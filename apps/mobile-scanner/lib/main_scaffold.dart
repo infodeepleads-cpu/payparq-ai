@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../responsive/responsive_layout.dart';
 import '../screens/hud_screen.dart'; // Mobile Scanner
 import '../screens/admin/admin_dashboard_screen.dart'; // Users List
-import '../screens/admin/cases_screen.dart';
-import '../screens/admin/upload_case_screen.dart';
+import '../features/enforcement/screens/cases_list_view.dart';
+import '../features/enforcement/screens/upload_case_form.dart';
+import '../features/management/screens/add_pass_screen.dart';
 import '../screens/placeholder_screen.dart';
 import '../theme.dart';
 
@@ -28,8 +29,8 @@ class _MasterScaffoldState extends State<MasterScaffold> {
   Widget _getDesktopPage(int index) {
     switch (index) {
       // Enforcement
-      case 0: return const CasesScreen();
-      case 1: return const UploadCaseScreen();
+      case 0: return const CasesListView();
+      case 1: return const UploadCaseForm();
       
       // Intelligence
       case 2: return const PlaceholderScreen(title: 'AI Analytics', description: 'Deep insights into parking utilization and violations.', icon: Icons.analytics_outlined);
@@ -38,7 +39,7 @@ class _MasterScaffoldState extends State<MasterScaffold> {
       // Management
       case 4: return const AdminDashboardScreen(); // Users
       case 5: return const PlaceholderScreen(title: 'Locations & Lots', description: 'Manage your parking zones and capacities.', icon: Icons.map_outlined);
-      case 6: return const PlaceholderScreen(title: 'Add Guest/Pass', description: 'Issue temporary passes for visitors.', icon: Icons.person_add_alt_1_outlined);
+      case 6: return const AddPassScreen();
       
       // Financials
       case 7: return const PlaceholderScreen(title: 'Billing', description: 'View invoices and subscription status.', icon: Icons.receipt_long_outlined);
