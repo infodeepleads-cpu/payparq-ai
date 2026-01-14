@@ -5,8 +5,11 @@ import '../screens/hud_screen.dart'; // Mobile Scanner
 import '../screens/admin/admin_dashboard_screen.dart'; // Users List
 import '../features/enforcement/screens/cases_list_view.dart';
 import '../features/enforcement/screens/upload_case_form.dart';
-import '../features/management/screens/add_pass_screen.dart';
-import '../screens/placeholder_screen.dart';
+import '../features/management/screens/passes_list_screen.dart';
+import '../features/management/screens/locations_screen.dart';
+import '../features/management/screens/add_staff_screen.dart';
+import '../features/intelligence/screens/dynamic_pricing_screen.dart';
+import '../screens/settings_screen.dart';
 import '../theme.dart';
 
 class MasterScaffold extends StatefulWidget {
@@ -17,8 +20,8 @@ class MasterScaffold extends StatefulWidget {
 }
 
 class _MasterScaffoldState extends State<MasterScaffold> {
-  // Default to 4 (Users/Add User) to match previous demo state
-  int _selectedIndex = 4; 
+  // Default to 2 (Main Dashboard) to match new order
+  int _selectedIndex = 2; 
 
   void _onItemTapped(int index) {
     setState(() {
@@ -28,35 +31,14 @@ class _MasterScaffoldState extends State<MasterScaffold> {
 
   Widget _getDesktopPage(int index) {
     switch (index) {
-      // Enforcement
       case 0: return const CasesListView();
       case 1: return const UploadCaseForm();
-      
-      // Intelligence
-      case 2: return const PlaceholderScreen(title: 'AI Analytics', description: 'Deep insights into parking utilization and violations.', icon: Icons.analytics_outlined);
-      case 3: return const PlaceholderScreen(title: 'DeepSeek Chatbot', description: 'Ask the AI anything about your parking lot status.', icon: Icons.chat_bubble_outline);
-      
-      // Management
-      case 4: return const AdminDashboardScreen(); // Users
-      case 5: return const PlaceholderScreen(title: 'Locations & Lots', description: 'Manage your parking zones and capacities.', icon: Icons.map_outlined);
-      case 6: return const AddPassScreen();
-      
-      // Financials
-      case 7: return const PlaceholderScreen(title: 'Billing', description: 'View invoices and subscription status.', icon: Icons.receipt_long_outlined);
-      case 8: return const PlaceholderScreen(title: 'Payouts', description: 'Manage stripe payouts and bank accounts.', icon: Icons.payments_outlined);
-      case 9: return const PlaceholderScreen(title: 'Revenue', description: 'Real-time revenue tracking dashboard.', icon: Icons.attach_money);
-      
-      // System
-      case 10: return const PlaceholderScreen(title: 'Pricing Rules', description: 'Configure dynamic pricing engines.', icon: Icons.price_change_outlined);
-      case 11: return const PlaceholderScreen(title: 'System Logs', description: 'Audit trails and system health logs.', icon: Icons.list_alt);
-      case 12: return const PlaceholderScreen(title: 'Settings', description: 'Global system configuration.', icon: Icons.settings_outlined);
-      case 13: return const PlaceholderScreen(title: 'Suspicious Alerts', description: 'AI-detected anomalies and security alerts.', icon: Icons.warning_amber_rounded);
-      
-      // Integrations
-      case 14: return const PlaceholderScreen(title: 'LPR Config', description: 'Manage License Plate Recognition cameras.', icon: Icons.camera_alt_outlined);
-      case 15: return const PlaceholderScreen(title: 'Smart Sign', description: 'Configure digital signage integrations.', icon: Icons.signpost_outlined);
-      case 16: return const PlaceholderScreen(title: 'Sticker Download', description: 'Download QR codes and smart stickers.', icon: Icons.download_outlined);
-      
+      case 2: return const AdminDashboardScreen();
+      case 3: return const PassesListScreen();
+      case 4: return const LocationsScreen();
+      case 5: return const AddStaffScreen();
+      case 6: return const DynamicPricingScreen();
+      case 7: return const SettingsScreen();
       default: return const AdminDashboardScreen();
     }
   }
@@ -73,27 +55,30 @@ class _MasterScaffoldState extends State<MasterScaffold> {
     );
   }
 
-  // Mobile: Bottom Navigation
   Widget _buildMobileScaffold() {
     return Scaffold(
       body: IndexedStack(
-        index: _selectedIndex,
+        index: _selectedIndex == 2 ? 0 : (_selectedIndex == 0 ? 1 : 2),
         children: const [
-          AdminDashboardScreen(), // Users List
-          HudScreen(), // Scanner
-          Center(child: Text('Settings')),
+          AdminDashboardScreen(),
+          HudScreen(),
+          SettingsScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         selectedItemColor: AppTheme.primary,
         unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        currentIndex: _selectedIndex == 2 ? 0 : (_selectedIndex == 0 ? 1 : 2),
+        onTap: (index) {
+          if (index == 0) _onItemTapped(2);
+          else if (index == 1) _onItemTapped(0);
+          else _onItemTapped(7);
+        },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Scanner'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
     );
@@ -134,7 +119,6 @@ class _MasterScaffoldState extends State<MasterScaffold> {
                     ],
                   ),
                 ),
-                // Navigation Items
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -144,34 +128,19 @@ class _MasterScaffoldState extends State<MasterScaffold> {
                       _buildSidebarItem(1, 'Upload Case', Icons.cloud_upload_outlined),
                       
                       const SizedBox(height: 16),
-                      _buildSidebarHeader('Intelligence'),
-                      _buildSidebarItem(2, 'AI Analytics', Icons.analytics_outlined),
-                      _buildSidebarItem(3, 'DeepSeek Chatbot', Icons.chat_bubble_outline),
-
-                      const SizedBox(height: 16),
                       _buildSidebarHeader('Management'),
-                      _buildSidebarItem(4, 'Users (Admins)', Icons.people_outline),
-                      _buildSidebarItem(5, 'Locations & Lots', Icons.map_outlined),
-                      _buildSidebarItem(6, 'Add Guest/Pass', Icons.person_add_alt_1_outlined),
+                      _buildSidebarItem(2, 'Dashboard', Icons.dashboard_outlined),
+                      _buildSidebarItem(3, 'Add Pass/Sub', Icons.card_membership_outlined),
+                      _buildSidebarItem(4, 'Add Location', Icons.add_location_alt_outlined),
+                      _buildSidebarItem(5, 'Add Admin/Officer', Icons.admin_panel_settings_outlined),
 
                       const SizedBox(height: 16),
-                      _buildSidebarHeader('Financials'),
-                      _buildSidebarItem(7, 'Billing', Icons.receipt_long_outlined),
-                      _buildSidebarItem(8, 'Payouts', Icons.payments_outlined),
-                      _buildSidebarItem(9, 'Revenue', Icons.attach_money),
+                      _buildSidebarHeader('Intelligence'),
+                      _buildSidebarItem(6, 'Dynamic Pricing', Icons.price_change_outlined),
 
                       const SizedBox(height: 16),
-                      _buildSidebarHeader('System'),
-                      _buildSidebarItem(10, 'Pricing Rules', Icons.price_change_outlined),
-                      _buildSidebarItem(11, 'Logs', Icons.list_alt),
-                      _buildSidebarItem(12, 'Settings', Icons.settings_outlined),
-                      _buildSidebarItem(13, 'Suspicious Alerts', Icons.warning_amber_rounded, badgeCount: 3),
-
-                      const SizedBox(height: 16),
-                      _buildSidebarHeader('Integrations'),
-                      _buildSidebarItem(14, 'LPR Config', Icons.camera_alt_outlined),
-                      _buildSidebarItem(15, 'Smart Sign', Icons.signpost_outlined),
-                      _buildSidebarItem(16, 'Sticker Download', Icons.download_outlined),
+                      _buildSidebarHeader('Settings'),
+                      _buildSidebarItem(7, 'System Settings', Icons.settings_outlined),
                     ],
                   ),
                 ),
@@ -192,6 +161,7 @@ class _MasterScaffoldState extends State<MasterScaffold> {
                           color: Colors.purple[100],
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        child: const Icon(Icons.person_outline, size: 20, color: Colors.purple),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -199,14 +169,14 @@ class _MasterScaffoldState extends State<MasterScaffold> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '[location_id]',
+                              'Admin User',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Text(
-                              '[Email]',
+                              'admin@payparq.ai',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: Colors.grey,

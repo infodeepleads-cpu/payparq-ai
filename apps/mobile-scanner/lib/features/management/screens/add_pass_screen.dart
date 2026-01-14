@@ -30,6 +30,7 @@ class _AddPassScreenState extends State<AddPassScreen> {
   
   // Subscription Specific
   bool _is24_7 = true;
+  double _dailyDurationHours = 24; // Default 24 hours
   TimeOfDay _dailyStart = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _dailyEnd = const TimeOfDay(hour: 18, minute: 0);
   int _subscriptionDurationMonths = 1;
@@ -52,6 +53,7 @@ class _AddPassScreenState extends State<AddPassScreen> {
         'start_time': _startDate.toIso8601String(),
         'end_time': _endDate.toIso8601String(),
         'status': 'active',
+        'daily_duration_hours': _type == 'subscription' ? _dailyDurationHours.toInt() : null,
       };
       
       if (_type == 'subscription' && !_is24_7) {
@@ -217,6 +219,20 @@ class _AddPassScreenState extends State<AddPassScreen> {
                              });
                            }),
                            const SizedBox(height: 16),
+                           
+                           // Daily Duration Slider (1-24h)
+                           Text('Daily Limit: ${_dailyDurationHours.toInt()} Hours', style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 14)),
+                           Slider(
+                             value: _dailyDurationHours,
+                             min: 1,
+                             max: 24,
+                             divisions: 23,
+                             label: '${_dailyDurationHours.toInt()} h',
+                             activeColor: AppTheme.primary,
+                             onChanged: (v) => setState(() => _dailyDurationHours = v),
+                           ),
+                           const SizedBox(height: 16),
+
                            DropdownButtonFormField<int>(
                              value: _subscriptionDurationMonths,
                              decoration: InputDecoration(

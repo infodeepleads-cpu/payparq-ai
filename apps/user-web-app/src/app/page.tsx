@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '../lib/supabase';
 import { 
   Home, 
   History, 
@@ -14,20 +15,62 @@ import {
 } from 'lucide-react';
 
 export default function UserHomePage() {
-  // Mock Data
-  const activeSession = {
-    id: 'sess_123',
-    plate: 'ABC-123',
-    location: 'Zone A-12',
-    entry: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 mins ago
-    cost: 4.50,
-  };
+  const [history, setHistory] = useState<any[]>([]);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [plate, setPlate] = useState('');
+  const [loc, setLoc] = useState('');
 
-  const history = [
-    { id: 1, date: 'Oct 15', location: 'Zone B-05', duration: '1h 30m', cost: 6.00 },
-    { id: 2, date: 'Oct 12', location: 'Zone A-12', duration: '45m', cost: 3.00 },
-    { id: 3, date: 'Oct 10', location: 'Downtown Garage', duration: '2h 15m', cost: 12.50 },
-  ];
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const locParam = params.get('loc') || '';
+        setLoc(locParam);
+        const lsPlate = localStorage.getItem('plate_number') || '';
+        setPlate(lsPlate);
+        // Fetch recent history
+        const { data: historyData, error } = await supabase
+          .from('parking_sessions')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (historyData) {
+          setHistory(historyData.map(item => ({
+            id: item.id,
+            date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            location: item.location_name || 'Unknown Zone',
+            duration: item.duration_minutes ? `${Math.floor(item.duration_minutes / 60)}h ${item.duration_minutes % 60}m` : 'Ongoing',
+            cost: item.total_cost || 0.00
+          })));
+        }
+
+        // Fetch active session
+        const { data: activeData } = await supabase
+          .from('parking_sessions')
+          .select('*')
+          .eq('status', 'active')
+          .single();
+
+        if (activeData) {
+          setActiveSession({
+            id: activeData.id,
+            plate: activeData.vehicle_plate || 'UNKNOWN',
+            location: activeData.location_name || 'Zone A',
+            entry: activeData.created_at,
+            cost: activeData.current_cost || 0.00,
+          });
+        }
+      } catch (e) {
+        console.error('Error loading dashboard:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-white flex flex-col md:flex-row">
@@ -78,43 +121,51 @@ export default function UserHomePage() {
           </div>
 
           {/* Active Session Card */}
-          <div className="bg-surface border border-primary/50 rounded-2xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4">
-              <span className="bg-green-500/20 text-green-400 border border-green-500/50 px-3 py-1 rounded-full text-xs font-bold uppercase animate-pulse">
-                Active Session
-              </span>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center relative z-10">
-              <div className="w-16 h-16 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
-                <Clock size={32} />
+          {activeSession ? (
+            <div className="bg-surface border border-primary/50 rounded-2xl p-6 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4">
+                <span className="bg-green-500/20 text-green-400 border border-green-500/50 px-3 py-1 rounded-full text-xs font-bold uppercase animate-pulse">
+                  Active Session
+                </span>
               </div>
               
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2 text-white/50 text-sm">
-                  <MapPin size={14} />
-                  {activeSession.location}
+              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center relative z-10">
+                <div className="w-16 h-16 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
+                  <Clock size={32} />
                 </div>
-                <div className="text-3xl font-bold font-mono">{activeSession.plate}</div>
-                <div className="text-white/70">Started at {new Date(activeSession.entry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2 text-white/50 text-sm">
+                    <MapPin size={14} />
+                    {activeSession.location}
+                  </div>
+                  <div className="text-3xl font-bold font-mono">{activeSession.plate}</div>
+                  <div className="text-white/70">Started at {new Date(activeSession.entry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-sm text-white/50">Current Total</div>
+                  <div className="text-2xl font-bold text-white">${activeSession.cost.toFixed(2)}</div>
+                </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-sm text-white/50">Current Total</div>
-                <div className="text-2xl font-bold text-white">${activeSession.cost.toFixed(2)}</div>
+              <div className="mt-6 pt-6 border-t border-white/10 flex gap-4">
+                <Link href="/success" className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all">
+                  View Details
+                  <ChevronRight size={18} />
+                </Link>
+                <button className="px-6 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-white font-medium transition-colors">
+                  End Session
+                </button>
               </div>
             </div>
-
-            <div className="mt-6 pt-6 border-t border-white/10 flex gap-4">
-              <Link href="/success" className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all">
-                View Details
-                <ChevronRight size={18} />
-              </Link>
-              <button className="px-6 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-white font-medium transition-colors">
-                End Session
-              </button>
+          ) : (
+            <div className="bg-surface border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center text-white/50 gap-3">
+               <Clock size={48} className="opacity-20" /> 
+               <div className="text-lg">No active parking session</div>
+               <Link href="/payment" className="text-primary hover:underline text-sm">Start a new session</Link>
             </div>
-          </div>
+          )}
 
           {/* Recent History */}
           <div>
@@ -139,6 +190,39 @@ export default function UserHomePage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="bg-surface border border-white/10 rounded-2xl p-6 space-y-3">
+            <div className="flex gap-3">
+              <input
+                className="flex-1 px-3 py-2 rounded bg-white/10 border border-white/20"
+                placeholder="Plate number"
+                value={plate}
+                onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              />
+              <button
+                className="px-4 py-2 bg-primary rounded text-white"
+                onClick={() => {
+                  localStorage.setItem('plate_number', plate);
+                }}
+              >
+                Save Plate
+              </button>
+            </div>
+            <button
+              className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl"
+              onClick={async () => {
+                const res = await fetch('/api/stripe/checkout', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ location_id: loc, plate_number: plate }),
+                });
+                const json = await res.json();
+                if (json.url) window.location.href = json.url;
+              }}
+            >
+              Start Checkout
+            </button>
           </div>
 
         </div>

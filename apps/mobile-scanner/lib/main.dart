@@ -31,7 +31,8 @@ class PayParqApp extends StatelessWidget {
     return MaterialApp(
       title: 'PayParq.AI',
       theme: AppTheme.lightTheme, // Default to Light Theme
-      home: const AuthScreen(), // Start with Auth Screen
+      // home: const AuthScreen(), // Bypass Auth for testing
+      home: const MasterScaffold(), 
       debugShowCheckedModeBanner: false,
     );
   }
