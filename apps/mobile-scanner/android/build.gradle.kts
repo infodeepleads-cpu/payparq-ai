@@ -20,10 +20,22 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate {
-        if (project.hasProperty("android")) {
-            val android = project.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
-            android?.compileSdkVersion(36)
+    project.configurations.all {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "com.android.support" && !requested.name.startsWith("multidex")) {
+                useVersion("28.0.0")
+            }
+        }
+    }
+}
+
+subprojects {
+    val androidExtension = project.extensions.findByName("android")
+    if (androidExtension != null) {
+        when (androidExtension) {
+            is com.android.build.gradle.BaseExtension -> {
+                androidExtension.compileSdkVersion(36)
+            }
         }
     }
 }
