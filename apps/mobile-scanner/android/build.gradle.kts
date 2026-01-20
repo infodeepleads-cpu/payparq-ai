@@ -30,13 +30,11 @@ subprojects {
 }
 
 subprojects {
-    val androidExtension = project.extensions.findByName("android")
-    if (androidExtension != null) {
-        when (androidExtension) {
-            is com.android.build.gradle.BaseExtension -> {
-                androidExtension.compileSdkVersion(36)
-            }
-        }
+    project.plugins.withId("com.android.application") {
+        project.extensions.getByType<com.android.build.gradle.BaseExtension>().compileSdkVersion(36)
+    }
+    project.plugins.withId("com.android.library") {
+        project.extensions.getByType<com.android.build.gradle.BaseExtension>().compileSdkVersion(36)
     }
 }
 
