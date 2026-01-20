@@ -1,0 +1,51 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2️⃣ Set up Java 17
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      # 3️⃣ Set up Flutter
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.3"
+          cache: true
+
+      # 4️⃣ Install dependencies
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: payparq.ai/apps/mobile/scanner
+
+      # 5️⃣ Analyze code (optional)
+      - name: Analyze (optional)
+        run: flutter analyze
+        working-directory: payparq.ai/apps/mobile/scanner
+
+      # 6️⃣ Build APK (release)
+      - name: Build APK (release)
+        run: flutter build apk --release
+        working-directory: payparq.ai/apps/mobile/scanner
+
+      # 7️⃣ Upload APK artifact
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: payparq.ai/apps/mobile/scanner/build/app/outputs/flutter-apk/app-release.apk
