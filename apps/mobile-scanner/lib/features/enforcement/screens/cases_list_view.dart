@@ -2,50 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
+import '../../management/repositories/parking_repository.dart';
+import '../../../logic/providers/auth_providers.dart';
+import '../../../logic/providers/dashboard_providers.dart';
 
-class CasesListView extends StatefulWidget {
+class CasesListView extends ConsumerStatefulWidget {
   const CasesListView({super.key});
 
   @override
-  State<CasesListView> createState() => _CasesListViewState();
+  ConsumerState<CasesListView> createState() => _CasesListViewState();
 }
 
-class _CasesListViewState extends State<CasesListView> {
-  final _violationsStream = Supabase.instance.client
-      .from('violations')
-      .stream(primaryKey: ['id']).order('issued_at', ascending: false);
+class _CasesListViewState extends ConsumerState<CasesListView> {
   final ImagePicker _picker = ImagePicker();
+  final TextEditingController _searchController = TextEditingController();
   bool _isProcessing = false;
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleQuickAction({required bool isWarning}) async {
+    final profile = ref.read(userProfileProvider).value;
+    if (profile == null) return;
+
+    // Priority: 1. Manually selected location, 2. Profile location
+    final locationDisplayId =
+        ref.read(selectedLocationIdProvider) ?? profile['location_id'];
+
+    if (locationDisplayId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Error: No Location ID selected or assigned.')),
+      );
+      return;
+    }
+
+    // Use the centralized UUID resolver
+    final locUuid = await ref.read(selectedLocationUuidProvider.future);
+    final supabase = Supabase.instance.client;
+
+    if (locUuid == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Invalid Location selected.')),
+        );
+      }
+      return;
+    }
+
     // 1. Capture Photo
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final XFile? image =
+        await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
     if (image == null) return;
 
+    Map<String, dynamic>? optimisticViolation;
     setState(() => _isProcessing = true);
 
     try {
-      final supabase = Supabase.instance.client;
       // Use a placeholder plate for "Quick Actions" until LPR is integrated
-      final plate = 'QUICK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+      final plate =
+          'QUICK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
 
       // 2. Upload Evidence
       final bytes = await image.readAsBytes();
       await supabase.storage.from('evidence').uploadBinary(
-        fileName,
-        bytes,
-        fileOptions: const FileOptions(contentType: 'image/jpeg'),
-      );
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
 
-      // 3. Create Violation Record
+      // 3. Create Violation Record with location_id
+      optimisticViolation = {
+        'plate': plate,
+        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
+        'fine_amount': isWarning ? 0.00 : 50.00,
+        'status': isWarning ? 'warning' : 'issued',
+        'issued_at': DateTime.now().toIso8601String(),
+        'evidence_r2_url': null,
+      };
+      setState(() {
+        ref.read(optimisticViolationsProvider.notifier).update((state) => [
+              optimisticViolation!,
+              ...state,
+            ]);
+      });
       await supabase.from('violations').insert({
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
         'fine_amount': isWarning ? 0.00 : 50.00,
         'status': isWarning ? 'warning' : 'issued',
-      });
+        'location_id': locUuid,
+        'evidence_r2_url': fileName,
+        'issued_at': DateTime.now().toIso8601String(),
+      }).select();
+      ref.invalidate(violationsStreamProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -58,229 +114,581 @@ class _CasesListViewState extends State<CasesListView> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          if (optimisticViolation != null) {
+            ref.read(optimisticViolationsProvider.notifier).update((state) =>
+                state.where((v) => v != optimisticViolation).toList());
+          }
+        });
+      }
     }
+  }
+
+  Future<void> _showEvidence(Map<String, dynamic> violation) async {
+    final plate = violation['plate'] ?? 'UNKNOWN';
+    final evidenceUrl = violation['evidence_r2_url'];
+
+    String? fullImageUrl;
+    if (evidenceUrl != null) {
+      try {
+        fullImageUrl = await Supabase.instance.client.storage
+            .from('evidence')
+            .createSignedUrl(evidenceUrl, 3600);
+      } catch (_) {
+        fullImageUrl = Supabase.instance.client.storage
+            .from('evidence')
+            .getPublicUrl(evidenceUrl);
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text('Evidence: $plate',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 300,
+              width: 300,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: fullImageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        fullImageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Colors.black));
+                        },
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image_outlined,
+                                  size: 48, color: Colors.grey),
+                              SizedBox(height: 8),
+                              Text('Image not found',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported_outlined,
+                              size: 48, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('No photo attached',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Violation:',
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                Text(violation['violation_type'] ?? 'General',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Fine Amount:',
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                Text('\$${violation['fine_amount'] ?? 0}',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, color: Colors.red)),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close',
+                style: GoogleFonts.inter(
+                    color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width >= 1100;
+    final violationsAsync = ref.watch(violationsStreamProvider);
+    final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final optimisticViolations = ref.watch(optimisticViolationsProvider);
+
+    // Watch global selection
+    ref.listen(selectedLocationIdProvider, (previous, next) {
+      if (next != null && next != previous) {
+        ref.invalidate(violationsStreamProvider);
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Quick Actions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
+      body: Column(
+        children: [
+          _buildHeader(isDesktop, selectedLocId),
+          Expanded(
+            child: _buildDataList(
+                isDesktop, violationsAsync, optimisticViolations),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isDesktop, String? selectedLocId) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 48 : 24,
+        vertical: isDesktop ? 48 : 32,
+      ),
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cases Log',
+                      'Cases',
                       style: GoogleFonts.inter(
-                        fontSize: 24,
+                        fontSize: isDesktop ? 40 : 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
+                        letterSpacing: -1,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Real-time enforcement actions and citations.',
+                      selectedLocId != null
+                          ? 'Monitoring all enforcement activity for Lot: $selectedLocId'
+                          : 'Please select a lot in the top bar.',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.grey[600],
+                        color: AppTheme.textSecondary,
                       ),
                     ),
                   ],
                 ),
-                // Quick Actions Buttons
-                Row(
-                  children: [
-                    if (_isProcessing)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 16.0),
-                        child: SizedBox(
-                          width: 20, 
-                          height: 20, 
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    ElevatedButton.icon(
-                      onPressed: _isProcessing ? null : () => _handleQuickAction(isWarning: true),
-                      icon: const Icon(Icons.warning_amber_rounded, size: 18),
-                      label: const Text('Quick Warning'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: _isProcessing ? null : () => _handleQuickAction(isWarning: false),
-                      icon: const Icon(Icons.receipt_long, size: 18),
-                      label: const Text('Quick Ticket'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              if (selectedLocId != null && isDesktop) _buildQuickActions(),
+            ],
+          ),
+          if (selectedLocId != null && !isDesktop) ...[
+            const SizedBox(height: 24),
+            _buildQuickActions(),
+          ],
+          SizedBox(height: isDesktop ? 48 : 32),
+          _buildSearchAndFilter(isDesktop),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_isProcessing)
+          const Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.black),
+            ),
+          ),
+        ElevatedButton.icon(
+          onPressed:
+              _isProcessing ? null : () => _handleQuickAction(isWarning: true),
+          icon: const Icon(Icons.warning_amber_rounded, size: 18),
+          label: const Text('Quick Warning'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            side: const BorderSide(color: AppTheme.border),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed:
+              _isProcessing ? null : () => _handleQuickAction(isWarning: false),
+          icon: const Icon(Icons.receipt_long, size: 18),
+          label: const Text('Quick Ticket'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchAndFilter(bool isDesktop) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: isDesktop ? 400 : double.infinity,
+          child: TextField(
+            controller: _searchController,
+            onChanged: (v) {
+              // We'll need to implement a search provider for violations
+              // For now, it's a UI placeholder to match Home
+            },
+            decoration: InputDecoration(
+              hintText: 'Search',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterButton('All'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Tickets'),
+              const SizedBox(width: 12),
+              _buildFilterButton('Warnings'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterButton(String label) {
+    // UI placeholder to match Home
+    const isSelected = false;
+
+    return InkWell(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : AppTheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected ? null : Border.all(color: AppTheme.border),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDataList(
+      bool isDesktop,
+      AsyncValue<List<Map<String, dynamic>>> violationsAsync,
+      List<Map<String, dynamic>> optimisticViolations) {
+    return violationsAsync.when(
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: Colors.black)),
+      error: (err, stack) => Center(child: Text('Error: $err')),
+      data: (violations) {
+        // Deduplicate: Don't show optimistic item if the real one has arrived in the stream
+        final optimisticItems = optimisticViolations.where((ov) {
+          return !violations.any((v) => v['plate'] == ov['plate']);
+        }).toList();
+
+        final allViolations = [
+          ...optimisticItems,
+          ...violations,
+        ];
+
+        // Ensure strict chronological sorting (newest first)
+        allViolations.sort((a, b) {
+          final aTime = DateTime.tryParse(a['issued_at'] ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final bTime = DateTime.tryParse(b['issued_at'] ?? '') ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          return bTime.compareTo(aTime);
+        });
+
+        if (allViolations.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.folder_open_outlined,
+                    size: 64, color: Colors.grey[200]),
+                const SizedBox(height: 16),
+                Text('No active cases found.',
+                    style: TextStyle(color: Colors.grey[400])),
               ],
             ),
-            const SizedBox(height: 24),
+          );
+        }
 
-            // List
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(violationsStreamProvider);
+          },
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
+            itemCount: allViolations.length,
+            itemBuilder: (context, index) {
+              final violation = allViolations[index];
+              final status = violation['status'] ?? 'issued';
+              final issuedAtStr = violation['issued_at'];
+              final issuedAt = issuedAtStr != null
+                  ? DateTime.parse(issuedAtStr)
+                  : DateTime.now();
+
+              return _buildViolationItem(violation, isDesktop);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildViolationItem(Map<String, dynamic> violation, bool isDesktop) {
+    final status = violation['status'] ?? 'issued';
+    final issuedAtStr = violation['issued_at'];
+    final issuedAt =
+        issuedAtStr != null ? DateTime.parse(issuedAtStr) : DateTime.now();
+    final plate = (violation['plate'] ?? 'UNKNOWN').toUpperCase();
+
+    if (!isDesktop) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildPlateBadge(plate),
+                _buildStatusBadge(status),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              violation['violation_type'] ?? 'General',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${_formatDate(issuedAt)} • \$${violation['fine_amount'] ?? 0}',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _showEvidence(violation),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: _violationsStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final violations = snapshot.data!;
-                    if (violations.isEmpty) {
-                      return const Center(child: Text('No active cases found.'));
-                    }
-
-                    return ListView.separated(
-                      itemCount: violations.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final violation = violations[index];
-                        final status = violation['status'] ?? 'issued';
-                        final issuedAt = DateTime.parse(violation['issued_at']);
-                        
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          leading: CircleAvatar(
-                            backgroundColor: _getStatusColor(status).withOpacity(0.1),
-                            child: Icon(
-                              _getStatusIcon(status),
-                              color: _getStatusColor(status),
-                              size: 20,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Text(
-                                violation['plate'] ?? 'UNKNOWN',
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.grey[300]!),
-                                ),
-                                child: Text(
-                                  violation['violation_type'] ?? 'General',
-                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Zone A • ${_formatDate(issuedAt)}',
-                              style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 13),
-                            ),
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '\$${violation['fine_amount'] ?? 0}',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              _buildStatusBadge(status),
-                            ],
-                          ),
-                          onTap: () {
-                            // TODO: Open Case Detail
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: const Text('View Evidence'),
               ),
             ),
           ],
         ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          _buildPlateBadge(plate),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  violation['violation_type'] ?? 'General',
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black),
+                ),
+                Text(
+                  _formatDate(issuedAt),
+                  style: GoogleFonts.inter(
+                      color: AppTheme.textSecondary, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          _buildStatusBadge(status),
+          const SizedBox(width: 24),
+          Text(
+            '\$${violation['fine_amount'] ?? 0}',
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(width: 24),
+          ElevatedButton(
+            onPressed: () => _showEvidence(violation),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4)),
+            ),
+            child: const Text('View'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlateBadge(String plate) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        plate,
+        style: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    bool isPaid = status.toLowerCase() == 'paid';
+    bool isWarning = status.toLowerCase() == 'warning';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: isPaid
+                  ? Colors.green[400]
+                  : (isWarning ? Colors.orange[400] : Colors.red[400]),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            status.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   String _formatDate(DateTime date) {
     return "${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid': return Colors.green;
-      case 'voided': return Colors.grey;
-      case 'warning': return Colors.orange;
-      default: return Colors.red; // issued/pending
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid': return Icons.check_circle_outline;
-      case 'voided': return Icons.block;
-      case 'warning': return Icons.warning_amber;
-      default: return Icons.gavel;
-    }
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color color = _getStatusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: GoogleFonts.inter(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 10,
-        ),
-      ),
-    );
   }
 }
