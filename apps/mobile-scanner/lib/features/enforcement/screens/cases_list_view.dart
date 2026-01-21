@@ -18,6 +18,8 @@ class CasesListView extends ConsumerStatefulWidget {
 class _CasesListViewState extends ConsumerState<CasesListView> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedFilter = 'All';
   bool _isProcessing = false;
 
   @override
@@ -379,13 +381,33 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           width: isDesktop ? 400 : double.infinity,
           child: TextField(
             controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (v) {
+              setState(() {
+                _searchQuery = v.trim().toLowerCase();
+              });
+            },
             onChanged: (v) {
-              // We'll need to implement a search provider for violations
-              // For now, it's a UI placeholder to match Home
+              setState(() {
+                _searchQuery = v.trim().toLowerCase();
+              });
             },
             decoration: InputDecoration(
-              hintText: 'Search',
+              hintText: 'Search by plate or type...',
               prefixIcon: const Icon(Icons.search, size: 20),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
@@ -417,11 +439,14 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Widget _buildFilterButton(String label) {
-    // UI placeholder to match Home
-    const isSelected = false;
+    final isSelected = _selectedFilter == label;
 
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         decoration: BoxDecoration(
@@ -455,10 +480,32 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           return !violations.any((v) => v['plate'] == ov['plate']);
         }).toList();
 
-        final allViolations = [
+        var allViolations = [
           ...optimisticItems,
           ...violations,
         ];
+
+        // 1. Filter by Search Query
+        if (_searchQuery.isNotEmpty) {
+          allViolations = allViolations.where((v) {
+            final plate = (v['plate'] ?? '').toString().toLowerCase();
+            final type = (v['violation_type'] ?? '').toString().toLowerCase();
+            return plate.contains(_searchQuery) || type.contains(_searchQuery);
+          }).toList();
+        }
+
+        // 2. Filter by Tab Selection
+        if (_selectedFilter != 'All') {
+          allViolations = allViolations.where((v) {
+            final status = (v['status'] ?? '').toString().toLowerCase();
+            if (_selectedFilter == 'Tickets') {
+              return status == 'issued' || status == 'paid';
+            } else if (_selectedFilter == 'Warnings') {
+              return status == 'warning';
+            }
+            return true;
+          }).toList();
+        }
 
         // Ensure strict chronological sorting (newest first)
         allViolations.sort((a, b) {
@@ -474,10 +521,13 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_open_outlined,
+                Icon(Icons.search_off_outlined,
                     size: 64, color: Colors.grey[200]),
                 const SizedBox(height: 16),
-                Text('No active cases found.',
+                Text(
+                    _searchQuery.isNotEmpty
+                        ? 'No matches for "$_searchQuery"'
+                        : 'No active cases found.',
                     style: TextStyle(color: Colors.grey[400])),
               ],
             ),
@@ -534,15 +584,12 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(
+            _highlightText(
               violation['violation_type'] ?? 'General',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              _searchQuery,
+              Colors.black,
+              Colors.yellow,
+              fontSize: 16,
             ),
             const SizedBox(height: 4),
             Text(
@@ -589,12 +636,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                _highlightText(
                   violation['violation_type'] ?? 'General',
-                  style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.black),
+                  _searchQuery,
+                  Colors.black,
+                  Colors.yellow,
                 ),
                 Text(
                   _formatDate(issuedAt),
@@ -638,14 +684,56 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         color: Colors.black,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        plate,
+      child: _highlightText(plate, _searchQuery, Colors.white, Colors.yellow),
+    );
+  }
+
+  Widget _highlightText(
+      String text, String query, Color baseColor, Color highlightColor,
+      {double fontSize = 18}) {
+    if (query.isEmpty || !text.toLowerCase().contains(query)) {
+      return Text(
+        text,
         style: GoogleFonts.inter(
-          fontSize: 18,
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 1,
+          color: baseColor,
+          letterSpacing: fontSize == 18 ? 1 : 0,
         ),
+      );
+    }
+
+    final matches = query.toLowerCase();
+    final parts = text.split(RegExp(matches, caseSensitive: false));
+    final List<TextSpan> spans = [];
+
+    int currentIndex = 0;
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isNotEmpty) {
+        spans.add(TextSpan(text: parts[i]));
+      }
+      currentIndex += parts[i].length;
+      if (i < parts.length - 1) {
+        final actualMatch =
+            text.substring(currentIndex, currentIndex + matches.length);
+        spans.add(TextSpan(
+          text: actualMatch,
+          style:
+              TextStyle(backgroundColor: highlightColor, color: Colors.black),
+        ));
+        currentIndex += matches.length;
+      }
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          color: baseColor,
+          letterSpacing: fontSize == 18 ? 1 : 0,
+        ),
+        children: spans,
       ),
     );
   }

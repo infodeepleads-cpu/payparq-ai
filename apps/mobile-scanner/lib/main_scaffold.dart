@@ -82,45 +82,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Check for updates on startup (non-intrusive)
-    ref.listen(updateCheckProvider, (previous, next) {
-      next.whenData((updateInfo) {
-        if (updateInfo != null && mounted) {
-          ScaffoldMessenger.of(context).showMaterialBanner(
-            MaterialBanner(
-              padding: const EdgeInsets.all(12),
-              content: Text(
-                'New Update Available (v${updateInfo.latestVersion})',
-                style: GoogleFonts.inter(
-                    color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              leading: const Icon(Icons.system_update_alt, color: Colors.white),
-              backgroundColor: Colors.blueAccent,
-              actions: [
-                TextButton(
-                  onPressed: () =>
-                      ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-                  child: const Text('LATER',
-                      style: TextStyle(color: Colors.white70)),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final url = Uri.parse(updateInfo.downloadUrl);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  child: const Text('UPDATE NOW',
-                      style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-          );
-        }
-      });
-    });
-
     // Force Light Theme for this layout as per design images
     return Theme(
       data: AppTheme.lightTheme,
@@ -285,8 +246,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           label: 'Scanner',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.folder_outlined),
-          activeIcon: Icon(Icons.folder),
+          icon: Icon(Icons.assignment_outlined),
+          activeIcon: Icon(Icons.assignment),
           label: 'Cases',
         ),
       ],
@@ -428,8 +389,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                   const EdgeInsets.symmetric(horizontal: 16),
                               children: [
                                 if (shouldShow(2))
-                                  _buildSidebarItem(2, 'Home',
-                                      Icons.dashboard_outlined),
+                                  _buildSidebarItem(
+                                      2, 'Home', Icons.dashboard_outlined),
                                 if (shouldShow(1))
                                   _buildSidebarItem(1, 'Scanner',
                                       Icons.qr_code_scanner_outlined),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart';
 import '../../features/management/repositories/parking_repository.dart';
@@ -64,14 +65,40 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Home',
-                style: GoogleFonts.inter(
-                  fontSize: isDesktop ? 40 : 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  letterSpacing: -1,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Home',
+                    style: GoogleFonts.inter(
+                      fontSize: isDesktop ? 40 : 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  if (isDesktop)
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final url = Uri.parse(
+                            'https://payparq-d-6rex95.web.app/app-release.apk');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(Icons.android, size: 20),
+                      label: const Text('Download App'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -81,10 +108,88 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   color: AppTheme.textSecondary,
                 ),
               ),
+              if (!isDesktop) ...[
+                const SizedBox(height: 24),
+                _buildMobileDownloadWidget(),
+              ],
             ],
           ),
           SizedBox(height: isDesktop ? 48 : 32),
           _buildSearchAndFilter(isDesktop),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileDownloadWidget() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.android, color: Colors.white, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Android App Available',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Install for the best experience.',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final url =
+                  Uri.parse('https://payparq-d-6rex95.web.app/app-release.apk');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: Text(
+              'Install',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
