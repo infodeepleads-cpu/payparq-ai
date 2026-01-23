@@ -186,7 +186,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'New Case',
+                'Upload Case',
                 style: GoogleFonts.inter(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,

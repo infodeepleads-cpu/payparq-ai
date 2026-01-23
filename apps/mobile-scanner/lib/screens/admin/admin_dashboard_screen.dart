@@ -206,7 +206,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             onChanged: (v) =>
                 ref.read(dashboardSearchProvider.notifier).state = v,
             decoration: InputDecoration(
-              hintText: 'Search',
+              hintText: 'Search...',
               prefixIcon: const Icon(Icons.search, size: 20),
               filled: true,
               fillColor: AppTheme.surface,
@@ -564,7 +564,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Widget _buildPlateBadge(String plate) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: 160,
+      height: 48,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(4),

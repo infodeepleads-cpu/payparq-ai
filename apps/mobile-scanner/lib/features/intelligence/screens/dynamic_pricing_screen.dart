@@ -28,6 +28,13 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   final TextEditingController _dailyController = TextEditingController();
   final TextEditingController _monthlyController = TextEditingController();
 
+  // Ceiling Controllers
+  final TextEditingController _hourlyCeilingController =
+      TextEditingController();
+  final TextEditingController _dailyCeilingController = TextEditingController();
+  final TextEditingController _monthlyCeilingController =
+      TextEditingController();
+
   // Dynamic Pricing state
   bool _dynamicEnabled = false;
   bool _surchargeEnabled = false;
@@ -148,9 +155,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final daily = (loc['base_price_daily'] ?? 0.0).toString();
       final monthly = (loc['base_price_monthly'] ?? 0.0).toString();
 
+      final hourlyCeiling = (loc['rate_per_hour_ceiling'] ?? 0.0).toString();
+      final dailyCeiling = (loc['base_price_daily_ceiling'] ?? 0.0).toString();
+      final monthlyCeiling =
+          (loc['base_price_monthly_ceiling'] ?? 0.0).toString();
+
       _hourlyController.text = hourly;
       _dailyController.text = daily;
       _monthlyController.text = monthly;
+
+      _hourlyCeilingController.text = hourlyCeiling;
+      _dailyCeilingController.text = dailyCeiling;
+      _monthlyCeilingController.text = monthlyCeiling;
 
       _dynamicEnabled = loc['dynamic_pricing_enabled'] ?? false;
       _surchargeEnabled = loc['surcharge_enabled'] ?? false;
@@ -200,6 +216,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _monthlyController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthly = double.tryParse(rawMonthly) ?? 0.0;
 
+    final String rawHourlyCeiling =
+        _hourlyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newHourlyCeiling = double.tryParse(rawHourlyCeiling) ?? 0.0;
+
+    final String rawDailyCeiling =
+        _dailyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newDailyCeiling = double.tryParse(rawDailyCeiling) ?? 0.0;
+
+    final String rawMonthlyCeiling =
+        _monthlyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newMonthlyCeiling = double.tryParse(rawMonthlyCeiling) ?? 0.0;
+
     setState(() => _isLoading = true);
 
     try {
@@ -207,6 +235,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'rate_per_hour': newHourly,
         'base_price_daily': newDaily,
         'base_price_monthly': newMonthly,
+        'rate_per_hour_ceiling': newHourlyCeiling,
+        'base_price_daily_ceiling': newDailyCeiling,
+        'base_price_monthly_ceiling': newMonthlyCeiling,
         'dynamic_pricing_enabled': _dynamicEnabled,
         'surcharge_enabled': _surchargeEnabled,
         'autopilot_enabled': _autopilotEnabled,
@@ -245,6 +276,13 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               (updatedData['base_price_daily'] ?? 0.0).toString();
           _monthlyController.text =
               (updatedData['base_price_monthly'] ?? 0.0).toString();
+
+          _hourlyCeilingController.text =
+              (updatedData['rate_per_hour_ceiling'] ?? 0.0).toString();
+          _dailyCeilingController.text =
+              (updatedData['base_price_daily_ceiling'] ?? 0.0).toString();
+          _monthlyCeilingController.text =
+              (updatedData['base_price_monthly_ceiling'] ?? 0.0).toString();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -366,7 +404,32 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                         Icons.calendar_month_outlined)),
               ],
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 32),
+
+            // Ceiling Pricing (Only if AutoPilot is ON)
+            if (_autopilotEnabled) ...[
+              _buildSectionHeader('Smart AutoPilot Constraints'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildPriceInput('Hourly Ceiling',
+                          _hourlyCeilingController, Icons.timer_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput('Daily Ceiling',
+                          _dailyCeilingController, Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          'Monthly Ceiling',
+                          _monthlyCeilingController,
+                          Icons.calendar_month_outlined)),
+                ],
+              ),
+              const SizedBox(height: 48),
+            ] else
+              const SizedBox(height: 48),
 
             // Dynamic Adjustment
             Row(
@@ -665,17 +728,23 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   Widget _buildStripeButton(String label, String type, Color color) {
     return SizedBox(
       width: double.infinity,
-      height: 52,
-      child: ElevatedButton.icon(
+      height: 60,
+      child: ElevatedButton(
         onPressed: () => _generateStripeLink(type),
-        icon: const Icon(Icons.payment_outlined, size: 18),
-        label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 0,
           side: const BorderSide(color: AppTheme.border),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        child: Text(
+          label.toUpperCase(),
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
         ),
       ),
     );

@@ -21,27 +21,21 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Fetch location pricing settings
-    // Try both UUID (id) and 5-digit ID (display_id) for compatibility
+    // 1. Fetch location pricing settings and owner's Stripe account
     const isFiveDigit = locationId.length === 5 && /^\d+$/.test(locationId);
     
-    const query = supabase.from('locations').select('*');
-    if (isFiveDigit) {
-      query.eq('display_id', locationId);
-    } else {
-      // Basic UUID format check to prevent unnecessary DB errors
-      if (locationId.length === 36) {
-        query.eq('id', locationId);
-      } else {
-        return new Response(JSON.stringify({ error: 'Invalid Location ID format' }), { status: 400 });
-      }
-    }
-
-    const { data: location, error: locError } = await query.single();
+    const { data: location, error: locError } = await supabase
+      .from('locations')
+      .select('*, profiles:owner_id(stripe_account_id, stripe_onboarding_complete)')
+      .or(isFiveDigit ? `display_id.eq.${locationId}` : `id.eq.${locationId}`)
+      .single();
 
     if (locError || !location) {
       return new Response(JSON.stringify({ error: 'Location not found' }), { status: 404 })
     }
+
+    const ownerProfile = (location as any).profiles;
+    const stripeAccountId = ownerProfile?.stripe_onboarding_complete ? ownerProfile?.stripe_account_id : null;
 
     // 2. Calculate Base Price
     let basePrice = 0
@@ -85,6 +79,18 @@ serve(async (req) => {
       finalPrice *= surchargeMultiplier
     }
 
+    // Apply Smart AutoPilot Ceiling Constraints
+    if (location.autopilot_enabled) {
+      let ceiling = 0
+      if (type === 'hourly') ceiling = location.rate_per_hour_ceiling || 0
+      else if (type === 'daily') ceiling = location.base_price_daily_ceiling || 0
+      else if (type === 'monthly') ceiling = location.base_price_monthly_ceiling || 0
+
+      if (ceiling > 0 && finalPrice > ceiling) {
+        finalPrice = ceiling
+      }
+    }
+
     // Round to 2 decimal places and convert to cents for Stripe
     const amountInCents = Math.round(finalPrice * 100)
 
@@ -93,7 +99,11 @@ serve(async (req) => {
     }
 
     // 4. Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // Commission Logic: 15% platform fee
+    const commissionPercent = 0.15;
+    const applicationFeeAmount = Math.round(amountInCents * commissionPercent);
+
+    const sessionParams: any = {
       payment_method_types: ['card'],
       phone_number_collection: {
         enabled: true,
@@ -131,7 +141,19 @@ serve(async (req) => {
           type: 'text',
         },
       ],
-    })
+    };
+
+    // If owner has a connected account, split the payment
+    if (stripeAccountId) {
+      sessionParams.payment_intent_data = {
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: {
+          destination: stripeAccountId,
+        },
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     // 5. Redirect user to Stripe (with No-Cache headers)
     return new Response(null, {

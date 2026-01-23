@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' as math;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
+import '../../../../logic/providers/analytics_provider.dart';
 
-class AnalyticsDashboardScreen extends StatefulWidget {
+class AnalyticsDashboardScreen extends ConsumerStatefulWidget {
   const AnalyticsDashboardScreen({super.key});
 
   @override
-  State<AnalyticsDashboardScreen> createState() =>
+  ConsumerState<AnalyticsDashboardScreen> createState() =>
       _AnalyticsDashboardScreenState();
 }
 
-class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
-  final PageController _pageController = PageController(viewportFraction: 1.0);
+class _AnalyticsDashboardScreenState
+    extends ConsumerState<AnalyticsDashboardScreen> {
+  final PageController _pageController = PageController();
   int _currentPage = 0;
 
   @override
@@ -24,142 +26,196 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final analyticsAsync = ref.watch(analyticsProvider);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(48),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Analytics',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Monitor performance, revenue, and system risks.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
+      body: analyticsAsync.when(
+        data: (data) => SingleChildScrollView(
+          padding: const EdgeInsets.all(48),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Text(
+                'Analytics',
+                style: GoogleFonts.inter(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  letterSpacing: -1,
                 ),
-              ],
-            ),
-            const SizedBox(height: 48),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Monitor performance, revenue, and system risks.',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 48),
 
-            // Row 1: Key Performance Metrics
-            _buildMetricGrid(),
-            const SizedBox(height: 48),
+              // Row 1: 4 Metric Cubicles
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 4,
+                crossAxisSpacing: 24,
+                mainAxisSpacing: 24,
+                childAspectRatio: 1.6,
+                children: [
+                  _buildMetricCard(
+                    'DAILY REVENUE',
+                    '€${data.dailyRevenue.toStringAsFixed(2)}',
+                    Icons.euro,
+                  ),
+                  _buildMetricCard(
+                    'MONTHLY REV AVG',
+                    '€${data.monthlyRevenueAvg.toStringAsFixed(2)}',
+                    Icons.calendar_month,
+                  ),
+                  _buildMetricCard(
+                    'DAILY OCCUPANCY',
+                    '${data.dailyOccupancy.toStringAsFixed(1)}%',
+                    Icons.pie_chart_outline,
+                  ),
+                  _buildMetricCard(
+                    'MONTHLY AVG OCCUPANCY',
+                    '${data.monthlyOccupancyAvg.toStringAsFixed(1)}%',
+                    Icons.analytics_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 48),
 
-            Center(
-              child: SizedBox(
-                height: 500,
-                width: 800,
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (idx) => setState(() => _currentPage = idx),
+              // Row 2: 1/4 Graphs with Arrows
+              SizedBox(
+                height: 450,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    _buildChartContainer(
-                      title: 'Daily Visit Trend',
-                      subtitle: 'Hourly vehicle influx monitoring',
-                      child: _buildLineChart(),
+                    PageView(
+                      controller: _pageController,
+                      onPageChanged: (int page) {
+                        setState(() {
+                          _currentPage = page;
+                        });
+                      },
+                      children: [
+                        _buildGraphCard(
+                          'AVG REVENUE',
+                          data.revenueChart,
+                          Colors.black,
+                          '€',
+                          'Average daily revenue trends over the last 30 days.',
+                        ),
+                        _buildGraphCard(
+                          'TOTAL NET',
+                          data.netRevenueChart,
+                          Colors.black,
+                          '€',
+                          'Net earnings after processing fees and operational costs.',
+                        ),
+                        _buildGraphCard(
+                          'AVG OCCUPANCY',
+                          data.occupancyChart,
+                          Colors.black,
+                          '%',
+                          'Average parking lot occupancy rate distribution.',
+                        ),
+                        _buildSpreadGraph(
+                          'REVENUE SPREAD',
+                          data.revenueFines,
+                          data.revenueNormal,
+                        ),
+                      ],
                     ),
-                    _buildChartContainer(
-                      title: 'Utilization Rate',
-                      subtitle: 'Daily occupancy distribution',
-                      child: _buildBarChart(),
+                    // Navigation Arrows
+                    Positioned(
+                      left: 0,
+                      child: _currentPage > 0
+                          ? _buildArrowButton(
+                              icon: Icons.arrow_back_ios_new,
+                              onPressed: () {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                            )
+                          : const SizedBox(),
                     ),
-                    _buildChartContainer(
-                      title: 'Revenue Attribution',
-                      subtitle: 'Income source breakdown',
-                      child: _buildPieChart(),
+                    Positioned(
+                      right: 0,
+                      child: _currentPage < 3
+                          ? _buildArrowButton(
+                              icon: Icons.arrow_forward_ios,
+                              onPressed: () {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                            )
+                          : const SizedBox(),
                     ),
-                    _buildChartContainer(
-                      title: 'Neural Risk Assessment',
-                      subtitle: 'AI-detected violation probability',
-                      child: _buildRadarChart(),
+                    // Page Indicator
+                    Positioned(
+                      bottom: 24,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          4,
+                          (index) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentPage == index
+                                  ? Colors.black
+                                  : Colors.black.withOpacity(0.1),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.chevron_left,
-                      color:
-                          _currentPage > 0 ? Colors.black : Colors.grey[300]),
-                  onPressed: _currentPage > 0
-                      ? () => _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut)
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                Text('Metric ${_currentPage + 1} of 4',
-                    style: GoogleFonts.inter(
-                        color: AppTheme.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.chevron_right,
-                      color:
-                          _currentPage < 3 ? Colors.black : Colors.grey[300]),
-                  onPressed: _currentPage < 3
-                      ? () => _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut)
-                      : null,
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
 
-  Widget _buildMetricGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
-      crossAxisSpacing: 24,
-      mainAxisSpacing: 24,
-      childAspectRatio: 1.6,
-      children: [
-        _buildMetricCard(
-            'Total Revenue', '€14,280.50', '+12.5%', Icons.attach_money),
-        _buildMetricCard(
-            'Avg Utilization', '78.2%', '+4.1%', Icons.pie_chart_outline),
-        _buildMetricCard(
-            'Active Sessions', '142', '+18', Icons.local_parking_outlined),
-        _buildMetricCard(
-            'Peak Influx', '42 veh/h', '-2.4%', Icons.speed_outlined),
-      ],
+  Widget _buildArrowButton(
+      {required IconData icon, required VoidCallback onPressed}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.black, size: 20),
+        onPressed: onPressed,
+      ),
     );
   }
 
-  Widget _buildMetricCard(
-      String title, String value, String trend, IconData icon) {
-    final bool isPositive = trend.startsWith('+');
+  Widget _buildMetricCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -171,43 +227,37 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(4)),
-                child: Icon(icon, color: Colors.white, size: 18),
-              ),
-              Text(
-                trend,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isPositive ? Colors.green[600] : Colors.red[600],
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
           ),
           const SizedBox(height: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5)),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(value,
-                  style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      letterSpacing: -0.5)),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  letterSpacing: -0.5,
+                ),
+              ),
             ],
           ),
         ],
@@ -215,86 +265,242 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _buildChartContainer(
-      {required String title,
-      required String subtitle,
-      required Widget child}) {
+  Widget _buildGraphCard(String title, List<ChartPoint> points, Color color,
+      String unit, String description) {
+    // Calculate rich data points
+    final double currentVal = points.isNotEmpty ? points.last.y : 0;
+    final double prevVal = points.length > 1 ? points[points.length - 2].y : 0;
+    final double diff = currentVal - prevVal;
+    final bool isUp = diff >= 0;
+
     return Container(
-      padding: const EdgeInsets.all(32),
-      height: 420,
+      margin: const EdgeInsets.symmetric(horizontal: 60),
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-          Text(subtitle,
-              style: GoogleFonts.inter(
-                  fontSize: 12, color: AppTheme.textSecondary)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    unit == '€'
+                        ? '€${currentVal.toStringAsFixed(2)}'
+                        : '${currentVal.toStringAsFixed(1)}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Icon(
+                        isUp ? Icons.trending_up : Icons.trending_down,
+                        size: 16,
+                        color: isUp ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${isUp ? '+' : ''}${diff.toStringAsFixed(2)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isUp ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 48),
-          Expanded(child: child),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (v) =>
+                      const FlLine(color: Color(0xFFF0F0F0), strokeWidth: 1),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (v, meta) {
+                        return const SizedBox();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (v, meta) {
+                        return Text(
+                          v.toInt().toString(),
+                          style: GoogleFonts.inter(
+                            color: Colors.grey[400],
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: points
+                        .asMap()
+                        .entries
+                        .map((e) => FlSpot(e.key.toDouble(), e.value.y))
+                        .toList(),
+                    isCurved: true,
+                    color: Colors.black,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) =>
+                          FlDotCirclePainter(
+                        radius: 4,
+                        color: Colors.black,
+                        strokeWidth: 2,
+                        strokeColor: Colors.white,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: Colors.black.withOpacity(0.05),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildLineChart() {
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (v) =>
-                FlLine(color: AppTheme.surface, strokeWidth: 1)),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 30,
-                  getTitlesWidget: (v, meta) {
-                    if (v % 4 != 0) return const SizedBox();
-                    return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text('${v.toInt()}h',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 10)));
-                  })),
-          leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 40,
-                  getTitlesWidget: (v, meta) {
-                    return Text(v.toInt().toString(),
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 10));
-                  })),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(
-            spots: List.generate(
-                24,
-                (i) =>
-                    FlSpot(i.toDouble(), 20 + math.Random().nextDouble() * 60)),
-            isCurved: true,
-            color: Colors.black,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: Colors.black.withOpacity(0.05),
+  Widget _buildSpreadGraph(String title, double fines, double normal) {
+    final total = fines + normal;
+    final finesPct = total > 0 ? (fines / total * 100) : 0;
+    final normalPct = total > 0 ? (normal / total * 100) : 0;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 60),
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Distribution between penalty charges and regular parking.',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                _buildSpreadDetail('REGULAR REVENUE', normal,
+                    normalPct.toDouble(), Colors.black, Colors.white),
+                const SizedBox(height: 16),
+                _buildSpreadDetail('FINES & PENALTIES', fines,
+                    finesPct.toDouble(), const Color(0xFFE0E0E0), Colors.black),
+                const Spacer(),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 4,
+                centerSpaceRadius: 70,
+                sections: [
+                  PieChartSectionData(
+                    value: fines,
+                    title: '${finesPct.toStringAsFixed(0)}%',
+                    color: const Color(0xFFE0E0E0),
+                    radius: 50,
+                    titleStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  PieChartSectionData(
+                    value: normal,
+                    title: '${normalPct.toStringAsFixed(0)}%',
+                    color: Colors.black,
+                    radius: 50,
+                    titleStyle: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -302,114 +508,50 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _buildBarChart() {
-    return BarChart(
-      BarChartData(
-        barGroups: List.generate(
-            7,
-            (i) => BarChartGroupData(
-                  x: i,
-                  barRods: [
-                    BarChartRodData(
-                      toY: 40 + math.Random().nextDouble() * 50,
-                      color: Colors.black,
-                      width: 12,
-                      borderRadius: BorderRadius.circular(2),
-                      backDrawRodData: BackgroundBarChartRodData(
-                          show: true, toY: 100, color: AppTheme.surface),
-                    ),
-                  ],
-                )),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                  showTitles: true,
-                  getTitlesWidget: (v, meta) {
-                    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                    return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(days[v.toInt()],
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 10)));
-                  })),
-          leftTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        borderData: FlBorderData(show: false),
-        gridData: const FlGridData(show: false),
+  Widget _buildSpreadDetail(
+      String label, double value, double pct, Color color, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        border:
+            color == Colors.white ? Border.all(color: AppTheme.border) : null,
       ),
-    );
-  }
-
-  Widget _buildPieChart() {
-    return PieChart(
-      PieChartData(
-        sectionsSpace: 2,
-        centerSpaceRadius: 50,
-        sections: [
-          PieChartSectionData(
-              value: 45,
-              title: 'GUEST',
-              color: Colors.black,
-              radius: 40,
-              titleStyle: const TextStyle(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          PieChartSectionData(
-              value: 35,
-              title: 'SUBS',
-              color: Colors.grey[800],
-              radius: 40,
-              titleStyle: const TextStyle(
-                  fontSize: 10,
+                  color: textColor.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '€${value.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          PieChartSectionData(
-              value: 20,
-              title: 'MISC',
-              color: Colors.grey[300],
-              radius: 40,
-              titleStyle: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRadarChart() {
-    return RadarChart(
-      RadarChartData(
-        dataSets: [
-          RadarDataSet(
-            fillColor: Colors.black.withOpacity(0.1),
-            borderColor: Colors.black,
-            entryRadius: 2,
-            dataEntries: [
-              const RadarEntry(value: 80),
-              const RadarEntry(value: 90),
-              const RadarEntry(value: 70),
-              const RadarEntry(value: 85),
-              const RadarEntry(value: 95)
+                  color: textColor,
+                ),
+              ),
             ],
           ),
+          Text(
+            '${pct.toStringAsFixed(1)}%',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
         ],
-        radarBackgroundColor: Colors.transparent,
-        borderData: FlBorderData(show: false),
-        radarBorderData: const BorderSide(color: AppTheme.border),
-        tickBorderData: const BorderSide(color: AppTheme.border),
-        gridBorderData: const BorderSide(color: AppTheme.border),
-        getTitle: (index, angle) {
-          const titles = ['Risk', 'Fraud', 'Churn', 'Safety', 'Growth'];
-          return RadarChartTitle(text: titles[index], angle: angle);
-        },
-        titleTextStyle: const TextStyle(color: Colors.grey, fontSize: 10),
       ),
     );
   }

@@ -393,21 +393,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               });
             },
             decoration: InputDecoration(
-              hintText: 'Search by plate or type...',
+              hintText: 'Search...',
               prefixIcon: const Icon(Icons.search, size: 20),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 20),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
-                    )
-                  : null,
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
@@ -679,12 +666,15 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
   Widget _buildPlateBadge(String plate) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: 160,
+      height: 48,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: _highlightText(plate, _searchQuery, Colors.white, Colors.yellow),
+      child: _highlightText(
+          plate.toUpperCase(), _searchQuery, Colors.white, Colors.yellow),
     );
   }
 

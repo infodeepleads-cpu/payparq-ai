@@ -9,6 +9,7 @@ import '../../../widgets/lot_location_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../logic/providers/auth_providers.dart';
+import 'verification_upload_screen.dart';
 
 class LocationsScreen extends ConsumerStatefulWidget {
   const LocationsScreen({super.key});
@@ -207,54 +208,60 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     ],
                                   ),
                                 ),
+                                _buildVerificationBadge(loc, isAdmin),
+                                const SizedBox(width: 12),
                                 _buildStatusBadge('ACTIVE'),
                                 const SizedBox(width: 48),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    FutureBuilder<int>(
-                                      future: Future.wait([
-                                        Supabase.instance.client
-                                            .from('parking_sessions')
-                                            .select('id')
-                                            .eq('location_id', displayId)
-                                            .eq('payment_status', 'paid')
-                                            .then(
-                                                (res) => (res as List).length),
-                                        Supabase.instance.client
-                                            .from('parking_permits')
-                                            .select('id')
-                                            .eq('location_id', displayId)
-                                            .eq('status', 'active')
-                                            .then(
-                                                (res) => (res as List).length),
-                                      ]).then(
-                                          (results) => results[0] + results[1]),
-                                      builder: (context, snapshot) {
-                                        final activeCount = snapshot.data ?? 0;
-                                        final total = loc['capacity'] ?? 0;
-                                        final available = total - activeCount;
+                                SizedBox(
+                                  width: 120,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      FutureBuilder<int>(
+                                        future: Future.wait([
+                                          Supabase.instance.client
+                                              .from('parking_sessions')
+                                              .select('id')
+                                              .eq('location_id', displayId)
+                                              .eq('payment_status', 'paid')
+                                              .then((res) =>
+                                                  (res as List).length),
+                                          Supabase.instance.client
+                                              .from('parking_permits')
+                                              .select('id')
+                                              .eq('location_id', displayId)
+                                              .eq('status', 'active')
+                                              .then((res) =>
+                                                  (res as List).length),
+                                        ]).then((results) =>
+                                            results[0] + results[1]),
+                                        builder: (context, snapshot) {
+                                          final activeCount =
+                                              snapshot.data ?? 0;
+                                          final total = loc['capacity'] ?? 0;
+                                          final available = total - activeCount;
 
-                                        return Text(
-                                          '$available/$total',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    Text(
-                                      'CAPACITY',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.textSecondary,
-                                        letterSpacing: 1,
+                                          return Text(
+                                            '$available/$total',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          );
+                                        },
                                       ),
-                                    ),
-                                  ],
+                                      Text(
+                                        'CAPACITY',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.textSecondary,
+                                          letterSpacing: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 const SizedBox(width: 24),
                                 IconButton(
@@ -276,6 +283,88 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildVerificationBadge(Map<String, dynamic> loc, bool isAdmin) {
+    final status = loc['verification_status'] ?? 'unverified';
+
+    Color badgeColor;
+    String label;
+    bool showAction = false;
+
+    switch (status) {
+      case 'verified':
+        badgeColor = Colors.green;
+        label = 'VERIFIED';
+        break;
+      case 'pending':
+        badgeColor = Colors.orange;
+        label = 'PENDING';
+        break;
+      case 'video_required':
+        badgeColor = Colors.purple;
+        label = 'VIDEO REQUIRED';
+        showAction = isAdmin;
+        break;
+      case 'call_scheduled':
+        badgeColor = Colors.blue;
+        label = 'CALL SCHEDULED';
+        break;
+      case 'rejected':
+        badgeColor = Colors.red;
+        label = 'REJECTED';
+        showAction = isAdmin;
+        break;
+      case 'unverified':
+      default:
+        badgeColor = Colors.deepOrange;
+        label = 'UNVERIFIED';
+        showAction = isAdmin;
+    }
+
+    return InkWell(
+      onTap: showAction
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VerificationUploadScreen(location: loc),
+                ),
+              );
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: badgeColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: badgeColor.withOpacity(0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              status == 'verified' ? Icons.verified : Icons.info_outline,
+              size: 14,
+              color: badgeColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: badgeColor,
+              ),
+            ),
+            if (showAction) ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

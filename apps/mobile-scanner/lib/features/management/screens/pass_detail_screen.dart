@@ -27,8 +27,6 @@ class PassDetailScreen extends StatelessWidget {
         ? '${(duration.inDays / 30).toStringAsFixed(1)} Months'
         : '${duration.inHours} Hours';
 
-    final String stripeLink = permit['stripe_payment_url'] ?? 'Not generated';
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -121,42 +119,6 @@ class PassDetailScreen extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 48),
-
-                  // Stripe Section
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.link, color: Colors.black),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Payment Link',
-                                  style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14)),
-                              Text(stripeLink,
-                                  style: GoogleFonts.inter(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.copy_all,
-                              size: 20, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),

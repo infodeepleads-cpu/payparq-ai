@@ -14,11 +14,16 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 serve(async (req) => {
   const reqId = crypto.randomUUID()
+  // For Stripe webhooks, we don't use Supabase Auth JWTs.
+  // We use the Stripe signature for verification.
   const signature = req.headers.get('stripe-signature')
 
   if (!signature) {
     console.error(`[${reqId}] Missing stripe-signature header`)
-    return new Response('Missing signature', { status: 400 })
+    return new Response(JSON.stringify({ error: 'No Stripe signature' }), { 
+      status: 400, 
+      headers: { 'Content-Type': 'application/json' } 
+    })
   }
 
   try {
@@ -111,6 +116,27 @@ serve(async (req) => {
       } catch (e) {
         console.error(`[${reqId}] ⚠️ Occupancy Update Error: ${e.message}`)
       }
+    } else if (event.type === 'account.updated') {
+      const account = event.data.object as any
+      console.log(`[${reqId}] 💳 Account Updated: ${account.id}`)
+
+      const onboardingComplete = account.details_submitted
+      const payoutsEnabled = account.payouts_enabled
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          stripe_onboarding_complete: onboardingComplete,
+          stripe_payouts_enabled: payoutsEnabled,
+        })
+        .eq('stripe_account_id', account.id)
+
+      if (updateError) {
+        console.error(`[${reqId}] ❌ Profile update failed:`, updateError)
+        throw new Error(`Profile Update Error: ${updateError.message}`)
+      }
+      
+      console.log(`[${reqId}] ✨ Profile updated for Stripe account ${account.id}.`)
     }
 
     return new Response(JSON.stringify({ received: true }), { 

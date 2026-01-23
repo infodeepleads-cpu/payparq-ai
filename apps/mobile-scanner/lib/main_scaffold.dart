@@ -16,6 +16,8 @@ import '../features/management/screens/locations_screen.dart';
 import '../features/management/screens/add_staff_screen.dart';
 import '../features/intelligence/screens/dynamic_pricing_screen.dart';
 import '../features/intelligence/screens/analytics_dashboard_screen.dart';
+import '../features/intelligence/screens/finance_screen.dart';
+import '../features/management/screens/verification_inbox_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/ocr_test_screen.dart';
 import '../theme.dart';
@@ -62,6 +64,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         return const AnalyticsDashboardScreen();
       case 8:
         return const SettingsScreen();
+      case 9:
+        return const FinanceScreen();
+      case 10:
+        return const VerificationInboxScreen();
       default:
         return const AdminDashboardScreen();
     }
@@ -311,10 +317,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
         // Helper to determine if a menu item should be visible based on role
         bool shouldShow(int index) {
+          if (index == 10) return isSuperAdmin; // Verification Inbox
           if (isSuperAdmin || isAdmin) return true;
           if (isManager) {
-            // Managers see everything except Add Location (4)
-            return index != 4;
+            // Managers see everything except Add Location (4) and Finance (9)
+            return index != 4 && index != 9;
           }
           if (isOfficer) {
             // Officers see: Cases (0), OCR (1), Dashboard (2), Settings (8)
@@ -392,8 +399,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                   _buildSidebarItem(
                                       2, 'Home', Icons.dashboard_outlined),
                                 if (shouldShow(1))
-                                  _buildSidebarItem(1, 'Scanner',
-                                      Icons.qr_code_scanner_outlined),
+                                  _buildSidebarItem(1, 'Upload Case',
+                                      Icons.drive_folder_upload_outlined),
                                 if (shouldShow(0))
                                   _buildSidebarItem(
                                       0, 'Cases', Icons.folder_outlined),
@@ -410,8 +417,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                   if (shouldShow(5))
                                     _buildSidebarItem(
                                         5, 'Staff', Icons.people_outline),
+                                  if (shouldShow(10))
+                                    _buildSidebarItem(
+                                        10, 'Inbox', Icons.mail_outline),
                                 ],
-                                if (shouldShow(6) || shouldShow(7)) ...[
+                                if (shouldShow(6) ||
+                                    shouldShow(7) ||
+                                    shouldShow(9)) ...[
                                   const SizedBox(height: 16),
                                   if (shouldShow(6))
                                     _buildSidebarItem(6, 'Pricing',
@@ -419,6 +431,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                   if (shouldShow(7))
                                     _buildSidebarItem(7, 'Analytics',
                                         Icons.insights_outlined),
+                                  if (shouldShow(9))
+                                    _buildSidebarItem(9, 'Finance',
+                                        Icons.account_balance_outlined),
                                 ],
                               ],
                             ),
@@ -426,7 +441,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: _buildSidebarItem(
-                                9, 'Sign Out', Icons.logout,
+                                99, 'Sign Out', Icons.logout,
                                 onTapOverride: _handleLogout),
                           ),
                           const SizedBox(height: 12),
@@ -488,6 +503,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                 const DynamicPricingScreen(),
                                 const AnalyticsDashboardScreen(),
                                 const SettingsScreen(),
+                                const FinanceScreen(),
+                                const VerificationInboxScreen(),
                               ],
                             ),
                           ),
