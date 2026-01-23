@@ -1,9 +1,9 @@
 
 -- Fix storage bucket and policies for location verification
--- Ensure bucket is public
+-- Ensure bucket is public and allows image/jpg as well just in case
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
-VALUES ('location-verification', 'location-verification', true, 5242880, '{image/jpeg,image/png,image/webp}')
-ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 5242880, allowed_mime_types = '{image/jpeg,image/png,image/webp}';
+VALUES ('location-verification', 'location-verification', true, 5242880, '{image/jpeg,image/png,image/webp,image/jpg}')
+ON CONFLICT (id) DO UPDATE SET public = true, file_size_limit = 5242880, allowed_mime_types = '{image/jpeg,image/png,image/webp,image/jpg}';
 
 -- Re-create policies with broader permissions for testing
 DROP POLICY IF EXISTS "Public Access" ON storage.objects;

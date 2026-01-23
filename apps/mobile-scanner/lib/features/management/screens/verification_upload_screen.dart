@@ -133,18 +133,23 @@ class _VerificationUploadScreenState
           fileExt = 'jpg';
         }
 
+        // Map extension to correct MIME type
+        final String mimeType = fileExt == 'jpg' || fileExt == 'jpeg'
+            ? 'image/jpeg'
+            : 'image/$fileExt';
+
         final fileName =
             '${locationId}_${DateTime.now().millisecondsSinceEpoch}_$i.$fileExt';
         final path = fileName;
 
-        debugPrint('Uploading image $i: $path (size: ${bytes.length} bytes)');
+        debugPrint(
+            'Uploading image $i: $path (size: ${bytes.length} bytes, mime: $mimeType)');
 
         try {
           await supabase.storage.from('location-verification').uploadBinary(
                 path,
                 bytes,
-                fileOptions:
-                    FileOptions(contentType: 'image/$fileExt', upsert: true),
+                fileOptions: FileOptions(contentType: mimeType, upsert: true),
               );
           debugPrint('Upload success for image $i');
         } catch (storageErr) {
@@ -204,7 +209,13 @@ class _VerificationUploadScreenState
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, '/');
+            }
+          },
         ),
       ),
       body: SingleChildScrollView(
