@@ -481,18 +481,20 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (v) {
-                          if (v == null || v.isEmpty)
+                          if (v == null || v.isEmpty) {
                             return 'Email is required';
+                          }
                           final emailRegex =
                               RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                          if (!emailRegex.hasMatch(v))
+                          if (!emailRegex.hasMatch(v)) {
                             return 'Enter a valid email address';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: selectedRole,
+                        initialValue: selectedRole,
                         decoration: const InputDecoration(
                           labelText: 'Role',
                           prefixIcon: Icon(Icons.shield_outlined),
@@ -650,15 +652,15 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                 context: parentContext,
                                 builder: (context) => AlertDialog(
                                   title: const Text('Account Created!'),
-                                  content: Column(
+                                  content: const Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                           'The staff account is now active and ready for use.'),
-                                      const SizedBox(height: 16),
-                                      const Text(
+                                      SizedBox(height: 16),
+                                      Text(
                                           'You can view and manage their credentials directly from the staff list.',
                                           style: TextStyle(
                                               fontSize: 13,

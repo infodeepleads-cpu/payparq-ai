@@ -83,3 +83,31 @@ final unifiedDashboardProvider =
 
   return AsyncValue.data(filtered);
 });
+
+/// Provider for locations awaiting verification (Super Admin only).
+final verificationApplicantsProvider =
+    Provider<AsyncValue<List<Map<String, dynamic>>>>((ref) {
+  final locationsAsync = ref.watch(locationsStreamProvider);
+  final search = ref.watch(dashboardSearchProvider).toLowerCase();
+
+  return locationsAsync.when(
+    data: (locs) {
+      final pending = locs.where((l) {
+        final isPending = l['verification_status'] == 'pending';
+        if (!isPending) return false;
+
+        final name = (l['name'] ?? '').toString().toLowerCase();
+        final address = (l['address'] ?? '').toString().toLowerCase();
+        final displayId = (l['display_id'] ?? '').toString().toLowerCase();
+
+        return name.contains(search) ||
+            address.contains(search) ||
+            displayId.contains(search);
+      }).toList();
+
+      return AsyncValue.data(pending);
+    },
+    loading: () => const AsyncValue.loading(),
+    error: (e, st) => AsyncValue.error(e, st),
+  );
+});

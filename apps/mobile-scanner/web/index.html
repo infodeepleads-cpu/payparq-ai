@@ -56,28 +56,34 @@
       100% { opacity: 0.4; }
     }
   </style>
+  <script>
+    // Simple Service Worker unregister to fix buffering/caching issues
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
+  <script src="flutter.js" defer></script>
 </head>
 <body>
   <div class="loading">
     <div class="pulsate">payparq.ai</div>
   </div>
   <script>
-    window.flutterConfiguration = {
-      canvasKitBaseUrl: "https://unpkg.com/canvaskit-wasm@0.37.1/bin/"
-    };
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine({
+            useColorEmoji: true
+          }).then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
   </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations()
-        .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
-        .then(() => {
-          if ('caches' in window) {
-            return caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))));
-          }
-        })
-        .catch(() => {});
-    }
-  </script>
-  <script src="flutter_bootstrap.js?v=2.6.4" async></script>
 </body>
 </html>

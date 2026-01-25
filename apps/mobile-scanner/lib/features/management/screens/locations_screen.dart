@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import '../../../widgets/pulsating_loading_screen.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../logic/providers/auth_providers.dart';
 import 'verification_upload_screen.dart';
@@ -19,6 +21,8 @@ class LocationsScreen extends ConsumerStatefulWidget {
 }
 
 class _LocationsScreenState extends ConsumerState<LocationsScreen> {
+  static const String _supportWhatsappDisplay = '+385 91 5963139';
+  static const String _supportWhatsappNumber = '385915963139';
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
@@ -115,7 +119,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           const Icon(Icons.warning_amber_rounded,
                               color: Colors.orange, size: 48),
                           const SizedBox(height: 16),
-                          Text('Database access restricted or error occurred.'),
+                          const Text('Database access restricted or error occurred.'),
                           const SizedBox(height: 8),
                           Text(err.toString(),
                               style: const TextStyle(
@@ -211,7 +215,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 _buildVerificationBadge(loc, isAdmin),
                                 const SizedBox(width: 12),
                                 _buildStatusBadge('ACTIVE'),
-                                const SizedBox(width: 48),
+                                const SizedBox(width: 24),
                                 SizedBox(
                                   width: 120,
                                   child: Column(
@@ -222,14 +226,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                           Supabase.instance.client
                                               .from('parking_sessions')
                                               .select('id')
-                                              .eq('location_id', displayId)
+                                              .eq('location_id', id)
                                               .eq('payment_status', 'paid')
                                               .then((res) =>
                                                   (res as List).length),
                                           Supabase.instance.client
                                               .from('parking_permits')
                                               .select('id')
-                                              .eq('location_id', displayId)
+                                              .eq('location_id', id)
                                               .eq('status', 'active')
                                               .then((res) =>
                                                   (res as List).length),
@@ -287,7 +291,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Widget _buildVerificationBadge(Map<String, dynamic> loc, bool isAdmin) {
-    final status = loc['verification_status'] ?? 'unverified';
+    final rawStatus = loc['verification_status'] ?? 'unverified';
+    final status =
+        rawStatus == 'video_required' ? 'contact_required' : rawStatus;
 
     Color badgeColor;
     String label;
@@ -302,14 +308,15 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         badgeColor = Colors.orange;
         label = 'PENDING';
         break;
-      case 'video_required':
-        badgeColor = Colors.purple;
-        label = 'VIDEO REQUIRED';
-        showAction = isAdmin;
-        break;
       case 'call_scheduled':
         badgeColor = Colors.blue;
-        label = 'CALL SCHEDULED';
+        label = 'CONTACT REQUIRED';
+        showAction = true;
+        break;
+      case 'contact_required':
+        badgeColor = Colors.blue;
+        label = 'CONTACT REQUIRED';
+        showAction = true;
         break;
       case 'rejected':
         badgeColor = Colors.red;
@@ -326,12 +333,19 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     return InkWell(
       onTap: showAction
           ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => VerificationUploadScreen(location: loc),
-                ),
-              );
+              if (status == 'contact_required') {
+                _showCallDialog(loc);
+              } else if (status == 'unverified' ||
+                  status == 'pending' ||
+                  status == 'rejected') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        VerificationUploadScreen(location: loc),
+                  ),
+                );
+              }
             }
           : null,
       child: Container(
@@ -433,6 +447,119 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
+  void _showCallDialog(Map<String, dynamic> loc) async {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Contact for verification'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.green[500],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.chat,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'WhatsApp Support',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _supportWhatsappDisplay,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Send message to support for verification.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[500],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final uri = Uri.parse(
+                              'https://wa.me/$_supportWhatsappNumber?text=${Uri.encodeComponent('Hi, I need help with lot verification.')}');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        child: Text(
+                          'Send message',
+                          style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showAddLocationDialog(BuildContext context, String? locationId) {
     final nameCtrl = TextEditingController();
     final capacityCtrl = TextEditingController();
@@ -457,6 +584,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
                       controller: nameCtrl,
@@ -467,40 +595,44 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 24),
+                    Text(
+                      'Lot Capacity (Spaces)',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: capacityCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 150',
+                        filled: true,
+                        fillColor: AppTheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Location on Map',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     LotLocationPicker(
                       onLocationSelected: (latLng, address) {
                         selectedLatLng = latLng;
                         selectedAddress = address;
                       },
-                    ),
-                    const SizedBox(height: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Lot Capacity',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: capacityCtrl,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. 150',
-                            filled: true,
-                            fillColor: AppTheme.surface,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -539,6 +671,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 'longitude': selectedLatLng!.longitude,
                                 'capacity':
                                     int.tryParse(capacityCtrl.text) ?? 0,
+                                'total_spots':
+                                    int.tryParse(capacityCtrl.text) ?? 0,
                                 'owner_id': user?.id,
                               })
                               .select()
@@ -550,11 +684,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           }
 
                           final newDisplayId = response['display_id'];
+
                           ref.read(selectedLocationIdProvider.notifier).state =
                               newDisplayId;
-                          ref.invalidate(locationsStreamProvider);
-                          ref.invalidate(availableLocationsProvider);
-
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -562,6 +694,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   content: Text('Location created!')),
                             );
                           }
+                          ref.invalidate(locationsStreamProvider);
+                          ref.invalidate(availableLocationsProvider);
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

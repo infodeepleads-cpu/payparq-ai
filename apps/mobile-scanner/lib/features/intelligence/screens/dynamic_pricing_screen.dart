@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -8,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../logic/providers/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:payparq_scanner/utils/web_download_helper.dart';
 
 class DynamicPricingScreen extends ConsumerStatefulWidget {
   const DynamicPricingScreen({super.key});
@@ -34,6 +38,13 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   final TextEditingController _dailyCeilingController = TextEditingController();
   final TextEditingController _monthlyCeilingController =
       TextEditingController();
+
+  // Minimum/Floor Controllers
+  final TextEditingController _hourlyFloorController = TextEditingController();
+  final TextEditingController _dailyFloorController = TextEditingController();
+  final TextEditingController _monthlyFloorController = TextEditingController();
+
+  final GlobalKey _signKey = GlobalKey();
 
   // Dynamic Pricing state
   bool _dynamicEnabled = false;
@@ -159,6 +170,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final dailyCeiling = (loc['base_price_daily_ceiling'] ?? 0.0).toString();
       final monthlyCeiling =
           (loc['base_price_monthly_ceiling'] ?? 0.0).toString();
+      final hourlyFloor = (loc['rate_per_hour_floor'] ?? 0.0).toString();
+      final dailyFloor = (loc['base_price_daily_floor'] ?? 0.0).toString();
+      final monthlyFloor = (loc['base_price_monthly_floor'] ?? 0.0).toString();
 
       _hourlyController.text = hourly;
       _dailyController.text = daily;
@@ -167,6 +181,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       _hourlyCeilingController.text = hourlyCeiling;
       _dailyCeilingController.text = dailyCeiling;
       _monthlyCeilingController.text = monthlyCeiling;
+      _hourlyFloorController.text = hourlyFloor;
+      _dailyFloorController.text = dailyFloor;
+      _monthlyFloorController.text = monthlyFloor;
 
       _dynamicEnabled = loc['dynamic_pricing_enabled'] ?? false;
       _surchargeEnabled = loc['surcharge_enabled'] ?? false;
@@ -228,6 +245,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _monthlyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthlyCeiling = double.tryParse(rawMonthlyCeiling) ?? 0.0;
 
+    final String rawHourlyFloor =
+        _hourlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newHourlyFloor = double.tryParse(rawHourlyFloor) ?? 0.0;
+
+    final String rawDailyFloor =
+        _dailyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newDailyFloor = double.tryParse(rawDailyFloor) ?? 0.0;
+
+    final String rawMonthlyFloor =
+        _monthlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
+
     setState(() => _isLoading = true);
 
     try {
@@ -238,6 +267,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'rate_per_hour_ceiling': newHourlyCeiling,
         'base_price_daily_ceiling': newDailyCeiling,
         'base_price_monthly_ceiling': newMonthlyCeiling,
+        'rate_per_hour_floor': newHourlyFloor,
+        'base_price_daily_floor': newDailyFloor,
+        'base_price_monthly_floor': newMonthlyFloor,
         'dynamic_pricing_enabled': _dynamicEnabled,
         'surcharge_enabled': _surchargeEnabled,
         'autopilot_enabled': _autopilotEnabled,
@@ -283,6 +315,12 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               (updatedData['base_price_daily_ceiling'] ?? 0.0).toString();
           _monthlyCeilingController.text =
               (updatedData['base_price_monthly_ceiling'] ?? 0.0).toString();
+          _hourlyFloorController.text =
+              (updatedData['rate_per_hour_floor'] ?? 0.0).toString();
+          _dailyFloorController.text =
+              (updatedData['base_price_daily_floor'] ?? 0.0).toString();
+          _monthlyFloorController.text =
+              (updatedData['base_price_monthly_floor'] ?? 0.0).toString();
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -321,7 +359,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     if (_selectedLocation == null) return;
     // Use the 5-digit display_id for the user-facing Stripe link
     final locationId =
-        _selectedLocation!['display_id'] ?? _selectedLocation!['id'];
+        (_selectedLocation!['display_id'] ?? _selectedLocation!['id'])
+            .toString();
 
     // Add timestamp cache-buster to prevent browser from returning old Stripe sessions
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -409,6 +448,24 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             // Ceiling Pricing (Only if AutoPilot is ON)
             if (_autopilotEnabled) ...[
               _buildSectionHeader('Smart AutoPilot Constraints'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildPriceInput('Hourly Minimum',
+                          _hourlyFloorController, Icons.timer_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput('Daily Minimum',
+                          _dailyFloorController, Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          'Monthly Minimum',
+                          _monthlyFloorController,
+                          Icons.calendar_month_outlined)),
+                ],
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -525,6 +582,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             _buildSectionHeader('Payment Terminal Assets'),
             const SizedBox(height: 16),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
@@ -537,36 +595,99 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       const SizedBox(height: 12),
                       _buildStripeButton(
                           'Generate Monthly Link', 'monthly', Colors.black),
+                      const SizedBox(height: 32),
+                      // New Flyer QR Section
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.blue.withOpacity(0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.qr_code_2, color: Colors.blue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'ADMIN FLYER ASSET',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Use this QR code on physical flyers. Payments via this QR incur only 15% commission.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildStripeButton(
+                                'Open Flyer Link', 'flyer', Colors.blue),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 48),
-                Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Text('TERMINAL QR',
-                          style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                              letterSpacing: 1.2)),
-                      const SizedBox(height: 16),
-                      if (_selectedLocation != null)
-                        QrImageView(
-                          data:
-                              'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${_selectedLocation!['id']}&type=hourly',
-                          version: QrVersions.auto,
-                          size: 160.0,
-                        )
-                      else
-                        const Text('Select a location'),
-                    ],
-                  ),
+                Column(
+                  children: [
+                    if (_selectedLocation != null)
+                      _buildSignColumn(
+                        (_selectedLocation!['display_id'] ??
+                                _selectedLocation!['id'])
+                            .toString(),
+                        'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=hourly',
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: const Text('Select a location'),
+                      ),
+                    const SizedBox(height: 24),
+                    // Flyer QR
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Text('FLYER QR (15% COMM)',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  color: Colors.blue,
+                                  letterSpacing: 1.2)),
+                          const SizedBox(height: 16),
+                          if (_selectedLocation != null)
+                            QrImageView(
+                              data:
+                                  'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=flyer',
+                              version: QrVersions.auto,
+                              size: 160.0,
+                            )
+                          else
+                            const Text('Select a location'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -598,8 +719,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.black, // Changed to Pure Black
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white54, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -622,8 +751,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             value: _autopilotEnabled,
             onChanged: (val) => setState(() => _autopilotEnabled = val),
             activeColor: Colors.white,
-            activeTrackColor: Colors.black,
-            inactiveTrackColor: Colors.white10,
+            activeTrackColor: Colors.white70,
+            inactiveTrackColor: Colors.white38,
           ),
         ],
       ),
@@ -745,6 +874,193 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             fontWeight: FontWeight.bold,
             letterSpacing: 1,
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadSign() async {
+    try {
+      final boundary =
+          _signKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 6.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+      if (kIsWeb) {
+        final fileName =
+            'parking_sign_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
+        downloadFileWeb(pngBytes, fileName);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Download supported on Web only.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating sign: $e')),
+      );
+    }
+  }
+
+  Widget _buildSignColumn(String displayId, String stripeUrl) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Your Parking Sign',
+          style: GoogleFonts.inter(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        LayoutBuilder(builder: (context, constraints) {
+          final double scale =
+              constraints.maxWidth < 400 ? constraints.maxWidth / 400 : 1.0;
+          if (scale < 1.0) {
+            return Transform.scale(
+              scale: scale,
+              alignment: Alignment.topCenter,
+              child: _buildSignContent(displayId, stripeUrl),
+            );
+          }
+          return _buildSignContent(displayId, stripeUrl);
+        }),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          onPressed: _downloadSign,
+          icon: const Icon(Icons.download),
+          label: const Text('Download Sign'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignContent(String displayId, String stripeUrl) {
+    return RepaintBoundary(
+      key: _signKey,
+      child: Container(
+        width: 400,
+        height: 600,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/sign_template_v2.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.image_not_supported,
+                          color: Colors.grey, size: 48),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Template not found',
+                        style:
+                            GoogleFonts.inter(color: Colors.grey, fontSize: 12),
+                      ),
+                      Text(
+                        'assets/images/your_photo.png',
+                        style:
+                            GoogleFonts.inter(color: Colors.grey, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 48,
+              left: 0,
+              right: 0,
+              height: 56,
+              child: Center(
+                child: Text(
+                  (_selectedLocation?['name'] ?? '').toString().toUpperCase(),
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: const Alignment(0, 0.28),
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    QrImageView(
+                      data: stripeUrl,
+                      version: QrVersions.auto,
+                      size: 120.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Colors.black,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'P',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 52,
+              bottom: 4,
+              child: Row(
+                children: [
+                  Text(
+                    displayId,
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -135,7 +135,9 @@ class _HudScreenState extends ConsumerState<HudScreen> {
           _isBusy ||
           !mounted ||
           _controller == null ||
-          !_controller!.value.isInitialized) return;
+          !_controller!.value.isInitialized) {
+        return;
+      }
 
       try {
         _isBusy = true;
@@ -255,8 +257,9 @@ class _HudScreenState extends ConsumerState<HudScreen> {
   }
 
   Future<void> _triggerManualValidation() async {
-    if (_isBusy || _controller == null || !_controller!.value.isInitialized)
+    if (_isBusy || _controller == null || !_controller!.value.isInitialized) {
       return;
+    }
 
     try {
       _isBusy = true;
@@ -643,6 +646,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     if (_isProcessing) return;
     final profile = ref.read(userProfileProvider).value;
     if (profile == null) return;
+    final issuerRole = profile['role'] == 'super_admin' ? 'payparq' : 'admin';
 
     final locationDisplayId =
         ref.read(selectedLocationIdProvider) ?? profile['location_id'];
@@ -676,17 +680,116 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     try {
       setState(() {
         _isProcessing = true;
-        _statusMessage = isWarning ? "ISSUING WARNING..." : "ISSUING TICKET...";
+        _statusMessage = isWarning ? "CAPTURING..." : "CAPTURING...";
         _statusColor = isWarning ? Colors.orange : Colors.red;
       });
 
       final image = await _controller!.takePicture();
+      final imageBytes = await image.readAsBytes();
+      final initialPlate = _detectedPlate ?? _currentTempId;
 
-      // Use detected plate if available, otherwise fallback to temporary ID
-      final plate = _detectedPlate ?? _currentTempId;
+      // Show confirmation dialog after taking photo
+      if (!mounted) return;
+      final plateController = TextEditingController(text: initialPlate);
+      final confirmedPlate = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.black.withOpacity(0.9),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: isWarning ? Colors.orange : Colors.red)),
+          title: Text(
+            isWarning ? 'CONFIRM WARNING' : 'CONFIRM TICKET',
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  imageBytes,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "VERIFY LICENSE PLATE",
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: plateController,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2),
+                textAlign: TextAlign.center,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+                ],
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.1),
+                  hintText: 'MA679XX',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  const Text('CANCEL', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (plateController.text.trim().isNotEmpty) {
+                  Navigator.pop(
+                      context, plateController.text.trim().toUpperCase());
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isWarning ? Colors.orange : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('CONFIRM & ISSUE'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmedPlate == null || confirmedPlate.isEmpty) {
+        setState(() {
+          _isProcessing = false;
+          _statusMessage = "SCANNING...";
+          _statusColor = Colors.white;
+        });
+        return;
+      }
+
+      setState(() {
+        _statusMessage = isWarning ? "ISSUING WARNING..." : "ISSUING TICKET...";
+        _statusColor = isWarning ? Colors.orange : Colors.red;
+      });
+
+      final plate = confirmedPlate;
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
 
-      final bytes = await image.readAsBytes();
+      final bytes = imageBytes;
       await supabase.storage.from('evidence').uploadBinary(
             fileName,
             bytes,
@@ -701,8 +804,9 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         'status': isWarning ? 'warning' : 'issued',
         'location_id': locUuid,
         'is_lpr_scan': true,
-        'evidence_r2_url': fileName, // Use the correct column name from schema
+        'evidence_r2_url': fileName,
         'issued_at': DateTime.now().toIso8601String(),
+        'issuer_role': issuerRole,
       }).select();
 
       if (mounted) {
@@ -768,7 +872,7 @@ class TacticalHudPainter extends CustomPainter {
       height: roiHeight,
     );
 
-    final cornerSize = 40.0;
+    const cornerSize = 40.0;
 
     // 1. Draw Docked Data Tray (The "Instrument" look)
     final trayPaint = Paint()
@@ -819,9 +923,9 @@ class TacticalHudPainter extends CustomPainter {
       ..strokeWidth = 1;
 
     canvas.drawLine(roiRect.topLeft + Offset(0, cornerSize),
-        roiRect.bottomLeft - Offset(0, 0), bracketPaint);
+        roiRect.bottomLeft - const Offset(0, 0), bracketPaint);
     canvas.drawLine(roiRect.topRight + Offset(0, cornerSize),
-        roiRect.bottomRight - Offset(0, 0), bracketPaint);
+        roiRect.bottomRight - const Offset(0, 0), bracketPaint);
 
     // 4. Scanning Laser Beam (Only if scanning)
     if (isScanning) {

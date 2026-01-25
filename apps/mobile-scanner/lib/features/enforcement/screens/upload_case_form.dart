@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart'; // For kIsWeb
+// For kIsWeb
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -72,6 +71,9 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
     try {
       final supabase = Supabase.instance.client;
       final selectedLocId = ref.read(selectedLocationIdProvider);
+      final profile = ref.read(userProfileProvider).value;
+      final issuerRole =
+          profile?['role'] == 'super_admin' ? 'payparq' : 'admin';
 
       if (selectedLocId == null) {
         throw Exception(
@@ -119,6 +121,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
         'location_id': locUuid,
         'evidence_r2_url': fileName, // Use the correct column name from schema
         'issued_at': DateTime.now().toIso8601String(),
+        'issuer_role': issuerRole,
       }).select();
 
       ref.invalidate(violationsStreamProvider);

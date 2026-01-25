@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:payparq_scanner/utils/web_download_helper.dart';
+import '../../../../theme.dart';
 
 class VerificationUploadScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> location;
@@ -29,6 +30,17 @@ class _VerificationUploadScreenState
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
   final GlobalKey _signKey = GlobalKey();
+  List<String> _existingPhotoUrls = [];
+
+  // Removed call scheduling state
+  @override
+  void initState() {
+    super.initState();
+    final photos = widget.location['verification_photos'];
+    if (photos is List) {
+      _existingPhotoUrls = photos.map((e) => e.toString()).toList();
+    }
+  }
 
   Future<void> _pickImage() async {
     if (_selectedImages.length >= 5) {
@@ -79,7 +91,7 @@ class _VerificationUploadScreenState
     try {
       RenderRepaintBoundary boundary =
           _signKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ui.Image image = await boundary.toImage(pixelRatio: 6.0);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
@@ -194,21 +206,33 @@ class _VerificationUploadScreenState
   @override
   Widget build(BuildContext context) {
     final String displayId = widget.location['display_id'] ?? 'N/A';
+    final String status =
+        widget.location['verification_status'] ?? 'unverified';
     final String stripeUrl =
         'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=$displayId&type=hourly';
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
+    // Determine what to show based on status
+    final bool showPhotosOnly = status == 'unverified';
+    final bool isPending = status == 'pending';
+    final bool isVerified = status == 'verified';
+    // Removed call scheduling status
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppTheme.lightBackground,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
         title: Text(
           'Verify Lot: ${widget.location['name']}',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
@@ -217,29 +241,96 @@ class _VerificationUploadScreenState
             }
           },
         ),
+        actions: const [SizedBox(width: 16)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: isNarrow
-            ? Column(
-                children: [
-                  _buildSignColumn(displayId, stripeUrl),
-                  const SizedBox(height: 48),
-                  _buildUploadColumn(),
-                ],
+        child: Column(
+          children: [
+            if (isPending)
+              _buildStatusBanner(
+                Icons.hourglass_empty,
+                Colors.orange,
+                'Verification Pending',
+                'We are currently reviewing your photos. This usually takes 24-48 hours.',
               )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 1, child: _buildUploadColumn()),
-                  const SizedBox(width: 48),
-                  Expanded(
-                      flex: 1, child: _buildSignColumn(displayId, stripeUrl)),
-                ],
-              ),
+            else if (isVerified)
+              _buildStatusBanner(
+                Icons.verified,
+                Colors.green,
+                'Lot Verified',
+                'Your lot has been successfully verified. You can now start managing sessions.',
+              )
+            else
+              isNarrow
+                  ? Column(
+                      children: [
+                        _buildSignColumn(displayId, stripeUrl),
+                        const SizedBox(height: 48),
+                        if (showPhotosOnly) _buildUploadColumn(),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            children: [
+                              if (showPhotosOnly) _buildUploadColumn(),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                        Expanded(
+                          flex: 1,
+                          child: _buildSignColumn(displayId, stripeUrl),
+                        ),
+                      ],
+                    ),
+          ],
+        ),
       ),
     );
   }
+
+  Widget _buildStatusBanner(
+      IconData icon, Color color, String title, String subtitle) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 64),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Removed call scheduling section and picker button
 
   Widget _buildUploadColumn() {
     return Column(
@@ -248,19 +339,19 @@ class _VerificationUploadScreenState
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.blue.withOpacity(0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            border: Border.all(color: Colors.blue.withOpacity(0.1)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.orange),
+              const Icon(Icons.info_outline, color: Colors.blue),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   'Please upload 3-5 high-quality photos of your lot showing our signage clearly.',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 14,
                   ),
                 ),
@@ -269,10 +360,44 @@ class _VerificationUploadScreenState
           ),
         ),
         const SizedBox(height: 32),
+        if (_existingPhotoUrls.isNotEmpty) ...[
+          Text(
+            'Previously Uploaded (${_existingPhotoUrls.length})',
+            style: GoogleFonts.inter(
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: _existingPhotoUrls.length,
+            itemBuilder: (context, index) {
+              return Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.border),
+                  image: DecorationImage(
+                    image: NetworkImage(_existingPhotoUrls[index]),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+        ],
         Text(
           'Upload Photos (${_selectedImages.length}/5)',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -294,26 +419,26 @@ class _VerificationUploadScreenState
                 onTap: () {
                   showModalBottomSheet(
                     context: context,
-                    backgroundColor: const Color(0xFF1A1A1A),
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
                     builder: (context) => SafeArea(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.camera_alt,
-                                color: Colors.white),
-                            title: const Text('Take Photo',
-                                style: TextStyle(color: Colors.white)),
+                            leading: const Icon(Icons.camera_alt),
+                            title: const Text('Take Photo'),
                             onTap: () {
                               Navigator.pop(context);
                               _pickImage();
                             },
                           ),
                           ListTile(
-                            leading: const Icon(Icons.photo_library,
-                                color: Colors.white),
-                            title: const Text('Choose from Gallery',
-                                style: TextStyle(color: Colors.white)),
+                            leading: const Icon(Icons.photo_library),
+                            title: const Text('Choose from Gallery'),
                             onTap: () {
                               Navigator.pop(context);
                               _pickFromGallery();
@@ -326,9 +451,9 @@ class _VerificationUploadScreenState
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    border: Border.all(color: AppTheme.border),
                   ),
                   child: const Icon(Icons.add_a_photo, color: Colors.grey),
                 ),
@@ -340,6 +465,7 @@ class _VerificationUploadScreenState
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.border),
                     image: DecorationImage(
                       image: kIsWeb
                           ? NetworkImage(_selectedImages[index].path)
@@ -376,14 +502,15 @@ class _VerificationUploadScreenState
           child: ElevatedButton(
             onPressed: _isUploading ? null : _submitVerification,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 0,
             ),
             child: _isUploading
-                ? const CircularProgressIndicator(color: Colors.black)
+                ? const CircularProgressIndicator(color: Colors.white)
                 : Text(
                     'Submit for Verification',
                     style: GoogleFonts.inter(
@@ -391,6 +518,19 @@ class _VerificationUploadScreenState
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel & Go Back',
+              style: GoogleFonts.inter(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+              ),
+            ),
           ),
         ),
       ],
@@ -404,17 +544,13 @@ class _VerificationUploadScreenState
         Text(
           'Your Parking Sign',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
-        // Wrap RepaintBoundary in a SingleChildScrollView or similar to avoid overflow if needed,
-        // but mainly we want to ensure it fits.
-        // For mobile, we might want to scale it down visually but keep pixel density for download.
         LayoutBuilder(builder: (context, constraints) {
-          // If screen is narrow, we might need to scale the preview down
           final double scale =
               constraints.maxWidth < 400 ? constraints.maxWidth / 400 : 1.0;
 
@@ -433,12 +569,13 @@ class _VerificationUploadScreenState
           icon: const Icon(Icons.download),
           label: const Text('Download Sign'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            elevation: 0,
           ),
         ),
       ],
@@ -455,131 +592,104 @@ class _VerificationUploadScreenState
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Container(
-              height: 60,
-              alignment: Alignment.center,
-              child: Text(
-                widget.location['name'].toString().toUpperCase(),
-                style: GoogleFonts.inter(
-                  color: Colors.black,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/sign_template_v2.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  color: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.image_not_supported,
+                          color: Colors.grey, size: 48),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Template not found',
+                        style:
+                            GoogleFonts.inter(color: Colors.grey, fontSize: 12),
+                      ),
+                      Text(
+                        'assets/images/your_photo.png',
+                        style:
+                            GoogleFonts.inter(color: Colors.grey, fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                color: const Color(0xFF111111),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Positioned(
+              top: 48,
+              left: 0,
+              right: 0,
+              height: 56,
+              child: Center(
+                child: Text(
+                  widget.location['name'].toString().toUpperCase(),
+                  style: GoogleFonts.montserrat(
+                    color: Colors.black,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ),
+            ),
+            Align(
+              alignment: const Alignment(0, 0.28),
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Column(
-                      children: [
-                        Text(
-                          'Safe parking',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                                width: 30, height: 1, color: Colors.white54),
-                            const SizedBox(width: 12),
-                            Text(
-                              'WITH',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                                width: 30, height: 1, color: Colors.white54),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'payparq',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                      ],
+                    QrImageView(
+                      data: stripeUrl,
+                      version: QrVersions.auto,
+                      size: 120.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Colors.black,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black,
+                      ),
                     ),
                     Container(
-                      width: 220,
-                      height: 220,
-                      decoration: BoxDecoration(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        shape: BoxShape.circle,
                       ),
-                      padding: const EdgeInsets.all(20),
-                      child: QrImageView(
-                        data: stripeUrl,
-                        version: QrVersions.auto,
-                        size: 200.0,
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Scan to ',
-                              style: GoogleFonts.inter(
-                                  color: Colors.white, fontSize: 18),
-                            ),
-                            Text(
-                              'stripe',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
+                      alignment: Alignment.center,
+                      child: Text(
+                        'P',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
                         ),
-                        const SizedBox(height: 40),
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              alignment: Alignment.centerLeft,
+            Positioned(
+              left: 52,
+              bottom: 4,
               child: Row(
                 children: [
-                  Text(
-                    'ID ',
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
                   Text(
                     displayId,
                     style: GoogleFonts.inter(
                       color: Colors.black,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -591,4 +701,64 @@ class _VerificationUploadScreenState
       ),
     );
   }
+}
+
+class QrFramePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke;
+
+    const length = 40.0;
+    const radius = 24.0;
+
+    // Top Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, length)
+        ..lineTo(0, radius)
+        ..arcToPoint(const Offset(radius, 0),
+            radius: const Radius.circular(radius))
+        ..lineTo(length, 0),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - length, 0)
+        ..lineTo(size.width - radius, 0)
+        ..arcToPoint(Offset(size.width, radius),
+            radius: const Radius.circular(radius))
+        ..lineTo(size.width, length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width, size.height - length)
+        ..lineTo(size.width, size.height - radius)
+        ..arcToPoint(Offset(size.width - radius, size.height),
+            radius: const Radius.circular(radius))
+        ..lineTo(size.width - length, size.height),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(length, size.height)
+        ..lineTo(radius, size.height)
+        ..arcToPoint(Offset(0, size.height - radius),
+            radius: const Radius.circular(radius))
+        ..lineTo(0, size.height - length),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

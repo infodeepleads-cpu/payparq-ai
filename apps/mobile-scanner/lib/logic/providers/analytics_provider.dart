@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/management/repositories/parking_repository.dart';
-import 'auth_providers.dart';
 
 class DashboardAnalytics {
   final double dailyRevenue;
@@ -102,11 +101,90 @@ final analyticsProvider = Provider<AsyncValue<DashboardAnalytics>>((ref) {
     }
   }
 
-  // 2. NET REVENUE (Commission Logic 5-50% depending on package)
-  // Logic: 15% flat commission for now as a baseline
-  double calculateNet(double gross) => gross * 0.85;
-  double netDaily = calculateNet(dailyRev);
-  double netMonthly = calculateNet(monthlyRev);
+  // 2. NET REVENUE & COMMISSION LOGIC
+  // Shared Revenue = Gross - (Stripe Fees + Transactional/Tax)
+  // Commission = Shared Revenue * Rate
+  double totalCommission = 0;
+
+  double calculateItemCommission(double gross, Map<String, dynamic>? location, String type, {String? subType}) {
+    if (location == null) return gross * 0.15; // Fallback
+
+    // 1. Calculate Shared Revenue (Deduct fees)
+    // Estimate: Stripe (2.9% + 0.30) + other charges (~5%)
+    double stripeFee = (gross * 0.029) + 0.30;
+    double otherCharges = gross * 0.05;
+    double sharedRevenue = gross - stripeFee - otherCharges;
+    if (sharedRevenue < 0) sharedRevenue = 0;
+
+    // 2. Determine Rate
+    bool isRunByPayparq = location['is_run_by_payparq'] ?? false;
+    double rate = 0.15; // Default
+
+    if (isRunByPayparq) {
+      rate = 0.50;
+    } else {
+      if (type == 'violation') {
+        if (subType == 'payparq') {
+          rate = location['comm_payparq_enforcement']?.toDouble() ?? 0.50;
+        } else {
+          rate = location['comm_admin_photo_enforcement']?.toDouble() ?? 0.25;
+        }
+      } else if (type == 'session') {
+        if (subType == 'flyer') {
+          rate = location['comm_admin_flyer_payment']?.toDouble() ?? 0.15;
+        } else {
+          rate = location['comm_regular_payment']?.toDouble() ?? 0.15;
+        }
+      } else if (type == 'permit') {
+        rate = location['comm_regular_payment']?.toDouble() ?? 0.15;
+      }
+    }
+
+    return sharedRevenue * rate;
+  }
+
+  // Recalculate Net Revenue by iterating items
+  double netDaily = 0;
+  double netMonthly = 0;
+
+  for (var s in sessions) {
+    if (s['payment_status'] != 'paid') continue;
+    final date = DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
+    final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
+    final loc = locations.firstWhere((l) => l['id'] == s['location_id'] || l['display_id'] == s['location_id'], orElse: () => {});
+    
+    double comm = calculateItemCommission(price, loc, 'session', subType: s['payment_source']);
+    double net = price - (price * 0.079 + 0.30) - comm; // Gross - Fees - Commission
+
+    if (date.isAfter(today)) netDaily += net;
+    if (date.isAfter(startOfMonth)) netMonthly += net;
+  }
+
+  for (var v in violations) {
+    if (v['status'] != 'paid') continue;
+    final date = DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
+    final amount = double.tryParse(v['fine_amount']?.toString() ?? '0') ?? 0.0;
+    final loc = locations.firstWhere((l) => l['id'] == v['location_id'], orElse: () => {});
+
+    double comm = calculateItemCommission(amount, loc, 'violation', subType: v['issuer_role']);
+    double net = amount - (amount * 0.079 + 0.30) - comm;
+
+    if (date.isAfter(today)) netDaily += net;
+    if (date.isAfter(startOfMonth)) netMonthly += net;
+  }
+
+  for (var p in permits) {
+    if (p['status'] != 'active') continue;
+    final price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
+    final loc = locations.firstWhere((l) => l['id'] == p['location_id'], orElse: () => {});
+
+    double comm = calculateItemCommission(price, loc, 'permit');
+    double net = price - (price * 0.079 + 0.30) - comm;
+
+    // Monthly portion
+    netMonthly += net;
+    netDaily += net / 30;
+  }
 
   // 3. OCCUPANCY CALCULATIONS
   double totalSpots = 0;

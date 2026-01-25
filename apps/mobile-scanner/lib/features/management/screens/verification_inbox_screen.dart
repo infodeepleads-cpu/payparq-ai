@@ -19,14 +19,24 @@ class VerificationInboxScreen extends ConsumerWidget {
   const VerificationInboxScreen({super.key});
 
   Future<void> _updateStatus(
-      BuildContext context, String locationId, String status) async {
+      BuildContext context, String locationId, String status,
+      {bool? isRunByPayparq}) async {
     try {
-      await Supabase.instance.client.from('locations').update({
+      final updates = <String, dynamic>{
         'verification_status': status,
         'verification_reviewed_at': DateTime.now().toIso8601String(),
         'verification_reviewed_by':
             Supabase.instance.client.auth.currentUser?.id,
-      }).eq('id', locationId);
+      };
+
+      if (isRunByPayparq != null) {
+        updates['is_run_by_payparq'] = isRunByPayparq;
+      }
+
+      await Supabase.instance.client
+          .from('locations')
+          .update(updates)
+          .eq('id', locationId);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,138 +55,196 @@ class VerificationInboxScreen extends ConsumerWidget {
   }
 
   void _showVerificationDetail(BuildContext context, Map<String, dynamic> loc) {
+    final rootContext = context;
     final List<dynamic> photos = loc['verification_photos'] ?? [];
     final submittedAt = loc['verification_submitted_at'] != null
         ? DateTime.parse(loc['verification_submitted_at'])
         : null;
+    bool isRunByPayparq = false;
 
     showDialog(
       context: context,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Column(
-          children: [
-            AppBar(
-              backgroundColor: Colors.black,
-              title: Text(loc['name'] ?? 'Verification Detail'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Submitted on: ${submittedAt != null ? DateFormat('MMM dd, yyyy HH:mm').format(submittedAt) : 'N/A'}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Verification Photos (${photos.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: photos.length,
-                      itemBuilder: (context, index) {
-                        return InkWell(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => Dialog.fullscreen(
-                                backgroundColor: Colors.black,
-                                child: Stack(
-                                  children: [
-                                    Center(
-                                      child: Image.network(photos[index]),
-                                    ),
-                                    Positioned(
-                                      top: 40,
-                                      right: 20,
-                                      child: IconButton(
-                                        icon: const Icon(Icons.close,
-                                            color: Colors.white, size: 30),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              photos[index],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                color: Colors.grey[900],
-                                child: const Icon(Icons.error_outline,
-                                    color: Colors.red),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 48),
-                    Text(
-                      'Actions',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _buildActionButton(context, 'Approve', Colors.green,
-                            () {
-                          _updateStatus(context, loc['id'], 'verified');
-                          Navigator.pop(context);
-                        }),
-                        _buildActionButton(
-                            context, 'Request Video', Colors.purple, () {
-                          _updateStatus(context, loc['id'], 'video_required');
-                          Navigator.pop(context);
-                        }),
-                        _buildActionButton(
-                            context, 'Schedule Call', Colors.blue, () {
-                          _updateStatus(context, loc['id'], 'call_scheduled');
-                          Navigator.pop(context);
-                        }),
-                        _buildActionButton(context, 'Reject', Colors.red, () {
-                          _updateStatus(context, loc['id'], 'rejected');
-                          Navigator.pop(context);
-                        }),
-                      ],
-                    ),
-                  ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Column(
+            children: [
+              AppBar(
+                backgroundColor: Colors.black,
+                title: Text(loc['name'] ?? 'Verification Detail'),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Submitted on: ${submittedAt != null ? DateFormat('MMM dd, yyyy HH:mm').format(submittedAt) : 'N/A'}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Lot Management Type',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: Colors.white.withOpacity(0.1)),
+                        ),
+                        child: Column(
+                          children: [
+                            RadioListTile<bool>(
+                              title: const Text('Regular Lot',
+                                  style: TextStyle(color: Colors.white)),
+                              subtitle: const Text(
+                                  'Admin managed. Standard commissions apply.',
+                                  style: TextStyle(color: Colors.grey)),
+                              value: false,
+                              groupValue: isRunByPayparq,
+                              onChanged: (val) =>
+                                  setDialogState(() => isRunByPayparq = val!),
+                              activeColor: Colors.blue,
+                            ),
+                            RadioListTile<bool>(
+                              title: const Text('Run by Payparq',
+                                  style: TextStyle(color: Colors.white)),
+                              subtitle: const Text(
+                                  'Payparq managed. 50% flat commission on all shared revenue.',
+                                  style: TextStyle(color: Colors.grey)),
+                              value: true,
+                              groupValue: isRunByPayparq,
+                              onChanged: (val) =>
+                                  setDialogState(() => isRunByPayparq = val!),
+                              activeColor: Colors.blue,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'Verification Photos (${photos.length})',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1,
+                        ),
+                        itemCount: photos.length,
+                        itemBuilder: (context, index) {
+                          return InkWell(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => Dialog.fullscreen(
+                                  backgroundColor: Colors.black,
+                                  child: Stack(
+                                    children: [
+                                      Center(
+                                        child: Image.network(photos[index]),
+                                      ),
+                                      Positioned(
+                                        top: 40,
+                                        right: 20,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.close,
+                                              color: Colors.white, size: 30),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                photos[index],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                  color: Colors.grey[900],
+                                  child: const Icon(Icons.error_outline,
+                                      color: Colors.red),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 48),
+                      Text(
+                        'Actions',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          _buildActionButton(context, 'Approve', Colors.green,
+                              () async {
+                            await _updateStatus(
+                                rootContext, loc['id'], 'verified',
+                                isRunByPayparq: isRunByPayparq);
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          }),
+                          _buildActionButton(context, 'Contact Required',
+                              Colors.blue, () async {
+                            await _updateStatus(
+                                rootContext, loc['id'], 'contact_required');
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          }),
+                          _buildActionButton(context, 'Reject', Colors.red,
+                              () async {
+                            await _updateStatus(
+                                rootContext, loc['id'], 'rejected');
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

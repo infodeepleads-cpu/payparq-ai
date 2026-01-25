@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -57,7 +58,79 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       return;
     }
 
-    // 1. Capture Photo
+    // Mandatory Plate Entry for Desktop
+    final plateController = TextEditingController();
+    final plate = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(isWarning ? 'Quick Warning' : 'Quick Ticket',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Enter License Plate (e.g. MA679XX)',
+                style: GoogleFonts.inter(
+                    fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: plateController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+              ],
+              decoration: InputDecoration(
+                hintText: 'MA679XX',
+                filled: true,
+                fillColor: AppTheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (v) {
+                final cleaned =
+                    v.trim().replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+                if (cleaned.isNotEmpty) Navigator.pop(context, cleaned);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final cleaned = plateController.text
+                  .trim()
+                  .replaceAll(RegExp(r'[^A-Z0-9]'), '')
+                  .toUpperCase();
+              if (cleaned.isNotEmpty) {
+                Navigator.pop(context, cleaned);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isWarning ? Colors.orange : Colors.black,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Next: Take Photo'),
+          ),
+        ],
+      ),
+    );
+
+    if (plate == null || plate.isEmpty) return;
+
+    // 1. Capture Photo (Mandatory)
     final XFile? image =
         await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
     if (image == null) return;
@@ -66,9 +139,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     setState(() => _isProcessing = true);
 
     try {
-      // Use a placeholder plate for "Quick Actions" until LPR is integrated
-      final plate =
-          'QUICK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
 
       // 2. Upload Evidence
@@ -86,14 +156,17 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         'fine_amount': isWarning ? 0.00 : 50.00,
         'status': isWarning ? 'warning' : 'issued',
         'issued_at': DateTime.now().toIso8601String(),
-        'evidence_r2_url': null,
+        'evidence_r2_url': fileName,
+        'location_id': locUuid,
       };
+
       setState(() {
         ref.read(optimisticViolationsProvider.notifier).update((state) => [
               optimisticViolation!,
               ...state,
             ]);
       });
+
       await supabase.from('violations').insert({
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
@@ -102,7 +175,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         'location_id': locUuid,
         'evidence_r2_url': fileName,
         'issued_at': DateTime.now().toIso8601String(),
-      }).select();
+        'is_lpr_scan': false,
+      });
+
       ref.invalidate(violationsStreamProvider);
 
       if (mounted) {
@@ -113,6 +188,22 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ),
         );
       }
+
+      ref.listen(violationsStreamProvider, (prev, next) {
+        final violations = next.value ?? [];
+        final exists = violations.any((v) =>
+            (v['plate'] ?? '') == plate &&
+            (v['evidence_r2_url'] ?? '') == fileName &&
+            (v['issued_at'] ?? '') != null);
+        if (exists) {
+          ref.read(optimisticViolationsProvider.notifier).update((state) =>
+              state
+                  .where((v) =>
+                      (v['plate'] ?? '') != plate ||
+                      (v['evidence_r2_url'] ?? '') != fileName)
+                  .toList());
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,10 +214,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       if (mounted) {
         setState(() {
           _isProcessing = false;
-          if (optimisticViolation != null) {
-            ref.read(optimisticViolationsProvider.notifier).update((state) =>
-                state.where((v) => v != optimisticViolation).toList());
-          }
+          // Keep optimistic item until the real stream shows the inserted record,
+          // then remove it in the listener above. This prevents flicker/disappear.
         });
       }
     }
@@ -462,9 +551,15 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           const Center(child: CircularProgressIndicator(color: Colors.black)),
       error: (err, stack) => Center(child: Text('Error: $err')),
       data: (violations) {
-        // Deduplicate: Don't show optimistic item if the real one has arrived in the stream
+        // Deduplicate: keep optimistic item unless the SAME record (by evidence + timestamp) arrived
         final optimisticItems = optimisticViolations.where((ov) {
-          return !violations.any((v) => v['plate'] == ov['plate']);
+          final ovPlate = ov['plate'];
+          final ovEvidence = ov['evidence_r2_url'];
+          final ovIssuedAt = ov['issued_at'];
+          return !violations.any((v) =>
+              v['plate'] == ovPlate &&
+              v['evidence_r2_url'] == ovEvidence &&
+              v['issued_at'] == ovIssuedAt);
         }).toList();
 
         var allViolations = [

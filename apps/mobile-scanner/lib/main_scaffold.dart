@@ -106,7 +106,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     if (profile == null) return _buildFinalizingScreen();
 
-    final displayLocId = selectedLocId ?? profile?['location_id'];
+    final displayLocId = selectedLocId ?? profile['location_id'];
 
     return Scaffold(
       appBar: AppBar(
@@ -234,9 +234,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       type: BottomNavigationBarType.fixed,
       currentIndex: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
       onTap: (index) {
-        if (index == 0)
+        if (index == 0) {
           _onItemTapped(2); // Dashboard (Home)
-        else if (index == 1)
+        } else if (index == 1)
           _onItemTapped(1); // Scanner
         else if (index == 2) _onItemTapped(0); // Cases
       },
@@ -493,18 +493,18 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           Expanded(
                             child: IndexedStack(
                               index: _selectedIndex,
-                              children: [
-                                const CasesListView(),
-                                const UploadCaseForm(),
-                                const AdminDashboardScreen(),
-                                const PassesListScreen(),
-                                const LocationsScreen(),
-                                const AddStaffScreen(),
-                                const DynamicPricingScreen(),
-                                const AnalyticsDashboardScreen(),
-                                const SettingsScreen(),
-                                const FinanceScreen(),
-                                const VerificationInboxScreen(),
+                              children: const [
+                                CasesListView(),
+                                UploadCaseForm(),
+                                AdminDashboardScreen(),
+                                PassesListScreen(),
+                                LocationsScreen(),
+                                AddStaffScreen(),
+                                DynamicPricingScreen(),
+                                AnalyticsDashboardScreen(),
+                                SettingsScreen(),
+                                FinanceScreen(),
+                                VerificationInboxScreen(),
                               ],
                             ),
                           ),
@@ -745,7 +745,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildSidebarItem(int index, String title, IconData icon,
-      {bool isSelected = false, int? badgeCount, VoidCallback? onTapOverride}) {
+      {bool isSelected = false, VoidCallback? onTapOverride}) {
     final bool active = isSelected || _selectedIndex == index;
 
     return Container(

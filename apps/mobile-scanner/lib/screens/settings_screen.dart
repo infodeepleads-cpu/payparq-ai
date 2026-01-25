@@ -13,8 +13,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _realtimeEnabled = true;
-  String _currency = 'USD';
+  final bool _realtimeEnabled = true;
+  final String _currency = 'USD';
   final _orgController = TextEditingController(text: 'PayParq Metropolis');
   final _emailController = TextEditingController(text: 'admin@payparq.ai');
 
@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       // Use a valid UUID format for testing until the SQL migration is run
       // This ensures the simulation works immediately
-      final testLocId = '00000000-0000-0000-0000-000000000000';
+      const testLocId = '00000000-0000-0000-0000-000000000000';
 
       final session = {
         'location_id': testLocId,

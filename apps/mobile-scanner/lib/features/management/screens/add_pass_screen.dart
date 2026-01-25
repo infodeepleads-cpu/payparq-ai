@@ -266,7 +266,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           const SizedBox(height: 16),
                           Text(
                               'Total Duration: ${_endDate.difference(_startDate).inHours} hours',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   color: AppTheme.textSecondary, fontSize: 13)),
                         ] else ...[
                           _buildDatePicker('Start Date', _startDate, (d) {
@@ -310,7 +310,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                                 ),
                                 child: DropdownButtonHideUnderline(
                                   child: DropdownButtonFormField<int>(
-                                    value: _subscriptionDurationMonths,
+                                    initialValue: _subscriptionDurationMonths,
                                     decoration: const InputDecoration(
                                         border: InputBorder.none),
                                     style: GoogleFonts.inter(
@@ -337,7 +337,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           const SizedBox(height: 12),
                           Text(
                               'Valid until: ${_endDate.toString().split(' ')[0]}',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   color: AppTheme.textSecondary, fontSize: 12)),
                           const SizedBox(height: 32),
                           CheckboxListTile(

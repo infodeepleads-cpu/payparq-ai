@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../instructions_screen.dart';
 import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart';
 import '../../features/management/repositories/parking_repository.dart';
@@ -111,6 +112,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               if (!isDesktop) ...[
                 const SizedBox(height: 24),
                 _buildMobileDownloadWidget(),
+                const SizedBox(height: 16),
+                _buildInstructionsWidget(),
+              ],
+              if (isDesktop) ...[
+                const SizedBox(height: 24),
+                _buildInstructionsWidget(),
               ],
             ],
           ),
@@ -188,6 +195,75 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             child: Text(
               'Install',
               style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionsWidget() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.menu_book_outlined,
+                color: AppTheme.primary, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Operator Guidelines',
+                  style: GoogleFonts.inter(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Learn how to manage your lot efficiently.',
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InstructionsScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: Text(
+              'INSTRUCTIONS',
+              style:
+                  GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
             ),
           ),
         ],

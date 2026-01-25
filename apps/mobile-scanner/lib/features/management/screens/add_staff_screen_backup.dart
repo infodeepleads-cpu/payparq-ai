@@ -206,7 +206,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: role,
+                    initialValue: role,
                     decoration: const InputDecoration(labelText: 'Role'),
                     items: const [
                       DropdownMenuItem(value: 'admin', child: Text('Admin (Full Access)')),
@@ -221,7 +221,7 @@ class _AddStaffScreenState extends State<AddStaffScreen> {
                       if (!snapshot.hasData) return const LinearProgressIndicator();
                       final locations = snapshot.data!;
                       return DropdownButtonFormField<String>(
-                        value: selectedLocationId,
+                        initialValue: selectedLocationId,
                         decoration: const InputDecoration(labelText: 'Assigned Location'),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('All Locations (Global)')),
