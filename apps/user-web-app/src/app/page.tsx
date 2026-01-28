@@ -2,238 +2,154 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      <header className="w-full border-b border-white/10 bg-black/70 backdrop-blur-md fixed top-0 left-0 right-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#5F59FF] flex items-center justify-center text-xs font-black">
-              P
-            </div>
-            <span className="text-sm font-black tracking-tight">
-              payparq<span className="text-[#5F59FF]">.ai</span>
-            </span>
-          </div>
-          <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-white/60">
-            <button className="hover:text-white transition-colors">
-              Platform
+    <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
+      <header className="fixed inset-x-0 top-0 z-40 bg-white">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between text-[11px] font-medium text-black">
+          <div className="flex items-center gap-6">
+            <button className="hover:text-gray-700 transition-colors">
+              Experience
             </button>
-            <button className="hover:text-white transition-colors">
-              Solutions
+            <button className="hover:text-gray-700 transition-colors">
+              Business
             </button>
-            <button className="hover:text-white transition-colors">
-              Customers
+            <button className="hover:text-gray-700 transition-colors">
+              Technology
             </button>
-            <button className="hover:text-white transition-colors">
+            <button className="hover:text-gray-700 transition-colors">
               Company
             </button>
-          </nav>
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-lg font-black tracking-tight">
+              M
+            </div>
+          </div>
           <div className="flex items-center gap-3">
-            <button className="hidden md:inline-flex text-xs font-semibold text-white/70 hover:text-white transition-colors">
-              Talk to sales
+            <button className="px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+              Get in Touch
             </button>
             <Link
-              href="/dashboard"
-              className="text-xs font-bold bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition-colors"
+              href="/pay"
+              className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
             >
-              Sign in
+              Pay Now
             </Link>
           </div>
         </div>
+        <div className="bg-black text-white text-[11px] text-center py-2">
+          <span className="font-semibold">payparq.ai</span> secures smarter parking portfolios with real-time recognition
+        </div>
       </header>
 
-      <main className="flex-1 pt-24">
-        <section className="relative min-h-[640px] flex items-center">
+      <main className="flex-1 pt-[96px] bg-black">
+        <section className="relative min-h-[640px]">
           <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-black" />
-            <div className="absolute -top-40 -right-40 w-[480px] h-[480px] bg-[#5F59FF]/40 blur-[120px]" />
+            <div
+              className="w-full h-full bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "url('https://images.unsplash.com/photo-1504274066651-8d31a536b11a?auto=format&fit=crop&w=1600&q=80')",
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
           </div>
-          <div className="relative z-10 max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-12">
-            <div className="flex-1 max-w-xl space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-semibold tracking-[0.18em] uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#5F59FF]" />
-                Artificial intelligence for parking
-              </div>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[0.9]">
-                Artificial intelligence
-                <br />
-                <span className="text-white/60">for the real world.</span>
-              </h1>
-              <p className="text-sm md:text-base text-white/60 max-w-md">
-                payparq.ai uses computer vision and data to operate parking with
-                zero gates, zero tickets, and zero hardware on site.
+          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[640px]">
+            <div className="max-w-md mb-20">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-white/80 mb-4">
+                Frictionless access to anywhere you want to be
               </p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-[#5F59FF] text-sm font-bold hover:scale-[1.02] transition-transform"
-                >
-                  Get started
-                </Link>
-                <button className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-white/5 border border-white/15 text-sm font-semibold text-white hover:bg-white/10 transition-colors">
-                  Talk to our team
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 max-w-md w-full">
-              <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">
-                      Live session
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white/80">
-                      Downtown Garage • Zone A-12
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-400/15">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-[11px] font-semibold text-green-300">
-                      Active
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
-                      Vehicle
-                    </p>
-                    <p className="text-xl font-black tracking-widest">
-                      ABC 123
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
-                      Duration
-                    </p>
-                    <p className="text-xl font-semibold text-white/90">
-                      2h 15m
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
-                      Location
-                    </p>
-                    <p className="text-sm font-semibold text-white/80">
-                      payparq.ai • P-0241
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
-                      Current total
-                    </p>
-                    <p className="text-xl font-black text-white">$8.50</p>
-                  </div>
-                </div>
-                <button className="w-full mt-2 rounded-2xl bg-white text-black text-sm font-bold py-3 hover:bg-gray-200 transition-colors">
-                  Open customer dashboard
-                </button>
-              </div>
+              <h1 className="text-4xl md:text-5xl font-semibold leading-tight mb-4">
+                payparq makes the world move with you
+              </h1>
+              <p className="text-sm text-white/80 mb-6">
+                A software-only layer that lets drivers arrive, park, and go without gates,
+                tickets, or kiosks. Intelligence lives in the cloud, not in the hardware.
+              </p>
+              <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                <span>Discover How</span>
+                <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
+                  →
+                </span>
+              </button>
             </div>
           </div>
         </section>
 
-        <section className="border-t border-white/10 bg-black">
-          <div className="max-w-7xl mx-auto px-6 py-16 space-y-10">
-            <div className="flex flex-col md:flex-row items-start justify-between gap-8">
-              <div className="space-y-3 max-w-md">
-                <p className="text-[10px] font-semibold text-[#5F59FF] uppercase tracking-[0.2em]">
-                  Why payparq.ai
+        <section className="bg-[#05020A] border-t border-white/10">
+          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+            <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
+                  For drivers, operators, and cities
                 </p>
-                <h2 className="text-2xl md:text-3xl font-black">
-                  Software-only parking with no gates, no tickets, no friction.
+                <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+                  Frictionless access to anywhere you want to be
                 </h2>
-                <p className="text-sm text-white/60">
-                  We replace traditional parking hardware with computer vision,
-                  advanced analytics, and a fully digital customer experience.
+                <p className="text-sm text-white/70 mb-6 max-w-md">
+                  From mixed-use garages to open-air lots, payparq turns any space into a
+                  seamless, app-free arrival experience while unlocking new revenue.
                 </p>
+                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
+                  <span className="text-xs">Download on the App Store</span>
+                </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full md:max-w-xl">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
-                    Compliance
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Company
                   </p>
-                  <p className="text-lg font-bold">License plate first</p>
-                  <p className="text-xs text-white/60">
-                    Every vehicle is captured and validated using AI-powered
-                    scanning.
-                  </p>
+                  <button className="block hover:text-white transition-colors">About</button>
+                  <button className="block hover:text-white transition-colors">Careers</button>
+                  <button className="block hover:text-white transition-colors">News</button>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
-                    Revenue
-                  </p>
-                  <p className="text-lg font-bold">Dynamic pricing</p>
-                  <p className="text-xs text-white/60">
-                    Optimize pricing by time, demand, and location with no
-                    manual updates.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                     Experience
                   </p>
-                  <p className="text-lg font-bold">App-free entry</p>
-                  <p className="text-xs text-white/60">
-                    Drivers just park and go. No tickets, no kiosks, no
-                    downloads.
+                  <button className="block hover:text-white transition-colors">Product</button>
+                  <button className="block hover:text-white transition-colors">Parking</button>
+                  <button className="block hover:text-white transition-colors">Aviation</button>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Policies
                   </p>
+                  <button className="block hover:text-white transition-colors">Legal</button>
+                  <button className="block hover:text-white transition-colors">Privacy</button>
+                  <button className="block hover:text-white transition-colors">Terms</button>
+                  <button className="block hover:text-white transition-colors">
+                    California Privacy
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Platform
+                  </p>
+                  <button className="block hover:text-white transition-colors">API</button>
+                  <button className="block hover:text-white transition-colors">Partners</button>
+                  <button className="block hover:text-white transition-colors">Support</button>
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/10">
-              <div>
-                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
-                  Occupancy
-                </p>
-                <p className="mt-2 text-3xl font-black">98%</p>
-                <p className="mt-1 text-xs text-green-400">
-                  Optimized across downtown portfolio
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
-                  Uplift
-                </p>
-                <p className="mt-2 text-3xl font-black">+22%</p>
-                <p className="mt-1 text-xs text-white/60">
-                  Average revenue per space compared to gated systems
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
-                  Coverage
-                </p>
-                <p className="mt-2 text-3xl font-black">24/7</p>
-                <p className="mt-1 text-xs text-white/60">
-                  Real-time monitoring and enforcement ready
-                </p>
-              </div>
+            <div className="mt-16 text-5xl md:text-7xl font-black tracking-tight text-white/5 select-none">
+              payparq
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-black">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs text-white/50">
+      <footer className="border-t border-white/10 bg-[#05020A]">
+        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
+          <div className="flex items-center gap-2">
             <span>© {new Date().getFullYear()} payparq.ai</span>
             <span className="hidden md:inline-block">•</span>
             <span className="hidden md:inline-block">
-              Artificial intelligence for parking
+              Frictionless access to anywhere you want to be
             </span>
           </div>
-          <div className="flex items-center gap-4 text-xs text-white/50">
-            <button className="hover:text-white transition-colors">
-              Privacy
-            </button>
-            <button className="hover:text-white transition-colors">
-              Terms
-            </button>
-            <button className="hover:text-white transition-colors">
-              Status
-            </button>
+          <div className="flex items-center gap-4">
+            <button className="hover:text-white transition-colors">Status</button>
+            <button className="hover:text-white transition-colors">Contact</button>
           </div>
         </div>
       </footer>
