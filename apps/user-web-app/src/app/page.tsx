@@ -48,7 +48,7 @@ export default function Home() {
               className="w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1504274066651-8d31a536b11a?auto=format&fit=crop&w=1600&q=80')",
+                  "url('https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=1920&q=80')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
