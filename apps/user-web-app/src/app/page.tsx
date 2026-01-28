@@ -1,232 +1,242 @@
-'use client';
+import Link from "next/link";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '../lib/supabase';
-import { 
-  Home, 
-  History, 
-  CreditCard, 
-  Car, 
-  Clock, 
-  MapPin, 
-  ChevronRight, 
-  LogOut 
-} from 'lucide-react';
-
-export default function UserHomePage() {
-  const [history, setHistory] = useState<any[]>([]);
-  const [activeSession, setActiveSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [plate, setPlate] = useState('');
-  const [loc, setLoc] = useState('');
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const locParam = params.get('loc') || '';
-        setLoc(locParam);
-        const lsPlate = localStorage.getItem('plate_number') || '';
-        setPlate(lsPlate);
-        // Fetch recent history
-        const { data: historyData, error } = await supabase
-          .from('parking_sessions')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (historyData) {
-          setHistory(historyData.map(item => ({
-            id: item.id,
-            date: new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            location: item.location_name || 'Unknown Zone',
-            duration: item.duration_minutes ? `${Math.floor(item.duration_minutes / 60)}h ${item.duration_minutes % 60}m` : 'Ongoing',
-            cost: item.total_cost || 0.00
-          })));
-        }
-
-        // Fetch active session
-        const { data: activeData } = await supabase
-          .from('parking_sessions')
-          .select('*')
-          .eq('status', 'active')
-          .single();
-
-        if (activeData) {
-          setActiveSession({
-            id: activeData.id,
-            plate: activeData.vehicle_plate || 'UNKNOWN',
-            location: activeData.location_name || 'Zone A',
-            entry: activeData.created_at,
-            cost: activeData.current_cost || 0.00,
-          });
-        }
-      } catch (e) {
-        console.error('Error loading dashboard:', e);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-background text-white flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-surface border-r border-white/10 flex flex-col">
-        <div className="p-6 border-b border-white/10">
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      <header className="w-full border-b border-white/10 bg-black/70 backdrop-blur-md fixed top-0 left-0 right-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center font-bold">P</div>
-            <span className="font-bold text-lg tracking-tight">PAYPARQ.AI</span>
+            <div className="w-7 h-7 rounded-full bg-[#5F59FF] flex items-center justify-center text-xs font-black">
+              P
+            </div>
+            <span className="text-sm font-black tracking-tight">
+              payparq<span className="text-[#5F59FF]">.ai</span>
+            </span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-white/60">
+            <button className="hover:text-white transition-colors">
+              Platform
+            </button>
+            <button className="hover:text-white transition-colors">
+              Solutions
+            </button>
+            <button className="hover:text-white transition-colors">
+              Customers
+            </button>
+            <button className="hover:text-white transition-colors">
+              Company
+            </button>
+          </nav>
+          <div className="flex items-center gap-3">
+            <button className="hidden md:inline-flex text-xs font-semibold text-white/70 hover:text-white transition-colors">
+              Talk to sales
+            </button>
+            <Link
+              href="/dashboard"
+              className="text-xs font-bold bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition-colors"
+            >
+              Sign in
+            </Link>
           </div>
         </div>
-        
-        <nav className="flex-1 p-4 space-y-2">
-          <Link href="/" className="flex items-center gap-3 px-4 py-3 bg-primary/10 text-primary rounded-lg font-medium transition-colors">
-            <Home size={20} />
-            Home
-          </Link>
-          <Link href="/success" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors">
-            <History size={20} />
-            Activity
-          </Link>
-          <Link href="/vehicles" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors">
-            <Car size={20} />
-            Vehicles
-          </Link>
-          <Link href="/payment" className="flex items-center gap-3 px-4 py-3 text-white/70 hover:bg-white/5 hover:text-white rounded-lg font-medium transition-colors">
-            <CreditCard size={20} />
-            Payment
-          </Link>
-        </nav>
+      </header>
 
-        <div className="p-4 border-t border-white/10">
-          <button className="flex items-center gap-3 w-full px-4 py-3 text-white/50 hover:text-red-400 transition-colors">
-            <LogOut size={20} />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <div className="max-w-4xl mx-auto space-y-8">
-          
-          {/* Greeting */}
-          <div>
-            <h1 className="text-2xl font-bold">Good Afternoon, Karlo</h1>
-            <p className="text-white/50">Here is your parking summary.</p>
+      <main className="flex-1 pt-24">
+        <section className="relative min-h-[640px] flex items-center">
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-gradient-to-b from-black via-black to-black" />
+            <div className="absolute -top-40 -right-40 w-[480px] h-[480px] bg-[#5F59FF]/40 blur-[120px]" />
           </div>
-
-          {/* Active Session Card */}
-          {activeSession ? (
-            <div className="bg-surface border border-primary/50 rounded-2xl p-6 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-4">
-                <span className="bg-green-500/20 text-green-400 border border-green-500/50 px-3 py-1 rounded-full text-xs font-bold uppercase animate-pulse">
-                  Active Session
-                </span>
+          <div className="relative z-10 max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="flex-1 max-w-xl space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-semibold tracking-[0.18em] uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5F59FF]" />
+                Artificial intelligence for parking
               </div>
-              
-              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center relative z-10">
-                <div className="w-16 h-16 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
-                  <Clock size={32} />
-                </div>
-                
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2 text-white/50 text-sm">
-                    <MapPin size={14} />
-                    {activeSession.location}
-                  </div>
-                  <div className="text-3xl font-bold font-mono">{activeSession.plate}</div>
-                  <div className="text-white/70">Started at {new Date(activeSession.entry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-sm text-white/50">Current Total</div>
-                  <div className="text-2xl font-bold text-white">${activeSession.cost.toFixed(2)}</div>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-white/10 flex gap-4">
-                <Link href="/success" className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all">
-                  View Details
-                  <ChevronRight size={18} />
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[0.9]">
+                Artificial intelligence
+                <br />
+                <span className="text-white/60">for the real world.</span>
+              </h1>
+              <p className="text-sm md:text-base text-white/60 max-w-md">
+                payparq.ai uses computer vision and data to operate parking with
+                zero gates, zero tickets, and zero hardware on site.
+              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-[#5F59FF] text-sm font-bold hover:scale-[1.02] transition-transform"
+                >
+                  Get started
                 </Link>
-                <button className="px-6 py-3 border border-white/10 hover:bg-white/5 rounded-xl text-white font-medium transition-colors">
-                  End Session
+                <button className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-white/5 border border-white/15 text-sm font-semibold text-white hover:bg-white/10 transition-colors">
+                  Talk to our team
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="bg-surface border border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center text-white/50 gap-3">
-               <Clock size={48} className="opacity-20" /> 
-               <div className="text-lg">No active parking session</div>
-               <Link href="/payment" className="text-primary hover:underline text-sm">Start a new session</Link>
-            </div>
-          )}
 
-          {/* Recent History */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Recent History</h2>
-              <Link href="/success" className="text-sm text-primary hover:text-primary-hover">View All</Link>
-            </div>
-            
-            <div className="bg-surface border border-white/10 rounded-xl overflow-hidden">
-              {history.map((item, i) => (
-                <div key={item.id} className={`p-4 flex items-center justify-between hover:bg-white/5 transition-colors ${i !== history.length - 1 ? 'border-b border-white/5' : ''}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white/50">
-                      <History size={20} />
-                    </div>
-                    <div>
-                      <div className="font-medium">{item.location}</div>
-                      <div className="text-xs text-white/50">{item.date} • {item.duration}</div>
-                    </div>
+            <div className="flex-1 max-w-md w-full">
+              <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">
+                      Live session
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white/80">
+                      Downtown Garage • Zone A-12
+                    </p>
                   </div>
-                  <div className="font-mono font-medium">${item.cost.toFixed(2)}</div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-400/15">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-[11px] font-semibold text-green-300">
+                      Active
+                    </span>
+                  </div>
                 </div>
-              ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
+                      Vehicle
+                    </p>
+                    <p className="text-xl font-black tracking-widest">
+                      ABC 123
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
+                      Duration
+                    </p>
+                    <p className="text-xl font-semibold text-white/90">
+                      2h 15m
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
+                      Location
+                    </p>
+                    <p className="text-sm font-semibold text-white/80">
+                      payparq.ai • P-0241
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-[0.18em]">
+                      Current total
+                    </p>
+                    <p className="text-xl font-black text-white">$8.50</p>
+                  </div>
+                </div>
+                <button className="w-full mt-2 rounded-2xl bg-white text-black text-sm font-bold py-3 hover:bg-gray-200 transition-colors">
+                  Open customer dashboard
+                </button>
+              </div>
             </div>
           </div>
+        </section>
 
-          <div className="bg-surface border border-white/10 rounded-2xl p-6 space-y-3">
-            <div className="flex gap-3">
-              <input
-                className="flex-1 px-3 py-2 rounded bg-white/10 border border-white/20"
-                placeholder="Plate number"
-                value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-              />
-              <button
-                className="px-4 py-2 bg-primary rounded text-white"
-                onClick={() => {
-                  localStorage.setItem('plate_number', plate);
-                }}
-              >
-                Save Plate
-              </button>
+        <section className="border-t border-white/10 bg-black">
+          <div className="max-w-7xl mx-auto px-6 py-16 space-y-10">
+            <div className="flex flex-col md:flex-row items-start justify-between gap-8">
+              <div className="space-y-3 max-w-md">
+                <p className="text-[10px] font-semibold text-[#5F59FF] uppercase tracking-[0.2em]">
+                  Why payparq.ai
+                </p>
+                <h2 className="text-2xl md:text-3xl font-black">
+                  Software-only parking with no gates, no tickets, no friction.
+                </h2>
+                <p className="text-sm text-white/60">
+                  We replace traditional parking hardware with computer vision,
+                  advanced analytics, and a fully digital customer experience.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full md:max-w-xl">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
+                    Compliance
+                  </p>
+                  <p className="text-lg font-bold">License plate first</p>
+                  <p className="text-xs text-white/60">
+                    Every vehicle is captured and validated using AI-powered
+                    scanning.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
+                    Revenue
+                  </p>
+                  <p className="text-lg font-bold">Dynamic pricing</p>
+                  <p className="text-xs text-white/60">
+                    Optimize pricing by time, demand, and location with no
+                    manual updates.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-2">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-[0.18em]">
+                    Experience
+                  </p>
+                  <p className="text-lg font-bold">App-free entry</p>
+                  <p className="text-xs text-white/60">
+                    Drivers just park and go. No tickets, no kiosks, no
+                    downloads.
+                  </p>
+                </div>
+              </div>
             </div>
-            <button
-              className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl"
-              onClick={async () => {
-                const res = await fetch('/api/stripe/checkout', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ location_id: loc, plate_number: plate }),
-                });
-                const json = await res.json();
-                if (json.url) window.location.href = json.url;
-              }}
-            >
-              Start Checkout
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/10">
+              <div>
+                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
+                  Occupancy
+                </p>
+                <p className="mt-2 text-3xl font-black">98%</p>
+                <p className="mt-1 text-xs text-green-400">
+                  Optimized across downtown portfolio
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
+                  Uplift
+                </p>
+                <p className="mt-2 text-3xl font-black">+22%</p>
+                <p className="mt-1 text-xs text-white/60">
+                  Average revenue per space compared to gated systems
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.18em]">
+                  Coverage
+                </p>
+                <p className="mt-2 text-3xl font-black">24/7</p>
+                <p className="mt-1 text-xs text-white/60">
+                  Real-time monitoring and enforcement ready
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-white/10 bg-black">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-white/50">
+            <span>© {new Date().getFullYear()} payparq.ai</span>
+            <span className="hidden md:inline-block">•</span>
+            <span className="hidden md:inline-block">
+              Artificial intelligence for parking
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-white/50">
+            <button className="hover:text-white transition-colors">
+              Privacy
+            </button>
+            <button className="hover:text-white transition-colors">
+              Terms
+            </button>
+            <button className="hover:text-white transition-colors">
+              Status
             </button>
           </div>
-
         </div>
-      </main>
+      </footer>
     </div>
   );
 }
