@@ -1,31 +1,92 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 export default function Home() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const toggleDropdown = (name: string) => {
+    setActiveDropdown(activeDropdown === name ? null : name);
+  };
+
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 bg-white">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between text-[11px] font-medium text-black">
-          <div className="flex items-center gap-6">
+      <header className="fixed inset-x-0 top-0 z-40 bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between text-[11px] font-medium text-black">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-6">
             <button className="hover:text-gray-700 transition-colors">
               Experience
             </button>
-            <button className="hover:text-gray-700 transition-colors">
-              Business
-            </button>
+            <div className="relative group">
+              <button 
+                onClick={() => toggleDropdown('business')}
+                className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+              >
+                Business
+                <svg className={`w-2.5 h-2.5 transition-transform ${activeDropdown === 'business' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {activeDropdown === 'business' && (
+                <div className="absolute top-full left-0 mt-2 w-40 bg-white border border-gray-100 shadow-lg rounded-lg py-2 z-50">
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">Operators</button>
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">Cities</button>
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">Real Estate</button>
+                </div>
+              )}
+            </div>
             <button className="hover:text-gray-700 transition-colors">
               Technology
             </button>
-            <button className="hover:text-gray-700 transition-colors">
-              Company
+            <div className="relative group">
+              <button 
+                onClick={() => toggleDropdown('company')}
+                className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+              >
+                Company
+                <svg className={`w-2.5 h-2.5 transition-transform ${activeDropdown === 'company' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {activeDropdown === 'company' && (
+                <div className="absolute top-full left-0 mt-2 w-40 bg-white border border-gray-100 shadow-lg rounded-lg py-2 z-50">
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">About</button>
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">Careers</button>
+                  <button className="block w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors">Contact</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center">
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {isMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                )}
+              </svg>
             </button>
           </div>
-          <div className="flex items-center justify-center">
+
+          {/* Logo */}
+          <div className="flex items-center justify-center absolute left-1/2 -translate-x-1/2">
             <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-lg font-black tracking-tight">
               M
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <button className="hidden sm:block px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors text-black">
               Get in Touch
             </button>
             <Link
@@ -36,13 +97,65 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="bg-black text-white text-[11px] text-center py-2">
+
+        {/* Mobile Dropdown Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-100 animate-in slide-in-from-top duration-200">
+            <div className="px-4 py-6 space-y-4 text-black text-[13px] font-medium">
+              <button className="block w-full text-left py-2 hover:text-gray-600">Experience</button>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => toggleDropdown('mobile-business')}
+                  className="flex items-center justify-between w-full py-2 hover:text-gray-600"
+                >
+                  Business
+                  <svg className={`w-4 h-4 transition-transform ${activeDropdown === 'mobile-business' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {activeDropdown === 'mobile-business' && (
+                  <div className="pl-4 space-y-3 text-[12px] text-gray-600 border-l border-gray-100 ml-1">
+                    <button className="block w-full text-left">Operators</button>
+                    <button className="block w-full text-left">Cities</button>
+                    <button className="block w-full text-left">Real Estate</button>
+                  </div>
+                )}
+              </div>
+              <button className="block w-full text-left py-2 hover:text-gray-600">Technology</button>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => toggleDropdown('mobile-company')}
+                  className="flex items-center justify-between w-full py-2 hover:text-gray-600"
+                >
+                  Company
+                  <svg className={`w-4 h-4 transition-transform ${activeDropdown === 'mobile-company' ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {activeDropdown === 'mobile-company' && (
+                  <div className="pl-4 space-y-3 text-[12px] text-gray-600 border-l border-gray-100 ml-1">
+                    <button className="block w-full text-left">About</button>
+                    <button className="block w-full text-left">Careers</button>
+                    <button className="block w-full text-left">Contact</button>
+                  </div>
+                )}
+              </div>
+              <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
+                <button className="w-full px-4 py-3 rounded-xl border border-gray-200 text-center font-semibold">
+                  Get in Touch
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-black text-white text-[10px] md:text-[11px] text-center py-2 px-4 line-clamp-1">
           <span className="font-semibold">payparq.ai</span> secures smarter parking portfolios with real-time recognition
         </div>
       </header>
 
-      <main className="flex-1 pt-[96px] bg-white">
-        <section className="relative min-h-[90vh] overflow-hidden">
+      <main className="flex-1 pt-[104px] md:pt-[96px] bg-white">
+        <section className="relative min-h-[85vh] md:min-h-[90vh] overflow-hidden">
           <div className="absolute inset-0">
             <div
               className="w-full h-full bg-cover bg-center"
@@ -51,29 +164,28 @@ export default function Home() {
                   "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=2000&q=100')",
               }}
             />
-            {/* Soft light overlay to ensure text readability if needed, but keeping it "light" */}
-            <div className="absolute inset-0 bg-white/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent md:bg-white/10" />
           </div>
-          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[90vh]">
-            <div className="max-w-md mb-24 text-black">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-4">
+          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[85vh] md:min-h-[90vh]">
+            <div className="max-w-md mb-16 md:mb-24 text-black">
+              <p className="text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-black/60 mb-4">
                 Frictionless access to anywhere you want to be
               </p>
-              <h1 className="text-4xl md:text-5xl font-semibold leading-tight mb-4">
+              <h1 className="text-3xl md:text-5xl font-semibold leading-tight mb-4">
                 payparq makes the world move with you
               </h1>
-              <p className="text-sm text-black/70 mb-6">
+              <p className="text-xs md:text-sm text-black/70 mb-8 md:mb-6 leading-relaxed">
                 A software-only layer that lets drivers arrive, park, and go without gates,
                 tickets, or kiosks. Intelligence lives in the cloud, not in the hardware.
               </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <button className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-black text-white text-xs font-semibold shadow-xl hover:bg-gray-800 transition-all active:scale-95">
                   <span>Discover How</span>
                   <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
                     →
                   </span>
                 </button>
-                <button className="px-5 py-2.5 rounded-full border border-black/25 text-[11px] font-semibold text-black/85 hover:border-black/60 hover:text-black transition-colors">
+                <button className="px-6 py-3.5 rounded-full border border-black/20 text-[11px] font-semibold text-black/80 hover:bg-black/5 transition-colors text-center">
                   For operators and cities
                 </button>
               </div>
@@ -82,80 +194,92 @@ export default function Home() {
         </section>
 
         <section className="bg-[#05020A] border-t border-white/10">
-          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
-            <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
+          <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+            <div className="grid gap-16 md:grid-cols-[1.5fr,1fr] items-start">
+              <div className="max-w-xl">
+                <p className="text-[10px] md:text-[11px] uppercase tracking-[0.24em] text-white/50 mb-6">
                   For drivers, operators, and cities
                 </p>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+                <h2 className="text-3xl md:text-4xl font-semibold mb-6 leading-tight">
                   Frictionless access to anywhere you want to be
                 </h2>
-                <p className="text-sm text-white/70 mb-6 max-w-md">
+                <p className="text-sm md:text-base text-white/60 mb-8 leading-relaxed">
                   From mixed-use garages to open-air lots, payparq turns any space into a
                   seamless, app-free arrival experience while unlocking new revenue.
                 </p>
-                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
-                  <span className="text-xs">Download on the App Store</span>
+                <button className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all group">
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                    <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.5,12c0,0.5-0.1,1-0.3,1.5c-0.5,1.4-1.9,2.4-3.5,2.4c-2.1,0-3.8-1.7-3.8-3.8c0-2.1,1.7-3.8,3.8-3.8c1.6,0,3,1,3.5,2.4 C17.4,11,17.5,11.5,17.5,12z M22,12c0,5.5-4.5,10-10,10S2,17.5,2,12S6.5,2,12,2S22,6.5,22,12z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[9px] uppercase tracking-wider text-white/40 font-bold">Download on the</p>
+                    <p className="text-sm font-semibold">App Store</p>
+                  </div>
                 </button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Company
-                  </p>
-                  <button className="block hover:text-white transition-colors">About</button>
-                  <button className="block hover:text-white transition-colors">Careers</button>
-                  <button className="block hover:text-white transition-colors">News</button>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:gap-12">
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Company</p>
+                  <div className="flex flex-col gap-3 text-[12px] text-white/50">
+                    <button className="text-left hover:text-white transition-colors">About</button>
+                    <button className="text-left hover:text-white transition-colors">Careers</button>
+                    <button className="text-left hover:text-white transition-colors">News</button>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Experience
-                  </p>
-                  <button className="block hover:text-white transition-colors">Product</button>
-                  <button className="block hover:text-white transition-colors">Parking</button>
-                  <button className="block hover:text-white transition-colors">Aviation</button>
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Experience</p>
+                  <div className="flex flex-col gap-3 text-[12px] text-white/50">
+                    <button className="text-left hover:text-white transition-colors">Product</button>
+                    <button className="text-left hover:text-white transition-colors">Parking</button>
+                    <button className="text-left hover:text-white transition-colors">Aviation</button>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Policies
-                  </p>
-                  <button className="block hover:text-white transition-colors">Legal</button>
-                  <button className="block hover:text-white transition-colors">Privacy</button>
-                  <button className="block hover:text-white transition-colors">Terms</button>
-                  <button className="block hover:text-white transition-colors">
-                    California Privacy
-                  </button>
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Policies</p>
+                  <div className="flex flex-col gap-3 text-[12px] text-white/50">
+                    <button className="text-left hover:text-white transition-colors">Legal</button>
+                    <button className="text-left hover:text-white transition-colors">Privacy</button>
+                    <button className="text-left hover:text-white transition-colors">Terms</button>
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Platform
-                  </p>
-                  <button className="block hover:text-white transition-colors">API</button>
-                  <button className="block hover:text-white transition-colors">Partners</button>
-                  <button className="block hover:text-white transition-colors">Support</button>
+                <div className="space-y-4">
+                  <p className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Platform</p>
+                  <div className="flex flex-col gap-3 text-[12px] text-white/50">
+                    <button className="text-left hover:text-white transition-colors">API</button>
+                    <button className="text-left hover:text-white transition-colors">Partners</button>
+                    <button className="text-left hover:text-white transition-colors">Support</button>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="mt-16 text-5xl md:text-7xl font-black tracking-tight text-white/5 select-none">
-              payparq
+            <div className="mt-24 pt-12 border-t border-white/5 relative overflow-hidden">
+              <div className="text-[15vw] font-black tracking-tighter text-white/[0.03] select-none leading-none -mb-8">
+                metropolis
+              </div>
+              <div className="absolute bottom-12 right-0 flex gap-6 text-white/20">
+                <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:text-white hover:border-white transition-all cursor-pointer">𝕏</div>
+                <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:text-white hover:border-white transition-all cursor-pointer">in</div>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-[#05020A]">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
-          <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} payparq.ai</span>
-            <span className="hidden md:inline-block">•</span>
-            <span className="hidden md:inline-block">
+      <footer className="border-t border-white/5 bg-[#05020A]">
+        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-8 text-[11px] text-white/40">
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
+            <span>© {new Date().getFullYear()} Metropolis Technologies, Inc.</span>
+            <span className="hidden md:inline-block opacity-30">•</span>
+            <span className="max-w-[200px] md:max-w-none">
               Frictionless access to anywhere you want to be
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-8">
             <button className="hover:text-white transition-colors">Status</button>
             <button className="hover:text-white transition-colors">Contact</button>
+            <button className="hover:text-white transition-colors">Site Map</button>
           </div>
         </div>
       </footer>
