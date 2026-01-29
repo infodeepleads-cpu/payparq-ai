@@ -6,6 +6,7 @@ import Link from "next/link";
 export default function Parking() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
