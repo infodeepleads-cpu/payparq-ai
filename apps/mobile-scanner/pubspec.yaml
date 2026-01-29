@@ -26,6 +26,7 @@ dependencies:
   geolocator: ^10.1.0
   http: ^1.2.0
   package_info_plus: ^9.0.0
+  printing: ^5.0.0
 
 dev_dependencies:
   flutter_test:

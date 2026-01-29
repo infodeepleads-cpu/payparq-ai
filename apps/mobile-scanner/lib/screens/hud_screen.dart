@@ -8,7 +8,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:vibration/vibration.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import '../logic/providers/auth_providers.dart';
 import '../features/management/repositories/parking_repository.dart';
 
@@ -31,7 +30,6 @@ class _HudScreenState extends ConsumerState<HudScreen> {
   late String _currentTempId;
 
   final TextRecognizer _textRecognizer = TextRecognizer();
-  bool _canProcess = true;
   bool _isBusy = false;
 
   // Frame averaging & Regex
@@ -385,7 +383,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     }
 
     // Vibrate for high-end UX
-    if (await Vibration.hasVibrator() ?? false) {
+    if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 200);
     }
 
@@ -400,7 +398,6 @@ class _HudScreenState extends ConsumerState<HudScreen> {
 
   @override
   void dispose() {
-    _canProcess = false;
     _textRecognizer.close();
     _controller?.dispose();
     super.dispose();
@@ -453,15 +450,15 @@ class _HudScreenState extends ConsumerState<HudScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _statusColor.withOpacity(0.3),
+                  color: _statusColor.withValues(alpha: 0.3),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _statusColor.withOpacity(0.1),
+                    color: _statusColor.withValues(alpha: 0.1),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -489,7 +486,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                       shadows: [
                         Shadow(
                           blurRadius: 8.0,
-                          color: Colors.black.withOpacity(0.8),
+                          color: Colors.black.withValues(alpha: 0.8),
                           offset: const Offset(1.0, 1.0),
                         ),
                       ],
@@ -518,7 +515,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                     letterSpacing: 2,
                     fontFamily: 'Courier',
                     color: Colors.white
-                        .withOpacity(_detectedPlate == null ? 0.3 : 1.0),
+                        .withValues(
+                            alpha: _detectedPlate == null ? 0.3 : 1.0),
                   ),
                 ),
               ),
@@ -579,7 +577,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -609,13 +607,13 @@ class _HudScreenState extends ConsumerState<HudScreen> {
           Container(
             padding: EdgeInsets.all(isPrimary ? 24 : 16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               shape: BoxShape.circle,
               border: Border.all(color: color, width: 2),
               boxShadow: isPrimary
                   ? [
                       BoxShadow(
-                        color: color.withOpacity(0.5),
+                        color: color.withValues(alpha: 0.5),
                         blurRadius: 15,
                         spreadRadius: 2,
                       )
@@ -695,7 +693,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          backgroundColor: Colors.black.withOpacity(0.9),
+          backgroundColor: Colors.black.withValues(alpha: 0.9),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: isWarning ? Colors.orange : Colors.red)),
@@ -738,9 +736,10 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                 ],
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
+                  fillColor: Colors.white.withValues(alpha: 0.1),
                   hintText: 'MA679XX',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                  hintStyle:
+                      TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -856,7 +855,7 @@ class TacticalHudPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = borderColor.withOpacity(0.8)
+      ..color = borderColor.withValues(alpha: 0.8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
 
@@ -876,7 +875,7 @@ class TacticalHudPainter extends CustomPainter {
 
     // 1. Draw Docked Data Tray (The "Instrument" look)
     final trayPaint = Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final trayRect = Rect.fromLTWH(
@@ -918,7 +917,7 @@ class TacticalHudPainter extends CustomPainter {
 
     // 3. Draw Side Brackets (Industry look)
     final bracketPaint = Paint()
-      ..color = borderColor.withOpacity(0.3)
+      ..color = borderColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -930,7 +929,7 @@ class TacticalHudPainter extends CustomPainter {
     // 4. Scanning Laser Beam (Only if scanning)
     if (isScanning) {
       final scanPaint = Paint()
-        ..color = borderColor.withOpacity(0.4)
+        ..color = borderColor.withValues(alpha: 0.4)
         ..strokeWidth = 1.5;
 
       // Animate this with a timer/state in a real app,

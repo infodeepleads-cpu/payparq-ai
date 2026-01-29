@@ -225,7 +225,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -261,7 +261,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                       Text(
                         'ID: $accountId',
                         style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 12,
                         ),
                       ),
@@ -285,7 +285,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                       ? 'All parking revenue (minus commissions) is automatically transferred to your IBAN.'
                       : 'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
                   style: GoogleFonts.inter(
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 14,
                   ),
                 ),
@@ -341,7 +341,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                     child: Text(
                       'Update Details',
                       style: GoogleFonts.inter(
-                          color: Colors.white.withOpacity(0.6)),
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                 ),

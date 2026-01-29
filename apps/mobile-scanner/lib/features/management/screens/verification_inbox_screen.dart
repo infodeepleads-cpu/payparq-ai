@@ -100,10 +100,11 @@ class VerificationInboxScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.white.withOpacity(0.1)),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: Column(
                           children: [
@@ -221,8 +222,9 @@ class VerificationInboxScreen extends ConsumerWidget {
                               Navigator.pop(dialogContext);
                             }
                           }),
-                          _buildActionButton(context, 'Contact Required',
-                              Colors.blue, () async {
+                          _buildActionButton(
+                              context, 'Contact Required', Colors.blue,
+                              () async {
                             await _updateStatus(
                                 rootContext, loc['id'], 'contact_required');
                             if (dialogContext.mounted) {
@@ -255,9 +257,9 @@ class VerificationInboxScreen extends ConsumerWidget {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color.withOpacity(0.1),
+        backgroundColor: color.withValues(alpha: 0.1),
         foregroundColor: color,
-        side: BorderSide(color: color.withOpacity(0.5)),
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

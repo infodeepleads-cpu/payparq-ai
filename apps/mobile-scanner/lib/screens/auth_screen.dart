@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'terms_conditions_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
+import '../logic/providers/locale_provider.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -15,25 +16,22 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool isSignIn = true;
   bool isObscured = true;
-  bool isCroatian = false; // Language toggle
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   String get _title => 'payparq.ai';
-  String get _subtitle => isCroatian
+  String _subtitle(bool isCroatian) => isCroatian
       ? 'Započnimo ispunjavanjem donjeg obrasca.'
       : 'Let\'s get started by filling out the form below.';
-  String get _emailLabel => isCroatian ? 'E-pošta' : 'Email';
-  String get _passwordLabel => isCroatian ? 'Lozinka' : 'Password';
+  String _emailLabel(bool isCroatian) => isCroatian ? 'E-pošta' : 'Email';
+  String _passwordLabel(bool isCroatian) => isCroatian ? 'Lozinka' : 'Password';
   String get _signInTab => 'Sign In';
   String get _signUpTab => 'Sign Up';
-  String get _forgotPassword =>
+  String _forgotPassword(bool isCroatian) =>
       isCroatian ? 'Zaboravljena lozinka' : 'Forgot Password';
-  String get _termsText => isCroatian
+  String _termsText(bool isCroatian) => isCroatian
       ? 'Registracijom prihvaćate naše Uvjete i pravila privatnosti.'
       : 'By signing up, you agree to our Terms & Privacy Policy.';
-  String get _termsLink => 'Terms & Conditions';
-  String get _privacyLink => 'Privacy Policy';
 
   Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
@@ -131,6 +129,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 800;
+    final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
@@ -160,8 +159,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () =>
-                                setState(() => isCroatian = !isCroatian),
+                            onPressed: () {
+                              final current =
+                                  ref.read(localeIsCroatianProvider);
+                              ref
+                                  .read(localeIsCroatianProvider.notifier)
+                                  .state = !current;
+                            },
                             icon: const Icon(Icons.language,
                                 size: 16, color: Colors.grey),
                             label: Text(isCroatian ? 'EN' : 'HR',
@@ -183,16 +187,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        _subtitle,
+                        _subtitle(isCroatian),
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: Colors.grey[600],
                         ),
                       ),
                       const SizedBox(height: 32),
-                      _buildTextField(_emailLabel, _emailController),
+                      _buildTextField(
+                          _emailLabel(isCroatian), _emailController),
                       const SizedBox(height: 24),
-                      _buildTextField(_passwordLabel, _passwordController,
+                      _buildTextField(
+                          _passwordLabel(isCroatian), _passwordController,
                           isPassword: true),
                       const SizedBox(height: 32),
                       SizedBox(
@@ -229,7 +235,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                             ),
                             child: Text(
-                              _termsText,
+                              _termsText(isCroatian),
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 color: Colors.grey[500],
@@ -245,7 +251,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         child: TextButton(
                           onPressed: _showResetPasswordDialog,
                           child: Text(
-                            _forgotPassword,
+                            _forgotPassword(isCroatian),
                             style: GoogleFonts.inter(
                               color: Colors.grey[600],
                               fontSize: 14,
@@ -279,8 +285,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.2),
-                        Colors.black.withOpacity(0.6),
+                        Colors.black.withValues(alpha: 0.2),
+                        Colors.black.withValues(alpha: 0.6),
                       ],
                     ),
                   ),

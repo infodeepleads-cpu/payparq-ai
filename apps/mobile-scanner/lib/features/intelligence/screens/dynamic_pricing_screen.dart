@@ -600,10 +600,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
+                          color: Colors.blue.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.blue.withOpacity(0.2)),
+                          border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -664,7 +665,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -724,7 +727,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         border: Border.all(color: Colors.white54, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -819,9 +822,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: enabled
-                ? const Color(0xFF2563EB).withOpacity(0.3)
-                : Colors.grey[200]!),
+          color: enabled
+              ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+              : Colors.grey[200]!,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

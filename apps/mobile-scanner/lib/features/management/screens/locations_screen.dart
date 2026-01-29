@@ -351,9 +351,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: badgeColor.withOpacity(0.1),
+          color: badgeColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: badgeColor.withOpacity(0.5)),
+          border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

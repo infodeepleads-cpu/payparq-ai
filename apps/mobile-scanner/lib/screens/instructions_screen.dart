@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme.dart';
+import '../logic/providers/locale_provider.dart';
 
-class InstructionsScreen extends StatelessWidget {
+class InstructionsScreen extends ConsumerWidget {
   const InstructionsScreen({super.key});
 
   Widget _buildStepTitle(String number, String title) {
@@ -59,14 +61,16 @@ class InstructionsScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
+
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          'Instructions',
+          isCroatian ? 'Upute' : 'Instructions',
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -94,7 +98,9 @@ class InstructionsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Lot Activation Guide',
+                    isCroatian
+                        ? 'Vodič za aktivaciju parkirališta'
+                        : 'Lot Activation Guide',
                     style: GoogleFonts.inter(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -103,7 +109,9 @@ class InstructionsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Follow these steps to activate and go live with your parking lot.',
+                    isCroatian
+                        ? 'Slijedite ove korake kako biste aktivirali i pustili u rad svoje parkiralište.'
+                        : 'Follow these steps to activate and go live with your parking lot.',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: AppTheme.textSecondary,
@@ -115,45 +123,58 @@ class InstructionsScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // 1. Set Location
-            _buildStepTitle('1', 'Set Location'),
-            _bullet(
-                'Go to the lot, add it in the app, and pin the GPS entrance and click Register Lot.'),
+            _buildStepTitle(
+                '1', isCroatian ? 'Postavite lokaciju' : 'Set Location'),
+            _bullet(isCroatian
+                ? 'Otiđite na parkiralište, dodajte ga u aplikaciju, označite GPS ulaz i kliknite Registriraj parkiralište.'
+                : 'Go to the lot, add it in the app, and pin the GPS entrance and click Register Lot.'),
             const SizedBox(height: 20),
 
             // 2. Verify Identity
-            _buildStepTitle('2', 'Verify Identity'),
-            _bullet(
-                'Connect Stripe Connect. Payments will be collected immediately, but funds stay "on hold" until the lot is fully verified.'),
+            _buildStepTitle(
+                '2', isCroatian ? 'Potvrdite identitet' : 'Verify Identity'),
+            _bullet(isCroatian
+                ? 'Povežite Stripe Connect. Naplate će započeti odmah, ali sredstva ostaju na čekanju dok se parkiralište u potpunosti ne verificira.'
+                : 'Connect Stripe Connect. Payments will be collected immediately, but funds stay "on hold" until the lot is fully verified.'),
             const SizedBox(height: 20),
 
             // 3. Physical Signage
-            _buildStepTitle('3', 'Physical Signage'),
-            _bullet(
-                'Download the sticker/sign PDF. You can choose depending on your lot will you use Smart Sign or Smart Sticker.'),
-            _bullet('Smart Stickers: Use A4 or A5 minimum.'),
-            _bullet(
-                'Smart Signs: Minimum A3 size. Use 3mm Dibond for durability.'),
+            _buildStepTitle(
+                '3', isCroatian ? 'Fizička signalizacija' : 'Physical Signage'),
+            _bullet(isCroatian
+                ? 'Preuzmite PDF naljepnice/znaka. Možete odabrati hoćete li koristiti Pametni znak ili Pametnu naljepnicu, ovisno o vašem parkiralištu.'
+                : 'Download the sticker/sign PDF. You can choose depending on your lot will you use Smart Sign or Smart Sticker.'),
+            _bullet(isCroatian
+                ? 'Pametne naljepnice: Koristite minimalno A4 ili A5 format.'
+                : 'Smart Stickers: Use A4 or A5 minimum.'),
+            _bullet(isCroatian
+                ? 'Pametni znakovi: Minimalno A3 format. Koristite 3mm Dibond za dugovječnost.'
+                : 'Smart Signs: Minimum A3 size. Use 3mm Dibond for durability.'),
             const SizedBox(height: 20),
 
             // 4. Quality Evidence
-            _buildStepTitle('4', 'Quality Evidence'),
-            _bullet(
-                'Upload 3-5 photos (Entrance, Exit, Parking Stalls, Signage Location). If photos fail, record a 30-second walkthrough video or schedule a call.'),
+            _buildStepTitle(
+                '4', isCroatian ? 'Dokazi kvalitete' : 'Quality Evidence'),
+            _bullet(isCroatian
+                ? 'Prenesite 3-5 fotografija (ulaz, izlaz, parkirna mjesta, lokacija signalizacije). Ako fotografije ne uspiju, snimite video obilaska od 30 sekundi ili zakažite poziv.'
+                : 'Upload 3-5 photos (Entrance, Exit, Parking Stalls, Signage Location). If photos fail, record a 30-second walkthrough video or schedule a call.'),
             const SizedBox(height: 20),
 
             // 5. Go Live
-            _buildStepTitle('5', 'Go Live'),
-            _bullet(
-                'Once verified, your funds are released if any. Tickets and warnings issued before verification are saved as drafts; they only become "active" and enforceable once the lot is Live.'),
+            _buildStepTitle('5', isCroatian ? 'Kreni uživo' : 'Go Live'),
+            _bullet(isCroatian
+                ? 'Nakon verifikacije, vaša sredstva se oslobađaju. Kazne i upozorenja izdana prije verifikacije spremaju se kao skice; postaju aktivna i izvršiva tek kada parkiralište krene uživo.'
+                : 'Once verified, your funds are released if any. Tickets and warnings issued before verification are saved as drafts; they only become "active" and enforceable once the lot is Live.'),
             const SizedBox(height: 32),
 
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.06),
+                color: AppTheme.primary.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                border:
+                    Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
@@ -161,7 +182,9 @@ class InstructionsScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Tip: Ensure your Stripe Connect onboarding is completed to enable automatic payouts.',
+                      isCroatian
+                          ? 'Savjet: Provjerite je li Stripe Connect registracija dovršena kako biste omogućili automatske isplate.'
+                          : 'Tip: Ensure your Stripe Connect onboarding is completed to enable automatic payouts.',
                       style: GoogleFonts.inter(
                           color: Colors.black87, fontSize: 14),
                     ),

@@ -29,7 +29,7 @@ class PlaceholderScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -62,7 +62,7 @@ class PlaceholderScreen extends StatelessWidget {
             const SizedBox(height: 32),
             Chip(
               label: const Text('Coming Soon'),
-              backgroundColor: AppTheme.primary.withOpacity(0.1),
+              backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
               labelStyle: const TextStyle(
                 color: AppTheme.primary,
                 fontWeight: FontWeight.bold,

@@ -5,8 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../instructions_screen.dart';
 import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart';
-import '../../features/management/repositories/parking_repository.dart';
-import '../../widgets/skeleton_loader.dart';
 import '../../logic/providers/dashboard_providers.dart';
 import '../../logic/providers/auth_providers.dart';
 
@@ -136,7 +134,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -147,7 +145,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.android, color: Colors.white, size: 32),
@@ -206,16 +204,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.05),
+        color: AppTheme.primary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.1),
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.menu_book_outlined,
@@ -336,44 +336,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTab(String title, bool active) {
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: active ? AppTheme.primary : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Text(
-          title,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? AppTheme.primary : Colors.grey[500],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLastUpdated() {
-    return Row(
-      children: [
-        const Icon(Icons.sync, size: 14, color: Colors.grey),
-        const SizedBox(width: 4),
-        Text(
-          'Last updated: Just now',
-          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
-        ),
-      ],
     );
   }
 
@@ -739,18 +701,4 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isDesktop) {
-    final selectedFilter = ref.watch(dashboardFilterProvider);
-    final isSelected = selectedFilter == label;
-
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (v) =>
-          ref.read(dashboardFilterProvider.notifier).state = label,
-      selectedColor: AppTheme.primary,
-      labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
-      backgroundColor: Colors.white,
-    );
-  }
 }
