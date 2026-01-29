@@ -83,7 +83,7 @@ export default function Home() {
               <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center text-xl font-black tracking-tighter shadow-lg transform -rotate-3 hover:rotate-0 transition-transform cursor-pointer">
                 P
               </div>
-              <span className="text-xl font-bold tracking-tighter font-plus-jakarta hidden sm:block">payparq<span className="text-[#5F3DFC]">.ai</span></span>
+              <span className="text-xl font-bold tracking-tighter font-plus-jakarta hidden sm:block">payparq</span>
             </div>
           </div>
 
@@ -153,7 +153,7 @@ export default function Home() {
         )}
 
         <div className="bg-black text-white text-[10px] md:text-[11px] text-center py-2 px-4 line-clamp-1">
-          <span className="font-semibold">payparq.ai</span> secures smarter parking portfolios with real-time recognition
+          <span className="font-semibold">payparq</span> secures smarter parking portfolios with real-time recognition
         </div>
       </header>
 
@@ -182,7 +182,7 @@ export default function Home() {
                 </p>
               </div>
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-8 font-plus-jakarta">
-                payparq.ai makes cities <span className="text-[#5F3DFC]">move with you</span>
+                payparq makes cities <span className="text-[#5F3DFC]">move with you</span>
               </h1>
               <p className="text-lg md:text-xl text-black/70 mb-10 leading-relaxed font-medium max-w-xl">
                 The world’s first mobile software-only platform for frictionless urban mobility
@@ -281,7 +281,7 @@ export default function Home() {
       <footer className="border-t border-white/5 bg-[#05020A]">
         <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-8 text-[11px] text-white/40">
           <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-center md:text-left">
-            <span>© {new Date().getFullYear()} payparq.ai Technologies, Inc.</span>
+            <span>© {new Date().getFullYear()} payparq Technologies, Inc.</span>
             <span className="hidden md:inline-block opacity-30">•</span>
             <span className="max-w-[200px] md:max-w-none">
               Frictionless access to anywhere you want to be
