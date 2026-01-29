@@ -79,8 +79,11 @@ export default function Home() {
 
           {/* Logo */}
           <div className="flex items-center justify-center absolute left-1/2 -translate-x-1/2">
-            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-lg font-black tracking-tight">
-              M
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center text-xl font-black tracking-tighter shadow-lg transform -rotate-3 hover:rotate-0 transition-transform cursor-pointer">
+                P
+              </div>
+              <span className="text-xl font-bold tracking-tighter font-plus-jakarta hidden sm:block">payparq<span className="text-[#5F3DFC]">.ai</span></span>
             </div>
           </div>
 
@@ -158,35 +161,44 @@ export default function Home() {
         <section className="relative min-h-[85vh] md:min-h-[90vh] overflow-hidden">
           <div className="absolute inset-0">
             <div
-              className="w-full h-full bg-cover bg-center"
+              className="w-full h-full bg-cover bg-center transition-transform duration-1000 scale-105 hover:scale-100"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1531834351286-9a2544a4991c?auto=format&fit=crop&w=2000&q=100')",
+                  "url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=2500&q=100')",
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent md:bg-white/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/40 to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10" />
           </div>
-          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[85vh] md:min-h-[90vh]">
-            <div className="max-w-md mb-16 md:mb-24 text-black">
-              <p className="text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-black/60 mb-4">
-                Frictionless access to anywhere you want to be
-              </p>
-              <h1 className="text-3xl md:text-5xl font-semibold leading-tight mb-4">
-                payparq makes the world move with you
+          <div className="relative z-20 max-w-7xl mx-auto px-6 md:px-12 flex items-center min-h-[85vh] md:min-h-[90vh]">
+            <div className="max-w-2xl mb-12 md:mb-0 text-black">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/5 border border-black/10 mb-8 animate-fade-in">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5F3DFC] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#5F3DFC]"></span>
+                </span>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-black/80">
+                  Global Access Layer
+                </p>
+              </div>
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-8 font-plus-jakarta">
+                payparq makes the world <span className="text-[#5F3DFC]">move with you</span>
               </h1>
-              <p className="text-xs md:text-sm text-black/70 mb-8 md:mb-6 leading-relaxed">
-                A software-only layer that lets drivers arrive, park, and go without gates,
-                tickets, or kiosks. Intelligence lives in the cloud, not in the hardware.
+              <p className="text-lg md:text-xl text-black/70 mb-10 leading-relaxed font-medium max-w-xl">
+                The world's first software-only layer for frictionless urban mobility. 
+                Intelligence that lives in the cloud, not in the hardware.
               </p>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <button className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-black text-white text-xs font-semibold shadow-xl hover:bg-gray-800 transition-all active:scale-95">
-                  <span>Discover How</span>
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
-                    →
-                  </span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-5">
+                <button className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-full bg-black text-white text-sm font-bold shadow-2xl hover:bg-gray-900 transition-all active:scale-95 group">
+                  <span>Start Experience</span>
+                  <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </button>
-                <button className="px-6 py-3.5 rounded-full border border-black/20 text-[11px] font-semibold text-black/80 hover:bg-black/5 transition-colors text-center">
-                  For operators and cities
+                <button className="px-10 py-5 rounded-full border-2 border-black/10 text-sm font-bold text-black hover:bg-black/5 transition-all text-center">
+                  Partner with us
                 </button>
               </div>
             </div>

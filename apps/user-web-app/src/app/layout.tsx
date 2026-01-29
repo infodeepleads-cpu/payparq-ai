@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "payparq.ai | Artificial intelligence for parking",
-  description: "Software-only parking powered by computer vision and data.",
+  title: "payparq.ai | World-Class Artificial Intelligence for Parking",
+  description: "Experience the future of frictionless parking with payparq.ai. Ultra-modern software-only layer for cities and operators.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}
       >
         {children}
       </body>
