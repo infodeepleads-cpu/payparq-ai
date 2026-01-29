@@ -3,14 +3,14 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 flex justify-center items-start pointer-events-none">
-        <div className="w-full max-w-sm md:max-w-6xl px-4 md:px-6 pt-3 md:pt-4 pointer-events-auto">
-          <div className="bg-white/95 rounded-xl md:rounded-2xl shadow-lg border border-black/5 overflow-hidden">
-            <div className="h-14 md:h-16 flex items-center justify-between px-4 md:px-6 text-[11px] font-medium text-black">
+      <header className="fixed inset-x-0 top-0 z-40 flex justify-center items-start pointer-events-none font-apple-ui">
+        <div className="w-full max-w-sm md:max-w-[960px] px-4 md:px-20 pt-3 md:pt-4 pointer-events-auto">
+          <div className="bg-white/95 shadow-lg border border-black/5">
+            <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-6 text-[11px] font-medium text-black">
               <div className="flex items-center gap-4">
-                <button className="md:hidden flex flex-col justify-center gap-[3px] w-6 h-6 rounded-full border border-black/10 bg-white/80">
-                  <span className="h-[1.5px] w-3 mx-auto bg-black rounded-full" />
-                  <span className="h-[1.5px] w-3 mx-auto bg-black rounded-full" />
+                <button className="md:hidden flex flex-col justify-center gap-[3px]">
+                  <span className="h-[1.5px] w-4 bg-black" />
+                  <span className="h-[1.5px] w-4 bg-black" />
                 </button>
                 <div className="hidden md:flex items-center gap-6">
                   <button className="hover:text-gray-700 transition-colors">
@@ -27,11 +27,13 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-1 md:flex-none items-center justify-center">
-                <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-black text-white flex items-center justify-center text-sm md:text-base font-semibold tracking-tight border border-white/10 shadow-sm">
+
+              <div className="flex items-center justify-center">
+                <div className="w-9 h-9 md:w-10 md:h-10 rounded-[10px] bg-gradient-to-br from-zinc-800 to-black text-white flex items-center justify-center text-sm md:text-base font-bold tracking-tighter border border-white/10 shadow-lg ring-1 ring-black/5">
                   P
                 </div>
               </div>
+
               <div className="flex items-center justify-end gap-2 md:gap-3">
                 <button className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
                   Get in Touch
@@ -45,30 +47,27 @@ export default function Home() {
               </div>
             </div>
             <div className="bg-black text-white text-[10px] md:text-[11px] text-center py-2 px-4">
-              <span className="font-semibold">Payparq</span> secures parking portfolios across European cities
+              <span className="font-semibold">Payparq</span> powers smarter parking across Europe
             </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 pt-[124px] md:pt-[112px] bg-white">
-        <section className="relative min-h-[90vh] overflow-hidden">
+      <main className="flex-1 bg-white">
+        <section className="relative min-h-screen overflow-hidden">
           <div className="absolute inset-0">
             <div
               className="w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=2500&q=100')",
+                  "url('https://images.pexels.com/photos/5847385/pexels-photo-5847385.jpeg?auto=compress&cs=tinysrgb&w=1920')",
               }}
             />
-            <div className="absolute inset-0 bg-white/10" />
-            <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-gradient-to-br from-yellow-200/25 via-transparent to-transparent opacity-70 blur-3xl -translate-y-1/3 translate-x-1/5 pointer-events-none" />
+            <div className="absolute inset-0 bg-white/5" />
+            <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-gradient-to-br from-[#5F3DFC]/10 via-transparent to-transparent opacity-80 blur-3xl -translate-y-1/3 translate-x-1/5 pointer-events-none" />
           </div>
-          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end justify-center md:justify-start min-h-[90vh]">
-            <div className="max-w-md mb-24 text-black text-center md:text-left">
-              <p className="text-[11px] md:text-[12px] uppercase tracking-[0.24em] text-black/60 mb-5">
-                Frictionless access to anywhere you want to be
-              </p>
+          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-center md:items-end justify-center md:justify-start min-h-screen pt-32 md:pt-0">
+            <div className="max-w-md mb-12 md:mb-24 text-black text-center md:text-left">
               <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight leading-tight mb-6">
                 payparq makes cities{" "}
                 <span className="text-[#5F3DFC]">move with you</span>
@@ -154,7 +153,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-[#05020A]">
+      <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
         <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
           <div className="flex items-center gap-2">
             <span>© {new Date().getFullYear()} payparq</span>
