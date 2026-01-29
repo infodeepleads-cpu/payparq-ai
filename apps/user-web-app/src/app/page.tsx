@@ -161,7 +161,7 @@ export default function Home() {
               className="w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=2000&q=100')",
+                  "url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=2000&q=100')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent md:bg-white/10" />
