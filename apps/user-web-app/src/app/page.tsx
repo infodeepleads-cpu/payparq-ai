@@ -178,7 +178,7 @@ export default function Home() {
                 Payparq makes cities move with you
               </h1>
               <p className="text-xs md:text-sm text-black/70 mb-8 md:mb-6 leading-relaxed">
-                The world’s first software-only platform for frictionless urban mobility – built for parking operators, municipalities, and smart cities. Cloud-based intelligence that replaces expensive hardware, reduces operational costs, and enables seamless digital payments, enforcement, and compliance across Europe and beyond.
+                Payparq makes cities move with you. The world’s first software-only platform for frictionless urban mobility.
               </p>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <button className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-black text-white text-xs font-semibold shadow-xl hover:bg-gray-800 transition-all active:scale-95">
