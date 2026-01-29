@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
 const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "payparq.ai | World-Class Artificial Intelligence for Parking",
-  description: "Experience the future of frictionless parking with payparq.ai. Ultra-modern software-only layer for cities and operators.",
+  title: "payparq | Software-only mobility for parking",
+  description:
+    "The world’s first mobile software-only platform for frictionless urban mobility.",
 };
 
 export default function RootLayout({
@@ -24,11 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}
-      >
-        {children}
-      </body>
+      <body className={`${plusJakarta.className} antialiased`}>{children}</body>
     </html>
   );
 }
