@@ -164,7 +164,7 @@ export default function Home() {
               className="w-full h-full bg-cover bg-center transition-transform duration-1000 scale-105 hover:scale-100"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=2500&q=100')",
+                  "url('https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=2500&q=100')",
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/40 to-transparent z-10" />
