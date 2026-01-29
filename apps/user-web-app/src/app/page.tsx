@@ -41,36 +41,42 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 pt-[96px] bg-black">
-        <section className="relative min-h-[640px]">
+      <main className="flex-1 pt-[96px] bg-white">
+        <section className="relative min-h-[90vh] overflow-hidden">
           <div className="absolute inset-0">
             <div
               className="w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "url('https://images.unsplash.com/photo-1526481280695-3c687fd543c0?auto=format&fit=crop&w=1920&q=80')",
+                  "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=2000&q=100')",
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10" />
+            {/* Soft light overlay to ensure text readability if needed, but keeping it "light" */}
+            <div className="absolute inset-0 bg-white/10" />
           </div>
-          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[640px]">
-            <div className="max-w-md mb-20">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-white/80 mb-4">
+          <div className="relative z-10 max-w-6xl mx-auto px-6 flex items-end min-h-[90vh]">
+            <div className="max-w-md mb-24 text-black">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-4">
                 Frictionless access to anywhere you want to be
               </p>
               <h1 className="text-4xl md:text-5xl font-semibold leading-tight mb-4">
                 payparq makes the world move with you
               </h1>
-              <p className="text-sm text-white/80 mb-6">
+              <p className="text-sm text-black/70 mb-6">
                 A software-only layer that lets drivers arrive, park, and go without gates,
                 tickets, or kiosks. Intelligence lives in the cloud, not in the hardware.
               </p>
-              <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
-                <span>Discover How</span>
-                <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
-                  →
-                </span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors">
+                  <span>Discover How</span>
+                  <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
+                    →
+                  </span>
+                </button>
+                <button className="px-5 py-2.5 rounded-full border border-black/25 text-[11px] font-semibold text-black/85 hover:border-black/60 hover:text-black transition-colors">
+                  For operators and cities
+                </button>
+              </div>
             </div>
           </div>
         </section>
