@@ -185,7 +185,7 @@ export default function Home() {
                 Payparq makes cities <span className="text-[#5F3DFC]">move with you</span>
               </h1>
               <p className="text-lg md:text-xl text-black/70 mb-10 leading-relaxed font-medium max-w-xl">
-                The world’s first software-only platform for frictionless urban mobility – built for parking operators, municipalities, and smart cities. Cloud-based intelligence that replaces expensive hardware, reduces operational costs, and enables seamless digital payments, enforcement, and compliance across Europe and beyond.
+                The world’s first mobile software-only platform for frictionless urban mobility – built for parking operators, municipalities, and smart cities. Cloud-based intelligence that replaces expensive hardware, reduces operational costs, and enables seamless digital payments, enforcement, and compliance across Europe and beyond.
               </p>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-5">
                 <button className="inline-flex items-center justify-center gap-3 px-10 py-5 rounded-full bg-black text-white text-sm font-bold shadow-2xl hover:bg-gray-900 transition-all active:scale-95 group">
