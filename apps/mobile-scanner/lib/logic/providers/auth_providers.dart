@@ -8,34 +8,70 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  debugPrint('userProfileProvider: starting');
+  debugPrint('userProfileProvider: timestamp: ${DateTime.now()}');
+
   final user = Supabase.instance.client.auth.currentUser;
-  if (user == null) return Stream.value(null);
+  debugPrint('userProfileProvider: currentUser: $user');
+
+  if (user == null) {
+    debugPrint('userProfileProvider: no user, returning null');
+    return Stream.value(null);
+  }
 
   final controller = StreamController<Map<String, dynamic>?>();
+  debugPrint('userProfileProvider: created controller');
 
-  // 1. Initial fetch with timeout
+  // IMMEDIATE FALLBACK: Send minimal profile immediately
+  final immediateFallback = {
+    'id': user.id,
+    'email': user.email,
+    'role': user.userMetadata?['role'] ?? 'officer',
+    'location_id': user.userMetadata?['location_id'],
+    'full_name': user.userMetadata?['name'] ?? 'User',
+    '_immediate': true,
+  };
+  debugPrint('userProfileProvider: IMMEDIATE FALLBACK: $immediateFallback');
+  controller.add(immediateFallback);
+
+  // Enhanced fallback after 500ms if database is slow
+  Future.delayed(const Duration(milliseconds: 500), () {
+    if (!controller.isClosed && controller.hasListener) {
+      debugPrint('userProfileProvider: Enhanced fallback check');
+      // This ensures we have at least some data if database is very slow
+    }
+  });
+
+  // 1. Initial fetch with timeout (runs in parallel)
+  debugPrint('userProfileProvider: starting database fetch');
   Supabase.instance.client
       .from('profiles')
       .select()
       .eq('id', user.id)
       .maybeSingle()
-      .timeout(const Duration(seconds: 5))
+      .timeout(const Duration(seconds: 1)) // Reduced to 1s
       .then((data) {
-    if (!controller.isClosed) controller.add(data);
+    debugPrint('userProfileProvider: database fetch success: $data');
+    if (!controller.isClosed) {
+      if (data != null) {
+        controller.add(data);
+      }
+    }
   }).catchError((e) {
-    debugPrint('Profile Fetch Error/Timeout: $e');
+    debugPrint('userProfileProvider: database fetch failed: $e');
     // If database fetch fails, try to build a basic profile from JWT metadata
     final metadata = user.userMetadata;
     if (metadata != null && !controller.isClosed) {
-      controller.add({
+      final fallback = {
         'id': user.id,
         'email': user.email,
         'role': metadata['role'] ?? 'officer',
         'location_id': metadata['location_id'],
         'full_name': metadata['name'] ?? 'User',
-      });
-    } else {
-      if (!controller.isClosed) controller.add(null);
+        '_jwt_fallback': true,
+      };
+      debugPrint('userProfileProvider: JWT fallback: $fallback');
+      controller.add(fallback);
     }
   });
 
@@ -136,8 +172,12 @@ final availableLocationsProvider =
           (currentSelectedId == null || selectionInvalid)) {
         final firstId = locations.first['display_id'];
         if (firstId != null) {
-          Future.microtask(() {
-            ref.read(selectedLocationIdProvider.notifier).state = firstId;
+          // Use a delayed microtask to avoid Riverpod dependency issues
+          Future.delayed(Duration.zero, () {
+            if (ref.read(selectedLocationIdProvider) == null ||
+                selectionInvalid) {
+              ref.read(selectedLocationIdProvider.notifier).state = firstId;
+            }
           });
         }
       }

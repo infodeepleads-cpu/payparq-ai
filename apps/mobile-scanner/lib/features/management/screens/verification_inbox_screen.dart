@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../theme.dart';
-import '../../../widgets/pulsating_loading_screen.dart';
 
 final pendingVerificationsProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {

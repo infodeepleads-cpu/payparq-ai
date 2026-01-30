@@ -13,39 +13,96 @@ Future<void> main() async {
   runApp(const ProviderScope(child: BootApp()));
 }
 
-class BootApp extends StatelessWidget {
+class BootApp extends StatefulWidget {
   const BootApp({super.key});
+
+  @override
+  State<BootApp> createState() => _BootAppState();
+}
+
+class _BootAppState extends State<BootApp> {
+  late final Future<void> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _initFuture = _initSupabase();
+  }
 
   Future<void> _initSupabase() async {
     debugPrint('BootApp: starting Supabase.initialize');
+    debugPrint('BootApp: timestamp: ${DateTime.now()}');
+
     final initFuture = Supabase.initialize(
       url: 'https://iafjygownkhedereaoxw.supabase.co',
       anonKey: 'sb_publishable_ah4iveg_PBowEdtSgQo4Qg_KjLUzWBV',
-    ).then((_) {});
+    ).then<void>((_) {
+      debugPrint('BootApp: Supabase.initialize completed successfully');
+      debugPrint('BootApp: completion timestamp: ${DateTime.now()}');
+    });
 
-    if (kDebugMode) {
-      await initFuture.timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          debugPrint('BootApp: Supabase.initialize timeout in debug, continuing');
-        },
-      );
-    } else {
-      await initFuture;
-    }
+    await initFuture.timeout(const Duration(seconds: 15), onTimeout: () {
+      debugPrint('BootApp: Supabase.initialize timed out after 15s');
+      debugPrint('BootApp: timeout timestamp: ${DateTime.now()}');
+      return;
+    });
+
     debugPrint('BootApp: _initSupabase completed');
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
-      future: _initSupabase(),
+      future: _initFuture,
       builder: (context, snapshot) {
+        debugPrint('BootApp: FutureBuilder state: ${snapshot.connectionState}');
+        debugPrint('BootApp: hasError: ${snapshot.hasError}');
+        debugPrint('BootApp: timestamp: ${DateTime.now()}');
+
         if (snapshot.connectionState != ConnectionState.done) {
+          debugPrint('BootApp: showing loading screen');
           return MaterialApp(
             title: 'payparq.ai',
             theme: AppTheme.lightTheme,
             home: const PulsatingLoadingScreen(),
+            debugShowCheckedModeBanner: false,
+          );
+        }
+        if (snapshot.hasError) {
+          return MaterialApp(
+            title: 'payparq.ai',
+            theme: AppTheme.lightTheme,
+            home: Scaffold(
+              backgroundColor: AppTheme.lightBackground,
+              body: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Unable to initialize. Check connection and retry.',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _initFuture = _initSupabase();
+                            });
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             debugShowCheckedModeBanner: false,
           );
         }
@@ -66,13 +123,22 @@ class PayParqApp extends StatelessWidget {
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
+          debugPrint(
+              'PayParqApp: StreamBuilder state: ${snapshot.connectionState}');
+          debugPrint('PayParqApp: hasData: ${snapshot.hasData}');
+          debugPrint('PayParqApp: timestamp: ${DateTime.now()}');
+
           final session = Supabase.instance.client.auth.currentSession ??
               snapshot.data?.session;
 
+          debugPrint('PayParqApp: session: $session');
+
           if (session != null) {
+            debugPrint('PayParqApp: returning MasterScaffold');
             return const MasterScaffold();
           }
 
+          debugPrint('PayParqApp: returning AuthScreen');
           return const AuthScreen();
         },
       ),

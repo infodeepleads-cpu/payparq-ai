@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
+import '../../../screens/instructions_screen.dart';
 
 class CasesListView extends ConsumerStatefulWidget {
   const CasesListView({super.key});
@@ -131,53 +136,55 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
     if (plate == null || plate.isEmpty) return;
 
-    // 1. Capture Photo (Mandatory)
-    final XFile? image =
-        await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: kIsWeb ? 15 : 20,
+      maxWidth: kIsWeb ? 800 : 1024,
+      maxHeight: kIsWeb ? 800 : 1024,
+    );
     if (image == null) return;
 
-    Map<String, dynamic>? optimisticViolation;
     setState(() => _isProcessing = true);
 
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
+      final issuedAt = DateTime.now().toIso8601String();
 
-      // 2. Upload Evidence
-      final bytes = await image.readAsBytes();
-      await supabase.storage.from('evidence').uploadBinary(
-            fileName,
-            bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'),
-          );
-
-      // 3. Create Violation Record with location_id
-      optimisticViolation = {
+      // 2. Immediate Optimistic UI Update
+      final optimisticRecord = {
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
         'fine_amount': isWarning ? 0.00 : 50.00,
         'status': isWarning ? 'warning' : 'issued',
-        'issued_at': DateTime.now().toIso8601String(),
+        'issued_at': issuedAt,
         'evidence_r2_url': fileName,
         'location_id': locUuid,
       };
 
-      setState(() {
-        ref.read(optimisticViolationsProvider.notifier).update((state) => [
-              optimisticViolation!,
-              ...state,
-            ]);
-      });
+      ref.read(optimisticViolationsProvider.notifier).update((state) => [
+            optimisticRecord,
+            ...state,
+          ]);
 
-      await supabase.from('violations').insert({
-        'plate': plate,
-        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-        'fine_amount': isWarning ? 0.00 : 50.00,
-        'status': isWarning ? 'warning' : 'issued',
-        'location_id': locUuid,
-        'evidence_r2_url': fileName,
-        'issued_at': DateTime.now().toIso8601String(),
-        'is_lpr_scan': false,
-      });
+      final bytes = await image.readAsBytes();
+
+      await Future.wait<dynamic>([
+        supabase.storage.from('evidence').uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(contentType: 'image/jpeg'),
+            ),
+        supabase.from('violations').insert({
+          'plate': plate,
+          'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
+          'fine_amount': isWarning ? 0.00 : 50.00,
+          'status': isWarning ? 'warning' : 'issued',
+          'location_id': locUuid,
+          'evidence_r2_url': fileName,
+          'issued_at': issuedAt,
+          'is_lpr_scan': false,
+        }),
+      ]).timeout(const Duration(seconds: 25));
 
       ref.invalidate(violationsStreamProvider);
 
@@ -393,7 +400,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                     const SizedBox(height: 8),
                     Text(
                       selectedLocId != null
-                          ? 'Monitoring all enforcement activity for Lot: $selectedLocId'
+                          ? 'Monitoring all enforcement activity.'
                           : 'Please select a lot in the top bar.',
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -403,12 +410,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   ],
                 ),
               ),
-              if (selectedLocId != null && isDesktop) _buildQuickActions(),
             ],
           ),
-          if (selectedLocId != null && !isDesktop) ...[
+          if (selectedLocId != null) ...[
             const SizedBox(height: 24),
-            _buildQuickActions(),
+            _buildQuickActions(isDesktop),
           ],
           SizedBox(height: isDesktop ? 48 : 32),
           _buildSearchAndFilter(isDesktop),
@@ -417,7 +423,41 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildHeaderActionButton({
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required VoidCallback onTap,
+    required bool isDesktop,
+  }) {
+    final hasBorder = backgroundColor == Colors.white;
+
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: isDesktop ? 18 : 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        side: hasBorder ? const BorderSide(color: AppTheme.border) : null,
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 20 : 12,
+          vertical: isDesktop ? 12 : 8,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+        elevation: 0,
+        textStyle: GoogleFonts.inter(
+          fontSize: isDesktop ? 14 : 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(bool isDesktop) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -431,33 +471,22 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   strokeWidth: 2, color: Colors.black),
             ),
           ),
-        ElevatedButton.icon(
-          onPressed:
-              _isProcessing ? null : () => _handleQuickAction(isWarning: true),
-          icon: const Icon(Icons.warning_amber_rounded, size: 18),
-          label: const Text('Quick Warning'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            side: const BorderSide(color: AppTheme.border),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          ),
+        _buildHeaderActionButton(
+          icon: Icons.warning_amber_rounded,
+          label: 'Quick Warning',
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          onTap: () => _handleQuickAction(isWarning: true),
+          isDesktop: isDesktop,
         ),
         const SizedBox(width: 12),
-        ElevatedButton.icon(
-          onPressed:
-              _isProcessing ? null : () => _handleQuickAction(isWarning: false),
-          icon: const Icon(Icons.receipt_long, size: 18),
-          label: const Text('Quick Ticket'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          ),
+        _buildHeaderActionButton(
+          icon: Icons.receipt_long,
+          label: 'Quick Ticket',
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          onTap: () => _handleQuickAction(isWarning: false),
+          isDesktop: isDesktop,
         ),
       ],
     );
@@ -498,16 +527,16 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterButton('All'),
+              _buildFilterButton('All', isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton('Tickets'),
+              _buildFilterButton('Tickets', isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton('Warnings'),
+              _buildFilterButton('Warnings', isDesktop),
             ],
           ),
         ),
@@ -515,7 +544,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildFilterButton(String label) {
+  Widget _buildFilterButton(String label, bool isDesktop) {
     final isSelected = _selectedFilter == label;
 
     return InkWell(
@@ -525,7 +554,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 24 : 16,
+          vertical: isDesktop ? 10 : 8,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : AppTheme.surface,
           borderRadius: BorderRadius.circular(8),
@@ -534,7 +566,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: isDesktop ? 14 : 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             color: isSelected ? Colors.white : Colors.black,
           ),
@@ -590,13 +622,14 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           }).toList();
         }
 
-        // Ensure strict chronological sorting (newest first)
+        // Put second place plates first (newest first)
         allViolations.sort((a, b) {
           final aTime = DateTime.tryParse(a['issued_at'] ?? '') ??
               DateTime.fromMillisecondsSinceEpoch(0);
           final bTime = DateTime.tryParse(b['issued_at'] ?? '') ??
               DateTime.fromMillisecondsSinceEpoch(0);
-          return bTime.compareTo(aTime);
+          return bTime.compareTo(
+              aTime); // Show newest first (second place plates first)
         });
 
         if (allViolations.isEmpty) {
@@ -626,11 +659,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             itemCount: allViolations.length,
             itemBuilder: (context, index) {
               final violation = allViolations[index];
-              final status = violation['status'] ?? 'issued';
-              final issuedAtStr = violation['issued_at'];
-              final issuedAt = issuedAtStr != null
-                  ? DateTime.parse(issuedAtStr)
-                  : DateTime.now();
 
               return _buildViolationItem(violation, isDesktop);
             },
@@ -649,54 +677,64 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
     if (!isDesktop) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppTheme.border),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildPlateBadge(plate),
+                const SizedBox(width: 8),
                 _buildStatusBadge(status),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _highlightText(
-              violation['violation_type'] ?? 'General',
-              _searchQuery,
-              Colors.black,
-              Colors.yellow,
-              fontSize: 16,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${_formatDate(issuedAt)} • \$${violation['fine_amount'] ?? 0}',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _showEvidence(violation),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                const Spacer(),
+                SizedBox(
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: () => _showEvidence(violation),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('View', style: TextStyle(fontSize: 11)),
                   ),
                 ),
-                child: const Text('View Evidence'),
-              ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _highlightText(
+                        violation['violation_type'] ?? 'General',
+                        _searchQuery,
+                        Colors.black,
+                        Colors.yellow,
+                        fontSize: 12,
+                      ),
+                      Text(
+                        '${_formatDate(issuedAt)} • \$${violation['fine_amount'] ?? 0}',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -747,7 +785,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
             child: const Text('View'),
@@ -759,12 +797,19 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
   Widget _buildPlateBadge(String plate) {
     return Container(
-      width: 160,
-      height: 48,
+      width: 120,
+      height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: _highlightText(
           plate.toUpperCase(), _searchQuery, Colors.white, Colors.yellow),
@@ -825,33 +870,67 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     bool isPaid = status.toLowerCase() == 'paid';
     bool isWarning = status.toLowerCase() == 'warning';
 
+    Color backgroundColor;
+    Color borderColor;
+    Color textColor;
+    Color dotColor;
+
+    if (isPaid) {
+      backgroundColor = Colors.green[50]!;
+      borderColor = Colors.green[300]!;
+      textColor = Colors.green[700]!;
+      dotColor = Colors.green[500]!;
+    } else if (isWarning) {
+      backgroundColor = Colors.orange[50]!;
+      borderColor = Colors.orange[300]!;
+      textColor = Colors.orange[700]!;
+      dotColor = Colors.orange[500]!;
+    } else {
+      backgroundColor = Colors.red[50]!;
+      borderColor = Colors.red[300]!;
+      textColor = Colors.red[700]!;
+      dotColor = Colors.red[500]!;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: borderColor.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 12,
+            height: 12,
             decoration: BoxDecoration(
-              color: isPaid
-                  ? Colors.green[400]
-                  : (isWarning ? Colors.orange[400] : Colors.red[400]),
+              color: dotColor,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: dotColor.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             status.toUpperCase(),
             style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
             ),
           ),
         ],

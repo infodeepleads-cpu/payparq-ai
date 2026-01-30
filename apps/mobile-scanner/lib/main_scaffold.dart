@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../responsive/responsive_layout.dart';
 import '../logic/providers/auth_providers.dart';
-import '../logic/providers/update_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../widgets/pulsating_loading_screen.dart';
 import '../screens/hud_screen.dart'; // Mobile Scanner
 import '../screens/admin/admin_dashboard_screen.dart'; // Users List
@@ -19,7 +17,6 @@ import '../features/intelligence/screens/analytics_dashboard_screen.dart';
 import '../features/intelligence/screens/finance_screen.dart';
 import '../features/management/screens/verification_inbox_screen.dart';
 import '../screens/settings_screen.dart';
-import '../screens/ocr_test_screen.dart';
 import '../theme.dart';
 
 class MasterScaffold extends ConsumerStatefulWidget {
@@ -42,35 +39,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     setState(() {
       _selectedIndex = index;
     });
-  }
-
-  Widget _getDesktopPage(int index) {
-    switch (index) {
-      case 0:
-        return const CasesListView();
-      case 1:
-        return const OCRScanScreen();
-      case 2:
-        return const AdminDashboardScreen();
-      case 3:
-        return const PassesListScreen();
-      case 4:
-        return const LocationsScreen();
-      case 5:
-        return const AddStaffScreen();
-      case 6:
-        return const DynamicPricingScreen();
-      case 7:
-        return const AnalyticsDashboardScreen();
-      case 8:
-        return const SettingsScreen();
-      case 9:
-        return const FinanceScreen();
-      case 10:
-        return const VerificationInboxScreen();
-      default:
-        return const AdminDashboardScreen();
-    }
   }
 
   Future<void> _handleLogout() async {
@@ -99,13 +67,84 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildMobileScaffold() {
+    debugPrint('MasterScaffold: _buildMobileScaffold() started');
+    debugPrint('MasterScaffold: timestamp: ${DateTime.now()}');
+
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
-    final profile = ref.watch(userProfileProvider).value;
+
+    final profileAsync = ref.watch(userProfileProvider);
+    debugPrint('MasterScaffold: userProfileProvider state: $profileAsync');
+    debugPrint(
+        'MasterScaffold: userProfileProvider hasValue: ${profileAsync.hasValue}');
+    debugPrint(
+        'MasterScaffold: userProfileProvider isLoading: ${profileAsync.isLoading}');
+    debugPrint(
+        'MasterScaffold: userProfileProvider hasError: ${profileAsync.hasError}');
+
+    final profile = profileAsync.value;
+    debugPrint('MasterScaffold: profile value: $profile');
+
     final isOfficer = profile?['role'] == 'officer';
 
-    if (profile == null) return _buildFinalizingScreen();
+    // Handle profile loading states
+    if (profile == null) {
+      if (profileAsync.isLoading) {
+        debugPrint(
+            'MasterScaffold: profile is null and still loading, waiting...');
+        // Show a simple loading indicator while we wait for the immediate fallback
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      } else {
+        // Profile is null and not loading - this shouldn't happen with immediate fallback
+        debugPrint(
+            'MasterScaffold: profile is null and not loading - using emergency fallback');
+        // Emergency fallback - use basic user data from session
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          final emergencyProfile = {
+            'id': user.id,
+            'email': user.email,
+            'role': user.userMetadata?['role'] ?? 'officer',
+            'location_id': user.userMetadata?['location_id'],
+            'full_name': user.userMetadata?['name'] ?? 'User',
+            '_emergency_fallback': true,
+          };
+          debugPrint(
+              'MasterScaffold: using emergency profile: $emergencyProfile');
+          // Continue with emergency profile
+          return _buildScaffoldWithProfile(
+              emergencyProfile, availableLocsAsync, selectedLocId, isOfficer);
+        }
+      }
+    }
 
+    // Final null check - if profile is still null, show loading
+    if (profile == null) {
+      debugPrint(
+          'MasterScaffold: profile is still null after all fallbacks, showing loading');
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    debugPrint('MasterScaffold: profile loaded, continuing');
+    debugPrint('MasterScaffold: profile role: ${profile['role']}');
+
+    return _buildScaffoldWithProfile(
+        profile, availableLocsAsync, selectedLocId, isOfficer);
+  }
+
+  Widget _buildScaffoldWithProfile(
+      Map<String, dynamic> profile,
+      AsyncValue<List<Map<String, dynamic>>> availableLocsAsync,
+      String? selectedLocId,
+      bool isOfficer) {
     final displayLocId = selectedLocId ?? profile['location_id'];
 
     return Scaffold(
@@ -209,20 +248,30 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       body: _buildMobileBody(isOfficer),
       bottomNavigationBar: _buildMobileBottomNav(isOfficer),
     );
-  }
+  } // End of _buildScaffoldWithProfile
 
   Widget _buildMobileBody(bool isOfficer) {
     // Shared indices for both mobile and desktop:
     // 2: Dashboard (Home)
     // 1: Scanner
     // 0: Cases
-    return IndexedStack(
-      index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
-      children: const [
-        AdminDashboardScreen(),
-        HudScreen(),
-        CasesListView(),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Add padding to make the whole screen move down when scrolling
+          const SizedBox(height: 16),
+          IndexedStack(
+            index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
+            children: const [
+              AdminDashboardScreen(),
+              HudScreen(),
+              CasesListView(),
+            ],
+          ),
+          // Add bottom padding for better scrolling experience
+          const SizedBox(height: 32),
+        ],
+      ),
     );
   }
 
@@ -236,9 +285,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       onTap: (index) {
         if (index == 0) {
           _onItemTapped(2); // Dashboard (Home)
-        } else if (index == 1)
+        } else if (index == 1) {
           _onItemTapped(1); // Scanner
-        else if (index == 2) _onItemTapped(0); // Cases
+        } else if (index == 2) {
+          _onItemTapped(0); // Cases
+        }
       },
       items: const [
         BottomNavigationBarItem(
@@ -587,105 +638,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     );
   }
 
-  Widget _buildLogo() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.white, size: 24),
-          const SizedBox(width: 12),
-          Text(
-            'payparq.ai',
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileSection(Map<String, dynamic> profile) {
-    final name = profile['name'] ?? 'Admin User';
-    final email = profile['email'] ?? 'admin@payparq.ai';
-    final locationId = profile['location_id'] ?? '-----';
-    final isSuperAdmin = profile['role'] == 'super_admin';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                const Icon(Icons.person_outline, size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (!isSuperAdmin)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.blue[100]!),
-                        ),
-                        child: Text(
-                          locationId,
-                          style: GoogleFonts.robotoMono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[700],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                Text(
-                  email,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildErrorScreen(String message) {
     return Scaffold(
       body: Center(
@@ -729,20 +681,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Widget _buildFinalizingScreen() {
     return const PulsatingLoadingScreen();
-  }
-
-  Widget _buildSidebarHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          color: Colors.grey[500],
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
   }
 
   Widget _buildSidebarItem(int index, String title, IconData icon,

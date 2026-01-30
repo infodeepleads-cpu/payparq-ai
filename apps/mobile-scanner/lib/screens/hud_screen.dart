@@ -32,9 +32,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
   final TextRecognizer _textRecognizer = TextRecognizer();
   bool _isBusy = false;
 
-  // Frame averaging & Regex
+  // Frame averaging
   final List<String> _consecutiveHits = [];
-  final RegExp _plateRegex = RegExp(r'^[A-Z0-9]{4,8}$'); // Basic LPR regex
 
   @override
   void initState() {

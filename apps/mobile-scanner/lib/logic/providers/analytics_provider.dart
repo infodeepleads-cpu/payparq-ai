@@ -101,11 +101,6 @@ final analyticsProvider = Provider<AsyncValue<DashboardAnalytics>>((ref) {
     }
   }
 
-  // 2. NET REVENUE & COMMISSION LOGIC
-  // Shared Revenue = Gross - (Stripe Fees + Transactional/Tax)
-  // Commission = Shared Revenue * Rate
-  double totalCommission = 0;
-
   double calculateItemCommission(double gross, Map<String, dynamic>? location, String type, {String? subType}) {
     if (location == null) return gross * 0.15; // Fallback
 

@@ -72,13 +72,14 @@ final unifiedDashboardProvider =
     return true;
   }).toList();
 
-  // Sort by created_at
+  // Sort by created_at - put second place plates first (newest first)
   filtered.sort((a, b) {
     final dateA =
         DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000);
     final dateB =
         DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000);
-    return dateB.compareTo(dateA);
+    return dateB
+        .compareTo(dateA); // Show newest first (second place plates first)
   });
 
   return AsyncValue.data(filtered);

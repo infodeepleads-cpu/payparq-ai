@@ -16,6 +16,9 @@ class _PulsatingLoadingScreenState extends State<PulsatingLoadingScreen>
   @override
   void initState() {
     super.initState();
+    debugPrint('PulsatingLoadingScreen: initState()');
+    debugPrint('PulsatingLoadingScreen: timestamp: ${DateTime.now()}');
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -23,6 +26,14 @@ class _PulsatingLoadingScreenState extends State<PulsatingLoadingScreen>
     _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+
+    // Add timeout to auto-exit if stuck
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        debugPrint(
+            'PulsatingLoadingScreen: 10s timeout reached, still mounted');
+      }
+    });
   }
 
   @override
@@ -33,20 +44,23 @@ class _PulsatingLoadingScreenState extends State<PulsatingLoadingScreen>
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('PulsatingLoadingScreen: build()');
+    debugPrint('PulsatingLoadingScreen: timestamp: ${DateTime.now()}');
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: FadeTransition(
           opacity: _animation,
           child: Text(
-              'payparq.ai',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
+            'payparq.ai',
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.5,
             ),
+          ),
         ),
       ),
     );

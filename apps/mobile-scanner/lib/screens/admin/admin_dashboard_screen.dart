@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../instructions_screen.dart';
 import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart';
@@ -19,12 +24,188 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
+  final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
+  bool _isProcessing = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleQuickAction({required bool isWarning}) async {
+    final profile = ref.read(userProfileProvider).value;
+    if (profile == null) return;
+
+    // Priority: 1. Manually selected location, 2. Profile location
+    final locationDisplayId =
+        ref.read(selectedLocationIdProvider) ?? profile['location_id'];
+
+    if (locationDisplayId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Error: No Location ID selected or assigned.')),
+      );
+      return;
+    }
+
+    // Use the centralized UUID resolver
+    final locUuid = await ref.read(selectedLocationUuidProvider.future);
+    final supabase = Supabase.instance.client;
+
+    if (locUuid == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Invalid Location selected.')),
+        );
+      }
+      return;
+    }
+
+    // Mandatory Plate Entry for Desktop
+    final plateController = TextEditingController();
+    final plate = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(isWarning ? 'Quick Warning' : 'Quick Ticket',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Enter License Plate (e.g. MA679XX)',
+                style: GoogleFonts.inter(
+                    fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: plateController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+              ],
+              decoration: InputDecoration(
+                hintText: 'MA679XX',
+                filled: true,
+                fillColor: AppTheme.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (v) {
+                final cleaned =
+                    v.trim().replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
+                if (cleaned.isNotEmpty) Navigator.pop(context, cleaned);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel',
+                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final cleaned = plateController.text
+                  .trim()
+                  .replaceAll(RegExp(r'[^A-Z0-9]'), '')
+                  .toUpperCase();
+              if (cleaned.isNotEmpty) {
+                Navigator.pop(context, cleaned);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isWarning ? Colors.orange : Colors.black,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Next: Take Photo'),
+          ),
+        ],
+      ),
+    );
+
+    if (plate == null || plate.isEmpty) return;
+
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: kIsWeb ? 15 : 20,
+      maxWidth: kIsWeb ? 800 : 1024,
+      maxHeight: kIsWeb ? 800 : 1024,
+    );
+    if (image == null) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
+      final issuedAt = DateTime.now().toIso8601String();
+
+      // 2. Immediate Optimistic UI Update (Shared with Cases view)
+      final optimisticRecord = {
+        'plate': plate,
+        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
+        'fine_amount': isWarning ? 0.00 : 50.00,
+        'status': isWarning ? 'warning' : 'issued',
+        'issued_at': issuedAt,
+        'evidence_r2_url': fileName,
+        'location_id': locUuid,
+      };
+
+      ref.read(optimisticViolationsProvider.notifier).update((state) => [
+            optimisticRecord,
+            ...state,
+          ]);
+
+      final bytes = await image.readAsBytes();
+
+      await Future.wait<dynamic>([
+        supabase.storage.from('evidence').uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(contentType: 'image/jpeg'),
+            ),
+        supabase.from('violations').insert({
+          'plate': plate,
+          'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
+          'fine_amount': isWarning ? 0.00 : 50.00,
+          'status': isWarning ? 'warning' : 'issued',
+          'location_id': locUuid,
+          'evidence_r2_url': fileName,
+          'issued_at': issuedAt,
+          'is_lpr_scan': false,
+        }),
+      ]).timeout(const Duration(seconds: 25));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isWarning ? 'Warning Issued!' : 'Ticket Issued!'),
+            backgroundColor: isWarning
+                ? Colors.orange
+                : Colors.green, // Changed to green for success
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 
   @override
@@ -54,6 +235,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildHeader(bool isDesktop) {
+    final selectedLocId = ref.watch(selectedLocationIdProvider);
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 48 : 24,
@@ -63,213 +246,169 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Home',
-                    style: GoogleFonts.inter(
-                      fontSize: isDesktop ? 40 : 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      letterSpacing: -1,
+          if (isDesktop)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Home',
+                      style: GoogleFonts.inter(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Monitor all parking activity and lot occupancy.',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (kIsWeb)
+                  Row(
+                    children: [
+                      _buildHeaderActionButton(
+                        icon: Icons.menu_book_outlined,
+                        label: 'Instructions',
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const InstructionsScreen()),
+                          );
+                        },
+                        isDesktop: true,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildHeaderActionButton(
+                        icon: Icons.android,
+                        label: 'Download App',
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        onTap: () async {
+                          final url = Uri.parse(
+                              'https://payparq-d-6rex95.web.app/app-release.apk');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        isDesktop: true,
+                      ),
+                    ],
+                  ),
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Home',
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Monitor all parking activity and lot occupancy.',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                if (kIsWeb) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildHeaderActionButton(
+                        icon: Icons.menu_book_outlined,
+                        label: 'Instructions',
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const InstructionsScreen()),
+                          );
+                        },
+                        isDesktop: false,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildHeaderActionButton(
+                        icon: Icons.android,
+                        label: 'Download App',
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        onTap: () async {
+                          final url = Uri.parse(
+                              'https://payparq-d-6rex95.web.app/app-release.apk');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        isDesktop: false,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          if (selectedLocId != null) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isProcessing)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 16.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.black),
                     ),
                   ),
-                  if (kIsWeb)
-                    Row(
-                      children: [
-                        _buildHeaderActionButton(
-                          icon: Icons.menu_book_outlined,
-                          label: 'Instructions',
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const InstructionsScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        _buildHeaderActionButton(
-                          icon: Icons.android,
-                          label: 'Download App',
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          onTap: () async {
-                            final url = Uri.parse(
-                                'https://payparq-d-6rex95.web.app/app-release.apk');
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
+                // Only show quick actions on desktop, hide on mobile
+                if (isDesktop) ...[
+                  _buildHeaderActionButton(
+                    icon: Icons.warning_amber_rounded,
+                    label: 'Quick Warning',
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    onTap: () => _handleQuickAction(isWarning: true),
+                    isDesktop: isDesktop,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildHeaderActionButton(
+                    icon: Icons.receipt_long,
+                    label: 'Quick Ticket',
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    onTap: () => _handleQuickAction(isWarning: false),
+                    isDesktop: isDesktop,
+                  ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Monitor all parking activity and lot occupancy.',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           SizedBox(height: isDesktop ? 48 : 32),
           _buildSearchAndFilter(isDesktop),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileDownloadWidget() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.android, color: Colors.white, size: 32),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Android App Available',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Install for the best experience.',
-                  style: GoogleFonts.inter(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final url =
-                  Uri.parse('https://payparq-d-6rex95.web.app/app-release.apk');
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            child: Text(
-              'Install',
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInstructionsWidget() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.primary.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.menu_book_outlined,
-                color: AppTheme.primary, size: 32),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Operator Guidelines',
-                  style: GoogleFonts.inter(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Learn how to manage your lot efficiently.',
-                  style: GoogleFonts.inter(
-                    color: AppTheme.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const InstructionsScreen()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            child: Text(
-              'INSTRUCTIONS',
-              style:
-                  GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          ),
         ],
       ),
     );
@@ -281,34 +420,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required Color backgroundColor,
     required Color foregroundColor,
     required VoidCallback onTap,
+    required bool isDesktop,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppTheme.border),
+    final hasBorder = backgroundColor == Colors.white;
+
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: isDesktop ? 18 : 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        side: hasBorder ? const BorderSide(color: AppTheme.border) : null,
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 20 : 12,
+          vertical: isDesktop ? 12 : 8,
         ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: foregroundColor,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: foregroundColor,
-              ),
-            ),
-          ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+        elevation: 0,
+        textStyle: GoogleFonts.inter(
+          fontSize: isDesktop ? 14 : 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -340,7 +474,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -360,11 +494,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildFilterButton(String label) {
     final selectedFilter = ref.watch(dashboardFilterProvider);
     final isSelected = selectedFilter == label;
+    final isDesktop = MediaQuery.of(context).size.width >= 1100;
 
     return InkWell(
       onTap: () => ref.read(dashboardFilterProvider.notifier).state = label,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 24 : 16,
+          vertical: isDesktop ? 10 : 8,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : AppTheme.surface,
           borderRadius: BorderRadius.circular(8),
@@ -373,7 +511,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: isDesktop ? 14 : 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             color: isSelected ? Colors.white : Colors.black,
           ),
@@ -521,62 +659,72 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     if (!isDesktop) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppTheme.border),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildPlateBadge(plate),
+                const SizedBox(width: 8),
                 _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              s['contact_name'] ??
-                  s['email'] ??
-                  s['contact_email'] ??
-                  'Guest User',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${s['mobile'] ?? s['contact_phone'] ?? 'N/A'} • ${s['email'] ?? s['contact_email'] ?? 'N/A'}',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: AppTheme.textSecondary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _navigateToDetail(s),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                const Spacer(),
+                SizedBox(
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToDetail(s),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('View', style: TextStyle(fontSize: 11)),
                   ),
                 ),
-                child: const Text('View Details'),
-              ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s['contact_name'] ??
+                            s['email'] ??
+                            s['contact_email'] ??
+                            'Guest User',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${s['mobile'] ?? s['contact_phone'] ?? 'N/A'} • ${s['email'] ?? s['contact_email'] ?? 'N/A'}',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: AppTheme.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -635,7 +783,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
             child: const Text('View'),
@@ -647,20 +795,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Widget _buildPlateBadge(String plate) {
     return Container(
-      width: 160,
-      height: 48,
+      width: 120,
+      height: 36,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         plate.toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
           color: Colors.white,
-          letterSpacing: 1,
+          letterSpacing: 1.2,
         ),
       ),
     );
@@ -714,31 +869,53 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildStatusBadge(String status, bool isPaid) {
+    Color backgroundColor = isPaid ? Colors.green[50]! : Colors.grey[50]!;
+    Color borderColor = isPaid ? Colors.green[300]! : Colors.grey[300]!;
+    Color textColor = isPaid ? Colors.green[700]! : Colors.grey[700]!;
+    Color dotColor = isPaid ? Colors.green[500]! : Colors.grey[400]!;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(
+          color: borderColor,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: borderColor.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: 12,
+            height: 12,
             decoration: BoxDecoration(
-              color: isPaid ? Colors.green[400] : Colors.grey[300],
+              color: dotColor,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: dotColor.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             status,
             style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
             ),
           ),
         ],

@@ -15,7 +15,12 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
   XFile? _image;
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 25,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
     if (image != null) {
       setState(() {
         _image = image;

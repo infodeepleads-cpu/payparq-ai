@@ -1,13 +1,12 @@
-
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:web/web.dart' as web;
 
 void downloadFileWeb(Uint8List bytes, String fileName) {
-  final blob = html.Blob([bytes]);
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  html.AnchorElement(href: url)
-    ..setAttribute("download", fileName)
-    ..click();
-  html.Url.revokeObjectUrl(url);
+  final base64Data = base64Encode(bytes);
+  final url = 'data:application/octet-stream;base64,$base64Data';
+  final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
 }

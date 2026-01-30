@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -96,7 +98,7 @@ class _VerificationVideoScreenState
             fileName,
             bytes,
             fileOptions: FileOptions(contentType: contentType, upsert: true),
-          );
+          ).timeout(const Duration(seconds: 40));
 
       final String publicUrl =
           supabase.storage.from('location-verification').getPublicUrl(fileName);
@@ -115,7 +117,7 @@ class _VerificationVideoScreenState
       } else {
         throw Exception('Location identifier missing (id/display_id).');
       }
-      await updateQuery;
+      await updateQuery.timeout(const Duration(seconds: 20));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

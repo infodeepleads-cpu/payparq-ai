@@ -1,9 +1,12 @@
+import 'dart:async';
+
 // For kIsWeb
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../../../theme.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
@@ -48,8 +51,13 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image =
-        await _picker.pickImage(source: source, imageQuality: 50);
+    final bool isWeb = kIsWeb;
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: isWeb ? 15 : 25,
+      maxWidth: isWeb ? 800 : 1024,
+      maxHeight: isWeb ? 800 : 1024,
+    );
     if (image != null) {
       setState(() {
         _image = image;
@@ -104,25 +112,27 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
             ...state,
           ]);
 
-      // 1. Upload Image
+      // 1 & 2. Parallel Upload and DB Insert
       final bytes = await _image!.readAsBytes();
-      await supabase.storage.from('evidence').uploadBinary(
-            fileName,
-            bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'),
-          );
+      final issuedAt = DateTime.now().toIso8601String();
 
-      // 2. Insert Record with location_id
-      await supabase.from('violations').insert({
-        'plate': _plateController.text.toUpperCase(),
-        'violation_type': _violationType,
-        'fine_amount': 50.00,
-        'status': 'issued',
-        'location_id': locUuid,
-        'evidence_r2_url': fileName, // Use the correct column name from schema
-        'issued_at': DateTime.now().toIso8601String(),
-        'issuer_role': issuerRole,
-      }).select();
+      await Future.wait<dynamic>([
+        supabase.storage.from('evidence').uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: const FileOptions(contentType: 'image/jpeg'),
+            ),
+        supabase.from('violations').insert({
+          'plate': _plateController.text.toUpperCase(),
+          'violation_type': _violationType,
+          'fine_amount': 50.00,
+          'status': 'issued',
+          'location_id': locUuid,
+          'evidence_r2_url': fileName,
+          'issued_at': issuedAt,
+          'issuer_role': issuerRole,
+        }),
+      ]).timeout(const Duration(seconds: 25));
 
       ref.invalidate(violationsStreamProvider);
 

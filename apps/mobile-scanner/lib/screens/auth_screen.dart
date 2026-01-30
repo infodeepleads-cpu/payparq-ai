@@ -93,9 +93,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _showResetPasswordDialog() async {
     final emailCtrl = TextEditingController();
+    final rootContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Reset Password'),
         content: TextField(
           controller: emailCtrl,
@@ -103,20 +104,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              if (emailCtrl.text.isNotEmpty) {
-                await Supabase.instance.client.auth
-                    .resetPasswordForEmail(emailCtrl.text.trim());
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password reset link sent!')),
-                  );
-                }
-              }
+              final email = emailCtrl.text.trim();
+              if (email.isEmpty) return;
+              Navigator.pop(dialogContext);
+              await Supabase.instance.client.auth
+                  .resetPasswordForEmail(email);
+              if (!mounted) return;
+              ScaffoldMessenger.of(rootContext).showSnackBar(
+                const SnackBar(content: Text('Password reset link sent!')),
+              );
             },
             child: const Text('Send Reset Link'),
           ),

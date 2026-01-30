@@ -44,7 +44,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     emit(DashboardLoading());
     try {
       // TODO: Replace with real Supabase calls via Repository
-      await Future.delayed(const Duration(seconds: 1)); // Mock delay
       
       emit(DashboardLoaded(const {
         'activeSessions': 142,

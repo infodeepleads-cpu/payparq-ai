@@ -16,8 +16,8 @@ class AdminDataCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -26,10 +26,10 @@ class AdminDataCard extends StatelessWidget {
       child: Row(
         children: [
           leading,
-          const SizedBox(width: 24),
+          const SizedBox(width: 12),
           Expanded(child: mainContent),
           if (trailing != null) ...[
-            const SizedBox(width: 24),
+            const SizedBox(width: 12),
             trailing!,
           ],
         ],

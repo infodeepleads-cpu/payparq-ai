@@ -65,8 +65,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final profile = profileAsync.value;
 
       if (profile == null) {
-        if (profileAsync.hasError)
+        if (profileAsync.hasError) {
           throw Exception('Profile Error: ${profileAsync.error}');
+        }
         return;
       }
 
@@ -289,7 +290,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
       debugPrint('📡 SERVER RESPONSE: $response');
 
-      if (response != null && response.isNotEmpty) {
+      if (response.isNotEmpty) {
         final updatedData = response.first;
         debugPrint('✅ SUCCESS! RETURNED ID: ${updatedData['id']}');
 

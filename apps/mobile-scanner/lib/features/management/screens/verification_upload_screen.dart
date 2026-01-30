@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -50,9 +51,12 @@ class _VerificationUploadScreenState
       return;
     }
 
+    final bool isWeb = kIsWeb;
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: 70,
+      imageQuality: isWeb ? 15 : 25,
+      maxWidth: isWeb ? 800 : 1024,
+      maxHeight: isWeb ? 800 : 1024,
     );
 
     if (image != null) {
@@ -70,8 +74,11 @@ class _VerificationUploadScreenState
       return;
     }
 
+    final bool isWeb = kIsWeb;
     final List<XFile> images = await _picker.pickMultiImage(
-      imageQuality: 70,
+      imageQuality: isWeb ? 15 : 25,
+      maxWidth: isWeb ? 800 : 1024,
+      maxHeight: isWeb ? 800 : 1024,
     );
 
     if (images.isNotEmpty) {
@@ -126,53 +133,47 @@ class _VerificationUploadScreenState
     try {
       final supabase = Supabase.instance.client;
       final locationId = widget.location['id'];
-      final List<String> uploadedUrls = [];
+      // Parallel Upload for Speed
+      final List<Future<String>> uploadFutures = [];
 
       for (var i = 0; i < _selectedImages.length; i++) {
         final image = _selectedImages[i];
-        final bytes = await image.readAsBytes();
 
-        // Better extension handling
-        String fileExt = 'jpg';
-        if (image.name.contains('.')) {
-          fileExt = image.name.split('.').last.toLowerCase();
-        } else if (image.path.contains('.')) {
-          fileExt = image.path.split('.').last.toLowerCase();
-        }
+        uploadFutures.add(() async {
+          final bytes = await image.readAsBytes();
 
-        // Ensure valid extension for Supabase
-        if (!['jpg', 'jpeg', 'png', 'webp'].contains(fileExt)) {
-          fileExt = 'jpg';
-        }
+          String fileExt = 'jpg';
+          if (image.name.contains('.')) {
+            fileExt = image.name.split('.').last.toLowerCase();
+          } else if (image.path.contains('.')) {
+            fileExt = image.path.split('.').last.toLowerCase();
+          }
 
-        // Map extension to correct MIME type
-        final String mimeType = fileExt == 'jpg' || fileExt == 'jpeg'
-            ? 'image/jpeg'
-            : 'image/$fileExt';
+          if (!['jpg', 'jpeg', 'png', 'webp'].contains(fileExt)) {
+            fileExt = 'jpg';
+          }
 
-        final fileName =
-            '${locationId}_${DateTime.now().millisecondsSinceEpoch}_$i.$fileExt';
-        final path = fileName;
+          final String mimeType = fileExt == 'jpg' || fileExt == 'jpeg'
+              ? 'image/jpeg'
+              : 'image/$fileExt';
 
-        debugPrint(
-            'Uploading image $i: $path (size: ${bytes.length} bytes, mime: $mimeType)');
+          final fileName =
+              '${locationId}_${DateTime.now().millisecondsSinceEpoch}_$i.$fileExt';
 
-        try {
           await supabase.storage.from('location-verification').uploadBinary(
-                path,
+                fileName,
                 bytes,
                 fileOptions: FileOptions(contentType: mimeType, upsert: true),
               );
-          debugPrint('Upload success for image $i');
-        } catch (storageErr) {
-          debugPrint('Storage error for image $i: $storageErr');
-          rethrow;
-        }
 
-        final String publicUrl =
-            supabase.storage.from('location-verification').getPublicUrl(path);
-        uploadedUrls.add(publicUrl);
+          return supabase.storage
+              .from('location-verification')
+              .getPublicUrl(fileName);
+        }());
       }
+
+      final List<String> uploadedUrls =
+          await Future.wait(uploadFutures).timeout(const Duration(seconds: 40));
 
       await supabase.from('locations').update({
         'verification_status': 'pending',

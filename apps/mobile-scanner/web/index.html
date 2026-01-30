@@ -57,33 +57,30 @@
     }
   </style>
   <script>
-    // Simple Service Worker unregister to fix buffering/caching issues
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
+      // Delay check to avoid "document in invalid state" in sandboxed environments
+      window.addEventListener('load', function() {
+        try {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          }).catch(function(err) {
+            console.warn('Service worker unregistration failed:', err);
+          });
+        } catch (e) {
+          console.warn('Service worker access blocked:', e);
         }
       });
     }
   </script>
-  <script src="flutter.js" defer></script>
 </head>
 <body>
   <div class="loading">
     <div class="pulsate">payparq.ai</div>
   </div>
   <script>
-    window.addEventListener('load', function(ev) {
-      _flutter.loader.loadEntrypoint({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine({
-            useColorEmoji: true
-          }).then(function(appRunner) {
-            appRunner.runApp();
-          });
-        }
-      });
-    });
+    {{flutter_bootstrap_js}}
   </script>
 </body>
 </html>
