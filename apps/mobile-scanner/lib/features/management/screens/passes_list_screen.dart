@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../theme.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../repositories/parking_repository.dart';
 import 'add_pass_screen.dart';
 import 'pass_detail_screen.dart';
+import '../../../widgets/admin_data_card.dart';
 
 class PassesListScreen extends ConsumerStatefulWidget {
   const PassesListScreen({super.key});
@@ -107,61 +108,50 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                       final status = permit['status'] ?? 'active';
                       final id = permit['id'].toString();
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.border),
+                      return AdminDataCard(
+                        leading: Container(
+                          width: 160,
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            plate.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 1,
+                            ),
+                          ),
                         ),
-                        child: Row(
+                        mainContent: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(
-                              width: 160,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  plate.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
+                            Text(
+                              type == 'subscription'
+                                  ? 'Monthly Subscription'
+                                  : 'Guest Pass',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.black,
                               ),
                             ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    type == 'subscription'
-                                        ? 'Monthly Subscription'
-                                        : 'Guest Pass',
-                                    style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.black),
-                                  ),
-                                  Text(
-                                    'Valid until: Dec 2026',
-                                    style: GoogleFonts.inter(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 14),
-                                  ),
-                                ],
+                            Text(
+                              'Valid until: Dec 2026',
+                              style: GoogleFonts.inter(
+                                color: AppTheme.textSecondary,
+                                fontSize: 14,
                               ),
                             ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             _buildStatusBadge(status),
                             const SizedBox(width: 24),
                             ElevatedButton(
@@ -177,16 +167,21 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                                 backgroundColor: Colors.black,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 12),
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4)),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
                               child: const Text('View'),
                             ),
                             const SizedBox(width: 12),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  color: Colors.black),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.black,
+                              ),
                               onPressed: () => _confirmDelete(id),
                             ),
                           ],

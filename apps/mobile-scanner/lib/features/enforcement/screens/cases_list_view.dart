@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
+import '../../../widgets/admin_data_card.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
@@ -702,36 +703,29 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
+    return AdminDataCard(
+      leading: _buildPlateBadge(plate),
+      mainContent: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPlateBadge(plate),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _highlightText(
-                  violation['violation_type'] ?? 'General',
-                  _searchQuery,
-                  Colors.black,
-                  Colors.yellow,
-                ),
-                Text(
-                  _formatDate(issuedAt),
-                  style: GoogleFonts.inter(
-                      color: AppTheme.textSecondary, fontSize: 14),
-                ),
-              ],
+          _highlightText(
+            violation['violation_type'] ?? 'General',
+            _searchQuery,
+            Colors.black,
+            Colors.yellow,
+          ),
+          Text(
+            _formatDate(issuedAt),
+            style: GoogleFonts.inter(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
             ),
           ),
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           _buildStatusBadge(status),
           const SizedBox(width: 24),
           Text(
@@ -748,9 +742,13 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
             child: const Text('View'),
           ),

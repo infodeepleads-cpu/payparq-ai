@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../../../widgets/pulsating_loading_screen.dart';
+import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -158,60 +159,53 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           final displayId = loc['display_id'] ?? 'N/A';
                           final id = loc['id'].toString();
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.border),
+                          return AdminDataCard(
+                            leading: SizedBox(
+                              width: 160,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  displayId.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
                             ),
-                            child: Row(
+                            mainContent: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: 160,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      displayId.toUpperCase(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
+                                Text(
+                                  name,
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.black,
                                   ),
                                 ),
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: Colors.black),
-                                      ),
-                                      Text(
-                                        'Active Parking Hub',
-                                        style: GoogleFonts.inter(
-                                            color: AppTheme.textSecondary,
-                                            fontSize: 14),
-                                      ),
-                                    ],
+                                Text(
+                                  'Active Parking Hub',
+                                  style: GoogleFonts.inter(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
                                   ),
                                 ),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 _buildVerificationBadge(loc, isAdmin),
                                 const SizedBox(width: 12),
                                 _buildStatusBadge('ACTIVE'),
@@ -228,17 +222,19 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                               .select('id')
                                               .eq('location_id', id)
                                               .eq('payment_status', 'paid')
-                                              .then((res) =>
-                                                  (res as List).length),
+                                              .then(
+                                                  (res) => (res as List).length),
                                           Supabase.instance.client
                                               .from('parking_permits')
                                               .select('id')
                                               .eq('location_id', id)
                                               .eq('status', 'active')
-                                              .then((res) =>
-                                                  (res as List).length),
-                                        ]).then((results) =>
-                                            results[0] + results[1]),
+                                              .then(
+                                                  (res) => (res as List).length),
+                                        ]).then(
+                                          (results) =>
+                                              results[0] + results[1],
+                                        ),
                                         builder: (context, snapshot) {
                                           final activeCount =
                                               snapshot.data ?? 0;
@@ -269,8 +265,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 const SizedBox(width: 24),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.black),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.black,
+                                  ),
                                   onPressed: () =>
                                       _confirmDelete(id, displayId),
                                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart';
 import '../../logic/providers/dashboard_providers.dart';
 import '../../logic/providers/auth_providers.dart';
+import '../../widgets/admin_data_card.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -76,26 +78,36 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       letterSpacing: -1,
                     ),
                   ),
-                  if (isDesktop)
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final url = Uri.parse(
-                            'https://payparq-d-6rex95.web.app/app-release.apk');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url,
-                              mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      icon: const Icon(Icons.android, size: 20),
-                      label: const Text('Download App'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
+                  if (kIsWeb)
+                    Row(
+                      children: [
+                        _buildHeaderIconButton(
+                          icon: Icons.menu_book_outlined,
+                          backgroundColor: Colors.black,
+                          iconColor: Colors.white,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const InstructionsScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        _buildHeaderIconButton(
+                          icon: Icons.android,
+                          backgroundColor: Colors.white,
+                          iconColor: Colors.black,
+                          onTap: () async {
+                            final url = Uri.parse(
+                                'https://payparq-d-6rex95.web.app/app-release.apk');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -107,16 +119,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   color: AppTheme.textSecondary,
                 ),
               ),
-              if (!isDesktop) ...[
-                const SizedBox(height: 24),
-                _buildMobileDownloadWidget(),
-                const SizedBox(height: 16),
-                _buildInstructionsWidget(),
-              ],
-              if (isDesktop) ...[
-                const SizedBox(height: 24),
-                _buildInstructionsWidget(),
-              ],
             ],
           ),
           SizedBox(height: isDesktop ? 48 : 32),
@@ -267,6 +269,32 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderIconButton({
+    required IconData icon,
+    required Color backgroundColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Icon(
+          icon,
+          color: iconColor,
+          size: 20,
+        ),
       ),
     );
   }
@@ -540,48 +568,46 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
+    return AdminDataCard(
+      leading: _buildPlateBadge(plate),
+      mainContent: Row(
         children: [
-          _buildPlateBadge(plate),
-          const SizedBox(width: 24),
           Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _buildInfoColumn('Amount',
-                      s['ui_type'] == 'SUB' ? 'Monthly' : '€${s['price']}'),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: _buildInfoColumn(
-                      'User',
-                      s['contact_name'] ??
-                          s['email'] ??
-                          s['contact_email'] ??
-                          'Guest User'),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: _buildInfoColumn(
-                      'Phone', s['mobile'] ?? s['contact_phone'] ?? 'N/A'),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: _buildInfoColumn(
-                      'Email', s['email'] ?? s['contact_email'] ?? 'N/A'),
-                ),
-              ],
+            flex: 2,
+            child: _buildInfoColumn(
+              'Amount',
+              s['ui_type'] == 'SUB' ? 'Monthly' : '€${s['price']}',
             ),
           ),
+          Expanded(
+            flex: 3,
+            child: _buildInfoColumn(
+              'User',
+              s['contact_name'] ??
+                  s['email'] ??
+                  s['contact_email'] ??
+                  'Guest User',
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: _buildInfoColumn(
+              'Phone',
+              s['mobile'] ?? s['contact_phone'] ?? 'N/A',
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: _buildInfoColumn(
+              'Email',
+              s['email'] ?? s['contact_email'] ?? 'N/A',
+            ),
+          ),
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
           const SizedBox(width: 24),
           ElevatedButton(
@@ -589,9 +615,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
             child: const Text('View'),
           ),
@@ -700,5 +730,4 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
     );
   }
-
 }

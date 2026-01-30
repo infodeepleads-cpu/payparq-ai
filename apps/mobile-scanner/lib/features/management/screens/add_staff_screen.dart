@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
+import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 
@@ -188,76 +189,73 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           final isOfficer = (user['role'] == 'officer');
                           final id = user['id'].toString();
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.border),
+                          return AdminDataCard(
+                            leading: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(
+                                isOfficer
+                                    ? Icons.local_police
+                                    : Icons.admin_panel_settings,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
-                            child: Row(
+                            mainContent: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
+                                Text(
+                                  user['name'] ?? 'Unknown Name',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                     color: Colors.black,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Icon(
-                                    isOfficer
-                                        ? Icons.local_police
-                                        : Icons.admin_panel_settings,
-                                    color: Colors.white,
-                                    size: 20,
                                   ),
                                 ),
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user['name'] ?? 'Unknown Name',
-                                        style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: Colors.black),
-                                      ),
-                                      Text(
-                                        user['email'] ?? 'No Email',
-                                        style: GoogleFonts.inter(
-                                            color: AppTheme.textSecondary,
-                                            fontSize: 14),
-                                      ),
-                                    ],
+                                Text(
+                                  user['email'] ?? 'No Email',
+                                  style: GoogleFonts.inter(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
                                   ),
                                 ),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 _buildStatusBadge(
-                                    (user['role'] ?? 'staff').toUpperCase()),
+                                  (user['role'] ?? 'staff').toUpperCase(),
+                                ),
                                 const SizedBox(width: 24),
                                 ElevatedButton(
                                   onPressed: () => _showCredentialsDialog(
-                                      user['email'] ?? '',
-                                      user['raw_password'] ??
-                                          'Already Changed'),
+                                    user['email'] ?? '',
+                                    user['raw_password'] ?? 'Already Changed',
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.black,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 24, vertical: 12),
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
                                     shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
                                   child: const Text('Credentials'),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.black),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.black,
+                                  ),
                                   onPressed: () => _confirmDelete(id),
                                 ),
                               ],

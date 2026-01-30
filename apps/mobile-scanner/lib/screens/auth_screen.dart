@@ -143,10 +143,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Padding(
                   padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -260,6 +260,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         ),
                       ),
                     ],
+                    ),
                   ),
                 ),
               ),
