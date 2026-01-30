@@ -81,10 +81,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   if (kIsWeb)
                     Row(
                       children: [
-                        _buildHeaderIconButton(
+                        _buildHeaderActionButton(
                           icon: Icons.menu_book_outlined,
-                          backgroundColor: Colors.black,
-                          iconColor: Colors.white,
+                          label: 'Instructions',
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
                           onTap: () {
                             Navigator.push(
                               context,
@@ -94,10 +95,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           },
                         ),
                         const SizedBox(width: 12),
-                        _buildHeaderIconButton(
+                        _buildHeaderActionButton(
                           icon: Icons.android,
-                          backgroundColor: Colors.white,
-                          iconColor: Colors.black,
+                          label: 'Download App',
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
                           onTap: () async {
                             final url = Uri.parse(
                                 'https://payparq-d-6rex95.web.app/app-release.apk');
@@ -273,27 +275,40 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildHeaderIconButton({
+  Widget _buildHeaderActionButton({
     required IconData icon,
+    required String label,
     required Color backgroundColor,
-    required Color iconColor,
+    required Color foregroundColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        width: 40,
-        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: AppTheme.border),
         ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 20,
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: foregroundColor,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: foregroundColor,
+              ),
+            ),
+          ],
         ),
       ),
     );
