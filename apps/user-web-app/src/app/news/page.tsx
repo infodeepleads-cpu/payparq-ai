@@ -258,6 +258,153 @@ export default function News() {
             </p>
           </div>
         </section>
+
+        <section className="border-t border-black/5 bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 mb-8">
+              <div className="max-w-xl">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                  In the news
+                </p>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-4">
+                  How others are writing about Payparq.
+                </h2>
+                <p className="text-sm md:text-base text-black/75">
+                  Selected coverage from Croatian and international media on how Payparq is helping
+                  unlock new parking capacity and transform spaces into digital assets.
+                </p>
+              </div>
+              <div className="flex flex-col items-start md:items-end gap-3">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">
+                  Follow Payparq
+                </p>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://www.tiktok.com/@payparq"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Payparq on TikTok"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    <span className="text-[11px] font-semibold">Tt</span>
+                  </a>
+                  <a
+                    href="https://www.instagram.com/payparq.ai/?hl=hr"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Payparq on Instagram"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    <span className="text-[11px] font-semibold">Ig</span>
+                  </a>
+                  <a
+                    href="https://www.youtube.com/@karlozamic348"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Payparq on YouTube"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    <span className="text-[11px] font-semibold">Yt</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <a
+                href="https://www.vecernji.hr/vijesti/startup-iz-dalmacije-osvaja-hrvatsku-i-nezaustavljivo-se-siri-zauvijek-cemo-promijeniti-nacin-parkiranja-1875926"
+                target="_blank"
+                rel="noreferrer"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Večernji list
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Startup iz Dalmacije osvaja Hrvatsku
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Report on how Payparq, launched from Brela, is reshaping parking across Croatia
+                    and building a platform with global potential.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read article →
+                </div>
+              </a>
+
+              <a
+                href="https://total-croatia-news.com/news/croatian-startup-payparq/"
+                target="_blank"
+                rel="noreferrer"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Total Croatia News
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Croatian startup PayParq gaining traction nationwide
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    English-language feature on Payparq&apos;s origins in Brela and how the platform
+                    connects landowners, operators, and drivers.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read article →
+                </div>
+              </a>
+
+              <a
+                href="https://novac.jutarnji.hr/novac/aktualno/start-up-iz-brela-pokrenuo-revoluciju-privatna-parkiralista-sada-dostupna-svima-15602363"
+                target="_blank"
+                rel="noreferrer"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Jutarnji list / Novac
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Start-up iz Brela pokrenuo revoluciju
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Story about Payparq as an &quot;Airbnb for parking&quot; and how private
+                    parking becomes accessible through a digital platform.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read article →
+                </div>
+              </a>
+
+              <a
+                href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
+                target="_blank"
+                rel="noreferrer"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Poslovni dnevnik
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Startup iz Dalmacije osvaja Hrvatsku
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Business-focused coverage of Payparq&apos;s model, investment potential, and
+                    plans for expansion beyond Croatia.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read article →
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
