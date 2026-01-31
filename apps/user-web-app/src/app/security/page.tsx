@@ -32,7 +32,10 @@ export default function Security() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setBusinessOpen((open) => !open)}
+                      onClick={() => {
+                        setBusinessOpen((open) => !open);
+                        setCompanyOpen(false);
+                      }}
                     >
                       <span>Business</span>
                       <span className="text-[8px] leading-none">▾</span>
@@ -69,36 +72,46 @@ export default function Security() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setCompanyOpen((open) => !open)}
+                      onClick={() => {
+                        setCompanyOpen((open) => !open);
+                        setBusinessOpen(false);
+                      }}
                     >
                       <span>Company</span>
                       <span className="text-[8px] leading-none">▾</span>
                     </button>
-                    {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
-                        <Link
-                          href="/about"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          About
-                        </Link>
-                        <Link
-                          href="/careers"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          Careers
-                        </Link>
-                        <Link
-                          href="/news"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          News
-                        </Link>
-                      </div>
-                    )}
+                  {companyOpen && (
+                    <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
+                      <Link
+                        href="/about"
+                        className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                        onClick={() => setCompanyOpen(false)}
+                      >
+                        About
+                      </Link>
+                      <Link
+                        href="/careers"
+                        className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                        onClick={() => setCompanyOpen(false)}
+                      >
+                        Careers
+                      </Link>
+                      <Link
+                        href="/news"
+                        className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                        onClick={() => setCompanyOpen(false)}
+                      >
+                        News
+                      </Link>
+                      <Link
+                        href="/contact"
+                        className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                        onClick={() => setCompanyOpen(false)}
+                      >
+                        Get in touch
+                      </Link>
+                    </div>
+                  )}
                   </div>
                 </div>
               </div>
@@ -116,9 +129,12 @@ export default function Security() {
               </div>
 
               <div className="flex items-center justify-end gap-2 md:gap-3">
-                <button className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/contact"
+                  className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                >
                   Get in Touch
-                </button>
+                </Link>
                 <Link
                   href="/pay"
                   className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -139,7 +155,10 @@ export default function Security() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
-                    onClick={() => setBusinessOpen((open) => !open)}
+                    onClick={() => {
+                      setBusinessOpen((open) => !open);
+                      setCompanyOpen(false);
+                    }}
                   >
                     <span>Business</span>
                     <span className="text-[9px] leading-none">▾</span>
@@ -187,7 +206,10 @@ export default function Security() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
-                    onClick={() => setCompanyOpen((open) => !open)}
+                    onClick={() => {
+                      setCompanyOpen((open) => !open);
+                      setBusinessOpen(false);
+                    }}
                   >
                     <span>Company</span>
                     <span className="text-[9px] leading-none">▾</span>
@@ -224,11 +246,25 @@ export default function Security() {
                       >
                         News
                       </Link>
+                      <Link
+                        href="/contact"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setCompanyOpen(false);
+                        }}
+                      >
+                        Get in touch
+                      </Link>
                     </div>
                   )}
-                  <button className="w-full mt-2 border-t border-b border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors">
+                  <Link
+                    href="/contact"
+                    className="w-full mt-2 border-t border-b border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Get in Touch
-                  </button>
+                  </Link>
                   <Link
                     href="/pay"
                     className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -526,7 +562,9 @@ export default function Security() {
             <span>Security</span>
           </div>
           <div className="flex items-center gap-4">
-            <button className="hover:text-white transition-colors">Privacy</button>
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              Privacy
+            </Link>
             <button className="hover:text-white transition-colors">Terms</button>
           </div>
         </div>

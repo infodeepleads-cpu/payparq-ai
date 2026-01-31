@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
-import { ChevronDown, Camera } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export default function Product() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,7 +34,10 @@ export default function Product() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setBusinessOpen((open) => !open)}
+                      onClick={() => {
+                        setBusinessOpen((open) => !open);
+                        setCompanyOpen(false);
+                      }}
                     >
                       <span>Business</span>
                       <ChevronDown className="w-3 h-3" />
@@ -74,7 +77,10 @@ export default function Product() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setCompanyOpen((open) => !open)}
+                      onClick={() => {
+                        setCompanyOpen((open) => !open);
+                        setBusinessOpen(false);
+                      }}
                     >
                       <span>Company</span>
                       <ChevronDown className="w-3 h-3" />
@@ -144,7 +150,10 @@ export default function Product() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
-                    onClick={() => setBusinessOpen((open) => !open)}
+                    onClick={() => {
+                      setBusinessOpen((open) => !open);
+                      setCompanyOpen(false);
+                    }}
                   >
                     <span>Business</span>
                     <ChevronDown className="w-3 h-3" />
@@ -199,7 +208,10 @@ export default function Product() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
-                    onClick={() => setCompanyOpen((open) => !open)}
+                    onClick={() => {
+                      setCompanyOpen((open) => !open);
+                      setBusinessOpen(false);
+                    }}
                   >
                     <span>Company</span>
                     <ChevronDown className="w-3 h-3" />
@@ -259,138 +271,44 @@ export default function Product() {
       </header>
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="relative overflow-hidden bg-[#05020A] text-white">
-          <div className="absolute inset-0">
-            <div className="w-full h-full bg-gradient-to-br from-[#020617] via-[#020617] to-[#111827]" />
-            <div className="absolute inset-0 opacity-30">
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 0% 0%, rgba(94,234,212,0.35) 0, transparent 45%), radial-gradient(circle at 90% 100%, rgba(129,140,248,0.35) 0, transparent 50%)",
-                }}
-              />
-            </div>
-          </div>
-          <div className="relative max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-24">
-            <div className="grid gap-12 md:grid-cols-[1.3fr,1fr] items-center">
-              <div className="max-w-xl">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-                  iPhone-powered Mobile LPR
-                </p>
-                <h1 className="text-3xl md:text-5xl font-semibold md:font-bold tracking-tight leading-tight mb-4">
-                  Point your phone. We handle every plate.
-                </h1>
-                <p className="text-sm md:text-base text-white/75 mb-6">
-                  Payparq runs Mobile License Plate Recognition directly on iPhone, capturing plates as patrols move
-                  through the city and turning every photo into a live parking session.
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
-                    <span>Watch LPR in action</span>
-                  </button>
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
-                    <span>Talk to Sales</span>
-                  </button>
-                </div>
-                <div className="mt-6 flex flex-wrap items-center gap-4 text-[11px] text-white/60">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    <span>Plates captured in real time as patrols drive</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                    <span>No fixed cameras or gates required</span>
-                  </div>
-                </div>
-              </div>
-              <div className="hidden md:flex justify-end">
-                <div className="relative">
-                  <div className="absolute -top-6 -left-6 h-16 w-16 rounded-full bg-emerald-400/20 blur-2xl" />
-                  <div className="absolute -bottom-8 -right-4 h-20 w-20 rounded-full bg-indigo-400/25 blur-2xl" />
-                  <div className="relative mx-auto w-64 rounded-[32px] border border-white/15 bg-white/5 p-2 shadow-[0_30px_80px_rgba(15,23,42,0.8)]">
-                    <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/40" />
-                    <div className="overflow-hidden rounded-[24px] bg-gradient-to-b from-[#020617] via-[#020617] to-[#020617] border border-white/10">
-                      <div className="flex items-center justify-between px-4 py-3 text-[10px] text-white/70">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 border border-emerald-300/40">
-                            <Camera className="h-3 w-3 text-emerald-300" />
-                          </div>
-                          <span className="font-medium tracking-[0.16em] uppercase">LPR capture</span>
-                        </div>
-                        <span className="text-white/40">iPhone</span>
-                      </div>
-                      <div className="px-4 pb-4 pt-2 space-y-3">
-                        <div className="rounded-2xl bg-black/60 border border-white/10 px-4 py-3 flex items-center justify-between">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">Plate</p>
-                            <p className="font-mono text-lg tracking-[0.28em] text-white">ZG 123-PP</p>
-                          </div>
-                          <div className="text-right text-[10px] text-emerald-300">
-                            <p className="uppercase tracking-[0.18em]">Matched</p>
-                            <p className="text-white/60">Zone A • 02:14</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-[10px] text-white/60">
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
-                            <p className="uppercase tracking-[0.2em] text-white/40 mb-1">Session</p>
-                            <p className="font-mono text-xs text-white">Active • $3.40</p>
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
-                            <p className="uppercase tracking-[0.2em] text-white/40 mb-1">Confidence</p>
-                            <p className="font-mono text-xs text-emerald-300">99.2%</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-12 md:grid-cols-[1.4fr,1fr] items-start">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-20 md:py-24">
+            <div className="grid gap-12 md:grid-cols-[1.4fr,1fr] items-center">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
-                  Seamless. Simple. Built for drivers.
+                  Seamless. Simple. Built for partners.
                 </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
                   One profile. Effortless parking across your entire network.
                 </h2>
                 <p className="text-sm md:text-base text-black/75 mb-4">
-                  With Payparq, drivers connect a vehicle once and instantly get access to every participating lot,
-                  garage, and on-street zone. Visits start automatically on arrival and end when the vehicle leaves.
+                  With Payparq&apos;s connected mobile LPR app, drivers connect a vehicle once and instantly get access
+                  to every participating lot, garage, and on-street zone. Visits start automatically on arrival and end
+                  when the vehicle leaves.
                 </p>
                 <ul className="space-y-2 text-xs md:text-sm text-black/75">
                   <li>License plate recognition starts and stops sessions automatically.</li>
-                  <li>Clear SMS receipts keep drivers informed without needing an app.</li>
+                  <li>Clear email receipts keep drivers informed without needing an app.</li>
                   <li>No gates, tickets, or payment hardware required on site.</li>
                 </ul>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-6">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/60 mb-2">
-                  For your customers
-                </p>
-                <p className="text-sm md:text-base text-white/80 mb-3">
-                  A modern journey that fits into the rest of their digital life. Drivers stay focused on where they are
-                  going, not how to pay for parking.
-                </p>
-                <div className="mt-4 grid gap-3 text-xs md:text-sm text-white/80">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-[2px] h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    <p>Automatic sessions on entry and exit with accurate timing.</p>
+              <div className="flex justify-center">
+                <div className="rounded-3xl border border-black/5 bg-[#05020A] text-white p-4 md:p-6 shadow-[0_18px_45px_rgba(15,23,42,0.45)] max-w-xs w-full">
+                  <div className="flex justify-center mb-3">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full border border-white/20 bg-white/10 text-[11px] font-medium">
+                      Phone to plate mobile LPR enforcement
+                    </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <span className="mt-[2px] h-1.5 w-1.5 rounded-full bg-sky-400" />
-                    <p>Secure, tokenized payments that can be reused across sites.</p>
+                  <div className="rounded-2xl overflow-hidden bg-black/80 border border-white/10">
+                    <img
+                      src="/Snimka%20zaslona%202026-01-31%20174200.png"
+                      alt="Driver profile and recent parking sessions"
+                      className="w-full h-auto"
+                    />
                   </div>
-                  <div className="flex items-start gap-3">
-                    <span className="mt-[2px] h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    <p>Instant digital receipts with location, duration, and price.</p>
-                  </div>
+                  <p className="mt-3 text-xs md:text-sm text-white/80">
+                    A single profile powers access, payments, and receipts at every connected asset.
+                  </p>
                 </div>
               </div>
             </div>
@@ -411,42 +329,42 @@ export default function Product() {
                 parking gets a better experience.
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-3 text-xs md:text-sm text-white/80">
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">
+            <div className="grid gap-5 md:grid-cols-3 text-xs md:text-sm text-white/80">
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">
                   Real estate owners
                 </p>
                 <p>
                   Standardized digital revenue collection across assets, with live visibility into occupancy and yield.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">Drivers</p>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">Drivers</p>
                 <p>
                   A consistent, predictable way to park at the curb, in garages, and in surface lots without extra
                   steps.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">Building tenants</p>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">Building tenants</p>
                 <p>
                   Digital validations and guest access tools replace hang tags and spreadsheets with a clean portal.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">Property managers</p>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">Property managers</p>
                 <p>
                   A single dashboard to manage pricing, allocations, exceptions, and performance across properties.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">Local operations</p>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">Local operations</p>
                 <p>
                   Mobile tools show live utilization and guide teams to where patrols, valet, or support are needed most.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-1">Local businesses</p>
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">Local businesses</p>
                 <p>
                   Seamless digital validations keep spaces available for customers while still protecting the asset.
                 </p>
@@ -455,122 +373,226 @@ export default function Product() {
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-10 md:grid-cols-[1.4fr,1fr] items-start">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
-                  Reshaping parking economics
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
-                  Fewer hardware contracts. More software-driven NOI.
-                </h2>
-                <p className="text-sm md:text-base text-black/75 mb-4">
-                  Payparq replaces legacy meters, gates, and fragmented enforcement systems with a single, cloud-first
-                  stack. You unlock better revenue capture while reducing CapEx and operating complexity.
-                </p>
-                <ul className="space-y-2 text-xs md:text-sm text-black/75">
-                  <li>Remove redundant equipment while keeping or improving coverage.</li>
-                  <li>Standardize policies and pricing across every bay in the portfolio.</li>
-                  <li>Feed occupancy and demand data straight into asset reporting.</li>
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-6 text-xs md:text-sm text-black/80">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
-                  CapEx down, NOI up
-                </p>
-                <p className="mb-3">
-                  Instead of buying more hardware every time a site changes, Payparq scales with software. New zones and
-                  rules are configured centrally and pushed live in hours, not months.
-                </p>
-                <p>
-                  That means fewer surprises in the budget and a clearer link between curb performance and investor
-                  outcomes.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section className="bg-[#05020A] text-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-10 md:grid-cols-[1.4fr,1fr] items-start">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
-                  Actionable analysis
+            <div className="max-w-2xl mb-10">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
+                Dashboard
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
+                A control room for permits, activity, and performance.
+              </h2>
+              <p className="text-sm md:text-base text-white/80">
+                The Payparq dashboard brings every lot, permit, and visit into one place so teams can move from manual
+                checks to proactive management.
+              </p>
+            </div>
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-6 max-w-sm mx-auto">
+                <img
+                  src="/Snimka%20zaslona%202026-01-31%20173642.png"
+                  alt="Permits dashboard showing active permits and actions"
+                  className="w-full h-auto rounded-xl mb-4"
+                />
+                <p className="text-sm text-white/80">
+                  The Permits view centralises access for each lot. Teams can see active and upcoming permits, issue
+                  guest passes, and adjust rules without touching hardware.
                 </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
-                  Insights that explain how every space is being used.
-                </h2>
-                <p className="text-sm md:text-base text-white/80 mb-4">
-                  Payparq connects sessions, plates, and enforcement outcomes into a single dataset so you can see what
-                  is happening — not just how many tickets were written.
-                </p>
-                <ul className="space-y-2 text-xs md:text-sm text-white/80">
-                  <li>Understand dwell time, turnover, and repeat behavior at each site.</li>
-                  <li>Compare performance across neighborhoods, asset types, and time of day.</li>
-                  <li>Use data to make the case for pricing, policy, and capital decisions.</li>
-                </ul>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-6 text-xs md:text-sm text-white/85">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-2">
-                  Built for operators
-                </p>
-                <p className="mb-3">
-                  The same platform that powers driver sessions also drives dashboards and reports for your team, so no
-                  one is working from stale exports.
-                </p>
-                <p>
-                  Real-time views of occupancy and enforcement let you adjust staffing and strategy before problems
-                  show up in monthly numbers.
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-6 max-w-sm mx-auto">
+                <img
+                  src="/Snimka%20zaslona%202026-01-31%20174200.png"
+                  alt="Home dashboard listing active sessions and driver details"
+                  className="w-full h-auto rounded-xl mb-4"
+                />
+                <p className="text-sm text-white/80">
+                  The Home view shows live sessions, driver details, and contact information so staff can resolve
+                  issues quickly while keeping occupancy and compliance in view.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 border-t border-black/5">
-            <div className="grid gap-8 md:grid-cols-[1.5fr,1fr] items-center">
+        <section className="bg-[#F5F5F7] border-t border-black/5">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-28">
+            <div className="max-w-3xl mb-12">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
+                Pricing
+              </p>
+              <h2 className="text-3xl md:text-[2.3rem] font-semibold tracking-tight mb-5 text-black">
+                Flexible models that match how your assets earn.
+              </h2>
+              <p className="text-sm md:text-base text-black/70">
+                From pure revenue share to SaaS models for LPR and digital displays, Payparq pricing is structured in €
+                per spot per month. LPR and screens are delivered as software only, with no hardware bundles, so fees
+                align with authorization, monetisation, or media needs.
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 text-xs md:text-sm text-black/80">
+              <div className="rounded-3xl border border-black/10 bg-white p-6 md:p-8 flex flex-col gap-4 shadow-sm h-full">
+                <div>
+                  <p className="text-3xl md:text-4xl font-semibold tracking-tight">0</p>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
+                    Revenue share
+                  </p>
+                </div>
+                <p className="text-sm md:text-base text-black/75">
+                  Zero upfront cost. Revenue share on a mobile LPR experience delivered through our connected app, while
+                  you keep existing access and enforcement workflows.
+                </p>
+                <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
+                  <li>Monetisation-led model on incremental collections.</li>
+                  <li>Authorization, sessions, and payments handled in software.</li>
+                  <li>€ per spot per month with upside share.</li>
+                </ul>
+                <button className="mt-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-black/10 bg-black text-white text-[11px] md:text-xs font-semibold hover:bg-black/90 transition-colors">
+                  <span>Get in touch</span>
+                </button>
+              </div>
+              <div className="rounded-3xl border border-black/10 bg-white p-6 md:p-8 flex flex-col gap-4 shadow-sm h-full">
+                <div>
+                  <p className="text-3xl md:text-4xl font-semibold tracking-tight">10</p>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
+                    Authorization-first
+                  </p>
+                </div>
+                <p className="text-sm md:text-base text-black/75">
+                  For portfolios that want Payparq&apos;s mobile LPR and connected app as the primary authorization and
+                  enforcement layer with predictable SaaS economics.
+                </p>
+                <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
+                  <li>Plates, sessions, and enforcement unified in one platform.</li>
+                  <li>Simple platform fee instead of revenue share.</li>
+                  <li>€ per spot per month with predictable SaaS pricing.</li>
+                </ul>
+                <button className="mt-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-black/10 bg-black text-white text-[11px] md:text-xs font-semibold hover:bg-black/90 transition-colors">
+                  <span>Get in touch</span>
+                </button>
+              </div>
+              <div className="rounded-3xl border border-black/10 bg-white p-6 md:p-8 flex flex-col gap-4 shadow-sm h-full">
+                <div>
+                  <p className="text-3xl md:text-4xl font-semibold tracking-tight">15</p>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
+                    LPR SaaS
+                  </p>
+                </div>
+                <p className="text-sm md:text-base text-black/75">
+                  Software-only LPR enforcement and case management that connects to your existing camera
+                  infrastructure.
+                </p>
+                <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
+                  <li>No hardware bundles; works with compatible cameras you already operate.</li>
+                  <li>Ideal for portfolios standardising enforcement across sites.</li>
+                  <li>€ per spot per month SaaS pricing.</li>
+                </ul>
+                <button className="mt-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-black/10 bg-black text-white text-[11px] md:text-xs font-semibold hover:bg-black/90 transition-colors">
+                  <span>Get in touch</span>
+                </button>
+              </div>
+              <div className="rounded-3xl border border-black/10 bg-white p-6 md:p-8 flex flex-col gap-4 shadow-sm h-full">
+                <div>
+                  <p className="text-3xl md:text-4xl font-semibold tracking-tight">20</p>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
+                    Digital displays & DOOH SaaS
+                  </p>
+                </div>
+                <p className="text-sm md:text-base text-black/75">
+                  Digital signage and DOOH scheduling delivered as software, layered on top of Payparq access and
+                  sessions.
+                </p>
+                <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
+                  <li>Display and content management as SaaS, using your existing screens.</li>
+                  <li>Promotions and information scheduled alongside parking content.</li>
+                  <li>€ per spot per month with optional media revenue opportunities.</li>
+                </ul>
+                <button className="mt-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-black/10 bg-black text-white text-[11px] md:text-xs font-semibold hover:bg-black/90 transition-colors">
+                  <span>Get in touch</span>
+                </button>
+              </div>
+            </div>
+            <p className="mt-10 text-[11px] md:text-xs text-black/60">
+              Exact commercial terms depend on asset mix, utilisation, and existing infrastructure. Our team will shape
+              a proposal around your portfolio.
+            </p>
+          </div>
+        </section>
+
+        <section className="bg-[#05020A] border-t border-white/10">
+          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+            <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
-                  Ready to see Payparq in action?
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
+                  For drivers, operators, and cities
                 </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
-                  Bring seamless, software-led parking to your portfolio.
+                <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+                  Frictionless access to anywhere you want to be
                 </h2>
-                <p className="text-sm md:text-base text-black/75 mb-5">
-                  Share a few details about your assets and our team will follow up with a tailored walkthrough of how
-                  Payparq could work across your locations.
+                <p className="text-sm text-white/70 mb-6 max-w-md">
+                  From mixed-use garages to open-air lots, payparq turns any space into a
+                  seamless, app-free arrival experience while unlocking new revenue.
                 </p>
-                <div className="flex flex-wrap gap-3">
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors">
-                    <span>Book a demo</span>
-                  </button>
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-black/15 text-xs font-semibold hover:bg-black/5 transition-colors">
-                    <span>Download product overview</span>
-                  </button>
+                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
+                  <span className="text-xs">Download on the App Store</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Company
+                  </p>
+                  <Link href="/about" className="block hover:text-white transition-colors">
+                    About
+                  </Link>
+                  <Link href="/careers" className="block hover:text-white transition-colors">
+                    Careers
+                  </Link>
+                  <Link href="/news" className="block hover:text-white transition-colors">
+                    News
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Experience
+                  </p>
+                  <Link href="/product" className="block hover:text-white transition-colors">
+                    Product
+                  </Link>
+                  <Link href="/parking" className="block hover:text-white transition-colors">
+                    Parking
+                  </Link>
+                  <Link href="/security" className="block hover:text-white transition-colors">
+                    Security
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Policies
+                  </p>
+                  <Link href="/legal" className="block hover:text-white transition-colors">
+                    Legal
+                  </Link>
+                  <Link href="/privacy" className="block hover:text-white transition-colors">
+                    Privacy
+                  </Link>
+                  <button className="block hover:text-white transition-colors">Terms</button>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Platform
+                  </p>
+                  <button className="block hover:text-white transition-colors">Partners</button>
+                  <button className="block hover:text-white transition-colors">Support</button>
                 </div>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-6 text-xs md:text-sm text-black/80">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
-                  For investors and partners
-                </p>
-                <p className="mb-3">
-                  Payparq is designed to work at the scale of cities and portfolios, not just single garages. One
-                  product roadmap powers every new deployment.
-                </p>
-                <p>
-                  That means faster launches, more consistent operations, and a clearer story about how parking supports
-                  the rest of your strategy.
-                </p>
-              </div>
+            </div>
+            <div className="mt-12 pt-6 border-t border-white/10">
+              <FooterBrand />
             </div>
           </div>
         </section>
-      </main>
 
-      <FooterBrand />
+      </main>
     </div>
   );
 }

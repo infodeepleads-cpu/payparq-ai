@@ -34,7 +34,10 @@ export default function Business() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setBusinessOpen((open) => !open)}
+                      onClick={() => {
+                        setBusinessOpen((open) => !open);
+                        setCompanyOpen(false);
+                      }}
                     >
                       <span>Business</span>
                       <ChevronDown className="w-3 h-3" />
@@ -71,13 +74,16 @@ export default function Business() {
                   <div className="relative">
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => setCompanyOpen((open) => !open)}
+                      onClick={() => {
+                        setCompanyOpen((open) => !open);
+                        setBusinessOpen(false);
+                      }}
                     >
                       <span>Company</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
+                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
                         <Link
                           href="/about"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
@@ -99,6 +105,13 @@ export default function Business() {
                         >
                           News
                         </Link>
+                        <Link
+                          href="/contact"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          onClick={() => setCompanyOpen(false)}
+                        >
+                          Get in touch
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -118,9 +131,12 @@ export default function Business() {
               </div>
 
               <div className="flex items-center justify-end gap-2 md:gap-3">
-                <button className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/contact"
+                  className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                >
                   Get in Touch
-                </button>
+                </Link>
                 <Link
                   href="/pay"
                   className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -140,7 +156,10 @@ export default function Business() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
-                    onClick={() => setBusinessOpen((open) => !open)}
+                    onClick={() => {
+                      setBusinessOpen((open) => !open);
+                      setCompanyOpen(false);
+                    }}
                   >
                     <span>Business</span>
                     <ChevronDown className="w-3 h-3" />
@@ -188,7 +207,10 @@ export default function Business() {
                   </Link>
                   <button
                     className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
-                    onClick={() => setCompanyOpen((open) => !open)}
+                    onClick={() => {
+                      setCompanyOpen((open) => !open);
+                      setBusinessOpen(false);
+                    }}
                   >
                     <span>Company</span>
                     <ChevronDown className="w-3 h-3" />
@@ -227,9 +249,13 @@ export default function Business() {
                       </Link>
                     </div>
                   )}
-                  <button className="w-full mt-2 border-t border-b border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors">
+                  <Link
+                    href="/contact"
+                    className="w-full mt-2 border-t border-b border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors"
+                    onClick={() => setMobileOpen(false)}
+                  >
                     Get in Touch
-                  </button>
+                  </Link>
                   <Link
                     href="/pay"
                     className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -762,8 +788,12 @@ export default function Business() {
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                 Policies
               </p>
-              <button className="block hover:text-white transition-colors">Legal</button>
-              <button className="block hover:text-white transition-colors">Privacy</button>
+              <Link href="/legal" className="block hover:text-white transition-colors">
+                Legal
+              </Link>
+              <Link href="/privacy" className="block hover:text-white transition-colors">
+                Privacy
+              </Link>
               <button className="block hover:text-white transition-colors">Terms</button>
             </div>
             <div className="space-y-3">
