@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { FooterBrand } from "@/components/FooterBrand";
+import { ChevronDown } from "lucide-react";
 
 export default function Business() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,27 +37,27 @@ export default function Business() {
                       onClick={() => setBusinessOpen((open) => !open)}
                     >
                       <span>Business</span>
-                      <span className="text-[8px] leading-none">▾</span>
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                     {businessOpen && (
                       <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/business"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Smart City
                         </Link>
                         <Link
                           href="/parking"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Parking
                         </Link>
                         <Link
                           href="/security"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
@@ -72,27 +74,27 @@ export default function Business() {
                       onClick={() => setCompanyOpen((open) => !open)}
                     >
                       <span>Company</span>
-                      <span className="text-[8px] leading-none">▾</span>
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
                       <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/about"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           About
                         </Link>
                         <Link
                           href="/careers"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           Careers
                         </Link>
                         <Link
                           href="/news"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           News
@@ -137,11 +139,11 @@ export default function Business() {
                     Experience
                   </Link>
                   <button
-                    className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
                     onClick={() => setBusinessOpen((open) => !open)}
                   >
                     <span>Business</span>
-                    <span className="text-[9px] leading-none">▾</span>
+                    <ChevronDown className="w-3 h-3" />
                   </button>
                   {businessOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
@@ -185,11 +187,11 @@ export default function Business() {
                     Technology
                   </Link>
                   <button
-                    className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
                     onClick={() => setCompanyOpen((open) => !open)}
                   >
                     <span>Company</span>
-                    <span className="text-[9px] leading-none">▾</span>
+                    <ChevronDown className="w-3 h-3" />
                   </button>
                   {companyOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
@@ -547,6 +549,120 @@ export default function Business() {
           </div>
         </section>
 
+        <section className="bg-[#F5F5F7]">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+            <div className="grid gap-10 md:grid-cols-[1.3fr,1fr] items-start">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                  Dalmatian coast
+                </p>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+                  AI mobile LPR for Split, Makarska and Dubrovnik.
+                </h2>
+                <p className="text-sm md:text-base text-black/75 mb-3">
+                  Tourist seasons in Split, Makarska and Dubrovnik bring full streets, circling cars
+                  and overloaded car parks. Manual patrols and fragmented systems make it hard for
+                  municipalities and operators to keep up with the volume of visitors.
+                </p>
+                <p className="text-sm md:text-base text-black/75 mb-3">
+                  Payparq replaces paper lists and slow checks with a mobile license plate
+                  recognition app and live dashboard. From the Riva in Split to the promenades in
+                  Makarska and the streets around Dubrovnik&apos;s Old Town, every scan, violation
+                  and zone is visible in real time.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-xs md:text-sm text-black/80">
+                  <div className="rounded-2xl border border-black/5 bg-white p-4">
+                    <p className="font-semibold mb-1">Dashboard for control rooms</p>
+                    <p>
+                      Live occupancy per street, zone and car park, with violation statistics and
+                      history for pricing and capacity decisions.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/5 bg-white p-4">
+                    <p className="font-semibold mb-1">Mobile LPR for field teams</p>
+                    <p>
+                      Fast plate recognition from any Android device, online or offline, with
+                      instant checks against payments, permits and whitelists.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-3xl border border-black/5 bg-white p-5 text-xs md:text-sm text-black/80">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
+                  Results for coastal cities
+                </p>
+                <p className="mb-2">
+                  By combining mobile LPR with live analytics, cities and operators on the
+                  Dalmatian coast see more collected revenue, faster patrols and fewer disputes.
+                </p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>15–30% more collected parking fees and fines.</li>
+                  <li>Up to 50% faster patrol cycles.</li>
+                  <li>Transparent, auditable history for every enforcement action.</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-12 grid gap-6 md:grid-cols-3 text-sm md:text-base text-black/80">
+              <div className="rounded-2xl border border-black/5 bg-white p-5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
+                  Split
+                </p>
+                <h3 className="text-base md:text-lg font-semibold mb-2">
+                  Optimising parking operations in Split.
+                </h3>
+                <p className="mb-3 text-sm md:text-base">
+                  Demand explodes around the ferry port, Poljud and the city centre. Payparq shows
+                  which zones are full, where overstays happen and how patrols move during peak
+                  hours.
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-xs md:text-sm text-black/75">
+                  <li>Better control of mixed resident and tourist parking near the centre.</li>
+                  <li>
+                    Faster enforcement around high-turnover areas like the Riva and ferry terminal.
+                  </li>
+                  <li>Clear reporting for city management and private operators.</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-black/5 bg-white p-5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
+                  Makarska
+                </p>
+                <h3 className="text-base md:text-lg font-semibold mb-2">
+                  Handling seasonal peaks in Makarska.
+                </h3>
+                <p className="mb-3 text-sm md:text-base">
+                  Streets and waterfront parking fill up quickly in summer, and every unpaid stay is
+                  lost revenue. Payparq guides patrols along the promenade and side streets while the
+                  dashboard shows live turnover across all locations.
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-xs md:text-sm text-black/75">
+                  <li>Targeted patrols where violations are actually happening.</li>
+                  <li>Better protection of dedicated staff and resident parking.</li>
+                  <li>Data to support seasonal pricing and expansion decisions.</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-black/5 bg-white p-5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
+                  Dubrovnik
+                </p>
+                <h3 className="text-base md:text-lg font-semibold mb-2">
+                  Protecting capacity around Dubrovnik&apos;s Old Town.
+                </h3>
+                <p className="mb-3 text-sm md:text-base">
+                  Old Town visitors, cruise passengers and limited street space make parking highly
+                  sensitive. Payparq gives a clear picture of who is parked where, how long and with
+                  which permission.
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-xs md:text-sm text-black/75">
+                  <li>More efficient control around key tourist hotspots and access roads.</li>
+                  <li>Less abuse of permits and special parking rights.</li>
+                  <li>Documented enforcement trail for every plate, photo and case.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="bg-white">
           <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
             <div className="border border-black/5 rounded-3xl px-6 py-10 md:px-10 md:py-12 bg-[#F5F5F7]">
@@ -614,17 +730,52 @@ export default function Business() {
       </main>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
-          <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} payparq</span>
-            <span className="hidden md:inline-block">•</span>
-            <span className="hidden md:inline-block">
-              Frictionless access to anywhere you want to be
-            </span>
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Company
+              </p>
+              <Link href="/about" className="block hover:text-white transition-colors">
+                About
+              </Link>
+              <Link href="/careers" className="block hover:text-white transition-colors">
+                Careers
+              </Link>
+              <Link href="/news" className="block hover:text-white transition-colors">
+                News
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Experience
+              </p>
+              <button className="block hover:text-white transition-colors">Product</button>
+              <Link href="/parking" className="block hover:text-white transition-colors">
+                Parking
+              </Link>
+              <Link href="/security" className="block hover:text-white transition-colors">
+                Security
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Policies
+              </p>
+              <button className="block hover:text-white transition-colors">Legal</button>
+              <button className="block hover:text-white transition-colors">Privacy</button>
+              <button className="block hover:text-white transition-colors">Terms</button>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Platform
+              </p>
+              <button className="block hover:text-white transition-colors">Partners</button>
+              <button className="block hover:text-white transition-colors">Support</button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="hover:text-white transition-colors">Status</button>
-            <button className="hover:text-white transition-colors">Contact</button>
+          <div className="mt-12 pt-6 border-t border-white/10">
+            <FooterBrand />
           </div>
         </div>
       </footer>

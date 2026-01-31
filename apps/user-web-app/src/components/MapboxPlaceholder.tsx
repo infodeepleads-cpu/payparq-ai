@@ -31,6 +31,11 @@ export default function MapboxPlaceholder({ locationId }: MapboxPlaceholderProps
           <span className="text-xs text-white/50 font-mono">
             {mockCoords.lat.toFixed(4)}, {mockCoords.lng.toFixed(4)}
           </span>
+          {locationId && (
+            <span className="text-[10px] text-white/40 font-mono">
+              Location: {locationId}
+            </span>
+          )}
         </div>
       </div>
 

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { FooterBrand } from "@/components/FooterBrand";
+import { ChevronDown } from "lucide-react";
 
 export default function Experience() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,27 +37,27 @@ export default function Experience() {
                       onClick={() => setBusinessOpen((open) => !open)}
                     >
                       <span>Business</span>
-                      <span className="text-[8px] leading-none">▾</span>
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                     {businessOpen && (
                       <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/business"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Smart City
                         </Link>
                         <Link
                           href="/parking"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Parking
                         </Link>
                         <Link
                           href="/security"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
@@ -72,27 +74,27 @@ export default function Experience() {
                       onClick={() => setCompanyOpen((open) => !open)}
                     >
                       <span>Company</span>
-                      <span className="text-[8px] leading-none">▾</span>
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
                       <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/about"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           About
                         </Link>
                         <Link
                           href="/careers"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           Careers
                         </Link>
                         <Link
                           href="/news"
-                          className="block px-4 py-2 hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
                         >
                           News
@@ -138,11 +140,11 @@ export default function Experience() {
                     Experience
                   </Link>
                   <button
-                    className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
                     onClick={() => setBusinessOpen((open) => !open)}
                   >
                     <span>Business</span>
-                    <span className="text-[9px] leading-none">▾</span>
+                    <ChevronDown className="w-3 h-3" />
                   </button>
                   {businessOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
@@ -186,11 +188,11 @@ export default function Experience() {
                     Technology
                   </Link>
                   <button
-                    className="w-full flex items-center justify-between py-3 px-1 hover:bg-gray-100 transition-colors"
+                    className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
                     onClick={() => setCompanyOpen((open) => !open)}
                   >
                     <span>Company</span>
-                    <span className="text-[9px] leading-none">▾</span>
+                    <ChevronDown className="w-3 h-3" />
                   </button>
                   {companyOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
@@ -353,17 +355,52 @@ export default function Experience() {
       </main>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
-          <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} payparq</span>
-            <span className="hidden md:inline-block">•</span>
-            <span className="hidden md:inline-block">
-              Frictionless access to anywhere you want to be
-            </span>
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Company
+              </p>
+              <Link href="/about" className="block hover:text-white transition-colors">
+                About
+              </Link>
+              <Link href="/careers" className="block hover:text-white transition-colors">
+                Careers
+              </Link>
+              <Link href="/news" className="block hover:text-white transition-colors">
+                News
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Experience
+              </p>
+              <button className="block hover:text-white transition-colors">Product</button>
+              <Link href="/parking" className="block hover:text-white transition-colors">
+                Parking
+              </Link>
+              <Link href="/security" className="block hover:text-white transition-colors">
+                Security
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Policies
+              </p>
+              <button className="block hover:text-white transition-colors">Legal</button>
+              <button className="block hover:text-white transition-colors">Privacy</button>
+              <button className="block hover:text-white transition-colors">Terms</button>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Platform
+              </p>
+              <button className="block hover:text-white transition-colors">Partners</button>
+              <button className="block hover:text-white transition-colors">Support</button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="hover:text-white transition-colors">Status</button>
-            <button className="hover:text-white transition-colors">Contact</button>
+          <div className="mt-12 pt-6 border-t border-white/10">
+            <FooterBrand />
           </div>
         </div>
       </footer>
