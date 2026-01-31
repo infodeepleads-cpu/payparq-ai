@@ -27,7 +27,7 @@ export default function Home() {
                   <span className="h-[1.5px] w-4 bg-black" />
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
-                <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
+                <div className="hidden md:flex items-center justify-center gap-7 text-[11px] uppercase tracking-[0.24em]">
                   <Link href="/experience" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
@@ -131,7 +131,7 @@ export default function Home() {
             </div>
             {mobileOpen && (
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
-                <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
+                <div className="flex flex-col gap-2 pt-2 text-[11px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
                     href="/experience"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
@@ -232,14 +232,14 @@ export default function Home() {
                   </button>
                   <Link
                     href="/pay"
-                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
+                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
                   >
                     Pay Now
                   </Link>
                 </div>
               </div>
             )}
-            <div className="bg-black text-white text-[10px] md:text-[11px] text-center py-2 px-4 whitespace-nowrap">
+            <div className="bg-black text-white text-[11px] text-center py-2 px-4 whitespace-nowrap">
               <span className="font-semibold">Payparq</span> secures parking portfolios across the Country{" "}
               <a
                 href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
@@ -333,7 +333,7 @@ export default function Home() {
                   <span className="text-xs">Download on the App Store</span>
                 </button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                     Company
@@ -352,7 +352,9 @@ export default function Home() {
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                     Experience
                   </p>
-                  <button className="block hover:text-white transition-colors">Product</button>
+                  <Link href="/product" className="block hover:text-white transition-colors">
+                    Product
+                  </Link>
                   <Link href="/parking" className="block hover:text-white transition-colors">
                     Parking
                   </Link>

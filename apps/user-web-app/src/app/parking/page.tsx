@@ -672,7 +672,9 @@ export default function Parking() {
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                 Experience
               </p>
-              <button className="block hover:text-white transition-colors">Product</button>
+              <Link href="/product" className="block hover:text-white transition-colors">
+                Product
+              </Link>
               <Link href="/parking" className="block hover:text-white transition-colors">
                 Parking
               </Link>
