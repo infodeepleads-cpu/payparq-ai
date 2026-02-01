@@ -4,33 +4,35 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
-  const body = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   const url = new URL(req.url);
-  const location_id = (body.location_id as string) || url.searchParams.get('loc') || '';
-  const plate_number = (body.plate_number as string) || '';
-  const flow_type = (body.flow_type as string) || url.searchParams.get('flow') || 'park_now';
-  if (flow_type === 'reserve' && location_id) {
-    const { data, error } = await supabase
-      .from('locations')
-      .select('stripe_url, name')
-      .or(`id.eq.${location_id},name.ilike.${location_id}`)
-      .maybeSingle();
+  const location_id =
+    (typeof body.location_id === 'string' && body.location_id) || url.searchParams.get('loc') || '';
+  const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
+  const flow_type =
+    (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
 
-    if (error) {
-      console.error('Error fetching Stripe link for reserve flow:', error);
-    }
-
-    const stripeUrl = (data && 'stripe_url' in data ? (data as { stripe_url: string }).stripe_url : undefined) as
-      | string
-      | undefined;
-
-    if (stripeUrl) {
-      return NextResponse.json({ url: stripeUrl });
-    }
+  if (location_id) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://iafjygownkhedereaoxw.supabase.co';
+    let type = 'hourly';
+    if (flow_type === 'monthly') type = 'monthly';
+    else if (flow_type === 'reserve') type = 'reserve';
+    const params = new URLSearchParams();
+    params.set('location_id', location_id);
+    params.set('type', type);
+    params.set('t', Date.now().toString());
+    const redirectUrl = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/create-checkout?${params.toString()}`;
+    return NextResponse.json({ url: redirectUrl });
   }
+
   let unitAmount = 500;
   if (location_id) {
-    const { data } = await supabase.from('pricing_settings').select('rules_text').eq('location_id', location_id).eq('active', true).limit(1);
+    const { data } = await supabase
+      .from('pricing_settings')
+      .select('rules_text')
+      .eq('location_id', location_id)
+      .eq('active', true)
+      .limit(1);
     const rules = data?.[0]?.rules_text as string | undefined;
     if (rules) {
       const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
         quantity: 1,
       },
     ],
-    customer_email: body.customer_email || undefined,
+    customer_email: typeof body.customer_email === 'string' ? body.customer_email : undefined,
     payment_intent_data: {
       metadata: {
         location_id,
