@@ -804,6 +804,9 @@ export default function Business() {
               </p>
               <button className="block hover:text-white transition-colors">Partners</button>
               <button className="block hover:text-white transition-colors">Support</button>
+              <Link href="/members" className="block hover:text-white transition-colors">
+                Members
+              </Link>
             </div>
           </div>
           <div className="mt-12 pt-6 border-t border-white/10">

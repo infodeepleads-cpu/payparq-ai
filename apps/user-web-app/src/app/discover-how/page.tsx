@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
 import { useState } from "react";
 import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 
-export default function News() {
+export default function DiscoverHowPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function News() {
                   <span className="h-[1.5px] w-4 bg-black" />
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
-                <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
+                <div className="hidden md:flex items-center justify-center gap-7 text-[11px] uppercase tracking-[0.24em]">
                   <Link href="/experience" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
@@ -83,7 +83,7 @@ export default function News() {
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
+                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/about"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
@@ -104,13 +104,6 @@ export default function News() {
                           onClick={() => setCompanyOpen(false)}
                         >
                           News
-                        </Link>
-                        <Link
-                          href="/contact"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          Get in touch
                         </Link>
                       </div>
                     )}
@@ -147,7 +140,7 @@ export default function News() {
             </div>
             {mobileOpen && (
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
-                <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
+                <div className="flex flex-col gap-2 pt-2 text-[11px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
                     href="/experience"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
@@ -220,7 +213,7 @@ export default function News() {
                     <div className="flex flex-col gap-1 pb-1 pl-4">
                       <Link
                         href="/about"
-                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -230,7 +223,7 @@ export default function News() {
                       </Link>
                       <Link
                         href="/careers"
-                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -240,7 +233,7 @@ export default function News() {
                       </Link>
                       <Link
                         href="/news"
-                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -248,19 +241,21 @@ export default function News() {
                       >
                         News
                       </Link>
+                      <Link
+                        href="/contact"
+                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setCompanyOpen(false);
+                        }}
+                      >
+                        Contact
+                      </Link>
                     </div>
                   )}
                   <Link
-                    href="/contact"
-                    className="w-full mt-2 border-t border-b border-gray-200 py-3 text-center hover:bg-gray-100 transition-colors"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    Get in Touch
-                  </Link>
-                  <Link
                     href="/pay"
-                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
-                    onClick={() => setMobileOpen(false)}
+                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
                   >
                     Pay Now
                   </Link>
@@ -272,164 +267,101 @@ export default function News() {
       </header>
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-          <div className="max-w-2xl">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-              Company
-            </p>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-              Payparq news.
-            </h1>
-            <p className="text-sm md:text-base text-black/75">
-              Explore product updates, launches, and stories from Payparq partners as we roll out
-              software-first parking portfolios across new cities and assets.
-            </p>
-          </div>
-        </section>
-
-        <section className="border-t border-black/5 bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 mb-8">
-              <div className="max-w-xl">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  In the news
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-4">
-                  How others are writing about Payparq.
-                </h2>
-                <p className="text-sm md:text-base text-black/75">
-                  Selected coverage from Croatian and international media on how Payparq is helping
-                  unlock new parking capacity and transform spaces into digital assets.
-                </p>
-              </div>
-              <div className="flex flex-col items-start md:items-end gap-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">
-                  Follow Payparq
-                </p>
-                <div className="flex items-center gap-3">
-                  <a
-                    href="https://www.tiktok.com/@payparq"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Payparq on TikTok"
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
-                  >
-                    <span className="text-[11px] font-semibold">Tt</span>
-                  </a>
-                  <a
-                    href="https://www.instagram.com/payparq.ai/?hl=hr"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Payparq on Instagram"
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
-                  >
-                    <span className="text-[11px] font-semibold">Ig</span>
-                  </a>
-                  <a
-                    href="https://www.youtube.com/@karlozamic348"
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Payparq on YouTube"
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/15 bg-white text-black hover:bg-black hover:text-white transition-colors"
-                  >
-                    <span className="text-[11px] font-semibold">Yt</span>
-                  </a>
-                </div>
-              </div>
+        <section className="border-t border-black/5">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.1fr,1fr] items-start">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                Platform walkthrough
+              </p>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3 text-black">
+                Discover how Payparq fits your portfolio.
+              </h1>
+              <p className="text-sm md:text-base text-black/75 mb-4">
+                Share a few details about your assets and operations. Our team will map a members
+                workspace, enforcement tools, and payment flows tailored to your city or portfolio.
+              </p>
+              <ul className="space-y-2 text-xs md:text-sm text-black/70">
+                <li>See the Metropolis-style dashboard configured for your locations.</li>
+                <li>Understand how members, permits, and sessions are managed in one place.</li>
+                <li>Review rollout options that avoid heavy hardware or long projects.</li>
+              </ul>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <a
-                href="https://www.vecernji.hr/vijesti/startup-iz-dalmacije-osvaja-hrvatsku-i-nezaustavljivo-se-siri-zauvijek-cemo-promijeniti-nacin-parkiranja-1875926"
-                target="_blank"
-                rel="noreferrer"
-                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
+            <div className="rounded-3xl border border-black/10 bg-[#F5F5F7] p-6 md:p-7 shadow-sm">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                Share your details
+              </p>
+              <form className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      First name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Last name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Work email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Večernji list
-                  </p>
-                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
-                    Startup iz Dalmacije osvaja Hrvatsku
-                  </h3>
-                  <p className="text-xs md:text-sm text-black/70">
-                    Report on how Payparq, launched from Brela, is reshaping parking across Croatia
-                    and building a platform with global potential.
-                  </p>
+                  <label className="block text-xs font-semibold text-black/70 mb-1">
+                    Portfolio or city
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                  />
                 </div>
-                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
-                  Read article →
-                </div>
-              </a>
-
-              <a
-                href="https://total-croatia-news.com/news/croatian-startup-payparq/"
-                target="_blank"
-                rel="noreferrer"
-                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Total Croatia News
-                  </p>
-                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
-                    Croatian startup PayParq gaining traction nationwide
-                  </h3>
-                  <p className="text-xs md:text-sm text-black/70">
-                    English-language feature on Payparq&apos;s origins in Brela and how the platform
-                    connects landowners, operators, and drivers.
-                  </p>
+                  <label className="block text-xs font-semibold text-black/70 mb-1">
+                    What would you like to explore?
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                  />
                 </div>
-                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
-                  Read article →
-                </div>
-              </a>
-
-              <a
-                href="https://novac.jutarnji.hr/novac/aktualno/start-up-iz-brela-pokrenuo-revoluciju-privatna-parkiralista-sada-dostupna-svima-15602363"
-                target="_blank"
-                rel="noreferrer"
-                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Jutarnji list / Novac
-                  </p>
-                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
-                    Start-up iz Brela pokrenuo revoluciju
-                  </h3>
-                  <p className="text-xs md:text-sm text-black/70">
-                    Story about Payparq as an &quot;Airbnb for parking&quot; and how private
-                    parking becomes accessible through a digital platform.
-                  </p>
-                </div>
-                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
-                  Read article →
-                </div>
-              </a>
-
-              <a
-                href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
-                target="_blank"
-                rel="noreferrer"
-                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Poslovni dnevnik
-                  </p>
-                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
-                    Startup iz Dalmacije osvaja Hrvatsku
-                  </h3>
-                  <p className="text-xs md:text-sm text-black/70">
-                    Business-focused coverage of Payparq&apos;s model, investment potential, and
-                    plans for expansion beyond Croatia.
-                  </p>
-                </div>
-                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
-                  Read article →
-                </div>
-              </a>
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
+                >
+                  Submit
+                </button>
+              </form>
             </div>
           </div>
         </section>

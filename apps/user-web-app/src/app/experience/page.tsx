@@ -431,6 +431,9 @@ export default function Experience() {
               <Link href="/support" className="block hover:text-white transition-colors">
                 Support
               </Link>
+              <Link href="/members" className="block hover:text-white transition-colors">
+                Members
+              </Link>
             </div>
           </div>
           <div className="mt-12 pt-6 border-t border-white/10">

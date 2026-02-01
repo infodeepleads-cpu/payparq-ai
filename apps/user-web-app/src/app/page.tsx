@@ -304,7 +304,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
                 <Link
-                  href="/parking#demo"
+                  href="/discover-how"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors"
                 >
                   <span>Discover How</span>
@@ -412,6 +412,9 @@ export default function Home() {
                   <button className="block hover:text-white transition-colors">Partners</button>
                   <Link href="/support" className="block hover:text-white transition-colors">
                     Support
+                  </Link>
+                  <Link href="/members" className="block hover:text-white transition-colors">
+                    Members
                   </Link>
                 </div>
               </div>

@@ -661,6 +661,9 @@ export default function Privacy() {
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
                   <button className="block hover:text-white transition-colors">Partners</button>
                   <button className="block hover:text-white transition-colors">Support</button>
+                  <Link href="/members" className="block hover:text-white transition-colors">
+                    Members
+                  </Link>
                 </div>
               </div>
             </div>

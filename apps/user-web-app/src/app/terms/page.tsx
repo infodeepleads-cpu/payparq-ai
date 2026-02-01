@@ -676,6 +676,9 @@ export default function Terms() {
                   <Link href="/support" className="block hover:text-white transition-colors">
                     Support
                   </Link>
+                  <Link href="/members" className="block hover:text-white transition-colors">
+                    Members
+                  </Link>
                 </div>
               </div>
             </div>
