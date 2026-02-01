@@ -565,7 +565,9 @@ export default function Security() {
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy
             </Link>
-            <button className="hover:text-white transition-colors">Terms</button>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
           </div>
         </div>
       </footer>

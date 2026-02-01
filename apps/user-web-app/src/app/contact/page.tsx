@@ -440,12 +440,16 @@ export default function Contact() {
                   <Link href="/privacy" className="block hover:text-white transition-colors">
                     Privacy
                   </Link>
-                  <button className="block hover:text-white transition-colors">Terms</button>
+                  <Link href="/terms" className="block hover:text-white transition-colors">
+                    Terms
+                  </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
                   <button className="block hover:text-white transition-colors">Partners</button>
-                  <button className="block hover:text-white transition-colors">Support</button>
+                  <Link href="/support" className="block hover:text-white transition-colors">
+                    Support
+                  </Link>
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 
-export default function Home() {
+export default function Support() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function Home() {
                   <span className="h-[1.5px] w-4 bg-black" />
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
-                <div className="hidden md:flex items-center justify-center gap-7 text-[11px] uppercase tracking-[0.24em]">
+                <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
                   <Link href="/experience" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
@@ -83,7 +83,7 @@ export default function Home() {
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
+                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
                         <Link
                           href="/about"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
@@ -91,7 +91,7 @@ export default function Home() {
                         >
                           About
                         </Link>
-                        <Link
+                          <Link
                           href="/careers"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setCompanyOpen(false)}
@@ -104,6 +104,13 @@ export default function Home() {
                           onClick={() => setCompanyOpen(false)}
                         >
                           News
+                        </Link>
+                        <Link
+                          href="/contact"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          onClick={() => setCompanyOpen(false)}
+                        >
+                          Get in touch
                         </Link>
                       </div>
                     )}
@@ -124,9 +131,12 @@ export default function Home() {
               </div>
 
               <div className="flex items-center justify-end gap-2 md:gap-3">
-                <button className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/contact"
+                  className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                >
                   Get in Touch
-                </button>
+                </Link>
                 <Link
                   href="/pay"
                   className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -137,10 +147,11 @@ export default function Home() {
             </div>
             {mobileOpen && (
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
-                <div className="flex flex-col gap-2 pt-2 text-[11px] font-medium text-black w-full max-w-xs mx-auto">
+                <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
                     href="/experience"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
+                    onClick={() => setMobileOpen(false)}
                   >
                     Experience
                   </Link>
@@ -158,7 +169,7 @@ export default function Home() {
                     <div className="flex flex-col gap-1 pb-1 pl-4">
                       <Link
                         href="/business"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setBusinessOpen(false);
@@ -168,7 +179,7 @@ export default function Home() {
                       </Link>
                       <Link
                         href="/parking"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setBusinessOpen(false);
@@ -178,7 +189,7 @@ export default function Home() {
                       </Link>
                       <Link
                         href="/security"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setBusinessOpen(false);
@@ -209,7 +220,7 @@ export default function Home() {
                     <div className="flex flex-col gap-1 pb-1 pl-4">
                       <Link
                         href="/about"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -219,7 +230,7 @@ export default function Home() {
                       </Link>
                       <Link
                         href="/careers"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -229,7 +240,7 @@ export default function Home() {
                       </Link>
                       <Link
                         href="/news"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -239,7 +250,7 @@ export default function Home() {
                       </Link>
                       <Link
                         href="/contact"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
                           setMobileOpen(false);
                           setCompanyOpen(false);
@@ -258,87 +269,121 @@ export default function Home() {
                   </Link>
                   <Link
                     href="/pay"
-                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
+                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
+                    onClick={() => setMobileOpen(false)}
                   >
                     Pay Now
                   </Link>
                 </div>
               </div>
             )}
-            <div className="bg-black text-white text-[11px] text-center py-2 px-4 whitespace-nowrap">
-              <span className="font-semibold">Payparq</span> secures parking portfolios across the Country{" "}
-              <a
-                href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
-                target="_blank"
-                rel="noreferrer"
-              >
-                – read more
-              </a>
-              .
-            </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 bg-white">
-        <section className="relative min-h-screen overflow-hidden">
-          <div className="absolute inset-0">
-            <div
-              className="w-full h-full bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://images.pexels.com/photos/5847385/pexels-photo-5847385.jpeg?auto=compress&cs=tinysrgb&w=1920')",
-              }}
-            />
-            <div className="absolute inset-0 bg-white/5" />
-            <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-gradient-to-br from-[#5F3DFC]/10 via-transparent to-transparent opacity-80 blur-3xl -translate-y-1/3 translate-x-1/5 pointer-events-none" />
-          </div>
-          <div className="relative z-10 w-full px-6 md:px-24 flex items-center md:items-end justify-center md:justify-start min-h-screen pt-36 md:pt-32">
-            <div className="max-w-md mb-12 md:mb-24 text-black text-center md:text-left">
-              <h1 className="text-5xl md:text-7xl font-semibold md:font-bold tracking-tight leading-tight mb-6">
-                payparq makes cities{" "}
-                <span className="text-[#5F3DFC]">move with you</span>
-              </h1>
-              <p className="text-base md:text-xl text-black font-medium mb-8 max-w-xl mx-auto md:mx-0">
-                The world’s first mobile software-only platform for frictionless urban mobility.
-              </p>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors">
-                  <span>Discover How</span>
-                  <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
-                    →
-                  </span>
-                </button>
+      <main className="flex-1 bg-white pt-24 md:pt-28">
+        <section className="max-w-4xl mx-auto px-6 md:px-8 py-14 md:py-20 text-black">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">Support</p>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+            World-class support for drivers, operators, and cities
+          </h1>
+          <p className="text-sm md:text-base text-black/70 mb-8 max-w-2xl">
+            Whether you are parking for a few minutes or managing a multi-site portfolio, our team and
+            tools are here to help you resolve issues quickly, clearly, and with as little friction as
+            possible.
+          </p>
+
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-black mb-3">How to get help</h2>
+            <div className="grid gap-4 md:grid-cols-2 text-sm text-black/80">
+              <div className="border border-black/10 rounded-2xl p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/60 mb-2">
+                  For drivers
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-black/70">
+                  <li>Questions about an active or past parking session</li>
+                  <li>Issues with payment, refunds, or receipts</li>
+                  <li>Help understanding on-site signage or local rules</li>
+                </ul>
+              </div>
+              <div className="border border-black/10 rounded-2xl p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/60 mb-2">
+                  For operators &amp; cities
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-black/70">
+                  <li>Onboarding new locations or portfolios</li>
+                  <li>Configuring pricing, rules, and enforcement workflows</li>
+                  <li>Integrations, reporting, and account administration</li>
+                </ul>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="bg-white border-t border-black/5">
-          <div className="max-w-4xl mx-auto px-6 py-10 md:py-16 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="text-center md:text-left">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
-                Get in touch
-              </p>
-              <h3 className="text-xl md:text-2xl font-semibold text-black mb-1">
-                Ready to modernise your parking?
-              </h3>
-              <p className="text-sm text-black/70 max-w-md">
-                Talk to our team or go straight to payment with Payparq.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button className="px-5 py-2.5 rounded-full border border-gray-300 text-[11px] font-semibold text-black hover:bg-gray-50 transition-colors">
-                Get in Touch
-              </button>
-              <Link
-                href="/pay"
-                className="px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
-              >
-                Pay Now
-              </Link>
-            </div>
-          </div>
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-black mb-3">Primary support channels</h2>
+            <ul className="space-y-3 text-sm text-black/80">
+              <li>
+                <span className="font-semibold">Email:</span>{" "}
+                <a href="mailto:payparq@outlook.com" className="underline">
+                  payparq@outlook.com
+                </a>
+              </li>
+              <li>
+                <span className="font-semibold">In-product links:</span> look for “Help” and “Support”
+                links inside the app for context-specific assistance.
+              </li>
+            </ul>
+          </section>
+
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-black mb-3">What to include in your request</h2>
+            <p className="text-sm text-black/70 mb-3">
+              Adding a few details to your message helps us resolve your issue faster:
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-sm text-black/70">
+              <li>License plate number and country</li>
+              <li>Location name or code (from signage or receipt)</li>
+              <li>Date, local time, and duration of your stay</li>
+              <li>Any reference numbers (ticket ID, receipt ID, Stripe reference)</li>
+              <li>Screenshots or photos of the issue, if available</li>
+            </ul>
+          </section>
+
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-black mb-3">Response times</h2>
+            <p className="text-sm text-black/70 mb-2">
+              We aim to respond to most requests within one business day. Time-sensitive operational
+              incidents for operators and cities are handled with priority.
+            </p>
+            <p className="text-sm text-black/70">
+              During weekends, holidays, or periods of unusually high demand, responses may take longer,
+              but every request is logged, tracked, and answered.
+            </p>
+          </section>
+
+          <section className="mb-10">
+            <h2 className="text-lg font-semibold text-black mb-3">If your request involves enforcement</h2>
+            <p className="text-sm text-black/70 mb-2">
+              PayParq is a software platform. Local operators and municipal partners remain responsible
+              for on-the-ground enforcement decisions.
+            </p>
+            <p className="text-sm text-black/70">
+              If your question concerns a fine, notice, or dispute, please share any reference numbers
+              from the document you received so we can direct you to the correct party and provide any
+              supporting information we hold.
+            </p>
+          </section>
+
+          <section className="mb-2">
+            <h2 className="text-lg font-semibold text-black mb-3">Company information</h2>
+            <p className="text-sm text-black/70">
+              PayParq Global Inc.
+              <br />
+              Headquarters: 1309 Coffeen Avenue, Suite 1200, Sheridan, WY 82801, USA
+              <br />
+              Operating jurisdiction: European Union, primary operations Croatia
+            </p>
+          </section>
         </section>
 
         <section className="bg-[#05020A] border-t border-white/10">
@@ -352,18 +397,16 @@ export default function Home() {
                   Frictionless access to anywhere you want to be
                 </h2>
                 <p className="text-sm text-white/70 mb-6 max-w-md">
-                  From mixed-use garages to open-air lots, payparq turns any space into a
-                  seamless, app-free arrival experience while unlocking new revenue.
+                  From mixed-use garages to open-air lots, payparq turns any space into a seamless, app-free
+                  arrival experience while unlocking new revenue.
                 </p>
                 <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
                   <span className="text-xs">Download on the App Store</span>
                 </button>
               </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Company
-                  </p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
                   <Link href="/about" className="block hover:text-white transition-colors">
                     About
                   </Link>
@@ -375,9 +418,7 @@ export default function Home() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Experience
-                  </p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Experience</p>
                   <Link href="/product" className="block hover:text-white transition-colors">
                     Product
                   </Link>
@@ -389,9 +430,7 @@ export default function Home() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Policies
-                  </p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
                   <Link href="/legal" className="block hover:text-white transition-colors">
                     Legal
                   </Link>
@@ -403,9 +442,7 @@ export default function Home() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Platform
-                  </p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
                   <button className="block hover:text-white transition-colors">Partners</button>
                   <Link href="/support" className="block hover:text-white transition-colors">
                     Support

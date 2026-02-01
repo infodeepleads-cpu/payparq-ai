@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/supabase_service.dart';
+import '../../services/performance_monitor.dart';
 
 final authStateProvider = StreamProvider<AuthState>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
@@ -44,13 +46,26 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
   // 1. Initial fetch with timeout (runs in parallel)
   debugPrint('userProfileProvider: starting database fetch');
-  Supabase.instance.client
-      .from('profiles')
-      .select()
-      .eq('id', user.id)
-      .maybeSingle()
-      .timeout(const Duration(seconds: 1)) // Reduced to 1s
+  final stopwatch = Stopwatch()..start();
+  SupabaseService.instance
+      .executeQuery<Map<String, dynamic>?>(
+    queryId: 'profile_${user.id}',
+    timeout: const Duration(seconds: 1),
+    query: () => Supabase.instance.client
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle(),
+  )
       .then((data) {
+    stopwatch.stop();
+    PerformanceMonitor.instance.recordMetric(
+      operation: 'profile_fetch',
+      duration: stopwatch.elapsed,
+      success: true,
+      metadata: {'userId': user.id, 'source': 'database'},
+    );
+
     debugPrint('userProfileProvider: database fetch success: $data');
     if (!controller.isClosed) {
       if (data != null) {
@@ -58,6 +73,14 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       }
     }
   }).catchError((e) {
+    stopwatch.stop();
+    PerformanceMonitor.instance.recordMetric(
+      operation: 'profile_fetch',
+      duration: stopwatch.elapsed,
+      success: false,
+      metadata: {'userId': user.id, 'error': e.toString()},
+    );
+
     debugPrint('userProfileProvider: database fetch failed: $e');
     // If database fetch fails, try to build a basic profile from JWT metadata
     final metadata = user.userMetadata;
@@ -75,18 +98,26 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
     }
   });
 
-  // 2. Real-time subscription
+  // 2. Real-time subscription (with debouncing to prevent excessive updates)
+  Timer? updateTimer;
   final subscription = Supabase.instance.client
       .from('profiles')
       .stream(primaryKey: ['id'])
       .eq('id', user.id)
       .listen((data) {
         if (data.isNotEmpty && !controller.isClosed) {
-          controller.add(data.first);
+          // Debounce updates to prevent excessive rebuilds
+          updateTimer?.cancel();
+          updateTimer = Timer(const Duration(milliseconds: 300), () {
+            if (!controller.isClosed) {
+              controller.add(data.first);
+            }
+          });
         }
       });
 
   ref.onDispose(() {
+    updateTimer?.cancel();
     subscription.cancel();
     controller.close();
   });

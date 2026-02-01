@@ -175,7 +175,7 @@ class _AnalyticsDashboardScreenState
                               shape: BoxShape.circle,
                               color: _currentPage == index
                                   ? Colors.black
-                                  : Colors.black.withOpacity(0.1),
+                                  : Colors.black.withValues(alpha: 0.1),
                             ),
                           ),
                         ),
@@ -202,7 +202,7 @@ class _AnalyticsDashboardScreenState
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -410,7 +410,7 @@ class _AnalyticsDashboardScreenState
                     ),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                     ),
                   ),
                 ],
@@ -529,7 +529,7 @@ class _AnalyticsDashboardScreenState
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: textColor.withOpacity(0.7),
+                  color: textColor.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 4),

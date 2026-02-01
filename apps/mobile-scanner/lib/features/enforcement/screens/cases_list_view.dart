@@ -7,13 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
-import '../../../screens/instructions_screen.dart';
 
 class CasesListView extends ConsumerStatefulWidget {
   const CasesListView({super.key});
@@ -135,6 +133,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
 
     if (plate == null || plate.isEmpty) return;
+    if (!mounted) return;
 
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
@@ -143,6 +142,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       maxHeight: kIsWeb ? 800 : 1024,
     );
     if (image == null) return;
+    if (!mounted) return;
 
     setState(() => _isProcessing = true);
 
@@ -245,6 +245,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             .getPublicUrl(evidenceUrl);
       }
     }
+
+    if (!mounted) return;
 
     showDialog(
       context: context,

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme.dart';
 import 'main_scaffold.dart';
 import 'screens/auth_screen.dart';
+import 'services/supabase_service.dart';
+import 'services/performance_monitor.dart';
 
 import 'widgets/pulsating_loading_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize performance monitoring
+  PerformanceMonitor.instance.startCleanupTimer();
+
   runApp(const ProviderScope(child: BootApp()));
 }
 
@@ -33,19 +38,37 @@ class _BootAppState extends State<BootApp> {
     debugPrint('BootApp: starting Supabase.initialize');
     debugPrint('BootApp: timestamp: ${DateTime.now()}');
 
-    final initFuture = Supabase.initialize(
-      url: 'https://iafjygownkhedereaoxw.supabase.co',
-      anonKey: 'sb_publishable_ah4iveg_PBowEdtSgQo4Qg_KjLUzWBV',
-    ).then<void>((_) {
-      debugPrint('BootApp: Supabase.initialize completed successfully');
-      debugPrint('BootApp: completion timestamp: ${DateTime.now()}');
-    });
+    final stopwatch = Stopwatch()..start();
 
-    await initFuture.timeout(const Duration(seconds: 15), onTimeout: () {
-      debugPrint('BootApp: Supabase.initialize timed out after 15s');
-      debugPrint('BootApp: timeout timestamp: ${DateTime.now()}');
-      return;
-    });
+    try {
+      await SupabaseService.instance.initialize(
+        url: 'https://iafjygownkhedereaoxw.supabase.co',
+        anonKey: 'sb_publishable_ah4iveg_PBowEdtSgQo4Qg_KjLUzWBV',
+        timeout: const Duration(seconds: 5),
+      );
+
+      stopwatch.stop();
+      PerformanceMonitor.instance.recordMetric(
+        operation: 'supabase_initialization',
+        duration: stopwatch.elapsed,
+        success: true,
+      );
+
+      debugPrint(
+          'BootApp: Supabase.initialize completed successfully in ${stopwatch.elapsed.inMilliseconds}ms');
+    } catch (e) {
+      stopwatch.stop();
+      PerformanceMonitor.instance.recordMetric(
+        operation: 'supabase_initialization',
+        duration: stopwatch.elapsed,
+        success: false,
+        metadata: {'error': e.toString()},
+      );
+
+      debugPrint(
+          'BootApp: Supabase initialization failed after ${stopwatch.elapsed.inMilliseconds}ms: $e');
+      rethrow;
+    }
 
     debugPrint('BootApp: _initSupabase completed');
   }

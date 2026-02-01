@@ -51,7 +51,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final bool isWeb = kIsWeb;
+    const bool isWeb = kIsWeb;
     final XFile? image = await _picker.pickImage(
       source: source,
       imageQuality: isWeb ? 15 : 25,

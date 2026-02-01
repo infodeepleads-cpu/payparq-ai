@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -114,10 +115,6 @@ class VerificationInboxScreen extends ConsumerWidget {
                                   'Admin managed. Standard commissions apply.',
                                   style: TextStyle(color: Colors.grey)),
                               value: false,
-                              groupValue: isRunByPayparq,
-                              onChanged: (val) =>
-                                  setDialogState(() => isRunByPayparq = val!),
-                              activeColor: Colors.blue,
                             ),
                             RadioListTile<bool>(
                               title: const Text('Run by Payparq',
@@ -126,10 +123,6 @@ class VerificationInboxScreen extends ConsumerWidget {
                                   'Payparq managed. 50% flat commission on all shared revenue.',
                                   style: TextStyle(color: Colors.grey)),
                               value: true,
-                              groupValue: isRunByPayparq,
-                              onChanged: (val) =>
-                                  setDialogState(() => isRunByPayparq = val!),
-                              activeColor: Colors.blue,
                             ),
                           ],
                         ),

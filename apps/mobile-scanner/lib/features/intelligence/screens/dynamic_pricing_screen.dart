@@ -213,11 +213,14 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     if (!availableIds.contains(targetId)) {
       debugPrint(
           '🚨 CRITICAL ERROR: TARGET ID $targetId NOT IN AVAILABLE LIST');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Error: Selected Location ID not found in database!'),
-            backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+                  Text('Error: Selected Location ID not found in database!'),
+              backgroundColor: Colors.red),
+        );
+      }
       return;
     }
 
@@ -324,13 +327,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               (updatedData['base_price_monthly_floor'] ?? 0.0).toString();
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ SAVED! New Price: $newHourly'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ SAVED! New Price: $newHourly'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
       } else {
         debugPrint('❌ NO ROWS UPDATED! SERVER RETURNED EMPTY RESPONSE.');
         throw Exception(
@@ -340,17 +345,19 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final errorStr = e.toString();
       debugPrint('🔥 CRITICAL SAVE ERROR: $errorStr');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ SAVE FAILED: $errorStr'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 10),
-          action: SnackBarAction(
-              label: 'RETRY',
-              onPressed: _saveSettings,
-              textColor: Colors.white),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ SAVE FAILED: $errorStr'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+                label: 'RETRY',
+                onPressed: _saveSettings,
+                textColor: Colors.white),
+          ),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -374,349 +381,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment link generated!')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open Stripe link')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Watch the global selection and trigger a re-fetch if it changes
-    ref.listen(selectedLocationIdProvider, (previous, next) {
-      if (next != null && next != previous) {
-        _fetchLocations();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment link generated!')),
+        );
       }
-    });
-
-    if (_isLoading) {
-      return const PulsatingLoadingScreen();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open Stripe link')));
+      }
     }
-
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(48.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dynamic Pricing',
-              style: GoogleFonts.inter(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: -1,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'v1.1.2 • Seasonal & algorithmic price adjustments.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 48),
-
-            // Master AutoPilot Control
-            _buildMasterControl(),
-            const SizedBox(height: 48),
-
-            // Base Pricing
-            _buildSectionHeader('Standard Base Rates'),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                    child: _buildPriceInput('Hourly Rate', _hourlyController,
-                        Icons.timer_outlined)),
-                const SizedBox(width: 24),
-                Expanded(
-                    child: _buildPriceInput(
-                        'Daily Rate', _dailyController, Icons.today_outlined)),
-                const SizedBox(width: 24),
-                Expanded(
-                    child: _buildPriceInput('Monthly Rate', _monthlyController,
-                        Icons.calendar_month_outlined)),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Ceiling Pricing (Only if AutoPilot is ON)
-            if (_autopilotEnabled) ...[
-              _buildSectionHeader('Smart AutoPilot Constraints'),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildPriceInput('Hourly Minimum',
-                          _hourlyFloorController, Icons.timer_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput('Daily Minimum',
-                          _dailyFloorController, Icons.today_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput(
-                          'Monthly Minimum',
-                          _monthlyFloorController,
-                          Icons.calendar_month_outlined)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildPriceInput('Hourly Ceiling',
-                          _hourlyCeilingController, Icons.timer_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput('Daily Ceiling',
-                          _dailyCeilingController, Icons.today_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput(
-                          'Monthly Ceiling',
-                          _monthlyCeilingController,
-                          Icons.calendar_month_outlined)),
-                ],
-              ),
-              const SizedBox(height: 48),
-            ] else
-              const SizedBox(height: 48),
-
-            // Dynamic Adjustment
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionHeader('Demand Sensitivity'),
-                      const SizedBox(height: 16),
-                      _buildControlCard(
-                        title: 'Demand Ratio',
-                        subtitle: 'Adjustment benchmark (0% - 200%)',
-                        enabled: _dynamicEnabled,
-                        onToggle: (val) =>
-                            setState(() => _dynamicEnabled = val),
-                        child: Column(
-                          children: [
-                            Slider(
-                              value: _dynamicRatio,
-                              min: 0.0,
-                              max: 2.0,
-                              divisions: 20,
-                              label: '${(_dynamicRatio * 100).toInt()}%',
-                              activeColor: Colors.black,
-                              inactiveColor: AppTheme.surface,
-                              onChanged: (_dynamicEnabled && !_autopilotEnabled)
-                                  ? (val) => setState(() => _dynamicRatio = val)
-                                  : null,
-                            ),
-                            Text(
-                              'Manual Benchmark: ${(_dynamicRatio * 100).toInt()}%',
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 32),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSectionHeader('Congestion Surcharge'),
-                      const SizedBox(height: 16),
-                      _buildControlCard(
-                        title: 'Surcharge Multiplier',
-                        subtitle: 'Peak-traffic premium (1x - 10x)',
-                        enabled: _surchargeEnabled,
-                        onToggle: (val) =>
-                            setState(() => _surchargeEnabled = val),
-                        child: Column(
-                          children: [
-                            Slider(
-                              value: _surchargeMultiplier,
-                              min: 1.0,
-                              max: 10.0,
-                              divisions: 18,
-                              label: '${_surchargeMultiplier}x',
-                              activeColor: Colors.black,
-                              inactiveColor: AppTheme.surface,
-                              onChanged: (_surchargeEnabled &&
-                                      !_autopilotEnabled)
-                                  ? (val) =>
-                                      setState(() => _surchargeMultiplier = val)
-                                  : null,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Manual Benchmark: ${_surchargeMultiplier}x',
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 48),
-
-            // Entry Points
-            _buildSectionHeader('Payment Terminal Assets'),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      _buildStripeButton(
-                          'Generate Hourly Link', 'hourly', Colors.black),
-                      const SizedBox(height: 12),
-                      _buildStripeButton(
-                          'Generate Daily Link', 'daily', Colors.black),
-                      const SizedBox(height: 12),
-                      _buildStripeButton(
-                          'Generate Monthly Link', 'monthly', Colors.black),
-                      const SizedBox(height: 32),
-                      // New Flyer QR Section
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.qr_code_2, color: Colors.blue),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'ADMIN FLYER ASSET',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Use this QR code on physical flyers. Payments via this QR incur only 15% commission.',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black54),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildStripeButton(
-                                'Open Flyer Link', 'flyer', Colors.blue),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 48),
-                Column(
-                  children: [
-                    if (_selectedLocation != null)
-                      _buildSignColumn(
-                        (_selectedLocation!['display_id'] ??
-                                _selectedLocation!['id'])
-                            .toString(),
-                        'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=hourly',
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(32),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: const Text('Select a location'),
-                      ),
-                    const SizedBox(height: 24),
-                    // Flyer QR
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.blue.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Text('FLYER QR (15% COMM)',
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                  color: Colors.blue,
-                                  letterSpacing: 1.2)),
-                          const SizedBox(height: 16),
-                          if (_selectedLocation != null)
-                            QrImageView(
-                              data:
-                                  'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=flyer',
-                              version: QrVersions.auto,
-                              size: 160.0,
-                            )
-                          else
-                            const Text('Select a location'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 64),
-            Center(
-              child: SizedBox(
-                width: 200,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _saveSettings,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save Changes'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildMasterControl() {
@@ -754,7 +429,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           Switch.adaptive(
             value: _autopilotEnabled,
             onChanged: (val) => setState(() => _autopilotEnabled = val),
-            activeColor: Colors.white,
+            activeThumbColor: Colors.white,
             activeTrackColor: Colors.white70,
             inactiveTrackColor: Colors.white38,
           ),
@@ -848,7 +523,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               Switch.adaptive(
                 value: enabled,
                 onChanged: onToggle,
-                activeColor: Colors.black,
+                activeThumbColor: Colors.black,
               ),
             ],
           ),
@@ -896,14 +571,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             'parking_sign_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
         downloadFileWeb(pngBytes, fileName);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Download supported on Web only.')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Download supported on Web only.')),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating sign: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating sign: $e')),
+        );
+      }
     }
   }
 
@@ -1063,6 +742,342 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch the global selection and trigger a re-fetch if it changes
+    ref.listen(selectedLocationIdProvider, (previous, next) {
+      if (next != null && next != previous) {
+        _fetchLocations();
+      }
+    });
+
+    if (_isLoading) {
+      return const PulsatingLoadingScreen();
+    }
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(48.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dynamic Pricing',
+              style: GoogleFonts.inter(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'v1.1.2 • Seasonal & algorithmic price adjustments.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 48),
+
+            // Master AutoPilot Control
+            _buildMasterControl(),
+            const SizedBox(height: 48),
+
+            // Base Pricing
+            _buildSectionHeader('Standard Base Rates'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildPriceInput('Hourly Rate', _hourlyController,
+                        Icons.timer_outlined)),
+                const SizedBox(width: 24),
+                Expanded(
+                    child: _buildPriceInput(
+                        'Daily Rate', _dailyController, Icons.today_outlined)),
+                const SizedBox(width: 24),
+                Expanded(
+                    child: _buildPriceInput('Monthly Rate', _monthlyController,
+                        Icons.calendar_month_outlined)),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // Ceiling Pricing (Only if AutoPilot is ON)
+            if (_autopilotEnabled) ...[
+              _buildSectionHeader('Smart AutoPilot Constraints'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildPriceInput('Hourly Minimum',
+                          _hourlyFloorController, Icons.timer_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput('Daily Minimum',
+                          _dailyFloorController, Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          'Monthly Minimum',
+                          _monthlyFloorController,
+                          Icons.calendar_month_outlined)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                      child: _buildPriceInput('Hourly Ceiling',
+                          _hourlyCeilingController, Icons.timer_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput('Daily Ceiling',
+                          _dailyCeilingController, Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          'Monthly Ceiling',
+                          _monthlyCeilingController,
+                          Icons.calendar_month_outlined)),
+                ],
+              ),
+              const SizedBox(height: 48),
+            ] else
+              const SizedBox(height: 48),
+
+            // Dynamic Adjustment
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader('Demand Sensitivity'),
+                      const SizedBox(height: 16),
+                      _buildControlCard(
+                        title: 'Demand Ratio',
+                        subtitle: 'Adjustment benchmark (0% - 200%)',
+                        enabled: _dynamicEnabled,
+                        onToggle: (val) =>
+                            setState(() => _dynamicEnabled = val),
+                        child: Column(
+                          children: [
+                            Slider(
+                              value: _dynamicRatio,
+                              min: 0.0,
+                              max: 2.0,
+                              divisions: 20,
+                              label: '${(_dynamicRatio * 100).toInt()}%',
+                              thumbColor: Colors.black,
+                              inactiveColor: AppTheme.surface,
+                              onChanged: (_dynamicEnabled && !_autopilotEnabled)
+                                  ? (val) => setState(() => _dynamicRatio = val)
+                                  : null,
+                            ),
+                            Text(
+                              'Manual Benchmark: ${(_dynamicRatio * 100).toInt()}%',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 32),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader('Congestion Surcharge'),
+                      const SizedBox(height: 16),
+                      _buildControlCard(
+                        title: 'Surcharge Multiplier',
+                        subtitle: 'Peak-traffic premium (1x - 10x)',
+                        enabled: _surchargeEnabled,
+                        onToggle: (val) =>
+                            setState(() => _surchargeEnabled = val),
+                        child: Column(
+                          children: [
+                            Slider(
+                              value: _surchargeMultiplier,
+                              min: 1.0,
+                              max: 10.0,
+                              divisions: 18,
+                              label: '${_surchargeMultiplier}x',
+                              thumbColor: Colors.black,
+                              inactiveColor: AppTheme.surface,
+                              onChanged: (_surchargeEnabled &&
+                                      !_autopilotEnabled)
+                                  ? (val) =>
+                                      setState(() => _surchargeMultiplier = val)
+                                  : null,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Manual Benchmark: ${_surchargeMultiplier}x',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+
+            // Entry Points
+            _buildSectionHeader('Payment Terminal Assets'),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildStripeButton(
+                          'Generate Hourly Link', 'hourly', Colors.black),
+                      const SizedBox(height: 12),
+                      _buildStripeButton(
+                          'Generate Daily Link', 'daily', Colors.black),
+                      const SizedBox(height: 12),
+                      _buildStripeButton(
+                          'Generate Monthly Link', 'monthly', Colors.black),
+                      const SizedBox(height: 32),
+                      // New Flyer QR Section
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.qr_code_2, color: Colors.blue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'ADMIN FLYER ASSET',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Use this QR code on physical flyers. Payments via this QR incur only 15% commission.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildStripeButton(
+                                'Open Flyer Link', 'flyer', Colors.blue),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 48),
+                Column(
+                  children: [
+                    if (_selectedLocation != null)
+                      _buildSignColumn(
+                        (_selectedLocation!['display_id'] ??
+                                _selectedLocation!['id'])
+                            .toString(),
+                        'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=hourly',
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: const Text('Select a location'),
+                      ),
+                    const SizedBox(height: 24),
+                    // Flyer QR
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text('FLYER QR (15% COMM)',
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  color: Colors.blue,
+                                  letterSpacing: 1.2)),
+                          const SizedBox(height: 16),
+                          if (_selectedLocation != null)
+                            QrImageView(
+                              data:
+                                  'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=flyer',
+                              version: QrVersions.auto,
+                              size: 160.0,
+                            )
+                          else
+                            const Text('Select a location'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 64),
+            Center(
+              child: SizedBox(
+                width: 200,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _saveSettings,
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4)),
+                  ),
+                ),
               ),
             ),
           ],

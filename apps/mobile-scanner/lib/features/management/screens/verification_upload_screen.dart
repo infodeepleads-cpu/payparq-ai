@@ -108,15 +108,19 @@ class _VerificationUploadScreenState
             pngBytes, "parking_sign_${widget.location['display_id']}.png");
       } else {
         // Handle mobile download if needed, but the user is likely on web
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Download only supported on Web for now.')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Download only supported on Web for now.')),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating sign: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating sign: $e')),
+        );
+      }
     }
   }
 

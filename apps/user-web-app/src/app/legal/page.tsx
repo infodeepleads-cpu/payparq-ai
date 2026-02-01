@@ -311,7 +311,7 @@ export default function Legal() {
                     Describes the rules you agree to when using our services.
                   </p>
                   <Link
-                    href="#"
+                    href="/terms"
                     className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-black hover:text-black/80"
                   >
                     <span>Read our Terms of Service</span>
@@ -423,9 +423,15 @@ export default function Legal() {
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
-                  <button className="block hover:text-white transition-colors">Legal</button>
-                  <button className="block hover:text-white transition-colors">Privacy</button>
-                  <button className="block hover:text-white transition-colors">Terms</button>
+                  <Link href="/legal" className="block hover:text-white transition-colors">
+                    Legal
+                  </Link>
+                  <Link href="/privacy" className="block hover:text-white transition-colors">
+                    Privacy
+                  </Link>
+                  <Link href="/terms" className="block hover:text-white transition-colors">
+                    Terms
+                  </Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>

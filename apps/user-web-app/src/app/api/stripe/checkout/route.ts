@@ -8,6 +8,26 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url);
   const location_id = (body.location_id as string) || url.searchParams.get('loc') || '';
   const plate_number = (body.plate_number as string) || '';
+  const flow_type = (body.flow_type as string) || url.searchParams.get('flow') || 'park_now';
+  if (flow_type === 'reserve' && location_id) {
+    const { data, error } = await supabase
+      .from('locations')
+      .select('stripe_url, name')
+      .or(`id.eq.${location_id},name.ilike.${location_id}`)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching Stripe link for reserve flow:', error);
+    }
+
+    const stripeUrl = (data && 'stripe_url' in data ? (data as { stripe_url: string }).stripe_url : undefined) as
+      | string
+      | undefined;
+
+    if (stripeUrl) {
+      return NextResponse.json({ url: stripeUrl });
+    }
+  }
   let unitAmount = 500;
   if (location_id) {
     const { data } = await supabase.from('pricing_settings').select('rules_text').eq('location_id', location_id).eq('active', true).limit(1);
@@ -37,6 +57,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         location_id,
         plate_number,
+        flow_type,
       },
     },
   });
@@ -48,6 +69,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const location_id = url.searchParams.get('loc') || '';
   const plate_number = url.searchParams.get('plate') || '';
+  const flow_type = url.searchParams.get('flow') || 'park_now';
   let unitAmount = 500;
   if (location_id) {
     const { data } = await supabase.from('pricing_settings').select('rules_text').eq('location_id', location_id).eq('active', true).limit(1);
@@ -76,6 +98,7 @@ export async function GET(req: NextRequest) {
       metadata: {
         location_id,
         plate_number,
+        flow_type,
       },
     },
   });
