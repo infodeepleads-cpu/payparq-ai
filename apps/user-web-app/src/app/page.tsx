@@ -303,12 +303,15 @@ export default function Home() {
                 The world’s first mobile software-only platform for frictionless urban mobility.
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors">
+                <Link
+                  href="/parking#demo"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors"
+                >
                   <span>Discover How</span>
                   <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#5F3DFC] to-[#FF5CF5] flex items-center justify-center text-white text-[10px]">
                     →
                   </span>
-                </button>
+                </Link>
               </div>
             </div>
           </div>

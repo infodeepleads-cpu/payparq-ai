@@ -308,9 +308,12 @@ export default function Parking() {
                 real-time data for global partners.
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                <Link
+                  href="#demo"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
+                >
                   <span>Talk to Sales</span>
-                </button>
+                </Link>
                 <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
                   <span>Download Overview</span>
                 </button>
@@ -593,43 +596,100 @@ export default function Parking() {
           </div>
         </section>
 
-        <section className="bg-white border-t border-black/5">
+        <section id="demo" className="bg-white border-t border-black/5">
           <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
             <div className="grid gap-10 md:grid-cols-[1.2fr,1fr] items-start">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  Talk to Sales
+                  Downtime exposure for operational issues.
                 </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                  Ready to digitize your parking portfolio?
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1 text-black">
+                  Why wait?
                 </h2>
-                <p className="text-sm md:text-base text-black/75 mb-6">
-                  Share a few details about your assets and our team will come back with a tailored
-                  deployment plan, including expected uplift and time to go live.
+                <p className="text-sm md:text-base text-black/80 mb-6">
+                  Build what&apos;s next, now.
                 </p>
                 <form className="space-y-4">
                   <div>
+                    <p className="text-xs font-semibold text-black/70 mb-2">Name</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-black/70 mb-1">
+                          First Name (required)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-black/70 mb-1">
+                          Last Name (required)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-black/70 mb-1">
+                        Work email (required)
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-black/70 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-xs font-semibold text-black/70 mb-1">
-                      Name
+                      Company name (required)
                     </label>
                     <input
                       type="text"
+                      required
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Property location(s) (required)
+                    </label>
+                    <input
+                      type="text"
+                      required
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Work email
+                        Property State (required)
                       </label>
                       <input
-                        type="email"
+                        type="text"
+                        required
                         className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Company
+                        Property Type
                       </label>
                       <input
                         type="text"
@@ -639,12 +699,21 @@ export default function Parking() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-black/70 mb-1">
-                      Portfolio details
+                      What are your goals? (required)
                     </label>
                     <textarea
                       rows={4}
+                      required
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      placeholder="Number of locations, cities, and approximate spaces..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Anything else?
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
                   <button
