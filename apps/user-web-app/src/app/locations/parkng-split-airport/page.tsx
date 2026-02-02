@@ -448,10 +448,7 @@ export default function SplitAirportLocationPage() {
               </section>
             </div>
 
-            <div className="flex flex-col items-end gap-2 md:sticky md:top-24">
-              <p className="text-[10px] md:text-xs font-semibold text-[#F97316] pr-1">
-                6 are booking right now
-              </p>
+            <div className="flex flex-col items-end md:sticky md:top-24">
               <div className="rounded-3xl border border-black/5 bg-white shadow-lg p-3 md:p-5 text-black h-full min-h-[480px] max-w-md ml-auto flex flex-col">
                 <div className="flex flex-col h-full">
                   <div className="mb-5 flex flex-col items-center text-center text-black/80">
@@ -505,83 +502,62 @@ export default function SplitAirportLocationPage() {
 
         <section className="bg-[#05020A] border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
-            <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-                  For drivers flying from Split
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Company
                 </p>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-                  Turn Split Airport parking into a simple step
-                </h2>
-                <p className="text-sm text-white/70 mb-6 max-w-md">
-                  From early-morning flights to peak summer departures, PayParq keeps parking at
-                  Split Airport consistent and transparent. One location ID connects your stay to
-                  live pricing and enforcement.
-                </p>
-                <Link
-                  href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors"
-                >
-                  Start a parking session
+                <Link href="/about" className="block hover:text-white transition-colors">
+                  About
+                </Link>
+                <Link href="/careers" className="block hover:text-white transition-colors">
+                  Careers
+                </Link>
+                <Link href="/news" className="block hover:text-white transition-colors">
+                  News
                 </Link>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Company
-                  </p>
-                  <Link href="/about" className="block hover:text-white transition-colors">
-                    About
-                  </Link>
-                  <Link href="/careers" className="block hover:text-white transition-colors">
-                    Careers
-                  </Link>
-                  <Link href="/news" className="block hover:text-white transition-colors">
-                    News
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Experience
-                  </p>
-                  <Link href="/product" className="block hover:text-white transition-colors">
-                    Product
-                  </Link>
-                  <Link href="/parking" className="block hover:text-white transition-colors">
-                    Parking
-                  </Link>
-                  <Link href="/security" className="block hover:text-white transition-colors">
-                    Security
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Policies
-                  </p>
-                  <Link href="/legal" className="block hover:text-white transition-colors">
-                    Legal
-                  </Link>
-                  <Link href="/privacy" className="block hover:text-white transition-colors">
-                    Privacy
-                  </Link>
-                  <Link href="/terms" className="block hover:text-white transition-colors">
-                    Terms
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                    Platform
-                  </p>
-                  <Link href="/locations" className="block hover:text-white transition-colors">
-                    Locations
-                  </Link>
-                  <Link href="/members" className="block hover:text-white transition-colors">
-                    Members
-                  </Link>
-                  <Link href="/support" className="block hover:text-white transition-colors">
-                    Support
-                  </Link>
-                </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Experience
+                </p>
+                <Link href="/product" className="block hover:text-white transition-colors">
+                  Product
+                </Link>
+                <Link href="/parking" className="block hover:text-white transition-colors">
+                  Parking
+                </Link>
+                <Link href="/security" className="block hover:text-white transition-colors">
+                  Security
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Policies
+                </p>
+                <Link href="/legal" className="block hover:text-white transition-colors">
+                  Legal
+                </Link>
+                <Link href="/privacy" className="block hover:text-white transition-colors">
+                  Privacy
+                </Link>
+                <Link href="/terms" className="block hover:text-white transition-colors">
+                  Terms
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Platform
+                </p>
+                <Link href="/locations" className="block hover:text-white transition-colors">
+                  Locations
+                </Link>
+                <Link href="/members" className="block hover:text-white transition-colors">
+                  Members
+                </Link>
+                <Link href="/support" className="block hover:text-white transition-colors">
+                  Support
+                </Link>
               </div>
             </div>
             <div className="mt-12 pt-6 border-t border-white/10">
