@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseUrl } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
 
   if (location_id) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://iafjygownkhedereaoxw.supabase.co';
+    const baseUrl = supabaseUrl || 'https://iafjygownkhedereaoxw.supabase.co';
     let type = 'hourly';
     if (flow_type === 'monthly') type = 'monthly';
     else if (flow_type === 'reserve') type = 'reserve';
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     params.set('location_id', location_id);
     params.set('type', type);
     params.set('t', Date.now().toString());
-    const redirectUrl = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/create-checkout?${params.toString()}`;
+    const redirectUrl = `${baseUrl.replace(/\/+$/, '')}/functions/v1/create-checkout?${params.toString()}`;
     return NextResponse.json({ url: redirectUrl });
   }
 

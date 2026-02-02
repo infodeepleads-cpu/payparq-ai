@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 
-export default function Contact() {
+export default function Locations() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -117,7 +117,6 @@ export default function Contact() {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center justify-center">
                 <Link href="/" className="relative flex items-center justify-center">
                   <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
@@ -129,7 +128,6 @@ export default function Contact() {
                   </div>
                 </Link>
               </div>
-
               <div className="flex items-center justify-end gap-2 md:gap-3">
                 <Link
                   href="/contact"
@@ -282,110 +280,97 @@ export default function Contact() {
       </header>
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="max-w-3xl mx-auto px-6 md:px-12 py-16 md:py-24">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-black">
-            Welcome to PayParq
+        <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
+          <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+            Locations
+          </p>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-3 text-black">
+            PayParq Partner Locations
           </h1>
-          <div className="flex items-center gap-3 mb-8 flex-wrap">
-            <p className="text-sm md:text-base text-black/80">
-              I want to park at a PayParq location.
-            </p>
-            <Link
-              href="/parking"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
-            >
-              Get Started
-            </Link>
-          </div>
-          <div className="space-y-6 text-sm md:text-base text-black/80">
-            <div>
-              <p className="font-semibold mb-1">Q: What are you looking for?</p>
-              <p>
-                A: Whether you&apos;re visiting a city or managing a property, PayParq makes parking simple, seamless,
-                and digital.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: I&apos;m at a PayParq location and want to park. How do I get started?
-              </p>
-              <p>
-                A: First-time parking with PayParq? Sign up via our web app or mobile app. Add your vehicle and payment
-                method, and start parking immediately.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: Parked with PayParq before. Do I need to do anything?
-              </p>
-              <p>
-                A: No additional action is required. You can manage your visit by signing in to our web app or using our
-                mobile app.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: Interested in PayParq?</p>
-              <p>
-                A: Please fill out our sales contact form, and a member of our team will get in touch shortly.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: How can I purchase a monthly parking subscription?</p>
-              <p>
-                A:{" "}
-                <Link href="/pay" className="underline">
-                  Click here
-                </Link>{" "}
-                to select your preferred location and subscribe to a monthly plan.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: I need help with my account, technical issues, or payments.
-              </p>
-              <p>
-                A: Visit the{" "}
-                <a
-                  href="https://payparq.ai/help"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
+          <p className="text-sm md:text-base text-black/75 mb-8 max-w-2xl">
+            A single view of where PayParq is live today. Explore partner
+            locations across mixed-use garages, on-street zones, and private
+            portfolios as we expand the network.
+          </p>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
+                  Airport
+                </p>
+                <p className="text-base font-semibold text-black">
+                  Split Airport
+                </p>
+                <p className="text-sm text-black/70">
+                  App-free airport parking at Split with live plate recognition and flexible stays.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-[11px] text-black/60">
+                <p className="pr-3">
+                  Live with license-plate recognition, mobile payments, and enforcement tools.
+                </p>
+                <Link
+                  href="/locations/parkng-split-airport"
+                  className="font-semibold text-black hover:underline"
                 >
-                  Driver Help Center
-                </a>{" "}
-                for support.
+                  View details
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
+                  Mixed-use
+                </p>
+                <p className="text-base font-semibold text-black">
+                  Urban portfolio
+                </p>
+                <p className="text-sm text-black/70">
+                  City-center garages connecting office, retail, and residential
+                  inventory into one platform.
+                </p>
+              </div>
+              <p className="mt-4 text-[11px] text-black/60">
+                Rolling out dynamic pricing, allocations, and consolidated
+                reporting.
               </p>
             </div>
+            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
+                  Coming soon
+                </p>
+                <p className="text-base font-semibold text-black">
+                  New partner locations
+                </p>
+                <p className="text-sm text-black/70">
+                  We are onboarding additional city and private operators. Join
+                  the waitlist to bring PayParq to your assets.
+                </p>
+              </div>
+              <p className="mt-4 text-[11px] text-black/60">
+                Reach out to our team to learn about requirements and timelines.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-2xl border border-black/5 bg-[#05020A] text-white p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <p className="font-semibold mb-1">Q: How do I pay or dispute a parking notice?</p>
-              <p>
-                A: Go to{" "}
-                <Link href="/pay" className="underline">
-                  PayParq Payments
-                </Link>{" "}
-                to complete payments or submit disputes.
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
+                Become a partner
+              </p>
+              <p className="text-sm md:text-base text-white/80 max-w-xl">
+                Operate a portfolio that could benefit from PayParq? Share a few
+                details and we&apos;ll follow up with a tailored rollout plan.
               </p>
             </div>
-            <div>
-              <p className="font-semibold mb-1">Q: I&apos;m a member of the press. How can I contact PayParq?</p>
-              <p>
-                A: Email us at{" "}
-                <a href="mailto:press@payparq.ai" className="underline">
-                  press@payparq.ai
-                </a>
-                .
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: Are there career opportunities at PayParq?</p>
-              <p>
-                A: Visit our{" "}
-                <Link href="/careers" className="underline">
-                  Careers
-                </Link>{" "}
-                page to view open positions and apply for a job.
-              </p>
-            </div>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors"
+            >
+              Talk to our team
+            </Link>
           </div>
         </section>
 
@@ -400,8 +385,9 @@ export default function Contact() {
                   Frictionless access to anywhere you want to be
                 </h2>
                 <p className="text-sm text-white/70 mb-6 max-w-md">
-                  From mixed-use garages to open-air lots, payparq turns any space into a seamless, app-free arrival
-                  experience while unlocking new revenue.
+                  From mixed-use garages to open-air lots, payparq turns any
+                  space into a seamless, app-free arrival experience while
+                  unlocking new revenue.
                 </p>
                 <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
                   <span className="text-xs">Download on the App Store</span>
@@ -409,7 +395,9 @@ export default function Contact() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Company
+                  </p>
                   <Link href="/about" className="block hover:text-white transition-colors">
                     About
                   </Link>
@@ -421,7 +409,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Experience</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Experience
+                  </p>
                   <Link href="/product" className="block hover:text-white transition-colors">
                     Product
                   </Link>
@@ -433,7 +423,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Policies
+                  </p>
                   <Link href="/legal" className="block hover:text-white transition-colors">
                     Legal
                   </Link>
@@ -445,7 +437,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Platform
+                  </p>
                   <Link href="/locations" className="block hover:text-white transition-colors">
                     Locations
                   </Link>

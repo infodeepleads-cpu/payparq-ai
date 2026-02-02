@@ -4,10 +4,11 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
 type NavItemId =
+  | "account"
   | "home"
   | "monthly"
   | "activity"
@@ -34,8 +35,17 @@ export default function MembersPage() {
 
   const [activeItem, setActiveItem] = useState<NavItemId>("home");
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [plates, setPlates] = useState<string[]>([]);
+  const [newPlate, setNewPlate] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [newPaymentLabel, setNewPaymentLabel] = useState("");
 
   useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) {
+      setUser(null);
+      return;
+    }
+
     let cancelled = false;
 
     supabase.auth
@@ -74,6 +84,11 @@ export default function MembersPage() {
       return;
     }
 
+    if (!supabase || !isSupabaseConfigured) {
+      setAuthError("Members sign-in is not configured for this environment.");
+      return;
+    }
+
     setAuthLoading(true);
     setAuthError("");
 
@@ -101,10 +116,60 @@ export default function MembersPage() {
   }
 
   async function handleSignOut() {
+    if (!supabase || !isSupabaseConfigured) {
+      return;
+    }
     await supabase.auth.signOut();
   }
 
   function renderActiveContent() {
+    if (activeItem === "account") {
+      return (
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Account settings
+            </h2>
+            <p className="text-sm text-black/70">
+              Review the basics connected to your Payparq profile.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
+                Profile
+              </p>
+              <p className="text-sm text-black/80">
+                Signed in as{" "}
+                <span className="font-semibold">
+                  {user?.email || "Unknown email"}
+                </span>
+              </p>
+            </div>
+            <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
+                Quick summary
+              </p>
+              <p className="text-sm text-black/80">
+                Plates connected:{" "}
+                <span className="font-semibold">
+                  {plates.length > 0 ? plates.length : "None yet"}
+                </span>
+              </p>
+              <p className="text-sm text-black/80">
+                Payment methods:{" "}
+                <span className="font-semibold">
+                  {paymentMethods.length > 0
+                    ? paymentMethods.length
+                    : "None yet"}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (activeItem === "home") {
       return (
         <div className="space-y-2">
@@ -162,28 +227,150 @@ export default function MembersPage() {
 
     if (activeItem === "payment") {
       return (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight text-black">
-            Payment
-          </h2>
-          <p className="text-sm text-black/70">
-            Update saved cards, receipts, and invoicing preferences for your
-            account.
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Payment
+            </h2>
+            <p className="text-sm text-black/70">
+              Add a card label so you can quickly recognise how each payment is
+              charged.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-black/70">
+              Saved payment methods
+            </p>
+            {paymentMethods.length === 0 && (
+              <p className="text-sm text-black/60">
+                No payment methods added yet.
+              </p>
+            )}
+            {paymentMethods.length > 0 && (
+              <ul className="space-y-2 text-sm text-black/80">
+                {paymentMethods.map((label) => (
+                  <li
+                    key={label}
+                    className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2"
+                  >
+                    <span>{label}</span>
+                    <span className="text-[11px] text-black/50">
+                      Card on file
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-black/70">
+              Add a payment method
+            </p>
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                type="text"
+                value={newPaymentLabel}
+                onChange={(event) => setNewPaymentLabel(event.target.value)}
+                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                placeholder="e.g. Company Visa •••• 4242"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = newPaymentLabel.trim();
+                  if (!trimmed) return;
+                  if (paymentMethods.includes(trimmed)) {
+                    setNewPaymentLabel("");
+                    return;
+                  }
+                  setPaymentMethods((current) => [...current, trimmed]);
+                  setNewPaymentLabel("");
+                }}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
+              >
+                Add payment
+              </button>
+            </div>
+            <p className="text-[11px] text-black/60">
+              This is a preview of how payment management will look. Connect
+              your billing provider to store real card details.
+            </p>
+          </div>
         </div>
       );
     }
 
     if (activeItem === "vehicles") {
       return (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight text-black">
-            Vehicles
-          </h2>
-          <p className="text-sm text-black/70">
-            Keep your plates up to date so arrivals stay seamless across
-            connected locations.
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Vehicles
+            </h2>
+            <p className="text-sm text-black/70">
+              Add license plates you use for work so Payparq can recognise your
+              arrivals.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-black/70">
+              Saved plates
+            </p>
+            {plates.length === 0 && (
+              <p className="text-sm text-black/60">
+                No plates added yet. Add your first plate below.
+              </p>
+            )}
+            {plates.length > 0 && (
+              <ul className="flex flex-wrap gap-2 text-xs text-black/80">
+                {plates.map((plate) => (
+                  <li
+                    key={plate}
+                    className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5"
+                  >
+                    <span className="font-semibold tracking-[0.12em] uppercase">
+                      {plate}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-black/70">
+              Add a license plate
+            </p>
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                type="text"
+                value={newPlate}
+                onChange={(event) => setNewPlate(event.target.value)}
+                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40 uppercase"
+                placeholder="e.g. ZG-123-AB"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const trimmed = newPlate.trim();
+                  if (!trimmed) return;
+                  const value = trimmed.toUpperCase();
+                  if (plates.includes(value)) {
+                    setNewPlate("");
+                    return;
+                  }
+                  setPlates((current) => [...current, value]);
+                  setNewPlate("");
+                }}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
+              >
+                Add plate
+              </button>
+            </div>
+            <p className="text-[11px] text-black/60">
+              In production, these plates will sync with your parking locations
+              and enforcement tools.
+            </p>
+          </div>
         </div>
       );
     }
@@ -520,7 +707,15 @@ export default function MembersPage() {
                             Account overview
                           </p>
                         </div>
-                        <button className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl bg-white text-black text-[11px] font-semibold shadow-sm hover:bg-gray-100 transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => setActiveItem("account")}
+                          className={`w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors ${
+                            activeItem === "account"
+                              ? "bg-white text-black"
+                              : "bg-white/5 text-white hover:bg-white/10"
+                          }`}
+                        >
                           Account Settings
                         </button>
                       </div>
@@ -666,7 +861,9 @@ export default function MembersPage() {
                   <div className="flex-1 bg-[#F5F5F7] text-black">
                     <div className="h-full p-6 md:p-8 flex flex-col gap-4">
                       <div className="text-[11px] uppercase tracking-[0.24em] text-black/50">
-                        {activeItem === "home"
+                        {activeItem === "account"
+                          ? "Account settings"
+                          : activeItem === "home"
                           ? "Overview"
                           : activeItem === "monthly"
                           ? "Monthly subscriptions"
@@ -750,14 +947,14 @@ export default function MembersPage() {
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                 Platform
               </p>
-              <button className="block hover:text-white transition-colors">
-                Partners
-              </button>
-              <Link href="/support" className="block hover:text-white transition-colors">
-                Support
+              <Link href="/locations" className="block hover:text-white transition-colors">
+                Locations
               </Link>
               <Link href="/members" className="block hover:text-white transition-colors">
                 Members
+              </Link>
+              <Link href="/support" className="block hover:text-white transition-colors">
+                Support
               </Link>
             </div>
           </div>
@@ -769,4 +966,3 @@ export default function MembersPage() {
     </div>
   );
 }
-

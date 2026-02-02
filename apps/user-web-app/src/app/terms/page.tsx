@@ -672,12 +672,14 @@ export default function Terms() {
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
-                  <button className="block hover:text-white transition-colors">Partners</button>
-                  <Link href="/support" className="block hover:text-white transition-colors">
-                    Support
+                  <Link href="/locations" className="block hover:text-white transition-colors">
+                    Locations
                   </Link>
                   <Link href="/members" className="block hover:text-white transition-colors">
                     Members
+                  </Link>
+                  <Link href="/support" className="block hover:text-white transition-colors">
+                    Support
                   </Link>
                 </div>
               </div>

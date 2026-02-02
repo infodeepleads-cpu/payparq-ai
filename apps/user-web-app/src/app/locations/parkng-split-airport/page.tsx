@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
-import { ChevronDown } from "lucide-react";
+import MapboxPlaceholder from "@/components/MapboxPlaceholder";
 
-export default function Contact() {
+const LOCATION_ID = "parkng split airport";
+
+export default function SplitAirportLocationPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -117,7 +121,6 @@ export default function Contact() {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center justify-center">
                 <Link href="/" className="relative flex items-center justify-center">
                   <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
@@ -129,7 +132,6 @@ export default function Contact() {
                   </div>
                 </Link>
               </div>
-
               <div className="flex items-center justify-end gap-2 md:gap-3">
                 <Link
                   href="/contact"
@@ -138,10 +140,10 @@ export default function Contact() {
                   Get in Touch
                 </Link>
                 <Link
-                  href="/pay"
+                  href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
                   className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
                 >
-                  Pay Now
+                  Book Parking
                 </Link>
               </div>
             </div>
@@ -268,11 +270,11 @@ export default function Contact() {
                     Get in Touch
                   </Link>
                   <Link
-                    href="/pay"
+                    href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
                     className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Pay Now
+                    Book Parking
                   </Link>
                 </div>
               </div>
@@ -281,135 +283,253 @@ export default function Contact() {
         </div>
       </header>
 
-      <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="max-w-3xl mx-auto px-6 md:px-12 py-16 md:py-24">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-black">
-            Welcome to PayParq
+      <main className="flex-1 bg-white pt-16 md:pt-20">
+        <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-12 md:pt-6 md:pb-16">
+          <h1 className="text-3xl md:text-4xl font-normal tracking-tight mb-6 md:mb-8 text-black md:-ml-10">
+            Split Airport parking from €0.37 per hour - just 2 minutes away.
           </h1>
-          <div className="flex items-center gap-3 mb-8 flex-wrap">
-            <p className="text-sm md:text-base text-black/80">
-              I want to park at a PayParq location.
-            </p>
-            <Link
-              href="/parking"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
-            >
-              Get Started
-            </Link>
-          </div>
-          <div className="space-y-6 text-sm md:text-base text-black/80">
-            <div>
-              <p className="font-semibold mb-1">Q: What are you looking for?</p>
-              <p>
-                A: Whether you&apos;re visiting a city or managing a property, PayParq makes parking simple, seamless,
-                and digital.
-              </p>
+
+          <section className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] items-start">
+            <div className="space-y-8 md:-ml-10">
+              <div className="h-full min-h-[480px] rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg">
+                <div className="relative w-full h-full">
+                  <Image
+                    src="/Split_Airport_new_terminal_main_hall.jpg"
+                    alt="Split Airport new terminal main hall"
+                    fill
+                    priority
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)]" />
+                  <div className="absolute inset-x-6 bottom-6 flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/60">
+                        Split Airport car park
+                      </p>
+                      <p className="text-sm md:text-base text-white font-semibold">
+                        Rows of covered and open-air parking bays, ready for take-off.
+                      </p>
+                    </div>
+                    <span className="hidden md:inline-flex px-3 py-1 rounded-full bg-white/10 text-[10px] text-white/80 border border-white/20">
+                      Photo of Split Airport parking
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <MapboxPlaceholder locationId={LOCATION_ID} />
+
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
+                    Airport parking just minutes from the terminal
+                  </h2>
+                  <p className="text-sm md:text-base text-black/75">
+                    The PayParq-enabled car park at Split Airport is designed for fast arrivals and
+                    smooth departures. Drive in, park in your allocated zone, and your license plate
+                    links your stay to a live parking session. No paperwork, no barriers, and no
+                    searching for a pay machine.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-3 text-sm text-black/80">
+                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                      Location
+                    </p>
+                    <p className="font-semibold">Split Airport car park</p>
+                    <p className="text-xs text-black/70 mt-1">
+                      Walking distance from the terminal, with clearly marked PayParq zones.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                      Hours
+                    </p>
+                    <p className="font-semibold">24/7 access</p>
+                    <p className="text-xs text-black/70 mt-1">
+                      Perfect for early-morning departures, late arrivals, and seasonal flights.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                      Stays
+                    </p>
+                    <p className="font-semibold">Short- and long-term</p>
+                    <p className="text-xs text-black/70 mt-1">
+                      Choose flexible stays from a single day to extended trips from Split.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
+                    How parking with PayParq works at Split Airport
+                  </h2>
+                  <ol className="list-decimal pl-5 text-sm md:text-base text-black/75 space-y-2">
+                    <li>
+                      Follow the signs to the PayParq zones at the Split Airport car park and park
+                      in an available bay.
+                    </li>
+                    <li>
+                      Scan the QR code on signage or visit the PayParq pay page and enter the
+                      location ID shown:{" "}
+                      <span className="font-mono text-xs">{LOCATION_ID}</span>.
+                    </li>
+                    <li>
+                      Choose whether you want to park now, book a monthly pass, or reserve parking
+                      for a future trip.
+                    </li>
+                    <li>
+                      Checkout securely and receive your confirmation. Your plate is your access and
+                      proof of payment.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5">
+                    <h3 className="text-sm font-semibold text-black mb-2">
+                      Designed for travelers flying from Split
+                    </h3>
+                    <p className="text-sm text-black/75">
+                      Whether you are heading to European hubs or domestic destinations along the
+                      Adriatic, PayParq keeps parking simple. Keep your keys, keep your schedule,
+                      and keep your focus on the journey—not the car park.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5">
+                    <h3 className="text-sm font-semibold text-black mb-2">
+                      Built on real-time parking data
+                    </h3>
+                    <p className="text-sm text-black/75">
+                      The Split Airport location runs on the same platform trusted by coastal cities
+                      and mixed-use portfolios. Operators see live occupancy, dwell times, and
+                      compliance across every bay.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-2">
+                  Frequently asked questions
+                </h2>
+                <div className="space-y-4 text-sm md:text-base text-black/80">
+                  <div>
+                    <h3 className="font-semibold mb-1">Do I need an app to park at Split Airport?</h3>
+                    <p>
+                      No. PayParq is app-free. Use the QR code or short URL on the signage, enter
+                      the location ID, and complete payment in your browser.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">
+                      Can I extend my parking if my flight is delayed?
+                    </h3>
+                    <p>
+                      Yes. You can return to the PayParq link in your confirmation to extend your
+                      stay while your car remains in the same bay.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">
+                      Who operates the parking at Split Airport with PayParq?
+                    </h3>
+                    <p>
+                      PayParq provides the software platform that powers payments, enforcement, and
+                      analytics. Local operators and airports remain responsible for on-site
+                      operations and policies.
+                    </p>
+                  </div>
+                </div>
+              </section>
             </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: I&apos;m at a PayParq location and want to park. How do I get started?
+
+            <div className="flex flex-col items-end gap-2 md:sticky md:top-24">
+              <p className="text-[10px] md:text-xs font-semibold text-[#F97316] pr-1">
+                6 are booking right now
               </p>
-              <p>
-                A: First-time parking with PayParq? Sign up via our web app or mobile app. Add your vehicle and payment
-                method, and start parking immediately.
-              </p>
+              <div className="rounded-3xl border border-black/5 bg-white shadow-lg p-3 md:p-5 text-black h-full min-h-[480px] max-w-md ml-auto flex flex-col">
+                <div className="flex flex-col h-full">
+                  <div className="mb-5 flex flex-col items-center text-center text-black/80">
+                    <div className="inline-flex items-center gap-2 text-[11px] md:text-sm">
+                      <div className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-1">
+                        <span className="w-4 h-4 rounded-full bg-[#4285F4] text-[9px] font-bold text-white flex items-center justify-center">
+                          G
+                        </span>
+                        <span className="text-[11px] md:text-sm font-semibold">Google</span>
+                      </div>
+                      <span className="font-semibold">4.9</span>
+                      <span className="text-[10px] md:text-xs text-black/60">• 24,098 reviews</span>
+                    </div>
+                    <h2 className="mt-3 text-base md:text-xl font-semibold text-black">
+                      Select Dates to Calculate Price
+                    </h2>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center mt-5 mb-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
+                        <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
+                          Check In
+                        </span>
+                        <span className="mt-2 flex items-center justify-between text-base md:text-lg font-semibold text-black">
+                          <span>Pick date</span>
+                          <CalendarDays className="w-4 h-4 text-black/40" />
+                        </span>
+                      </button>
+                      <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
+                        <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
+                          Check Out
+                        </span>
+                        <span className="mt-2 flex items-center justify-between text-base md:text-lg font-semibold text-black">
+                          <span>Pick date</span>
+                          <CalendarDays className="w-4 h-4 text-black/40" />
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
+                    className="mt-auto inline-flex w-full items-center justify-center rounded-full bg-[#5F3DFC] px-6 py-3.5 text-sm md:text-base font-semibold text-white shadow hover:bg-[#4330c4] transition-colors"
+                  >
+                    Check price
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: Parked with PayParq before. Do I need to do anything?
-              </p>
-              <p>
-                A: No additional action is required. You can manage your visit by signing in to our web app or using our
-                mobile app.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: Interested in PayParq?</p>
-              <p>
-                A: Please fill out our sales contact form, and a member of our team will get in touch shortly.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: How can I purchase a monthly parking subscription?</p>
-              <p>
-                A:{" "}
-                <Link href="/pay" className="underline">
-                  Click here
-                </Link>{" "}
-                to select your preferred location and subscribe to a monthly plan.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">
-                Q: I need help with my account, technical issues, or payments.
-              </p>
-              <p>
-                A: Visit the{" "}
-                <a
-                  href="https://payparq.ai/help"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  Driver Help Center
-                </a>{" "}
-                for support.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: How do I pay or dispute a parking notice?</p>
-              <p>
-                A: Go to{" "}
-                <Link href="/pay" className="underline">
-                  PayParq Payments
-                </Link>{" "}
-                to complete payments or submit disputes.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: I&apos;m a member of the press. How can I contact PayParq?</p>
-              <p>
-                A: Email us at{" "}
-                <a href="mailto:press@payparq.ai" className="underline">
-                  press@payparq.ai
-                </a>
-                .
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">Q: Are there career opportunities at PayParq?</p>
-              <p>
-                A: Visit our{" "}
-                <Link href="/careers" className="underline">
-                  Careers
-                </Link>{" "}
-                page to view open positions and apply for a job.
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
+        </article>
 
         <section className="bg-[#05020A] border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">
-                  For drivers, operators, and cities
+                  For drivers flying from Split
                 </p>
                 <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-                  Frictionless access to anywhere you want to be
+                  Turn Split Airport parking into a simple step
                 </h2>
                 <p className="text-sm text-white/70 mb-6 max-w-md">
-                  From mixed-use garages to open-air lots, payparq turns any space into a seamless, app-free arrival
-                  experience while unlocking new revenue.
+                  From early-morning flights to peak summer departures, PayParq keeps parking at
+                  Split Airport consistent and transparent. One location ID connects your stay to
+                  live pricing and enforcement.
                 </p>
-                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
-                  <span className="text-xs">Download on the App Store</span>
-                </button>
+                <Link
+                  href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors"
+                >
+                  Start a parking session
+                </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Company
+                  </p>
                   <Link href="/about" className="block hover:text-white transition-colors">
                     About
                   </Link>
@@ -421,7 +541,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Experience</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Experience
+                  </p>
                   <Link href="/product" className="block hover:text-white transition-colors">
                     Product
                   </Link>
@@ -433,7 +555,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Policies
+                  </p>
                   <Link href="/legal" className="block hover:text-white transition-colors">
                     Legal
                   </Link>
@@ -445,7 +569,9 @@ export default function Contact() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Platform
+                  </p>
                   <Link href="/locations" className="block hover:text-white transition-colors">
                     Locations
                   </Link>
