@@ -291,7 +291,11 @@ export default function DiscoverHowPage() {
               <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                 Share your details
               </p>
-              <form className="space-y-4">
+              <form
+                className="space-y-4"
+                method="post"
+                action="/api/sales"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-black/70 mb-1">
@@ -300,6 +304,7 @@ export default function DiscoverHowPage() {
                     <input
                       type="text"
                       required
+                      name="first_name"
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
@@ -310,6 +315,7 @@ export default function DiscoverHowPage() {
                     <input
                       type="text"
                       required
+                      name="last_name"
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
@@ -322,6 +328,7 @@ export default function DiscoverHowPage() {
                     <input
                       type="email"
                       required
+                      name="work_email"
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
@@ -332,28 +339,70 @@ export default function DiscoverHowPage() {
                     <input
                       type="text"
                       required
+                      name="company"
                       className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-black/70 mb-1">
-                    Portfolio or city
+                    Locations
                   </label>
                   <input
                     type="text"
                     required
+                    name="locations"
                     className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-black/70 mb-1">
-                    What would you like to explore?
+                    What would you like to explore with Payparq?
                   </label>
-                  <textarea
-                    rows={4}
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                  />
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="explore-revenue"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                    >
+                      <input
+                        id="explore-revenue"
+                        type="checkbox"
+                        name="explore"
+                        value="Increase revenue"
+                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                      />
+                      <span className="text-sm text-black">Increase Revenue</span>
+                    </label>
+                    <label
+                      htmlFor="explore-unauthorized"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                    >
+                      <input
+                        id="explore-unauthorized"
+                        type="checkbox"
+                        name="explore"
+                        value="Stopping unauthorized vehicles"
+                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                      />
+                      <span className="text-sm text-black">Stopping Unauthorized Vehicles</span>
+                    </label>
+                    <label
+                      htmlFor="explore-congestion"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                    >
+                      <input
+                        id="explore-congestion"
+                        type="checkbox"
+                        name="explore"
+                        value="Eliminating congestion"
+                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                      />
+                      <span className="text-sm text-black">Eliminating Congestion</span>
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-black/50 mt-3">
+                    You can choose more than one.
+                  </p>
                 </div>
                 <button
                   type="submit"

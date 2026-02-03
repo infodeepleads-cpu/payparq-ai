@@ -294,13 +294,13 @@ export default function Parking() {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-[#05020A] via-[#05020A]/80 to-[#05020A]" />
           </div>
-          <div className="relative max-w-6xl mx-auto px-6 md:px-12 py-20 md:py-28">
+            <div className="relative max-w-6xl mx-auto px-6 md:px-12 py-20 md:py-28">
             <div className="max-w-2xl">
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-4">
-                Smart City
+                Smart upgrade
               </p>
               <h1 className="text-3xl md:text-5xl font-semibold md:font-bold tracking-tight leading-tight mb-5">
-                Mapping the Future of Parking.
+                Parking, Reimagined.
               </h1>
               <p className="text-sm md:text-base text-white/80 max-w-xl mb-6">
                 We digitize every space with Mobile LPR and AI Computer Vision to turn static lots into
@@ -309,14 +309,17 @@ export default function Parking() {
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <Link
-                  href="#demo"
+                  href="/discover-how"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
                 >
                   <span>Talk to Sales</span>
                 </Link>
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
-                  <span>Download Overview</span>
-                </button>
+                <Link
+                  href="/product"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors"
+                >
+                  <span>Product &amp; Pricing</span>
+                </Link>
               </div>
             </div>
             <div className="mt-10 grid grid-cols-1 md:grid-cols-[1.1fr,1.2fr] gap-8 items-start">
@@ -596,154 +599,6 @@ export default function Parking() {
           </div>
         </section>
 
-        <section id="demo" className="bg-white border-t border-black/5">
-          <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-10 md:grid-cols-[1.2fr,1fr] items-start">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  Downtime exposure for operational issues.
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1 text-black">
-                  Why wait?
-                </h2>
-                <p className="text-sm md:text-base text-black/80 mb-6">
-                  Build what&apos;s next, now.
-                </p>
-                <form className="space-y-4">
-                  <div>
-                    <p className="text-xs font-semibold text-black/70 mb-2">Name</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-black/70 mb-1">
-                          First Name (required)
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-black/70 mb-1">
-                          Last Name (required)
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Work email (required)
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-black/70 mb-1">
-                      Company name (required)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-black/70 mb-1">
-                      Property location(s) (required)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Property State (required)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/70 mb-1">
-                        Property Type
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-black/70 mb-1">
-                      What are your goals? (required)
-                    </label>
-                    <textarea
-                      rows={4}
-                      required
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-black/70 mb-1">
-                      Anything else?
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
-                  >
-                    Submit
-                  </button>
-                </form>
-              </div>
-              <div className="h-56 md:h-full rounded-3xl border border-black/5 bg-[#F5F5F7] flex flex-col justify-between p-6">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                    Why this matters for your portfolio
-                  </p>
-                  <p className="text-xs md:text-sm text-black/75 mb-3">
-                    With PayParq, every parking space becomes a managed digital asset. Operators gain
-                    live visibility into occupancy, revenue, and compliance and can act on it from a
-                    single pane of glass.
-                  </p>
-                  <p className="text-xs md:text-sm text-black/75">
-                    By standardizing payments, enforcement, and reporting across sites, you protect NOI,
-                    reduce leakage, and give investors a clear view of how each asset performs in the
-                    real world.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
