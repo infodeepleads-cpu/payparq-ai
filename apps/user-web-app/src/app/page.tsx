@@ -27,40 +27,50 @@ export default function Home() {
                   <span className="h-[1.5px] w-4 bg-black" />
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
-                <div className="hidden md:flex items-center justify-center gap-7 text-[11px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
+                  <Link
+                    href="/experience"
+                    className="hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50"
+                  >
                     Experience
                   </Link>
-                  <div className="relative">
+                  <div
+                    className="relative"
+                    onMouseEnter={() => {
+                      setBusinessOpen(true);
+                      setCompanyOpen(false);
+                    }}
+                    onMouseLeave={() => setBusinessOpen(false)}
+                  >
                     <button
-                      className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                      className="flex items-center gap-1 hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50 text-[10px]"
                       onClick={() => {
                         setBusinessOpen((open) => !open);
                         setCompanyOpen(false);
                       }}
                     >
-                      <span>Business</span>
+                      <span>BUSINESS</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {businessOpen && (
-                      <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
+                      <div className="absolute left-0 top-full bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/business"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Smart City
                         </Link>
                         <Link
                           href="/parking"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Parking
                         </Link>
                         <Link
                           href="/security"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
@@ -68,39 +78,49 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <Link href="/technology" className="hover:text-gray-700 transition-colors">
+                  <Link
+                    href="/technology"
+                    className="hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50"
+                  >
                     Technology
                   </Link>
-                  <div className="relative">
+                  <div
+                    className="relative"
+                    onMouseEnter={() => {
+                      setCompanyOpen(true);
+                      setBusinessOpen(false);
+                    }}
+                    onMouseLeave={() => setCompanyOpen(false)}
+                  >
                     <button
-                      className="flex items-center gap-1 hover:text-gray-700 transition-colors"
+                      className="flex items-center gap-1 hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50 text-[10px]"
                       onClick={() => {
                         setCompanyOpen((open) => !open);
                         setBusinessOpen(false);
                       }}
                     >
-                      <span>Company</span>
+                      <span>COMPANY</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
+                      <div className="absolute right-0 top-full bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/about"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setCompanyOpen(false)}
                         >
                           About
                         </Link>
                         <Link
                           href="/careers"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setCompanyOpen(false)}
                         >
                           Careers
                         </Link>
                         <Link
                           href="/news"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
                           onClick={() => setCompanyOpen(false)}
                         >
                           News
@@ -236,16 +256,6 @@ export default function Home() {
                         }}
                       >
                         News
-                      </Link>
-                      <Link
-                        href="/contact"
-                        className="w-full py-2 text-center hover:bg-gray-100 transition-colors"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          setCompanyOpen(false);
-                        }}
-                      >
-                        Get in touch
                       </Link>
                     </div>
                   )}

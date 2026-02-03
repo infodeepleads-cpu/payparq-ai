@@ -165,7 +165,7 @@ export default function SplitAirportLocationPage() {
                     href="/experience"
                     className="hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50"
                   >
-                    Experience
+                    EXPERIENCE
                   </Link>
                   <div
                     className="relative"
@@ -182,11 +182,11 @@ export default function SplitAirportLocationPage() {
                         setCompanyOpen(false);
                       }}
                     >
-                      <span>Business</span>
+                      <span>BUSINESS</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {businessOpen && (
-                      <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
+                      <div className="absolute left-0 top-full bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/business"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
@@ -215,7 +215,7 @@ export default function SplitAirportLocationPage() {
                     href="/technology"
                     className="hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50"
                   >
-                    Technology
+                    TECHNOLOGY
                   </Link>
                   <div
                     className="relative"
@@ -232,11 +232,11 @@ export default function SplitAirportLocationPage() {
                         setBusinessOpen(false);
                       }}
                     >
-                      <span>Company</span>
+                      <span>COMPANY</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                     {companyOpen && (
-                      <div className="absolute right-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
+                      <div className="absolute right-0 top-full bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[200px] z-50">
                         <Link
                           href="/about"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors hover:underline underline-offset-2"
