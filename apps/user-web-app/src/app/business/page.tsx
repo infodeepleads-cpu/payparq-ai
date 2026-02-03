@@ -45,13 +45,6 @@ export default function Business() {
                     {businessOpen && (
                       <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
-                          href="/business"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setBusinessOpen(false)}
-                        >
-                          Smart City
-                        </Link>
-                        <Link
                           href="/parking"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
@@ -64,6 +57,13 @@ export default function Business() {
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
+                        </Link>
+                        <Link
+                          href="/business"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          onClick={() => setBusinessOpen(false)}
+                        >
+                          Smart City
                         </Link>
                       </div>
                     )}
@@ -167,16 +167,6 @@ export default function Business() {
                   {businessOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
                       <Link
-                        href="/business"
-                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          setBusinessOpen(false);
-                        }}
-                      >
-                        Smart City
-                      </Link>
-                      <Link
                         href="/parking"
                         className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
@@ -195,6 +185,16 @@ export default function Business() {
                         }}
                       >
                         Security
+                      </Link>
+                      <Link
+                        href="/business"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setBusinessOpen(false);
+                        }}
+                      >
+                        Smart City
                       </Link>
                     </div>
                   )}

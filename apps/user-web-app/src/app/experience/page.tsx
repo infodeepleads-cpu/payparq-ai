@@ -45,13 +45,6 @@ export default function Experience() {
                     {businessOpen && (
                       <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
-                          href="/business"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setBusinessOpen(false)}
-                        >
-                          Smart City
-                        </Link>
-                        <Link
                           href="/parking"
                           className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
                           onClick={() => setBusinessOpen(false)}
@@ -64,6 +57,13 @@ export default function Experience() {
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
+                        </Link>
+                        <Link
+                          href="/business"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          onClick={() => setBusinessOpen(false)}
+                        >
+                          Smart City
                         </Link>
                       </div>
                     )}
@@ -168,16 +168,6 @@ export default function Experience() {
                   {businessOpen && (
                     <div className="flex flex-col gap-1 pb-1 pl-4">
                       <Link
-                        href="/business"
-                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
-                        onClick={() => {
-                          setMobileOpen(false);
-                          setBusinessOpen(false);
-                        }}
-                      >
-                        Smart City
-                      </Link>
-                      <Link
                         href="/parking"
                         className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
                         onClick={() => {
@@ -196,6 +186,16 @@ export default function Experience() {
                         }}
                       >
                         Security
+                      </Link>
+                      <Link
+                        href="/business"
+                        className="w-full py-2 text-left hover:bg-gray-100 transition-colors"
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setBusinessOpen(false);
+                        }}
+                      >
+                        Smart City
                       </Link>
                     </div>
                   )}
@@ -372,9 +372,12 @@ export default function Experience() {
                 compliance in real time — without costly hardware. Reduce operational costs,
                 increase revenue, and deploy in days, not months.
               </p>
-              <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors">
+              <Link
+                href="/discover-how"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-800 transition-colors"
+              >
                 <span>Let&apos;s Talk</span>
-              </button>
+              </Link>
             </div>
           </div>
         </section>
