@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { CalendarDays, ChevronDown, Car, Camera, MessageCircle, CreditCard, Star, Plus, Minus } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
-import MapboxPlaceholder from "@/components/MapboxPlaceholder";
+ 
 
 const LOCATION_ID = "parkng split airport";
 
@@ -13,6 +13,135 @@ export default function SplitAirportLocationPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [openFaq, setOpenFaq] = useState<number[]>([]);
+  const howItWorks = [
+    {
+      label: "Book & Pay Instantly",
+      title: "1. Book & Pay Instantly",
+      description:
+        "Choose your parking time and pay securely via Stripe or simply scan the QR code upon arrival. No tickets, no gates—just a seamless digital checkout.",
+      image: "/Split_Airport_new_terminal_main_hall.jpg",
+    },
+    {
+      label: "Connect with Your City Manager",
+      title: "2. Connect with Your City Manager",
+      description:
+        "Immediately after payment, you can send a personal WhatsApp message to our City Manager. This is your direct line for 24/7 support or any assistance you need during your stay.",
+      image: "/Split_Airport_new_terminal_main_hall.jpg",
+    },
+    {
+      label: "Arrange Your Ride & Protection",
+      title: "3. Arrange Your Ride & Protection",
+      description:
+        "Once booked, you can easily reserve a 1-way or 2-way Uber/Taxi through our application or our dedicated support line. You also have the flexibility to: Add vehicle insurance for extra peace of mind. Rearrange or cancel your ride up to 60 minutes before arrival. Rely on our Return Back Guarantee if your plans change.",
+      image: "/Split_Airport_new_terminal_main_hall.jpg",
+    },
+    {
+      label: "Park & Go",
+      title: "4. Park & Go",
+      description:
+        "Upon arrival, simply pull into any empty, unmarked space or your assigned dedicated spot. Your plate is your permit—our AI takes care of the rest.",
+      image: "/Split_Airport_new_terminal_main_hall.jpg",
+    },
+  ];
+  const faqItems = [
+    {
+      q: "How long does transfer to Split Airport take?",
+      a: "On‑demand rides via Uber/Taxi typically take 2–3 minutes from the PayParq car park to Split Airport (SPU) in Kaštela. Total time from arriving at the car park to reaching your gate is usually 10–15 minutes depending on traffic.",
+    },
+    {
+      q: "How long do I have to wait for my transfer?",
+      a: "There is no scheduled waiting. Request an Uber/Taxi on arrival through the PayParq link or WhatsApp and depart within minutes. Our City Manager can coordinate priority pick‑up.",
+    },
+    {
+      q: "When and how often is there a transfer?",
+      a: "Transfers are on‑demand 24/7 via Uber/Taxi. Arrive, request a ride, and go directly to your chosen terminal at Split Airport.",
+    },
+    {
+      q: "Can I book a parking space without a transfer?",
+      a: "Yes. Choose parking‑only at checkout if you prefer to arrange your own transport or walk to nearby public transport.",
+    },
+    {
+      q: "Can I just book the transfer without parking?",
+      a: "Yes. Ride assistance is available even without PayParq parking, subject to local availability and pricing.",
+    },
+    {
+      q: "If I'm earlier or later than planned, is that a problem?",
+      a: "No. PayParq operates 24/7. You can adjust your session and request a ride at any time using your confirmation link or WhatsApp.",
+    },
+    {
+      q: "Is there a transfer at 04:00?",
+      a: "Yes. Early‑morning and late‑night rides are supported. Local ride network surcharges may apply; PayParq does not add extra fees.",
+    },
+    {
+      q: "When do I pay for parking?",
+      a: "Pay instantly when booking via Stripe or on arrival by scanning the QR code on signage. All payments are processed securely.",
+    },
+    {
+      q: "When should I be at the car park?",
+      a: "For international flights, aim to arrive about 2 hours before departure. Typical car park‑to‑terminal time is around 10 minutes.",
+    },
+    {
+      q: "How long does the drive from the car park to Split Airport take?",
+      a: "Driving time is about 2–3 minutes depending on traffic. Rides take you directly to your terminal entrance.",
+    },
+    {
+      q: "How can I change or cancel?",
+      a: "Use the link in your confirmation to rebook, extend, shorten, or cancel. No additional PayParq service fees are applied; pricing adjusts to your new times.",
+    },
+    {
+      q: "How do I get back to my car?",
+      a: "After baggage claim, open your confirmation link or message WhatsApp to request a ride back to the PayParq car park.",
+    },
+    {
+      q: "Where is the PayParq car park?",
+      a: "At Split Airport (SPU) in Kaštela, Croatia. See the embedded Google Map on this page for exact location and directions.",
+    },
+    {
+      q: "What other services can I book?",
+      a: "Optional interior/exterior cleaning is available through local partners next to the car park. Message us on WhatsApp for availability.",
+    },
+    {
+      q: "What happens if my return flight is delayed?",
+      a: "We accommodate delays. Extend your parking via the confirmation link and request an on‑demand ride when you’re ready to leave the terminal.",
+    },
+    {
+      q: "Is there a van surcharge?",
+      a: "Larger vans or minibuses may incur higher rates. The final price is shown at checkout and includes the standard ride assistance.",
+    },
+  ];
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((i) => ({
+      "@type": "Question",
+      name: i.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: i.a,
+      },
+    })),
+  };
+  const locationSchema = {
+    "@context": "https://schema.org",
+    "@type": "ParkingFacility",
+    name: "PayParq Split Airport Parking",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Kaštela",
+      addressRegion: "Split-Dalmatia County",
+      addressCountry: "HR",
+    },
+    areaServed: "Split, Trogir, Kaštela, Dalmatian Coast",
+    url: "https://payparq.ai/locations/parkng-split-airport",
+    slogan: "Effortless airport parking for Split & Dalmatia",
+    amenityFeature: [
+      { "@type": "LocationFeatureSpecification", name: "On‑demand Uber/Taxi", value: true },
+      { "@type": "LocationFeatureSpecification", name: "AI Camera Monitoring", value: true },
+      { "@type": "LocationFeatureSpecification", name: "Stripe Secure Checkout", value: true },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -284,7 +413,7 @@ export default function SplitAirportLocationPage() {
       </header>
 
       <main className="flex-1 bg-white pt-16 md:pt-20">
-        <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-12 md:pt-6 md:pb-16">
+        <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-5 md:pt-6 md:pb-5">
           <h1 className="text-3xl md:text-4xl font-normal tracking-tight mb-6 md:mb-8 text-black md:-ml-10">
             Split Airport parking from €0.37 per hour - just 2 minutes away.
           </h1>
@@ -309,6 +438,24 @@ export default function SplitAirportLocationPage() {
                       <p className="text-sm md:text-base text-white font-semibold">
                         Rows of covered and open-air parking bays, ready for take-off.
                       </p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                          <Car className="w-3 h-3" />
+                          <span>Uber/Taxi</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                          <MessageCircle className="w-3 h-3" />
+                          <span>WhatsApp 24/7</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                          <CreditCard className="w-3 h-3" />
+                          <span>Stripe</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                          <Camera className="w-3 h-3" />
+                          <span>AI Cameras</span>
+                        </span>
+                      </div>
                     </div>
                     <span className="hidden md:inline-flex px-3 py-1 rounded-full bg-white/10 text-[10px] text-white/80 border border-white/20">
                       Photo of Split Airport parking
@@ -317,7 +464,112 @@ export default function SplitAirportLocationPage() {
                 </div>
               </div>
 
-              <MapboxPlaceholder locationId={LOCATION_ID} />
+              <section className="mt-4 rounded-3xl border border-black/10 bg-white overflow-hidden">
+                <div className="relative w-full h-[260px] md:h-[360px]">
+                  <iframe
+                    className="absolute inset-0 w-full h-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps?q=Split+Airport&output=embed"
+                  />
+                </div>
+              </section>
+
+              <section className="mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                      Uber
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                      WhatsApp
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                      Stripe
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                      AI LPR
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-1">
+                    <span className="w-4 h-4 rounded-full bg-[#4285F4] text-[9px] font-bold text-white flex items-center justify-center">
+                      G
+                    </span>
+                    <span className="text-[11px] md:text-sm font-semibold text-black">Google</span>
+                  </div>
+                  <span className="text-sm font-semibold text-black">4.9</span>
+                  <span className="text-[11px] text-black/60">• 24,098 reviews</span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:gap-5">
+                  <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden border border-black/10">
+                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="Reviewer" fill className="object-cover" />
+                      </div>
+                      <div className="flex items-center gap-1 text-black">
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-black">
+                      “Straightforward parking next to the terminal. Paid in seconds on my phone.”
+                    </p>
+                    <p className="mt-2 text-[11px] text-black/60">Marta K.</p>
+                  </div>
+                  <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden border border-black/10">
+                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="Reviewer" fill className="object-cover" />
+                      </div>
+                      <div className="flex items-center gap-1 text-black">
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-black">
+                      “Loved that my license plate handled access and payment. No tickets to keep.”
+                    </p>
+                    <p className="mt-2 text-[11px] text-black/60">Ivan S.</p>
+                  </div>
+                  <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden border border-black/10">
+                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="Reviewer" fill className="object-cover" />
+                      </div>
+                      <div className="flex items-center gap-1 text-black">
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                        <Star className="w-4 h-4 text-black" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-black">
+                      “Quick and simple. Parked, paid, and got to the gate in minutes.”
+                    </p>
+                    <p className="mt-2 text-[11px] text-black/60">David L.</p>
+                  </div>
+                </div>
+              </section>
+
+ 
 
               <section className="space-y-6">
                 <div>
@@ -363,138 +615,367 @@ export default function SplitAirportLocationPage() {
                 </div>
               </section>
 
+              <section className="mt-8">
+                <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-4">
+                  Our Story
+                </h2>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                    <div className="relative w-full pb-[100%]">
+                      <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
+                        <Image
+                          src="/Split_Airport_new_terminal_main_hall.jpg"
+                          alt="Unbeatable Price Guarantee"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0" style={{ height: '50%' }}>
+                        <div className="h-full p-4 md:p-5 text-black">
+                          <h3 className="text-base md:text-lg font-semibold mb-1">1. Unbeatable Price Guarantee</h3>
+                          <p className="text-[13px] md:text-base font-medium">
+                            We’ve cut the overhead—no shuttles, gates, or staff—to offer the market’s lowest rates.
+                            Find a cheaper lot? We’ll refund the difference plus 50% off your next stay.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                    <div className="relative w-full pb-[100%]">
+                      <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
+                        <Image
+                          src="/Split_Airport_new_terminal_main_hall.jpg"
+                          alt="Seamless Digital Entry"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0" style={{ height: '50%' }}>
+                        <div className="h-full p-4 md:p-5 text-black">
+                          <h3 className="text-base md:text-lg font-semibold mb-1">2. Seamless Digital Entry</h3>
+                          <p className="text-[13px] md:text-base font-medium">
+                            Skip the kiosks and apps. Our gateless, ticketless system uses plate recognition for instant
+                            entry. Just drive in or reserve ahead for the best deal.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                    <div className="relative w-full pb-[100%]">
+                      <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
+                        <Image
+                          src="/Split_Airport_new_terminal_main_hall.jpg"
+                          alt="Integrated Uber & Taxi Hub"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0" style={{ height: '50%' }}>
+                        <div className="h-full p-4 md:p-5 text-black">
+                          <h3 className="text-base md:text-lg font-semibold mb-1">3. Integrated Uber & Taxi Hub</h3>
+                          <p className="text-[13px] md:text-base font-medium">
+                            While our lot is remote, you’re never stranded. We feature dedicated Uber/Taxi integration
+                            and 24/7 WhatsApp support to ensure a fast, reliable bridge to your final destination.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                    <div className="relative w-full pb-[100%]">
+                      <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
+                        <Image
+                          src="/Split_Airport_new_terminal_main_hall.jpg"
+                          alt="AI-Monitored Security"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0" style={{ height: '50%' }}>
+                        <div className="h-full p-4 md:p-5 text-black">
+                          <h3 className="text-base md:text-lg font-semibold mb-1">4. AI-Monitored Security</h3>
+                          <p className="text-[13px] md:text-base font-medium">
+                            Rest easy with 24/7 AI Computer Vision monitoring every vehicle. We ensure all cars are
+                            authorized and offer an optional insurance where applicable for total peace of mind.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <section className="space-y-6">
                 <div>
                   <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
-                    How parking with PayParq works at Split Airport
+                    How It Works
                   </h2>
-                  <ol className="list-decimal pl-5 text-sm md:text-base text-black/75 space-y-2">
-                    <li>
-                      Follow the signs to the PayParq zones at the Split Airport car park and park
-                      in an available bay.
-                    </li>
-                    <li>
-                      Scan the QR code on signage or visit the PayParq pay page and enter the
-                      location ID shown:{" "}
-                      <span className="font-mono text-xs">{LOCATION_ID}</span>.
-                    </li>
-                    <li>
-                      Choose whether you want to park now, book a monthly pass, or reserve parking
-                      for a future trip.
-                    </li>
-                    <li>
-                      Checkout securely and receive your confirmation. Your plate is your access and
-                      proof of payment.
-                    </li>
-                  </ol>
+                  <div className="border-b border-black/10">
+                    <div className="flex items-center gap-6 overflow-x-auto py-2">
+                      {howItWorks.map((s, i) => (
+                        <button
+                          key={s.label}
+                          type="button"
+                          onClick={() => setActiveStep(i)}
+                          className={`relative pb-2 text-[11px] md:text-sm font-semibold uppercase tracking-[0.22em] ${activeStep === i ? "text-black" : "text-black/50"}`}
+                          aria-current={activeStep === i ? "step" : undefined}
+                        >
+                          {s.label}
+                          {activeStep === i ? (
+                            <span className="absolute left-0 right-0 -bottom-[1px] h-[2px] bg-black" />
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-3xl border border-black/10 bg-white overflow-hidden">
+                    <div className="relative w-full h-[260px] md:h-[360px]">
+                      <Image
+                        src={howItWorks[activeStep].image}
+                        alt={howItWorks[activeStep].label}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-x-4 bottom-4 bg-white/90 backdrop-blur-md border border-black/10 rounded-2xl p-4 md:p-5 max-w-[85%] text-black">
+                        <p className="text-sm md:text-base font-semibold">
+                          {howItWorks[activeStep].title}
+                        </p>
+                        <p className="text-xs md:text-sm text-black/70 mt-1">
+                          {howItWorks[activeStep].description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </section>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5">
-                    <h3 className="text-sm font-semibold text-black mb-2">
-                      Designed for travelers flying from Split
-                    </h3>
-                    <p className="text-sm text-black/75">
-                      Whether you are heading to European hubs or domestic destinations along the
-                      Adriatic, PayParq keeps parking simple. Keep your keys, keep your schedule,
-                      and keep your focus on the journey—not the car park.
-                    </p>
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
+                    Innovations &amp; Service
+                  </h2>
+                  <div className="grid gap-6 md:grid-cols-[1.2fr,1fr] items-start">
+                    <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+                      <p className="text-sm md:text-base text-black/80">
+                        Gateless, ticketless arrival powered by license plate recognition with seamless mobile checkout via Stripe.
+                      </p>
+                      <p className="mt-3 text-sm md:text-base text-black/80">
+                        A personal WhatsApp City Manager gives you direct, fast support whenever you need it.
+                      </p>
+                      <p className="mt-3 text-sm md:text-base text-black/80">
+                        Integrated Uber/Taxi booking, optional vehicle insurance, and a Return Back Guarantee keep your plans flexible.
+                      </p>
+                      <p className="mt-3 text-sm md:text-base text-black/80">
+                        AI Computer Vision monitors the car park and ensures every bay is authorized for peace of mind.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                        <div className="relative w-full pb-[60%]">
+                          <Image
+                            src="/Split_Airport_new_terminal_main_hall.jpg"
+                            alt="Split Airport terminal hall"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                        <div className="relative w-full pb-[60%]">
+                          <Image
+                            src="/hero-bg.jpg"
+                            alt="PayParq arrival experience"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5">
-                    <h3 className="text-sm font-semibold text-black mb-2">
-                      Built on real-time parking data
-                    </h3>
-                    <p className="text-sm text-black/75">
-                      The Split Airport location runs on the same platform trusted by coastal cities
-                      and mixed-use portfolios. Operators see live occupancy, dwell times, and
-                      compliance across every bay.
-                    </p>
+                </div>
+              </section>
+
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
+                    About Us
+                  </h2>
+                  <div className="grid gap-8 md:grid-cols-[0.7fr,1.3fr] items-start">
+                    <div className="flex flex-col items-center md:items-start gap-6">
+                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow-hidden border border-black/10">
+                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="PayParq team" fill className="object-cover" />
+                      </div>
+                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow-hidden border border-black/10">
+                        <Image src="/hero-bg.jpg" alt="PayParq service" fill className="object-cover" />
+                      </div>
+                    </div>
+                    <div className="space-y-5">
+                      <p className="text-sm md:text-base text-black/80">
+                        PayParq is a modern, customer-first parking platform led by Karlo Žamić. We build for friendliness, speed, and reliability at every touchpoint—from arrival to checkout.
+                      </p>
+                      <p className="text-sm md:text-base text-black/80">
+                        Our goal is for you to try our low-cost, high-service airport parking and be so satisfied that you&apos;ll recommend us to friends and family.
+                      </p>
+                      <p className="text-sm md:text-base text-black/80">
+                        Our team strives daily for your well-being: fast support through WhatsApp, clear signage, and a seamless digital experience without gates or tickets.
+                      </p>
+                      <p className="text-sm md:text-base text-black/80">
+                        We focus on effortless arrivals with integrated Uber/Taxi connections and flexible options like optional vehicle insurance and a Return Back Guarantee when plans change.
+                      </p>
+                      <p className="text-sm md:text-base text-black/80">
+                        As a community-minded company, we love seeing families start and end trips smoothly—small details and warm service matter to us.
+                      </p>
+                    </div>
                   </div>
+                </div>
+              </section>
+
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-3">
+                    Explore Split & Dalmatia
+                  </h2>
+                  <div className="grid gap-6 md:grid-cols-[1.2fr,1fr] items-start">
+                    <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+                      <p className="text-sm md:text-base text-black/80">
+                        Park next to Split Airport (SPU) in Kaštela and be on your way to
+                        Diocletian’s Palace, Trogir old town, and the Adriatic islands of Hvar, Brač, and Šolta.
+                      </p>
+                      <p className="mt-3 text-sm md:text-base text-black/80">
+                        Designed for visitors and locals, PayParq connects you to fast on‑demand rides, flexible stays,
+                        and a seamless digital checkout—perfect for weekend getaways and summer holidays along the Dalmatian Coast.
+                      </p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] md:text-sm text-black/70">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                          Airport parking near Split
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                          Kaštela & Trogir access
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                          Dalmatian Coast trips
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                          Hvar • Brač • Šolta ferries
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                        <div className="relative w-full pb-[60%]">
+                          <Image
+                            src="/Split_Airport_new_terminal_main_hall.jpg"
+                            alt="Split Airport terminal"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                        <div className="relative w-full pb-[60%]">
+                          <Image
+                            src="/hero-bg.jpg"
+                            alt="Coastal route near Split"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(locationSchema) }}
+                  />
                 </div>
               </section>
 
               <section className="space-y-4">
                 <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-2">
-                  Frequently asked questions
+                  Frequently Asked Questions
                 </h2>
-                <div className="space-y-4 text-sm md:text-base text-black/80">
+                <div className="space-y-2 text-sm md:text-base text-black/80">
+                  {faqItems.map((i, idx) => {
+                    const open = openFaq.includes(idx);
+                    return (
+                      <div key={i.q} className="border-b border-black/10">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenFaq((prev) =>
+                              prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+                            )
+                          }
+                          aria-expanded={open}
+                          className="w-full flex items-center justify-between py-2 text-left"
+                        >
+                          <span className="font-semibold">{i.q}</span>
+                          {open ? <Minus className="w-4 h-4 text-black/60" /> : <Plus className="w-4 h-4 text-black/60" />}
+                        </button>
+                        {open ? <div className="pb-3 text-black/75">{i.a}</div> : null}
+                      </div>
+                    );
+                  })}
                   <div>
-                    <h3 className="font-semibold mb-1">Do I need an app to park at Split Airport?</h3>
+                    <h3 className="font-semibold mb-1">Contact</h3>
                     <p>
-                      No. PayParq is app-free. Use the QR code or short URL on the signage, enter
-                      the location ID, and complete payment in your browser.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Can I extend my parking if my flight is delayed?
-                    </h3>
-                    <p>
-                      Yes. You can return to the PayParq link in your confirmation to extend your
-                      stay while your car remains in the same bay.
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-1">
-                      Who operates the parking at Split Airport with PayParq?
-                    </h3>
-                    <p>
-                      PayParq provides the software platform that powers payments, enforcement, and
-                      analytics. Local operators and airports remain responsible for on-site
-                      operations and policies.
+                      WhatsApp support is available 24/7 via your booking confirmation link. Email:
+                      <span className="ml-1 font-semibold">payparq@outlook.com</span>.
                     </p>
                   </div>
                 </div>
+                <script
+                  type="application/ld+json"
+                  dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+                />
               </section>
             </div>
 
             <div className="flex flex-col items-end md:sticky md:top-24">
-              <div className="rounded-3xl border border-black/5 bg-white shadow-lg p-3 md:p-5 text-black h-full min-h-[480px] max-w-md ml-auto flex flex-col">
-                <div className="flex flex-col h-full">
-                  <div className="mb-5 flex flex-col items-center text-center text-black/80">
-                    <div className="inline-flex items-center gap-2 text-[11px] md:text-sm">
-                      <div className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-1">
-                        <span className="w-4 h-4 rounded-full bg-[#4285F4] text-[9px] font-bold text-white flex items-center justify-center">
-                          G
-                        </span>
-                        <span className="text-[11px] md:text-sm font-semibold">Google</span>
-                      </div>
-                      <span className="font-semibold">4.9</span>
-                      <span className="text-[10px] md:text-xs text-black/60">• 24,098 reviews</span>
+              <div className="rounded-3xl border border-black/5 bg-white shadow-lg p-3 pb-1 md:p-5 md:pb-2 text-black h-full min-h-[480px] max-w-md ml-auto flex flex-col">
+                <div className="mb-5 flex flex-col items-center text-center text-black/80">
+                  <div className="inline-flex items-center gap-2 text-[11px] md:text-sm">
+                    <div className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-1">
+                      <span className="w-4 h-4 rounded-full bg-[#4285F4] text-[9px] font-bold text-white flex items-center justify-center">
+                        G
+                      </span>
+                      <span className="text-[11px] md:text-sm font-semibold">Google</span>
                     </div>
-                    <h2 className="mt-3 text-base md:text-xl font-semibold text-black">
-                      Select Dates to Calculate Price
-                    </h2>
+                    <span className="font-semibold">4.9</span>
+                    <span className="text-[10px] md:text-xs text-black/60">• 24,098 reviews</span>
                   </div>
-                  <div className="flex-1 flex items-center justify-center mt-5 mb-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
-                        <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
-                          Check In
-                        </span>
-                        <span className="mt-2 flex items-center justify-between text-base md:text-lg font-semibold text-black">
-                          <span>Pick date</span>
-                          <CalendarDays className="w-4 h-4 text-black/40" />
-                        </span>
-                      </button>
-                      <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
-                        <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
-                          Check Out
-                        </span>
-                        <span className="mt-2 flex items-center justify-between text-base md:text-lg font-semibold text-black">
-                          <span>Pick date</span>
-                          <CalendarDays className="w-4 h-4 text-black/40" />
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
-                    className="mt-auto inline-flex w-full items-center justify-center rounded-full bg-[#5F3DFC] px-6 py-3.5 text-sm md:text-base font-semibold text-white shadow hover:bg-[#4330c4] transition-colors"
-                  >
-                    Check price
-                  </Link>
+                  <h2 className="mt-3 text-base md:text-xl font-semibold text-black">
+                    Select Dates to Calculate Price
+                  </h2>
                 </div>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="grid grid-cols-2 gap-3 relative -top-10">
+                    <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
+                      <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
+                        Check In
+                      </span>
+                      <span className="mt-2 flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4 text-black/40" />
+                      </span>
+                    </button>
+                    <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
+                      <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
+                        Check Out
+                      </span>
+                      <span className="mt-2 flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4 text-black/40" />
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <Link
+                  href={`/pay?loc=${encodeURIComponent(LOCATION_ID)}`}
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-full bg-[#5F3DFC] px-6 py-3.5 text-sm md:text-base font-semibold text-white shadow hover:bg-[#4330c4] transition-colors"
+                >
+                  Check price
+                </Link>
               </div>
             </div>
           </section>

@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
 
   let unitAmount = 500;
   if (location_id) {
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase client is not configured.' }, { status: 500 });
+    }
     const { data } = await supabase
       .from('pricing_settings')
       .select('rules_text')
@@ -74,7 +77,15 @@ export async function GET(req: NextRequest) {
   const flow_type = url.searchParams.get('flow') || 'park_now';
   let unitAmount = 500;
   if (location_id) {
-    const { data } = await supabase.from('pricing_settings').select('rules_text').eq('location_id', location_id).eq('active', true).limit(1);
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase client is not configured.' }, { status: 500 });
+    }
+    const { data } = await supabase
+      .from('pricing_settings')
+      .select('rules_text')
+      .eq('location_id', location_id)
+      .eq('active', true)
+      .limit(1);
     const rules = data?.[0]?.rules_text as string | undefined;
     if (rules) {
       const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
