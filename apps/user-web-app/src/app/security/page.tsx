@@ -1,7 +1,9 @@
- "use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { FooterBrand } from "@/components/FooterBrand";
 
 export default function Security() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -280,16 +282,63 @@ export default function Security() {
       </header>
 
       <main className="flex-1 bg-[#05020A] pt-24 md:pt-28">
-        <section className="max-w-6xl mx-auto px-6 md:px-12 pb-16 md:pb-20">
-          <div className="grid gap-10 md:grid-cols-[1.4fr,1fr] items-start">
+        <section className="bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                Safe Parking
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+                Stop unauthorized vehicles, keep trusted lists live.
+              </h2>
+              <div className="space-y-3 text-sm md:text-base text-black/80 max-w-xl">
+                <p>
+                  Enforce access using live authorization lists and AI recognition. Unauthorized vehicles are
+                  flagged instantly for action—authorized guests flow through without friction.
+                </p>
+                <p>
+                  Add optional insurance where applicable to protect drivers and partners, with clear on‑site
+                  signaling and 24/7 coverage.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 mt-6">
+                <Link
+                  href="/discover-how"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
+                >
+                  <span>Talk to Sales</span>
+                </Link>
+                <Link
+                  href="/product"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-black/20 text-xs font-semibold hover:bg-black/5 transition-colors"
+                >
+                  <span>Product &amp; Pricing</span>
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-black p-4 md:p-6 text-white flex items-center justify-center">
+              <Image
+                src="/Snimka zaslona 2026-01-31 180550.png"
+                alt="Safe parking with payparq"
+                width={210}
+                height={300}
+                className="rounded-2xl border border-white/10 h-auto object-contain"
+                priority
+              />
+            </div>
+          </div>
+        </section>
+        <section className="bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 pb-16 md:pb-20">
+            <div className="grid gap-10 md:grid-cols-[1.4fr,1fr] items-start">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                 Our partners
               </p>
-              <h1 className="text-2xl md:text-4xl font-semibold tracking-tight mb-4">
+              <h1 className="text-2xl md:text-4xl font-semibold tracking-tight mb-4 text-black">
                 Real-time space intelligence.
               </h1>
-              <p className="text-sm md:text-base text-white/75 mb-6">
+              <p className="text-sm md:text-base text-black/75 mb-6">
                 Digitize every stall with AI-powered recognition that keeps your parking assets safer,
                 smarter, and always in view.
               </p>
@@ -306,63 +355,11 @@ export default function Security() {
                 </div>
               </div>
             </div>
-            <div className="rounded-3xl border border-white/15 bg-gradient-to-br from-white/5 via-white/0 to-[#4C46E5]/20 p-6 flex flex-col justify-between gap-6">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-2">
-                  Partner ecosystem
-                </p>
-                <div className="flex flex-wrap items-center gap-3 md:gap-4">
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">W</span>
-                    <span className="sr-only">WhatsApp</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">U</span>
-                    <span className="sr-only">Uber</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">G</span>
-                    <span className="sr-only">Google</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">S</span>
-                    <span className="sr-only">Supabase</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">V</span>
-                    <span className="sr-only">Vercel</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">C</span>
-                    <span className="sr-only">Cloudflare</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">T</span>
-                    <span className="sr-only">TikTok</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">Y</span>
-                    <span className="sr-only">YouTube</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">I</span>
-                    <span className="sr-only">Instagram</span>
-                  </div>
-                  <div className="flex items-center justify-center h-9 w-9 md:h-10 md:w-10 rounded-full border border-white/20 bg-white/10">
-                    <span className="text-xs font-semibold">M</span>
-                    <span className="sr-only">Microsoft</span>
-                  </div>
-                </div>
+            <div className="rounded-3xl border border-black/10 bg-[#F5F5F7] p-6 flex flex-col justify-between text-black/80">
+              <div className="pt-3 border-t border-black/10 text-xs md:text-sm text-black/75">
+                See occupancy, enforcement, and risk in one place so your teams can act before issues impact revenue or experience.
               </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-2">
-                  Real-time portfolio insight
-                </p>
-                <p className="text-xs md:text-sm text-white/75">
-                  See occupancy, enforcement, and risk in one place so your teams can act before issues
-                  impact revenue or experience.
-                </p>
-              </div>
+            </div>
             </div>
           </div>
         </section>
@@ -470,104 +467,72 @@ export default function Security() {
           </div>
         </section>
 
-        <section className="bg-[#05020A] text-white border-t border-white/10">
-          <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-10 md:grid-cols-[1.3fr,1fr] items-start">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
-                  Request a demo
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
-                  See Payparq security in action.
-                </h2>
-                <p className="text-sm md:text-base text-white/75 mb-6">
-                  Explore how AI-powered recognition and digital mapping protect every parking space while
-                  keeping the journey effortless for drivers.
-                </p>
-                <div className="grid gap-4 text-xs md:text-sm text-white/80">
-                  <div>
-                    <p className="font-semibold mb-1">Portfolio-wide coverage</p>
-                    <p>
-                      From high‑turnover retail to long‑stay assets, unify visibility across every site in
-                      one secure view.
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold mb-1">Real-time alerts</p>
-                    <p>
-                      Surface unauthorized stays, anomalies, and revenue risk as they happen, not days
-                      later in reports.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
-                <form className="space-y-4 text-xs md:text-sm">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-white/60"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                        Work email
-                      </label>
-                      <input
-                        type="email"
-                        className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-white/60"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                        Company
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-white/60"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                      Portfolio details
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-white/60 resize-none"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-2 inline-flex w-full justify-center items-center bg-white text-black text-[12px] font-semibold py-2.5 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
-                  >
-                    Talk to sales
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </section>
+        
+
       </main>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-white/60">
-          <div className="flex items-center gap-2">
-            <span>© {new Date().getFullYear()} payparq</span>
-            <span className="w-[3px] h-[3px] rounded-full bg-white/40" />
-            <span>Security</span>
+        <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Company
+              </p>
+              <Link href="/about" className="block hover:text-white transition-colors">
+                About
+              </Link>
+              <Link href="/careers" className="block hover:text-white transition-colors">
+                Careers
+              </Link>
+              <Link href="/news" className="block hover:text-white transition-colors">
+                News
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Experience
+              </p>
+              <Link href="/product" className="block hover:text-white transition-colors">
+                Product
+              </Link>
+              <Link href="/parking" className="block hover:text-white transition-colors">
+                Parking
+              </Link>
+              <Link href="/security" className="block hover:text-white transition-colors">
+                Security
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Policies
+              </p>
+              <Link href="/legal" className="block hover:text-white transition-colors">
+                Legal
+              </Link>
+              <Link href="/privacy" className="block hover:text-white transition-colors">
+                Privacy
+              </Link>
+              <Link href="/terms" className="block hover:text-white transition-colors">
+                Terms
+              </Link>
+            </div>
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                Platform
+              </p>
+              <Link href="/locations" className="block hover:text-white transition-colors">
+                Locations
+              </Link>
+              <Link href="/members" className="block hover:text-white transition-colors">
+                Members
+              </Link>
+              <Link href="/support" className="block hover:text-white transition-colors">
+                Support
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-white transition-colors">
-              Privacy
-            </Link>
-            <Link href="/terms" className="hover:text-white transition-colors">
-              Terms
-            </Link>
+          <div className="mt-12 pt-6 border-t border-white/10">
+            <FooterBrand />
           </div>
         </div>
       </footer>
