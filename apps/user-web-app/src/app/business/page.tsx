@@ -28,10 +28,17 @@ export default function Business() {
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
                 <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                  <Link href="/experience" className="hover:text-gray-700 hover:underline underline-offset-4 transition-colors">
                     Experience
                   </Link>
-                  <div className="relative">
+                  <div
+                    className="relative"
+                    onMouseEnter={() => {
+                      setBusinessOpen(true);
+                      setCompanyOpen(false);
+                    }}
+                    onMouseLeave={() => setBusinessOpen(false)}
+                  >
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
                       onClick={() => {
@@ -46,21 +53,21 @@ export default function Business() {
                       <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
                         <Link
                           href="/parking"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 hover:underline underline-offset-4 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Parking
                         </Link>
                         <Link
                           href="/security"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 hover:underline underline-offset-4 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Security
                         </Link>
                         <Link
                           href="/business"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
+                          className="block px-4 py-2 text-center hover:bg-gray-50 hover:underline underline-offset-4 transition-colors"
                           onClick={() => setBusinessOpen(false)}
                         >
                           Smart City
@@ -68,10 +75,17 @@ export default function Business() {
                       </div>
                     )}
                   </div>
-                  <Link href="/technology" className="hover:text-gray-700 transition-colors">
+                  <Link href="/technology" className="hover:text-gray-700 hover:underline underline-offset-4 transition-colors">
                     Technology
                   </Link>
-                  <div className="relative">
+                  <div
+                    className="relative"
+                    onMouseEnter={() => {
+                      setCompanyOpen(true);
+                      setBusinessOpen(false);
+                    }}
+                    onMouseLeave={() => setCompanyOpen(false)}
+                  >
                     <button
                       className="flex items-center gap-1 hover:text-gray-700 transition-colors"
                       onClick={() => {
