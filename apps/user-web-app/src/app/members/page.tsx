@@ -463,7 +463,8 @@ export default function MembersPage() {
               <button
                 type="button"
                 onClick={handleAddPaymentMethod}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
+                disabled={!!actionProcessing}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
               >
                 Add payment method
               </button>
@@ -471,6 +472,9 @@ export default function MembersPage() {
             <p className="text-[11px] text-black/60">
               Opens a secure Stripe page to save a tokenized payment method.
             </p>
+            {actionError && (
+              <p className="text-[11px] text-red-600">{actionError}</p>
+            )}
           </div>
         </div>
       );
@@ -758,7 +762,7 @@ export default function MembersPage() {
       </header>
 
       <main className="flex-1 pt-20 md:pt-24 bg-[#05020A]">
-        <section className="max-w-6xl mx-auto px-4 md:px-10 py-10 md:py-16">
+        <section className="max-w-7xl mx-auto px-4 md:px-10 py-10 md:py-16">
           {!user && (
             <div className="max-w-md mx-auto">
               <div className="rounded-3xl border border-white/10 bg-white text-black p-6 md:p-8 shadow-lg">
@@ -868,7 +872,7 @@ export default function MembersPage() {
                 </button>
               </div>
 
-              <div className="rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur">
+              <div className="rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur min-h-[60vh]">
                 <div className="bg-[#5F3DFC] px-6 py-4 flex items-center justify-between">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">
