@@ -351,73 +351,7 @@ export default function Business() {
             </div>
           </div>
         </section>
-
-        <section className="bg-[#F5F5F7]">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                Software-first deployment
-              </p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                Live in days, not months.
-              </h2>
-              <p className="text-sm md:text-base text-black/75 mb-4">
-                Payparq is built as a software-only layer that sits on top of your existing
-                infrastructure. Mobile payments, license-plate recognition, and enforcement tools work
-                together so you can standardize operations across locations without digging up a
-                single lane.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs md:text-sm text-black/80">
-                <div>
-                  <p className="font-semibold mb-1">Zero CapEx model</p>
-                  <p>
-                    Deploy Payparq with minimal upfront spend and align costs to performance and
-                    revenue.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Go live rapidly</p>
-                  <p>
-                    Standardized playbooks get new sites running in a fraction of the time of
-                    traditional hardware.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Less hardware, more insight</p>
-                  <p>
-                    Replace complex gates and kiosks with software that is easier to maintain and
-                    continuously improving.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Portfolio-wide control</p>
-                  <p>
-                    Configure rules, tariffs, and permissions centrally and push them to every asset
-                    in your network.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="h-64 md:h-80 rounded-3xl overflow-hidden border border-black/5 relative">
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.pexels.com/photos/681335/pexels-photo-681335.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="relative h-full flex flex-col justify-end p-5 text-white">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-1">
-                  Portfolio
-                </p>
-                <p className="text-sm md:text-base font-semibold">
-                  Standardized, software-only deployments across complex urban assets.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+ 
 
 
         <section className="bg-[#05020A] text-white">
