@@ -288,13 +288,13 @@ export default function Careers() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="#open-roles"
+                  href="/careers/open-roles"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
                 >
                   <span>View open roles</span>
                 </Link>
                 <a
-                  href="mailto:careers@payparq.ai"
+                  href="mailto:payparq@outlook.com"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-black/10 text-xs font-semibold text-black hover:bg-black/5 transition-colors"
                 >
                   <span>Contact recruiting</span>
@@ -342,19 +342,20 @@ export default function Careers() {
             <div className="grid gap-4 sm:grid-cols-2 text-xs md:text-sm text-black/80">
               <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
-                  Health and wellbeing
+                  Entrepreneurial venture
                 </p>
                 <p>
-                  Competitive health coverage and wellbeing support so you can focus on building, not
-                  logistics.
+                  We operate with a founder mindset: high autonomy, clear ownership, and bias toward
+                  shipping. Agentic roles, not traditional employment constructs.
                 </p>
               </div>
               <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mb-2">
-                  Time off
+                  Unlimited upside
                 </p>
                 <p>
-                  Flexible time off policies and company holidays to recharge and think long-term.
+                  Outcome-aligned model tied to city growth and performance — not salaries or
+                  benefits. Build value, share in the upside.
                 </p>
               </div>
               <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
@@ -498,8 +499,8 @@ export default function Careers() {
               <div className="text-xs md:text-sm text-white/70">
                 <p className="mb-2">
                   For general interest, email{" "}
-                  <a href="mailto:careers@payparq.ai" className="underline hover:text-white">
-                    careers@payparq.ai
+                  <a href="mailto:payparq@outlook.com" className="underline hover:text-white">
+                    payparq@outlook.com
                   </a>
                   .
                 </p>
@@ -507,31 +508,16 @@ export default function Careers() {
               </div>
             </div>
             <div className="rounded-3xl border border-white/15 bg-white/5 p-6 md:p-8 text-xs md:text-sm text-white/80">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70">
-                  Example teams
+              <div className="text-center">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-2">
+                  Contact recruiting
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/25 text-[11px] text-white/80">
-                    Product &amp; Design
-                  </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/25 text-[11px] text-white/80">
-                    Engineering
-                  </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/25 text-[11px] text-white/80">
-                    Operations
-                  </span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/25 text-[11px] text-white/80">
-                    City &amp; Partner Success
-                  </span>
-                </div>
-              </div>
-              <div className="border-t border-white/10 pt-4 text-white/70">
-                <p>
-                  As we formalize our hiring roadmap, this space will surface specific roles. For now,
-                  we prioritize people who are excited to work at the intersection of mobility, software,
-                  and cities.
-                </p>
+                <a
+                  href="mailto:payparq@outlook.com"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/20 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  payparq@outlook.com
+                </a>
               </div>
             </div>
           </div>

@@ -273,7 +273,7 @@ export default function News() {
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
         <section className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto text-center">
             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
               Company
             </p>
@@ -289,8 +289,8 @@ export default function News() {
         
         <section className="border-t border-black/5 bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 mb-8">
-              <div className="max-w-xl">
+            <div className="mb-8">
+              <div className="max-w-xl mx-auto text-center">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                   PayParq Blog
                 </p>

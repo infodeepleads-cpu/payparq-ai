@@ -272,51 +272,36 @@ export default function About() {
       </header>
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-24">
-          <div className="grid gap-12 md:grid-cols-[1.4fr,1fr] items-end">
+        <section className="bg-[#05020A] text-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-24">
+            <div className="grid gap-12 md:grid-cols-[1.4fr,1fr] items-end">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
                 Company
               </p>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold md:font-bold tracking-tight leading-tight mb-5 text-black">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold md:font-bold tracking-tight leading-tight mb-5 text-white">
                 Powering a more connected future of parking.
               </h1>
-              <p className="text-sm md:text-base text-black/75 mb-5 max-w-xl">
+              <p className="text-sm md:text-base text-white/80 mb-5 max-w-xl">
                 Payparq is building a software-only mobility platform that turns every space into a
                 connected, data-driven asset. We use Mobile LPR, AI Computer Vision, and automation
                 to make arrival effortless for drivers and operations simple for cities and operators.
               </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                  <span>Get in Touch</span>
+                </Link>
+                <Link href="/overview" className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
+                  <span>Download Overview</span>
+                </Link>
+              </div>
               <div className="flex flex-wrap gap-3 text-[11px] md:text-xs text-black/70">
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-black/5">
-                  Software-only infrastructure
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-black/5">
-                  Mobile LPR + AI Computer Vision
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-black/5">
-                  Built for cities and operators
-                </span>
+                
               </div>
             </div>
-            <div className="grid gap-4 text-xs md:text-sm text-black/80">
-              <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4 transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                  What we do
-                </p>
-                <p>
-                  We digitize physical parking spaces so they can be priced, managed, and experienced
-                  like modern digital products.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-[#05020A] text-white p-4 transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/60 mb-1">
-                  Where we focus
-                </p>
-                <p className="text-white/80">
-                  Mixed-use garages, on-street portfolios, campuses, destinations, and fast-growing
-                  urban environments.
-                </p>
-              </div>
+            <div className="grid gap-4 text-xs md:text-sm text-white/80">
+              
+            </div>
             </div>
           </div>
         </section>

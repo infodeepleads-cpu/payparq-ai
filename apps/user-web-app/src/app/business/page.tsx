@@ -322,12 +322,12 @@ export default function Business() {
                 payments and enforcement, and unlocks new value across your portfolio.
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
-                  <span>Talk to our team</span>
-                </button>
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
-                  <span>See how it works</span>
-                </button>
+                <Link href="/discover-how" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                  <span>Talk to Sales</span>
+                </Link>
+                <Link href="/product" className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
+                  <span>Product &amp; Pricing</span>
+                </Link>
               </div>
             </div>
             
@@ -352,6 +352,32 @@ export default function Business() {
           </div>
         </section>
  
+        <section className="bg-[#F5F5F7]">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                Software-first deployment
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3 text-black">
+                Live in days, not months.
+              </h2>
+              <p className="text-sm md:text-base text-black/75">
+                Software-only deployments across complex urban assets.
+              </p>
+            </div>
+            <div className="h-64 md:h-80 rounded-3xl overflow-hidden border border-black/5 relative">
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "url('https://images.pexels.com/photos/681335/pexels-photo-681335.jpeg?auto=compress&cs=tinysrgb&w=1600')",
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            </div>
+          </div>
+        </section>
+
 
 
         <section className="bg-[#05020A] text-white">
@@ -368,24 +394,6 @@ export default function Business() {
                   Payparq adapts to the way each asset is used, while giving you a single source of
                   truth across every car park, on-street zone, and shared mobility hub.
                 </p>
-              </div>
-              <div className="h-64 md:h-72 rounded-3xl overflow-hidden border border-white/10 relative">
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{
-                    backgroundImage:
-                      "url('https://images.pexels.com/photos/1488385/pexels-photo-1488385.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05020A] via-black/40 to-transparent" />
-                <div className="relative h-full flex flex-col justify-end p-5">
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-1">
-                    Smart portfolio
-                  </p>
-                  <p className="text-sm md:text-base font-semibold">
-                    Connected across city centers, residential, retail, and office.
-                  </p>
-                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs md:text-sm">
@@ -445,10 +453,10 @@ export default function Business() {
               </div>
               <div className="rounded-3xl border border-black/5 bg-white p-5 text-xs md:text-sm text-black/80">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
-                  Park &amp; Taxi — Case Study
+                  Park &amp; Taxi — Case Study: Brela
                 </p>
                 <p className="mb-2">
-                  Captured up to 40 cars per day at chokepoints and routed them to remote lots for
+                  In Brela on the Makarska Riviera, captured up to 40 cars per day at chokepoints and routed them to remote lots for
                   faster arrivals and better capacity use.
                 </p>
                 <p>

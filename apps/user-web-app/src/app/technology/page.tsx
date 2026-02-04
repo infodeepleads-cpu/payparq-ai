@@ -300,12 +300,12 @@ export default function Technology() {
                 enforcement, and analytics across cities and portfolios.
               </p>
               <div className="flex flex-wrap items-center gap-3">
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                <Link href="/discover-how" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
                   <span>Talk to Sales</span>
-                </button>
-                <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
-                  <span>Download Tech Overview</span>
-                </button>
+                </Link>
+                <Link href="/product" className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors">
+                  <span>Product &amp; Pricing</span>
+                </Link>
               </div>
             </div>
             <div className="grid gap-4 text-xs md:text-sm text-white/80">
@@ -340,174 +340,9 @@ export default function Technology() {
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                Built for real cities
-              </p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                AI Computer Vision tuned for urban movement.
-              </h2>
-              <p className="text-sm md:text-base text-black/75 mb-4">
-                From narrow historic streets to multi-level garages, Payparq&apos;s vision stack is
-                trained for complex environments. Mobile LPR vehicles, handheld devices, and fixed camera
-                feeds all write into the same live map of your portfolio.
-              </p>
-              <div className="space-y-4 text-sm md:text-base text-black/80">
-                <div>
-                  <p className="font-semibold mb-1">Computer Vision pipeline</p>
-                  <ul className="list-disc list-inside text-xs md:text-sm text-black/75 space-y-1">
-                    <li>High-fidelity plate reads at city speeds, day or night.</li>
-                    <li>
-                      Multi-frame verification reduces false positives in dense traffic and crowded
-                      streets.
-                    </li>
-                    <li>
-                      Geo-tagged events connect vehicles to exact bays, zones, and pricing rules in
-                      real time.
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Geo-intelligent layer</p>
-                  <ul className="list-disc list-inside text-xs md:text-sm text-black/75 space-y-1">
-                    <li>
-                      Every stall modeled as a digital asset with attributes, time rules, and enforcement
-                      logic.
-                    </li>
-                    <li>
-                      Automated matching between plate events, tariffs, and payment data for instant
-                      compliance checks.
-                    </li>
-                    <li>
-                      City, district, and asset-level views to understand performance across regions.
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div className="h-64 md:h-80 rounded-3xl overflow-hidden border border-black/5 relative">
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.pexels.com/photos/3768894/pexels-photo-3768894.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/30 to-transparent" />
-              <div className="relative h-full flex flex-col justify-end p-5 text-white">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-1">
-                  Real streets, real traffic
-                </p>
-                <p className="text-sm md:text-base font-semibold">
-                  Optimized for moving vehicles, pedestrians, and mixed-use city centers.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
-        <section className="bg-[#F5F5F7]">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-10">
-              <div className="max-w-xl">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  Platform capabilities
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                  One software stack for every parking asset.
-                </h2>
-                <p className="text-sm md:text-base text-black/75">
-                  Payparq&apos;s Mobile LPR platform is built for operators, owners, and cities that need
-                  real-time control without installing heavy infrastructure. Everything runs from the
-                  cloud, from portfolio-wide pricing to local enforcement routes.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3 text-xs md:text-sm text-black/70">
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Mobile LPR
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Space Digitization
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  AI Computer Vision
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Geo Intelligence
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-xs md:text-sm text-black/80 mb-10">
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Mobile LPR fleets
-                </p>
-                <p>
-                  Configure vehicles, routes, and capture rules centrally, then deploy across cities in
-                  days instead of months.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Payments and enforcement
-                </p>
-                <p>
-                  Automatically match plates to payments, permits, and tariffs to surface gaps and trigger
-                  workflow actions.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Analytics and reporting
-                </p>
-                <p>
-                  Understand occupancy, dwell time, and compliance trends by asset, street, or city for
-                  data-driven decisions.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Developer APIs
-                </p>
-                <p>
-                  Integrate Payparq into existing portals, city platforms, or partner applications with
-                  secure APIs.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs md:text-sm text-black/80">
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Zero CapEx rollout
-                </p>
-                <p>
-                  Deploy Mobile LPR and Computer Vision with minimal on-site hardware and no kiosks or
-                  gates to maintain.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Global reach, local precision
-                </p>
-                <p>
-                  Standardize technology across countries while honoring local rules, tariffs, and demand
-                  patterns.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Continuous learning
-                </p>
-                <p>
-                  Models improve with every capture, so your enforcement and pricing get sharper over
-                  time.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
         <section className="bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.5fr,1fr] items-center">
@@ -592,43 +427,13 @@ export default function Technology() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-3xl border border-white/20 bg-white/5 p-6">
-                <form className="space-y-4 text-xs md:text-sm">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                      Work email
-                    </label>
-                    <input
-                      type="email"
-                      className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-xs md:text-sm text-white outline-none focus:border-white/60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-xs md:text-sm text-white outline-none focus:border-white/60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/80 mb-1">
-                      Portfolio details
-                    </label>
-                    <textarea
-                      rows={4}
-                      className="w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-xs md:text-sm text-white outline-none focus:border-white/60"
-                      placeholder="Number of locations, cities, and approximate spaces..."
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors w-full"
-                  >
-                    Submit
-                  </button>
-                </form>
+              <div className="rounded-3xl border border-white/20 bg-white/5 p-6 flex items-center justify-center">
+                <Link
+                  href="/discover-how"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
+                >
+                  Discover How
+                </Link>
               </div>
             </div>
           </div>
