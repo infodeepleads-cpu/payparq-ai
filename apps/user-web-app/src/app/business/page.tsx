@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default function Business() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -327,37 +330,24 @@ export default function Business() {
                 </button>
               </div>
             </div>
-            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs md:text-sm">
-              <div className="border border-white/15 rounded-2xl bg-white/5 p-4 backdrop-blur-sm">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-2">
-                  Intelligence
-                </p>
-                <p className="font-semibold mb-1">Real-time curb visibility</p>
-                <p className="text-white/75">
-                  Live occupancy, payments, and enforcement in one view so you can manage every bay
-                  as a dynamic asset.
-                </p>
-              </div>
-              <div className="border border-white/15 rounded-2xl bg-white/5 p-4 backdrop-blur-sm">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-2">
-                  Automation
-                </p>
-                <p className="font-semibold mb-1">Frictionless experience</p>
-                <p className="text-white/75">
-                  Fully mobile, ticketless journeys across payment, access, and compliance with no
-                  queues or hardware friction.
-                </p>
-              </div>
-              <div className="border border-white/15 rounded-2xl bg-white/5 p-4 backdrop-blur-sm">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-white/70 mb-2">
-                  Performance
-                </p>
-                <p className="font-semibold mb-1">Asset-level results</p>
-                <p className="text-white/75">
-                  Data tools that surface revenue, dwell time, and compliance to optimize pricing and
-                  performance.
-                </p>
-              </div>
+            
+          </div>
+        </section>
+
+        <section className="bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+              Smart Sign
+            </p>
+            <div className="border border-black/10 bg-[#05020A] p-4 md:p-6 text-white flex items-center justify-center">
+              <Image
+                src="/Untitled-2.png"
+                alt="Smart City visualization"
+                width={210}
+                height={300}
+                className="h-auto object-contain"
+                priority
+              />
             </div>
           </div>
         </section>
@@ -369,7 +359,7 @@ export default function Business() {
                 Software-first deployment
               </p>
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                Zero heavy hardware. Live in weeks, not months.
+                Live in days, not months.
               </h2>
               <p className="text-sm md:text-base text-black/75 mb-4">
                 Payparq is built as a software-only layer that sits on top of your existing
@@ -429,92 +419,6 @@ export default function Business() {
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-10">
-              <div className="max-w-xl">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  Operations at scale
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
-                  Built to run real parking businesses, not just single sites.
-                </h2>
-                <p className="text-sm md:text-base text-black/75">
-                  Whether you manage municipal on-street portfolios or mixed-use garages, Payparq
-                  brings together the tools and data your teams need to execute at scale while keeping
-                  the driver experience effortless.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm text-black">
-                <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Uptime
-                  </p>
-                  <p className="text-xl font-semibold">99.9%</p>
-                  <p className="text-xs text-black/70 mt-1">
-                    Cloud-native platform engineered for reliability across busy urban environments.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Expansion
-                  </p>
-                  <p className="text-xl font-semibold">Portfolio-wide</p>
-                  <p className="text-xs text-black/70 mt-1">
-                    Easily replicate best-performing playbooks across locations and cities.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Visibility
-                  </p>
-                  <p className="text-xl font-semibold">Real-time</p>
-                  <p className="text-xs text-black/70 mt-1">
-                    Live dashboards on occupancy, compliance, and revenue across every asset.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
-                    Support
-                  </p>
-                  <p className="text-xl font-semibold">Partner-first</p>
-                  <p className="text-xs text-black/70 mt-1">
-                    Dedicated teams focused on your portfolio’s performance and on-the-ground needs.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-black/80">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Actionable insights
-                </p>
-                <p>
-                  Granular data on stay length, demand peaks, and compliance helps fine-tune pricing,
-                  product mix, and enforcement strategy.
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Integrated workflows
-                </p>
-                <p>
-                  From digital permits to enforcement routes, Payparq slots into existing processes
-                  and simplifies complex operational tasks.
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Continuous learning
-                </p>
-                <p>
-                  Machine learning models improve with every session, helping you anticipate demand
-                  and respond before issues appear on site.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <section className="bg-[#05020A] text-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
@@ -591,55 +495,32 @@ export default function Business() {
 
         <section className="bg-[#F5F5F7]">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid gap-10 md:grid-cols-[1.3fr,1fr] items-start">
+            <div className="grid gap-10 md:grid-cols-2 items-start">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                   Dalmatian coast
                 </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3 text-black">
                   AI mobile LPR for Split, Makarska and Dubrovnik.
                 </h2>
-                <p className="text-sm md:text-base text-black/75 mb-3">
-                  Tourist seasons in Split, Makarska and Dubrovnik bring full streets, circling cars
-                  and overloaded car parks. Manual patrols and fragmented systems make it hard for
-                  municipalities and operators to keep up with the volume of visitors.
+                <p className="text-sm md:text-base text-black/75">
+                  Summer peaks create chokepoints and overloaded car parks. Payparq brings mobile
+                  license plate recognition and live dashboards so every scan and zone is visible in
+                  real time.
                 </p>
-                <p className="text-sm md:text-base text-black/75 mb-3">
-                  Payparq replaces paper lists and slow checks with a mobile license plate
-                  recognition app and live dashboard. From the Riva in Split to the promenades in
-                  Makarska and the streets around Dubrovnik&apos;s Old Town, every scan, violation
-                  and zone is visible in real time.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 text-xs md:text-sm text-black/80">
-                  <div className="rounded-2xl border border-black/5 bg-white p-4">
-                    <p className="font-semibold mb-1">Dashboard for control rooms</p>
-                    <p>
-                      Live occupancy per street, zone and car park, with violation statistics and
-                      history for pricing and capacity decisions.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-black/5 bg-white p-4">
-                    <p className="font-semibold mb-1">Mobile LPR for field teams</p>
-                    <p>
-                      Fast plate recognition from any Android device, online or offline, with
-                      instant checks against payments, permits and whitelists.
-                    </p>
-                  </div>
-                </div>
               </div>
               <div className="rounded-3xl border border-black/5 bg-white p-5 text-xs md:text-sm text-black/80">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-2">
-                  Results for coastal cities
+                  Park &amp; Taxi — Case Study
                 </p>
                 <p className="mb-2">
-                  By combining mobile LPR with live analytics, cities and operators on the
-                  Dalmatian coast see more collected revenue, faster patrols and fewer disputes.
+                  Captured up to 40 cars per day at chokepoints and routed them to remote lots for
+                  faster arrivals and better capacity use.
                 </p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>15–30% more collected parking fees and fines.</li>
-                  <li>Up to 50% faster patrol cycles.</li>
-                  <li>Transparent, auditable history for every enforcement action.</li>
-                </ul>
+                <p>
+                  A simple, software-only flow at busy junctions keeps traffic moving while
+                  protecting resident bays and visitor zones.
+                </p>
               </div>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3 text-sm md:text-base text-black/80">
@@ -703,36 +584,7 @@ export default function Business() {
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="border border-black/5 rounded-3xl px-6 py-10 md:px-10 md:py-12 bg-[#F5F5F7]">
-              <div className="grid gap-8 md:grid-cols-[2fr,1fr] items-center">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
-                    Partner perspective
-                  </p>
-                  <p className="text-base md:text-lg text-black/85 mb-4">
-                    “Parking should be invisible to the journey. Payparq lets us deliver that kind
-                    of experience while still treating every bay as a serious revenue driver.”
-                  </p>
-                  <p className="text-xs md:text-sm text-black/60">
-                    — Portfolio operator partner
-                  </p>
-                </div>
-                <div className="h-40 rounded-2xl overflow-hidden border border-black/10 relative">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{
-                      backgroundImage:
-                        "url('https://images.pexels.com/photos/1008155/pexels-photo-1008155.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
         <section className="bg-[#05020A] text-white border-t border-white/10">
           <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
@@ -754,14 +606,17 @@ export default function Business() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <button className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/discover-how"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
+                >
                   Let&apos;s Talk
-                </button>
+                </Link>
                 <Link
                   href="/pay"
                   className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors"
                 >
-                  Go to Pay Now
+                  Pay Now
                 </Link>
               </div>
             </div>

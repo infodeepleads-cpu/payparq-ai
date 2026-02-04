@@ -5,13 +5,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { FooterBrand } from "@/components/FooterBrand";
 
+export const dynamic = "force-dynamic";
+
 export default function Security() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
+    <div className="min-h-screen bg-white text-black flex flex-col">
       <header className="fixed inset-x-0 top-0 z-40 pointer-events-none font-apple-ui">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
@@ -281,7 +283,7 @@ export default function Security() {
         </div>
       </header>
 
-      <main className="flex-1 bg-[#05020A] pt-24 md:pt-28">
+      <main className="flex-1 bg-white pt-24 md:pt-28">
         <section className="bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
             <div>
@@ -291,16 +293,6 @@ export default function Security() {
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
                 Stop unauthorized vehicles, keep trusted lists live.
               </h2>
-              <div className="space-y-3 text-sm md:text-base text-black/80 max-w-xl">
-                <p>
-                  Enforce access using live authorization lists and AI recognition. Unauthorized vehicles are
-                  flagged instantly for action—authorized guests flow through without friction.
-                </p>
-                <p>
-                  Add optional insurance where applicable to protect drivers and partners, with clear on‑site
-                  signaling and 24/7 coverage.
-                </p>
-              </div>
               <div className="flex flex-wrap items-center gap-3 mt-6">
                 <Link
                   href="/discover-how"
@@ -310,7 +302,7 @@ export default function Security() {
                 </Link>
                 <Link
                   href="/product"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-black/20 text-xs font-semibold hover:bg-black/5 transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
                 >
                   <span>Product &amp; Pricing</span>
                 </Link>
@@ -330,7 +322,6 @@ export default function Security() {
         </section>
         <section className="bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 pb-16 md:pb-20">
-            <div className="grid gap-10 md:grid-cols-[1.4fr,1fr] items-start">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                 Our partners
@@ -338,28 +329,10 @@ export default function Security() {
               <h1 className="text-2xl md:text-4xl font-semibold tracking-tight mb-4 text-black">
                 Real-time space intelligence.
               </h1>
-              <p className="text-sm md:text-base text-black/75 mb-6">
+              <p className="text-sm md:text-base text-black/75">
                 Digitize every stall with AI-powered recognition that keeps your parking assets safer,
                 smarter, and always in view.
               </p>
-              <div className="grid gap-4 text-xs md:text-sm text-white/80">
-                <div>
-                  <p className="font-semibold mb-1">
-                    Precise digital mapping for every space
-                  </p>
-                  <p>
-                    Our technology does more than watch. It indexes every stall into a live digital twin
-                    of your infrastructure, giving operations teams total visibility and automated
-                    protection.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-3xl border border-black/10 bg-[#F5F5F7] p-6 flex flex-col justify-between text-black/80">
-              <div className="pt-3 border-t border-black/10 text-xs md:text-sm text-black/75">
-                See occupancy, enforcement, and risk in one place so your teams can act before issues impact revenue or experience.
-              </div>
-            </div>
             </div>
           </div>
         </section>
@@ -409,6 +382,8 @@ export default function Security() {
             </div>
           </div>
         </section>
+
+        
 
         <section className="bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
@@ -470,6 +445,40 @@ export default function Security() {
         
 
       </main>
+
+      <section className="bg-[#05020A] text-white border-t border-white/10">
+        <div className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-20">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+            <div className="max-w-xl">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
+                Ready to modernize
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
+                Turn your parking portfolio into a connected, intelligent network.
+              </h2>
+              <p className="text-sm md:text-base text-white/75 mb-4">
+                Payparq secures smarter parking portfolios across the Country. Our software-only
+                platform enables parking operators and cities to manage payments, enforcement, and
+                compliance in real time — without costly hardware.
+              </p>
+              <p className="text-sm md:text-base text-white/75">
+                Reduce operational costs, increase revenue, and deploy in days, not months.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+                Let&apos;s Talk
+              </button>
+              <Link
+                href="/pay"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors"
+              >
+                Go to Pay Now
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
         <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">

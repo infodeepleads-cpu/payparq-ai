@@ -5,6 +5,8 @@ import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function Parking() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
@@ -369,7 +371,7 @@ export default function Parking() {
         </section>
 
         <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 grid-cols-1 items-center">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                 Digitizing the World’s Parking Infrastructure
@@ -378,54 +380,10 @@ export default function Parking() {
                 Digitizing the World’s Parking Infrastructure.
               </h2>
               <p className="text-sm md:text-base text-black/75 mb-4">
-                We transform static pavement into a high-fidelity digital map. By digitizing every
-                space, we create responsive environments that drive maximum asset yield and frictionless
-                urban mobility.
+                We convert static pavement into live, monetizable infrastructure. Real-time visibility,
+                automated operations, and data-backed control unlock higher NOI and frictionless mobility
+                at scale.
               </p>
-              <div className="space-y-4 text-sm md:text-base text-black/80">
-                <div>
-                  <p className="font-semibold mb-1">AI-Driven Space Intelligence</p>
-                  <ul className="list-disc list-inside text-xs md:text-sm text-black/75 space-y-1">
-                    <li>Mobile LPR Recognition: Real-time, high-accuracy vehicle identification across any geography.</li>
-                    <li>Total Space Digitization: We map every stall, turning physical inventory into live digital data.</li>
-                    <li>Automated Revenue Recovery: Frictionless access and payments that eliminate leakage.</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Advanced Computer Vision at Scale</p>
-                  <ul className="list-disc list-inside text-xs md:text-sm text-black/75 space-y-1">
-                    <li>
-                      Our tech doesn&apos;t just scan; it indexes. By creating a digital twin of every parking asset, our
-                      platform optimizes occupancy and automates enforcement in real time.
-                    </li>
-                    <li>
-                      Global Reach, Local Precision: The world&apos;s most scalable LPR parking platform.
-                    </li>
-                    <li>
-                      Rapid Deployment: Digitizing entire portfolios with zero infrastructure lag.
-                    </li>
-                    <li>Data-Backed Performance: Advanced analytics to outpace local market trends.</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div className="h-64 md:h-80 rounded-3xl overflow-hidden border border-black/5 relative">
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="relative h-full flex flex-col justify-end p-5 text-white">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/70 mb-1">
-                  Digital twin
-                </p>
-                <p className="text-sm md:text-base font-semibold">
-                  A live digital map of every parking asset you operate.
-                </p>
-              </div>
             </div>
           </div>
         </section>
@@ -433,171 +391,151 @@ export default function Parking() {
         <section className="bg-[#F5F5F7]">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-10">
-              <div className="max-w-xl">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
-                  Zero CapEx. Live in 3 Days.
-                </p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+              <div className="max-w-xl mx-auto text-center">
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black text-center">
                   Zero CapEx. Live in 3 Days.
                 </h2>
-                <p className="text-sm md:text-base text-black/75">
-                  PayParq deploys customized technology at zero upfront cost. Our vertically-integrated
-                  platform enables seamless onboarding and scalability across your entire portfolio.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3 text-xs md:text-sm text-black/70">
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Global Space Digitization
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Mobile LPR
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  AI Computer Vision
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10 bg-white">
-                  Data-driven Infrastructure
-                </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-xs md:text-sm text-black/80 mb-10">
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 justify-items-center max-w-4xl mx-auto text-xs md:text-sm text-black/80 mb-10">
+              <div className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
+                <p className="text-base md:text-lg font-semibold uppercase tracking-[0.16em] text-black">
                   Zero CapEx Infrastructure
                 </p>
-                <p>
-                  Deploy advanced Computer Vision with no upfront hardware costs, aligning spend with
-                  performance.
-                </p>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
+              <div className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
+                <p className="text-base md:text-lg font-semibold uppercase tracking-[0.16em] text-black">
                   Rapid Digital Onboarding
                 </p>
-                <p>Your entire parking portfolio digitized and live in under 30 days.</p>
               </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
+              <div className="rounded-2xl border border-black/10 bg-white p-6 text-center shadow-sm">
+                <p className="text-base md:text-lg font-semibold uppercase tracking-[0.16em] text-black">
                   Built for Global Scale
-                </p>
-                <p>
-                  Seamlessly manage assets across cities with a single, unified cloud-based dashboard.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-black/5 bg-white p-5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-2">
-                  Software-First Efficiency
-                </p>
-                <p>
-                  Trade failing gates and kiosks for Mobile LPR and high-accuracy AI recognition.
                 </p>
               </div>
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6" />
           </div>
         </section>
+        
 
-        <section className="bg-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.6fr,1fr] items-center">
+        
+
+        <section className="bg-[#05020A] text-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 grid-cols-1 items-center">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
                 The Future of Smart Real Estate
               </p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-white">
                 “Digitizing our parking inventory was the turning point.”
               </h2>
-              <p className="text-sm md:text-base text-black/80 mb-4">
+              <p className="text-sm md:text-base text-white/80 mb-4">
                 “Digitizing our parking inventory was the turning point. We stopped managing pavement and
                 started managing a high-yield digital asset.”
               </p>
-              <p className="text-xs md:text-sm text-black/60 mb-6">— Ivica, PayParq partner</p>
-              <div className="space-y-4 text-xs md:text-sm text-black/80">
-                <div>
-                  <p className="font-semibold mb-1">Intelligence at the Edge.</p>
-                  <p>
-                    Convert static parking stalls into a responsive AI-powered digital map in days. Our
-                    Mobile LPR technology eliminates the need for heavy hardware, turning any location into
-                    a smart environment.
-                  </p>
-                </div>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Zero CapEx Infrastructure</li>
-                  <li>Rapid Digital Onboarding</li>
-                  <li>Built for Global Scale</li>
-                  <li>Software-First Efficiency</li>
-                  <li>Proven Digital Transformation with higher NOI.</li>
-                </ul>
-              </div>
+              <p className="text-xs md:text-sm text-white/60 mb-6">— Ivica, PayParq partner</p>
+              <p className="text-sm md:text-base text-white/80 mb-4">
+                “Payparq made our operations seamless and our customers happier.”
+              </p>
+              <p className="text-xs md:text-sm text-white/60">— Marko, PayParq partner</p>
             </div>
-            <div className="h-56 md:h-72 rounded-3xl overflow-hidden border border-black/5 relative">
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage:
-                    "url('https://images.pexels.com/photos/3768236/pexels-photo-3768236.jpeg?auto=compress&cs=tinysrgb&w=1600')",
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+          </div>
+        </section>
+
+        <section className="bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+              The Future of Parking
+            </p>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+              The Future of Parking
+            </h2>
+            <div className="space-y-3 text-sm md:text-base text-black/80 max-w-3xl">
+              <p>Parking is no longer space.</p>
+              <p>It’s infrastructure.</p>
+              <p>
+                Metropolis proved it in the U.S.—the largest operator built not on leases or software,
+                but on technology-driven operations.
+              </p>
+              <p>We bring even more. Live in 3 days. Properly informed and satisfied customers.</p>
+              <p>No risk. No friction. No inefficiency.</p>
+              <p>Just intelligent control, optimized revenue, and a permanent operating system.</p>
+              <p>This isn’t parking.</p>
+              <p>It’s mobility infrastructure.</p>
             </div>
           </div>
         </section>
 
         <section className="bg-[#05020A] text-white">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="mb-8">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
-                Us vs Them
-              </p>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                PayParq vs legacy parking systems.
-              </h2>
-            </div>
-            <div className="overflow-x-auto rounded-2xl border border-white/15 bg-white/5">
-              <table className="min-w-full text-xs md:text-sm">
-                <thead className="bg-white/10 text-left">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Capability</th>
-                    <th className="px-4 py-3 font-semibold">PayParq</th>
-                    <th className="px-4 py-3 font-semibold">Legacy Systems</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-3">Deployment model</td>
-                    <td className="px-4 py-3">Zero CapEx, software-first Mobile LPR.</td>
-                    <td className="px-4 py-3">Heavy hardware, gated access, high upfront cost.</td>
-                  </tr>
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-3">Speed to go live</td>
-                    <td className="px-4 py-3">Entire portfolios live in days.</td>
-                    <td className="px-4 py-3">Slow phased installs over months or years.</td>
-                  </tr>
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-3">Space intelligence</td>
-                    <td className="px-4 py-3">
-                      Global space digitization and AI Computer Vision across every stall.
-                    </td>
-                    <td className="px-4 py-3">Limited, hardware-bound visibility at each site.</td>
-                  </tr>
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-3">Revenue protection</td>
-                    <td className="px-4 py-3">
-                      Automated revenue recovery and real-time enforcement.
-                    </td>
-                    <td className="px-4 py-3">Manual enforcement and frequent leakage.</td>
-                  </tr>
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-3">Portfolio management</td>
-                    <td className="px-4 py-3">
-                      Global reach, local precision via unified cloud dashboard.
-                    </td>
-                    <td className="px-4 py-3">Fragmented tools and siloed local systems.</td>
-                  </tr>
-                </tbody>
-              </table>
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
+                  <svg viewBox="0 0 64 64" className="w-7 h-7">
+                    <circle cx="20" cy="32" r="7" fill="#ffffff" />
+                    <circle cx="44" cy="32" r="7" fill="#ffffff" />
+                    <circle cx="32" cy="32" r="5" fill="#ffffff" />
+                    <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
+                  PayParq HUBs
+                </h2>
+              </div>
+              <p className="text-xs md:text-sm text-white/60 mb-4">Remote lots</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm md:text-base text-white/80">
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 mb-2">
+                    Unbeatable Price Guarantee
+                  </p>
+                  <p>
+                    We’ve cut the overhead—no shuttles, gates, or staff—to offer the market’s lowest
+                    rates. Find a cheaper lot? We’ll refund the difference plus 50% off your next stay.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 mb-2">
+                    Seamless Digital Entry
+                  </p>
+                  <p>
+                    Skip the kiosks and apps. Our gateless, ticketless system uses plate recognition for
+                    instant entry. Just drive in or reserve ahead for the best deal.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 mb-2">
+                    Integrated Uber &amp; Taxi Hub
+                  </p>
+                  <p>
+                    While our lot is remote, you’re never stranded. We feature dedicated Uber/Taxi
+                    integration and 24/7 WhatsApp support to ensure a fast, reliable bridge to your final
+                    destination.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 mb-2">
+                    AI-Monitored Security
+                  </p>
+                  <p>
+                    Rest easy with 24/7 AI Computer Vision monitoring every vehicle. We ensure all cars are
+                    authorized and offer an optional insurance where applicable for total peace of mind.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <Link
+                  href="/discover-how"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors"
+                >
+                  Apply
+                </Link>
+              </div>
             </div>
           </div>
         </section>
+
+        
 
       </main>
 

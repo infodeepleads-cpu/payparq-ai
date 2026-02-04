@@ -280,14 +280,9 @@ export default function DiscoverHowPage() {
                 Share a few details about your assets and operations. Our team will map a members
                 workspace, enforcement tools, and payment flows tailored to your city or portfolio.
               </p>
-              <ul className="space-y-2 text-xs md:text-sm text-black/70">
-                <li>See the Payparq-style dashboard configured for your locations.</li>
-                <li>Understand how members, permits, and sessions are managed in one place.</li>
-                <li>Review rollout options that avoid heavy hardware or long projects.</li>
-              </ul>
             </div>
 
-            <div className="rounded-3xl border border-black/10 bg-[#F5F5F7] p-6 md:p-7 shadow-sm">
+            <div className="rounded-3xl border border-black/10 bg-white p-6 md:p-7 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
                 Share your details
               </p>
@@ -359,54 +354,75 @@ export default function DiscoverHowPage() {
                   <label className="block text-xs font-semibold text-black/70 mb-1">
                     What would you like to explore with Payparq?
                   </label>
-                  <div className="space-y-2">
+                  <div className="space-y-3 mt-2">
                     <label
                       htmlFor="explore-revenue"
-                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                      className="flex items-center gap-3 cursor-pointer"
                     >
                       <input
                         id="explore-revenue"
                         type="checkbox"
                         name="explore"
-                        value="Increase revenue"
-                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                        value="Increasing revenue"
+                        className="peer sr-only"
                       />
-                      <span className="text-sm text-black">Increase Revenue</span>
+                      <div className="flex h-9 items-center rounded-full border border-black/10 bg-white px-3 py-1 shadow-sm transition hover:border-black/40 peer-checked:border-[#5F3DFC] peer-checked:bg-[#5F3DFC]/5">
+                        <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC] text-white text-[11px]">
+                          ✓
+                        </span>
+                        <span className="text-xs font-medium text-black">
+                          Increasing revenue
+                        </span>
+                      </div>
                     </label>
                     <label
                       htmlFor="explore-unauthorized"
-                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                      className="flex items-center gap-3 cursor-pointer"
                     >
                       <input
                         id="explore-unauthorized"
                         type="checkbox"
                         name="explore"
                         value="Stopping unauthorized vehicles"
-                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                        className="peer sr-only"
                       />
-                      <span className="text-sm text-black">Stopping Unauthorized Vehicles</span>
+                      <div className="flex h-9 items-center rounded-full border border-black/10 bg-white px-3 py-1 shadow-sm transition hover:border-black/40 peer-checked:border-[#5F3DFC] peer-checked:bg-[#5F3DFC]/5">
+                        <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC] text-white text-[11px]">
+                          ✓
+                        </span>
+                        <span className="text-xs font-medium text-black">
+                          Stopping unauthorized vehicles
+                        </span>
+                      </div>
                     </label>
                     <label
                       htmlFor="explore-congestion"
-                      className="flex items-center gap-3 p-3 rounded-xl border border-black/10 bg-gradient-to-br from-white to-gray-50 hover:border-black/40 hover:shadow-sm cursor-pointer"
+                      className="flex items-center gap-3 cursor-pointer"
                     >
                       <input
                         id="explore-congestion"
                         type="checkbox"
                         name="explore"
                         value="Eliminating congestion"
-                        className="h-4 w-4 rounded-full border-black/40 text-black focus:ring-black"
+                        className="peer sr-only"
                       />
-                      <span className="text-sm text-black">Eliminating Congestion</span>
+                      <div className="flex h-9 items-center rounded-full border border-black/10 bg-white px-3 py-1 shadow-sm transition hover:border-black/40 peer-checked:border-[#5F3DFC] peer-checked:bg-[#5F3DFC]/5">
+                        <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC] text-white text-[11px]">
+                          ✓
+                        </span>
+                        <span className="text-xs font-medium text-black">
+                          Eliminating congestion
+                        </span>
+                      </div>
                     </label>
                   </div>
-                  <p className="text-[11px] text-black/50 mt-3">
+                  <p className="mt-3 text-[11px] text-black/50">
                     You can choose more than one.
                   </p>
                 </div>
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
+                  className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors"
                 >
                   Submit
                 </button>

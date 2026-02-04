@@ -286,6 +286,47 @@ export default function News() {
             </p>
           </div>
         </section>
+        
+        <section className="border-t border-black/5 bg-white">
+          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 mb-8">
+              <div className="max-w-xl">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">
+                  PayParq Blog
+                </p>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-black mb-4">
+                  Ideas, case studies, and field notes.
+                </h2>
+                <p className="text-sm md:text-base text-black/75">
+                  Stories from deployments across Croatia and beyond — how software-first parking
+                  improves traffic flow, protects resident bays, and unlocks capacity.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Link
+                href="/news/blog/park-taxi-brela"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Case Study — Brela, Croatia
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Park &amp; Taxi: 20–40 cars captured daily and routed to remote lots
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Software-only flow at a seaside chokepoint on the Makarska Riviera reduces
+                    congestion and protects resident zones while improving arrivals.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read post →
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         <section className="border-t border-black/5 bg-white">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
