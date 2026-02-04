@@ -11,6 +11,22 @@ export async function POST(req: NextRequest) {
   const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
+  let customer_email: string | undefined = undefined;
+  if (typeof body === 'object' && body && 'customer_email' in body) {
+    const v = (body as { customer_email?: unknown }).customer_email;
+    if (typeof v === 'string') customer_email = v;
+  }
+
+  if (flow_type === 'setup') {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      success_url: `${url.origin}/success`,
+      cancel_url: `${url.origin}/`,
+      customer_email,
+      payment_method_types: ['card', 'sepa_debit'],
+    });
+    return NextResponse.json({ url: session.url });
+  }
 
   if (location_id) {
     const baseUrl = supabaseUrl || 'https://iafjygownkhedereaoxw.supabase.co';
@@ -47,17 +63,18 @@ export async function POST(req: NextRequest) {
     phone_number_collection: { enabled: true },
     success_url: `${url.origin}/success`,
     cancel_url: `${url.origin}/`,
+    payment_method_types: ['card', 'sepa_debit'],
     line_items: [
       {
         price_data: {
-          currency: 'usd',
+          currency: 'eur',
           product_data: { name: 'Parking Session' },
           unit_amount: unitAmount,
         },
         quantity: 1,
       },
     ],
-    customer_email: typeof body.customer_email === 'string' ? body.customer_email : undefined,
+    customer_email,
     payment_intent_data: {
       metadata: {
         location_id,
@@ -75,6 +92,19 @@ export async function GET(req: NextRequest) {
   const location_id = url.searchParams.get('loc') || '';
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
+  const customer_email = url.searchParams.get('email') || undefined;
+
+  if (flow_type === 'setup') {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      success_url: `${url.origin}/success`,
+      cancel_url: `${url.origin}/`,
+      customer_email,
+      payment_method_types: ['card', 'sepa_debit'],
+    });
+    return NextResponse.redirect(session.url!, { status: 303 });
+  }
+
   let unitAmount = 500;
   if (location_id) {
     if (!supabase) {
@@ -97,10 +127,11 @@ export async function GET(req: NextRequest) {
     phone_number_collection: { enabled: true },
     success_url: `${url.origin}/success`,
     cancel_url: `${url.origin}/`,
+    payment_method_types: ['card', 'sepa_debit'],
     line_items: [
       {
         price_data: {
-          currency: 'usd',
+          currency: 'eur',
           product_data: { name: 'Parking Session' },
           unit_amount: unitAmount,
         },

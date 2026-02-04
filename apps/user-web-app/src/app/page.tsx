@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -12,7 +13,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 pointer-events-none font-apple-ui">
+      <SiteHeader />
+      <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
             <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">
@@ -144,9 +146,12 @@ export default function Home() {
               </div>
 
               <div className="flex items-center justify-end gap-2 md:gap-3">
-                <button className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/contact"
+                  className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
+                >
                   Get in Touch
-                </button>
+                </Link>
                 <Link
                   href="/pay"
                   className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
@@ -341,9 +346,12 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button className="px-5 py-2.5 rounded-full border border-gray-300 text-[11px] font-semibold text-black hover:bg-gray-50 transition-colors">
+              <Link
+                href="/contact"
+                className="px-5 py-2.5 rounded-full border border-gray-300 text-[11px] font-semibold text-black hover:bg-gray-50 transition-colors"
+              >
                 Get in Touch
-              </button>
+              </Link>
               <Link
                 href="/pay"
                 className="px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"

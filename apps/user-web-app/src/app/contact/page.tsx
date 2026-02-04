@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export default function Contact() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -12,7 +13,8 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 pointer-events-none font-apple-ui">
+      <SiteHeader />
+      <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
             <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">

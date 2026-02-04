@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export default function Legal() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -12,7 +13,8 @@ export default function Legal() {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 pointer-events-none font-apple-ui">
+      <SiteHeader />
+      <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
             <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">
@@ -270,7 +272,7 @@ export default function Legal() {
       </header>
 
       <main className="flex-1 bg-white pt-24 md:pt-28">
-        <section className="max-w-5xl mx-auto px-6 md:px-12 py-16 md:py-24">
+        <section className="max-w-7xl mx-auto px-6 md:px-12 py-16 md:py-24">
           <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">Legal</p>
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4 text-black">
             Legal information
@@ -379,7 +381,7 @@ export default function Legal() {
         </section>
 
         <section className="bg-[#05020A] border-t border-white/10">
-          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+          <div className="max-w-7xl mx-auto px-6 py-16 md:py-20">
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">

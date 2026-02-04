@@ -19,6 +19,10 @@ export async function POST(req: Request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     console.log('✅ Checkout session completed:', session.id);
+    if (session.mode === 'setup') {
+      console.log('🔐 Payment method setup completed.');
+      return NextResponse.json({ received: true });
+    }
 
     // 1. EXTRACT DATA
     let location_id = session.metadata?.location_id || '';

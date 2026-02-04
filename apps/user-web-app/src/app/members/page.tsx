@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
+import { SiteHeader } from "@/components/SiteHeader";
 
 type NavItemId =
   | "account"
@@ -20,6 +21,7 @@ type NavItemId =
   | "help";
 
 type AuthMode = "sign_in" | "sign_up";
+type FlowType = "park_now" | "monthly" | "reserve";
 
 export default function MembersPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -38,7 +40,9 @@ export default function MembersPage() {
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
-  const [newPaymentLabel, setNewPaymentLabel] = useState("");
+  const [actionLocation, setActionLocation] = useState("");
+  const [actionProcessing, setActionProcessing] = useState<FlowType | null>(null);
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
@@ -121,6 +125,92 @@ export default function MembersPage() {
     }
     await supabase.auth.signOut();
   }
+  async function handleCheckout(flow: FlowType, location: string) {
+    const value = location.trim();
+    if (!value) {
+      setActionError("Enter a location ID or name from on-site signage.");
+      return;
+    }
+    setActionProcessing(flow);
+    setActionError("");
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location_id: value,
+          plate_number: "",
+          customer_email: user?.email,
+          flow_type: flow,
+        }),
+      });
+      if (!res.ok) {
+        setActionError("Unable to start checkout. Please try again.");
+        setActionProcessing(null);
+        return;
+      }
+      const data = (await res.json().catch(() => null)) as { url?: string } | null;
+      if (!data?.url) {
+        setActionError("Checkout link not available. Please try again.");
+        setActionProcessing(null);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setActionError("Something went wrong. Please try again.");
+      setActionProcessing(null);
+    }
+  }
+  async function handleResetPassword() {
+    if (!user?.email) {
+      setAuthError("No email available for reset.");
+      return;
+    }
+    if (!supabase || !isSupabaseConfigured) {
+      setAuthError("Reset is not configured for this environment.");
+      return;
+    }
+    try {
+      await supabase.auth.resetPasswordForEmail(user.email);
+      setAuthError("Check your email for the reset link.");
+    } catch {
+      setAuthError("Unable to send reset email right now.");
+    }
+  }
+
+  async function handleAddPaymentMethod() {
+    if (!user?.email) {
+      setActionError("Sign in to add a payment method.");
+      return;
+    }
+    setActionProcessing("park_now");
+    setActionError("");
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          flow_type: "setup",
+          customer_email: user.email,
+        }),
+      });
+      if (!res.ok) {
+        setActionError("Unable to open secure payment setup.");
+        setActionProcessing(null);
+        return;
+      }
+      const data = (await res.json().catch(() => null)) as { url?: string } | null;
+      if (!data?.url) {
+        setActionError("Setup link not available. Please try again.");
+        setActionProcessing(null);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setActionError("Something went wrong. Please try again.");
+      setActionProcessing(null);
+    }
+  }
 
   function renderActiveContent() {
     if (activeItem === "account") {
@@ -145,6 +235,29 @@ export default function MembersPage() {
                   {user?.email || "Unknown email"}
                 </span>
               </p>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
+                >
+                  Reset password
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(user?.email || "")}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
+                >
+                  Copy email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
             <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
@@ -172,21 +285,63 @@ export default function MembersPage() {
 
     if (activeItem === "home") {
       return (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight text-black">
-            Welcome back
-          </h2>
-          <p className="text-sm text-black/70">
-            Select a section in the sidebar to review your activity, manage
-            subscriptions, or update your details.
-          </p>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Welcome back
+            </h2>
+            <p className="text-sm text-black/70">
+              Use quick actions to pay, reserve, or start monthly in seconds.
+            </p>
+          </div>
+          <div className="rounded-xl border border-black/5 bg-white p-4 space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
+              Quick actions
+            </p>
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                type="text"
+                value={actionLocation}
+                onChange={(e) => setActionLocation(e.target.value)}
+                placeholder="Location ID or name"
+                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+              />
+              <button
+                type="button"
+                onClick={() => handleCheckout("park_now", actionLocation)}
+                disabled={!!actionProcessing}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
+              >
+                Park Now
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckout("monthly", actionLocation)}
+                disabled={!!actionProcessing}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckout("reserve", actionLocation)}
+                disabled={!!actionProcessing}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
+              >
+                Reserve
+              </button>
+            </div>
+            {actionError && (
+              <p className="text-[11px] text-red-600">{actionError}</p>
+            )}
+          </div>
         </div>
       );
     }
 
     if (activeItem === "monthly") {
       return (
-        <div className="space-y-2">
+        <div className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight text-black">
             Monthly subscriptions
           </h2>
@@ -194,6 +349,31 @@ export default function MembersPage() {
             View and manage recurring permits connected to your plate or
             company.
           </p>
+          <div className="rounded-xl border border-black/5 bg-white p-4 space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
+              Start monthly
+            </p>
+            <div className="flex flex-col md:flex-row gap-2">
+              <input
+                type="text"
+                value={actionLocation}
+                onChange={(e) => setActionLocation(e.target.value)}
+                placeholder="Location ID or name"
+                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+              />
+              <button
+                type="button"
+                onClick={() => handleCheckout("monthly", actionLocation)}
+                disabled={!!actionProcessing}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
+              >
+                Continue
+              </button>
+            </div>
+            {actionError && (
+              <p className="text-[11px] text-red-600">{actionError}</p>
+            )}
+          </div>
         </div>
       );
     }
@@ -254,9 +434,22 @@ export default function MembersPage() {
                     className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2"
                   >
                     <span>{label}</span>
-                    <span className="text-[11px] text-black/50">
-                      Card on file
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-black/50">
+                        Card on file
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPaymentMethods((current) =>
+                            current.filter((x) => x !== label)
+                          )
+                        }
+                        className="text-[11px] underline underline-offset-2 text-black/60 hover:text-black"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -267,33 +460,16 @@ export default function MembersPage() {
               Add a payment method
             </p>
             <div className="flex flex-col md:flex-row gap-2">
-              <input
-                type="text"
-                value={newPaymentLabel}
-                onChange={(event) => setNewPaymentLabel(event.target.value)}
-                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                placeholder="e.g. Company Visa •••• 4242"
-              />
               <button
                 type="button"
-                onClick={() => {
-                  const trimmed = newPaymentLabel.trim();
-                  if (!trimmed) return;
-                  if (paymentMethods.includes(trimmed)) {
-                    setNewPaymentLabel("");
-                    return;
-                  }
-                  setPaymentMethods((current) => [...current, trimmed]);
-                  setNewPaymentLabel("");
-                }}
+                onClick={handleAddPaymentMethod}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
               >
-                Add payment
+                Add payment method
               </button>
             </div>
             <p className="text-[11px] text-black/60">
-              This is a preview of how payment management will look. Connect
-              your billing provider to store real card details.
+              Opens a secure Stripe page to save a tokenized payment method.
             </p>
           </div>
         </div>
@@ -331,6 +507,15 @@ export default function MembersPage() {
                     <span className="font-semibold tracking-[0.12em] uppercase">
                       {plate}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPlates((current) => current.filter((x) => x !== plate))
+                      }
+                      className="text-[10px] underline underline-offset-2 text-black/60 hover:text-black"
+                    >
+                      Remove
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -415,7 +600,8 @@ export default function MembersPage() {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-40 pointer-events-none font-apple-ui">
+      <SiteHeader />
+      <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
             <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">
@@ -586,6 +772,11 @@ export default function MembersPage() {
                   Use your email to access member tools, subscriptions, and
                   activity.
                 </p>
+                {!isSupabaseConfigured && (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">
+                    Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and restart the server.
+                  </div>
+                )}
                 <form className="space-y-4" onSubmit={handleAuth}>
                   <div className="space-y-1">
                     <label className="block text-xs font-semibold text-black/70">
