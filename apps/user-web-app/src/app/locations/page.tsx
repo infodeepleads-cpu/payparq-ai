@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 const CroatiaMap = dynamic(() => import("@/components/CroatiaMap"), { ssr: false });
@@ -88,6 +88,22 @@ export default function Locations() {
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   // BOUNDS not needed with Leaflet-based map
+  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number}>>(HUBS as unknown as Array<{id:string; name:string; label:string; href:string; lat:number; lng:number}>);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/hubs')
+      .then((r) => r.json())
+      .then((json) => {
+        if (!mounted) return;
+        if (json && Array.isArray(json.hubs) && json.hubs.length > 0) {
+          setHubs(json.hubs);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -376,7 +392,7 @@ export default function Locations() {
           <div className="mt-8 rounded-3xl border border-white/10 bg-[#05020A] text-white p-6 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
               <div className="w-full h-[520px] md:h-[520px]">
-                <CroatiaMap hubs={HUBS} />
+                <CroatiaMap hubs={hubs} />
               </div>
               <div className="w-full space-y-4 h-[520px] md:h-[520px]">
                 <div>
@@ -389,7 +405,7 @@ export default function Locations() {
                   </p>
                 </div>
                 <ul className="space-y-2 text-[12px] text-white/80">
-                  {HUBS.map((hub) => {
+                  {hubs.map((hub) => {
                     const isAirport =
                       hub.label.toLowerCase().includes("airport") || hub.name.toLowerCase().includes("airport");
                     const premiumPriceLabel = isAirport ? "$0.37" : "$0.39";

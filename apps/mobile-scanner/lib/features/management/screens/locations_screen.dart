@@ -158,6 +158,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           final name = loc['name'] ?? 'Unnamed Lot';
                           final displayId = loc['display_id'] ?? 'N/A';
                           final id = loc['id'].toString();
+                          final Map<String, dynamic> meta =
+                              (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+                          final bool isHub = meta['hub_enabled'] == true;
 
                           return AdminDataCard(
                             leading: SizedBox(
@@ -263,6 +266,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 24),
+                                if (isSuperAdmin)
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Hub',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Switch(
+                                        value: isHub,
+                                        activeColor: Colors.black,
+                                        onChanged: (v) => _toggleHub(loc, v),
+                                      ),
+                                    ],
+                                  ),
                                 const SizedBox(width: 24),
                                 IconButton(
                                   icon: const Icon(
@@ -443,6 +465,47 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final id = loc['id'].toString();
+      final Map<String, dynamic> meta =
+          (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+      final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
+      newMeta['hub_enabled'] = enabled;
+      final displayId = (loc['display_id'] ?? '').toString();
+      final slug =
+          displayId.replaceAll(RegExp(r'\s+'), '-').toLowerCase();
+      newMeta['hub_slug'] = slug;
+      await supabase
+          .from('locations')
+          .update({'verification_metadata': newMeta})
+          .eq('id', id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              enabled
+                  ? 'Marked as PayParq hub'
+                  : 'Removed PayParq hub designation',
+            ),
+            backgroundColor: enabled ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+      ref.invalidate(locationsStreamProvider);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showCallDialog(Map<String, dynamic> loc) async {
