@@ -28,11 +28,19 @@ export async function POST(req: NextRequest) {
         success_url: `${url.origin}/success`,
         cancel_url: `${url.origin}/`,
         customer_email,
-        payment_method_types: ['card', 'sepa_debit'],
+        payment_method_types: ['card'],
+        setup_intent_data: {
+          metadata: {
+            location_id,
+            plate_number,
+            flow_type,
+          },
+        },
       });
       return NextResponse.json({ url: session.url });
-    } catch {
-      return NextResponse.json({ error: 'stripe_setup_failed' }, { status: 400 });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'stripe_setup_failed';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
   }
 
@@ -93,8 +101,9 @@ export async function POST(req: NextRequest) {
       },
     });
     return NextResponse.json({ url: session.url });
-  } catch {
-    return NextResponse.json({ error: 'stripe_payment_failed' }, { status: 400 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'stripe_payment_failed';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 
@@ -117,11 +126,19 @@ export async function GET(req: NextRequest) {
         success_url: `${url.origin}/success`,
         cancel_url: `${url.origin}/`,
         customer_email,
-        payment_method_types: ['card', 'sepa_debit'],
+        payment_method_types: ['card'],
+        setup_intent_data: {
+          metadata: {
+            location_id,
+            plate_number,
+            flow_type,
+          },
+        },
       });
       return NextResponse.redirect(session.url!, { status: 303 });
-    } catch {
-      return NextResponse.json({ error: 'stripe_setup_failed' }, { status: 400 });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'stripe_setup_failed';
+      return NextResponse.json({ error: message }, { status: 400 });
     }
   }
 
@@ -168,7 +185,8 @@ export async function GET(req: NextRequest) {
       },
     });
     return NextResponse.redirect(session.url!, { status: 303 });
-  } catch {
-    return NextResponse.json({ error: 'stripe_payment_failed' }, { status: 400 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'stripe_payment_failed';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

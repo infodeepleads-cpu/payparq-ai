@@ -2,14 +2,92 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+const CroatiaMap = dynamic(() => import("@/components/CroatiaMap"), { ssr: false });
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+
+const HUBS = [
+  {
+    id: "split",
+    name: "Split",
+    label: "City hub",
+    href: "/locations/split",
+    lat: 43.5081,
+    lng: 16.4402,
+    location_id: "split hub",
+  },
+  {
+    id: "split-airport",
+    name: "Split Airport",
+    label: "Airport hub",
+    href: "/locations/parkng-split-airport",
+    lat: 43.5389,
+    lng: 16.2976,
+    location_id: "parkng split airport",
+  },
+  {
+    id: "trogir",
+    name: "Trogir",
+    label: "Coastal hub",
+    href: "/locations/trogir",
+    lat: 43.5179,
+    lng: 16.2518,
+    location_id: "trogir hub",
+  },
+  {
+    id: "makarska",
+    name: "Makarska",
+    label: "Coastal hub",
+    href: "/locations/makarska",
+    lat: 43.2961,
+    lng: 17.0179,
+    location_id: "makarska hub",
+  },
+  {
+    id: "baska-voda",
+    name: "Baška Voda",
+    label: "Coastal hub",
+    href: "/locations/baska-voda",
+    lat: 43.3566,
+    lng: 16.9495,
+    location_id: "baska voda hub",
+  },
+  {
+    id: "brela",
+    name: "Brela",
+    label: "Coastal hub",
+    href: "/locations/brela",
+    lat: 43.3687,
+    lng: 16.9401,
+    location_id: "brela hub",
+  },
+  {
+    id: "dubrovnik",
+    name: "Dubrovnik",
+    label: "Southern hub",
+    href: "/locations/dubrovnik",
+    lat: 42.6507,
+    lng: 18.0944,
+    location_id: "dubrovnik hub",
+  },
+  {
+    id: "zagreb-airport",
+    name: "Zagreb Airport",
+    label: "Airport hub",
+    href: "/locations/zagreb-airport",
+    lat: 45.7383,
+    lng: 16.061,
+    location_id: "zagreb airport",
+  },
+] as const;
 
 export default function Locations() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  // BOUNDS not needed with Leaflet-based map
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -295,65 +373,43 @@ export default function Locations() {
             portfolios as we expand the network.
           </p>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
-              <div className="space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
-                  Airport
-                </p>
-                <p className="text-base font-semibold text-black">
-                  Split Airport
-                </p>
-                <p className="text-sm text-black/70">
-                  App-free airport parking at Split with live plate recognition and flexible stays.
-                </p>
+          <div className="mt-8 rounded-3xl border border-white/10 bg-[#05020A] text-white p-6 md:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+              <div className="w-full h-[520px] md:h-[520px]">
+                <CroatiaMap hubs={HUBS} />
               </div>
-              <div className="mt-4 flex items-center justify-between text-[11px] text-black/60">
-                <p className="pr-3">
-                  Live with license-plate recognition, mobile payments, and enforcement tools.
-                </p>
-                <Link
-                  href="/locations/parkng-split-airport"
-                  className="font-semibold text-black hover:underline"
-                >
-                  View details
-                </Link>
+              <div className="w-full space-y-4 h-[520px] md:h-[520px]">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
+                    PayParq partner hubs
+                  </p>
+                  <p className="text-sm md:text-base text-white/80">
+                    Explore PayParq hubs along the Croatian coast. Tap a pin to
+                    open a dedicated page for each partner location.
+                  </p>
+                </div>
+                <ul className="space-y-2 text-[12px] text-white/80">
+                  {HUBS.map((hub) => {
+                    const isAirport =
+                      hub.label.toLowerCase().includes("airport") || hub.name.toLowerCase().includes("airport");
+                    const premiumPriceLabel = isAirport ? "$0.37" : "$0.39";
+                    return (
+                      <li key={hub.id} className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">{hub.name}</p>
+                          <p className="text-white/60">{hub.label}</p>
+                        </div>
+                        <Link
+                          href={hub.href}
+                          className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-black text-[11px] font-semibold border border-black/20 hover:bg-gray-100"
+                        >
+                          {premiumPriceLabel}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-            </div>
-            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
-              <div className="space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
-                  Mixed-use
-                </p>
-                <p className="text-base font-semibold text-black">
-                  Urban portfolio
-                </p>
-                <p className="text-sm text-black/70">
-                  City-center garages connecting office, retail, and residential
-                  inventory into one platform.
-                </p>
-              </div>
-              <p className="mt-4 text-[11px] text-black/60">
-                Rolling out dynamic pricing, allocations, and consolidated
-                reporting.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between">
-              <div className="space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-black/50">
-                  Coming soon
-                </p>
-                <p className="text-base font-semibold text-black">
-                  New partner locations
-                </p>
-                <p className="text-sm text-black/70">
-                  We are onboarding additional city and private operators. Join
-                  the waitlist to bring PayParq to your assets.
-                </p>
-              </div>
-              <p className="mt-4 text-[11px] text-black/60">
-                Reach out to our team to learn about requirements and timelines.
-              </p>
             </div>
           </div>
 
