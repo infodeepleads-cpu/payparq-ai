@@ -2,11 +2,10 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
-import { SiteHeader } from "@/components/SiteHeader";
 
 type NavItemId =
   | "account"
@@ -24,9 +23,6 @@ type AuthMode = "sign_in" | "sign_up";
 type FlowType = "park_now" | "monthly" | "reserve";
 
 export default function MembersPage() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [businessOpen, setBusinessOpen] = useState(false);
-  const [companyOpen, setCompanyOpen] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>("sign_in");
@@ -36,13 +32,25 @@ export default function MembersPage() {
   const [authError, setAuthError] = useState("");
 
   const [activeItem, setActiveItem] = useState<NavItemId>("home");
-  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [actionLocation, setActionLocation] = useState("");
   const [actionProcessing, setActionProcessing] = useState<FlowType | null>(null);
   const [actionError, setActionError] = useState("");
+
+  const [devSignedIn, setDevSignedIn] = useState(false);
+
+  const isLocalDevOverrideEnabled =
+    process.env.NODE_ENV === "development" && !isSupabaseConfigured;
+
+  const displayEmail =
+    user?.email || (devSignedIn ? "dev@local.test" : "Unknown email");
+
+  const [homeFlow, setHomeFlow] = useState<"park_now" | "monthly" | "reserve">("park_now");
+  const [homeOpen, setHomeOpen] = useState(true);
+
+  const isSignedIn = !!user || devSignedIn;
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
@@ -120,6 +128,7 @@ export default function MembersPage() {
   }
 
   async function handleSignOut() {
+    setDevSignedIn(false);
     if (!supabase || !isSupabaseConfigured) {
       return;
     }
@@ -230,10 +239,7 @@ export default function MembersPage() {
                 Profile
               </p>
               <p className="text-sm text-black/80">
-                Signed in as{" "}
-                <span className="font-semibold">
-                  {user?.email || "Unknown email"}
-                </span>
+                Signed in as <span className="font-semibold">{displayEmail}</span>
               </p>
               <div className="flex flex-wrap gap-2 pt-2">
                 <button
@@ -245,7 +251,7 @@ export default function MembersPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard?.writeText(user?.email || "")}
+                  onClick={() => navigator.clipboard?.writeText(displayEmail)}
                   className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
                 >
                   Copy email
@@ -286,55 +292,86 @@ export default function MembersPage() {
     if (activeItem === "home") {
       return (
         <div className="space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight text-black">
-              Welcome back
-            </h2>
-            <p className="text-sm text-black/70">
-              Use quick actions to pay, reserve, or start monthly in seconds.
-            </p>
-          </div>
-          <div className="rounded-xl border border-black/5 bg-white p-4 space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
-              Quick actions
-            </p>
-            <div className="flex flex-col md:flex-row gap-2">
-              <input
-                type="text"
-                value={actionLocation}
-                onChange={(e) => setActionLocation(e.target.value)}
-                placeholder="Location ID or name"
-                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-              />
-              <button
-                type="button"
-                onClick={() => handleCheckout("park_now", actionLocation)}
-                disabled={!!actionProcessing}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
-              >
-                Park Now
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCheckout("monthly", actionLocation)}
-                disabled={!!actionProcessing}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCheckout("reserve", actionLocation)}
-                disabled={!!actionProcessing}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
-              >
-                Reserve
-              </button>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-black">
+                Welcome back
+              </h2>
+              <p className="text-sm text-black/70">
+                Use quick actions to pay, reserve, or start monthly in seconds.
+              </p>
             </div>
-            {actionError && (
-              <p className="text-[11px] text-red-600">{actionError}</p>
-            )}
+            <button
+              type="button"
+              onClick={() => setHomeOpen((v) => !v)}
+              className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
+            >
+              {homeOpen ? "Hide" : "Show"}
+            </button>
           </div>
+          {homeOpen && (
+            <div className="bg-white p-4 space-y-3">
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  type="text"
+                  value={actionLocation}
+                  onChange={(e) => setActionLocation(e.target.value)}
+                  placeholder="Location ID or name"
+                  className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-full border border-black/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setHomeFlow("park_now")}
+                    className={`px-3 py-1.5 text-[11px] font-semibold ${
+                      homeFlow === "park_now"
+                        ? "bg-black text-white"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    Park Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHomeFlow("monthly")}
+                    className={`px-3 py-1.5 text-[11px] font-semibold ${
+                      homeFlow === "monthly"
+                        ? "bg-black text-white"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHomeFlow("reserve")}
+                    className={`px-3 py-1.5 text-[11px] font-semibold ${
+                      homeFlow === "reserve"
+                        ? "bg-black text-white"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    Reserve
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleCheckout(homeFlow as FlowType, actionLocation)
+                  }
+                  disabled={!!actionProcessing}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
+                >
+                  Continue
+                </button>
+              </div>
+              {actionError && (
+                <p className="text-[11px] text-red-600">{actionError}</p>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -346,33 +383,11 @@ export default function MembersPage() {
             Monthly subscriptions
           </h2>
           <p className="text-sm text-black/70">
-            View and manage recurring permits connected to your plate or
-            company.
+            View-only list of your recurring permits connected to a plate or company.
           </p>
-          <div className="rounded-xl border border-black/5 bg-white p-4 space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
-              Start monthly
-            </p>
-            <div className="flex flex-col md:flex-row gap-2">
-              <input
-                type="text"
-                value={actionLocation}
-                onChange={(e) => setActionLocation(e.target.value)}
-                placeholder="Location ID or name"
-                className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-              />
-              <button
-                type="button"
-                onClick={() => handleCheckout("monthly", actionLocation)}
-                disabled={!!actionProcessing}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
-              >
-                Continue
-              </button>
-            </div>
-            {actionError && (
-              <p className="text-[11px] text-red-600">{actionError}</p>
-            )}
+          <div className="bg-white p-4 space-y-3">
+            <p className="text-xs font-semibold text-black/70">Your monthly permits</p>
+            <p className="text-sm text-black/60">No active monthly subscriptions.</p>
           </div>
         </div>
       );
@@ -603,168 +618,31 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <SiteHeader />
-      <header className="hidden">
-        <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
-          <div className="bg-white/95 shadow-lg border border-black/5">
-            <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">
-              <div className="flex items-center justify-start md:justify-center gap-4">
-                <button
-                  type="button"
-                  className="md:hidden flex flex-col justify-center gap-[3px]"
-                  onClick={() => setMobileOpen((open) => !open)}
-                  aria-label="Toggle navigation"
-                  aria-expanded={mobileOpen}
-                >
-                  <span className="h-[1.5px] w-4 bg-black" />
-                  <span className="h-[1.5px] w-4 bg-black" />
-                </button>
-                <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
-                    Experience
-                  </Link>
-                  <div className="relative">
-                    <button
-                      className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => {
-                        setBusinessOpen((open) => !open);
-                        setCompanyOpen(false);
-                      }}
-                    >
-                      <span>Business</span>
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                    {businessOpen && (
-                      <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
-                        <Link
-                          href="/parking"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setBusinessOpen(false)}
-                        >
-                          Parking
-                        </Link>
-                        <Link
-                          href="/security"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setBusinessOpen(false)}
-                        >
-                          Security
-                        </Link>
-                        <Link
-                          href="/business"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setBusinessOpen(false)}
-                        >
-                          Smart City
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                  <Link href="/technology" className="hover:text-gray-700 transition-colors">
-                    Technology
-                  </Link>
-                  <div className="relative">
-                    <button
-                      className="flex items-center gap-1 hover:text-gray-700 transition-colors"
-                      onClick={() => {
-                        setCompanyOpen((open) => !open);
-                        setBusinessOpen(false);
-                      }}
-                    >
-                      <span>Company</span>
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                    {companyOpen && (
-                      <div className="absolute left-0 mt-2 bg-white shadow-lg border border-black/5 rounded-xl text-[11px] text-black min-w-[180px] z-50">
-                        <Link
-                          href="/about"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          About
-                        </Link>
-                        <Link
-                          href="/careers"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          Careers
-                        </Link>
-                        <Link
-                          href="/news"
-                          className="block px-4 py-2 text-center hover:bg-gray-50 transition-colors"
-                          onClick={() => setCompanyOpen(false)}
-                        >
-                          News
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-center">
-                <Link href="/" className="inline-flex items-center gap-2">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-black flex items-center justify-center">
-                    <span className="text-xs md:text-sm font-semibold tracking-tight text-white">
-                      P
-                    </span>
-                  </div>
-                  <span className="text-xs md:text-sm font-semibold tracking-tight">
-                    payparq members
-                  </span>
-                </Link>
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                {user && (
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="hidden md:inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[10px] font-semibold hover:bg-gray-100 transition-colors"
-                  >
-                    Log out
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        {mobileOpen && (
-          <div className="md:hidden w-full px-4 md:px-10 pb-3 pointer-events-auto">
-            <div className="bg-white shadow-lg border border-black/5 px-4 py-3 text-[11px] text-black space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="uppercase tracking-[0.24em] text-[10px]">
-                  Navigate
-                </span>
-                {user && (
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="text-[10px] font-semibold underline"
-                  >
-                    Log out
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Link href="/experience">Experience</Link>
-                <Link href="/business">Smart City</Link>
-                <Link href="/parking">Parking</Link>
-                <Link href="/security">Security</Link>
-                <Link href="/technology">Technology</Link>
-                <Link href="/about">About</Link>
-                <Link href="/careers">Careers</Link>
-                <Link href="/news">News</Link>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+    <div
+      className={
+        isSignedIn
+          ? "h-screen overflow-hidden bg-[#05020A] text-white flex flex-col"
+          : "min-h-screen bg-[#05020A] text-white flex flex-col"
+      }
+    >
+      {!isSignedIn && <SiteHeader />}
 
-      <main className="flex-1 pt-20 md:pt-24 bg-[#05020A]">
-        <section className="max-w-7xl mx-auto px-4 md:px-10 py-10 md:py-16">
-          {!user && (
-            <div className="max-w-md mx-auto">
+      <main
+        className={
+          isSignedIn
+            ? "flex-1 bg-[#05020A] overflow-hidden flex flex-col"
+            : "flex-1 bg-[#05020A] pt-24 md:pt-28"
+        }
+      >
+        <section
+          className={
+            isSignedIn
+              ? "w-full px-0 md:px-0 py-0 flex-1 flex flex-col overflow-hidden"
+              : "w-full px-4 md:px-0 py-10 md:py-12 flex flex-col items-center"
+          }
+        >
+          {!isSignedIn && (
+            <div className="w-full max-w-md">
               <div className="rounded-3xl border border-white/10 bg-white text-black p-6 md:p-8 shadow-lg">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-black/50 mb-3">
                   Members
@@ -842,247 +720,353 @@ export default function MembersPage() {
                   email sign-in policies, confirmations, and SMTP inside your
                   Supabase dashboard.
                 </p>
+                {isLocalDevOverrideEnabled && (
+                  <div className="mt-6 rounded-2xl border border-dashed border-black/15 bg-black/[0.02] p-3 text-[11px]">
+                    <p className="font-semibold text-black/80">
+                      Local-only preview
+                    </p>
+                    <p className="mt-1 text-black/70">
+                      Supabase is not configured locally. You can still open the
+                      Members dashboard layout without signing in.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setDevSignedIn(true)}
+                      className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
+                    >
+                      Continue to dashboard (no Supabase)
+                    </button>
+                    <p className="mt-2 text-[10px] text-black/60">
+                      Stripe checkout and real parking data will not work in
+                      this mode. Use it only for local layout testing.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {user && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between gap-4">
+          {isSignedIn && (
+            <div className="flex-1 flex flex-col bg-[#05020A] overflow-hidden">
+              <div className="bg-[#5F3DFC] px-4 md:px-6 py-3 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">
                     Members
                   </p>
-                  <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                  <p className="text-xs md:text-sm font-semibold">
                     Platform workspace
-                  </h1>
-                  <p className="text-sm text-white/70">
-                    A single place to manage your activity, subscriptions, and
-                    vehicles.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSidebarVisible((visible) => !visible)
-                  }
-                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-white/15 text-[10px] font-semibold hover:bg-white/10 transition-colors"
-                >
-                  {sidebarVisible ? "Hide sidebar" : "Show sidebar"}
-                </button>
-              </div>
-
-              <div className="rounded-3xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur min-h-[60vh]">
-                <div className="bg-[#5F3DFC] px-6 py-4 flex items-center justify-between">
+                <div className="text-[11px] text-white/80 text-right flex flex-col items-end gap-1">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">
-                      Payparq platform
-                    </p>
-                    <p className="text-sm md:text-base font-semibold">
-                      Member dashboard
-                    </p>
-                  </div>
-                  <div className="text-[11px] text-white/80 text-right">
                     <p>Signed in as</p>
                     <p className="font-semibold truncate max-w-[180px]">
-                      {user.email}
+                      {displayEmail}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="md:hidden inline-flex items-center px-3 py-1.5 rounded-full border border-white/30 text-[11px] font-semibold text-white/90 hover:bg-white/10 transition-colors"
+                  >
+                    Log out
+                  </button>
                 </div>
+              </div>
 
-                <div className="flex flex-col md:flex-row bg-[#05020A]">
-                  {sidebarVisible && (
-                    <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-[#05020A]">
-                      <div className="p-5 space-y-4">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold">
-                            {user.email?.split("@")[0] || "Member"}
-                          </p>
-                          <p className="text-[11px] text-white/60">
-                            Account overview
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("account")}
-                          className={`w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors ${
-                            activeItem === "account"
-                              ? "bg-white text-black"
-                              : "bg-white/5 text-white hover:bg-white/10"
-                          }`}
-                        >
-                          Account Settings
-                        </button>
-                      </div>
-                      <nav className="px-2 pb-4 space-y-1 text-[12px]">
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("home")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "home"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC]/90 text-[11px]">
-                            H
-                          </span>
-                          <span>Home</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("monthly")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "monthly"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            P
-                          </span>
-                          <span>Monthly subscriptions</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("activity")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "activity"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            A
-                          </span>
-                          <span>Activity</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("company")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "company"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            C
-                          </span>
-                          <span>Company subscriptions</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("payment")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "payment"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            $
-                          </span>
-                          <span>Payment</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("vehicles")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "vehicles"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            V
-                          </span>
-                          <span>Vehicles</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("promotions")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "promotions"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            %
-                          </span>
-                          <span>Promotions</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("rewards")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "rewards"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            R
-                          </span>
-                          <span>Rewards</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveItem("help")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                            activeItem === "help"
-                              ? "bg-white text-black"
-                              : "text-white/70 hover:bg-white/5"
-                          }`}
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            ?
-                          </span>
-                          <span>Help</span>
-                        </button>
-                      </nav>
-                      <div className="border-t border-white/10 px-4 py-4">
-                        <button
-                          type="button"
-                          onClick={handleSignOut}
-                          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl border border-white/20 text-[11px] font-semibold text-white/80 hover:bg-white/5 transition-colors"
-                        >
-                          Log out
-                        </button>
-                      </div>
-                    </aside>
-                  )}
-                  <div className="flex-1 bg-[#F5F5F7] text-black">
-                    <div className="h-full p-6 md:p-8 flex flex-col gap-4">
-                      <div className="text-[11px] uppercase tracking-[0.24em] text-black/50">
-                        {activeItem === "account"
-                          ? "Account settings"
-                          : activeItem === "home"
-                          ? "Overview"
-                          : activeItem === "monthly"
-                          ? "Monthly subscriptions"
-                          : activeItem === "activity"
-                          ? "Activity"
-                          : activeItem === "company"
-                          ? "Company subscriptions"
-                          : activeItem === "payment"
-                          ? "Payment"
-                          : activeItem === "vehicles"
-                          ? "Vehicles"
-                          : activeItem === "promotions"
-                          ? "Promotions"
-                          : activeItem === "rewards"
-                          ? "Rewards"
-                          : "Help"}
-                      </div>
-                      <div className="rounded-2xl border border-black/5 bg-white p-5 md:p-6 shadow-sm flex-1 flex flex-col justify-between">
-                        {renderActiveContent()}
-                        <div className="mt-6 text-[11px] text-black/50">
-                          This view is wired for your Supabase project. Connect
-                          real data from your parking sessions, permits, and
-                          enforcement events to power this workspace.
-                        </div>
+              <div className="md:hidden border-t border-white/10 bg-[#05020A] overflow-x-auto">
+                <div className="flex items-center gap-2 px-4 py-2 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("home")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "home"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Home</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("monthly")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "monthly"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Monthly</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("activity")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "activity"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Activity</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("company")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "company"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Company</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("payment")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "payment"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Payment</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("vehicles")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "vehicles"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Vehicles</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("promotions")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "promotions"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Promotions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("rewards")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "rewards"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Rewards</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("help")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "help"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Help</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 flex bg-[#05020A] overflow-hidden">
+                <aside className="hidden md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col">
+                  <nav className="px-2 pt-4 pb-4 space-y-1 text-[12px] flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("home")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "home"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC]/90 text-[11px]">
+                        H
+                      </span>
+                      <span>Home</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("monthly")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "monthly"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        P
+                      </span>
+                      <span>Monthly subscriptions</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("activity")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "activity"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        A
+                      </span>
+                      <span>Activity</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("company")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "company"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        C
+                      </span>
+                      <span>Company subscriptions</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("payment")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "payment"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        $
+                      </span>
+                      <span>Payment</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("vehicles")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "vehicles"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        V
+                      </span>
+                      <span>Vehicles</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("promotions")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "promotions"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        %
+                      </span>
+                      <span>Promotions</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("rewards")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "rewards"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        R
+                      </span>
+                      <span>Rewards</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("help")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "help"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        ?
+                      </span>
+                      <span>Help</span>
+                    </button>
+                  </nav>
+                  <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
+                    <div className="space-y-1 text-[11px] text-white/70">
+                      <p className="font-semibold">
+                        Account overview
+                      </p>
+                      <p className="truncate">
+                        {displayEmail}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("account")}
+                      className={`w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors ${
+                        activeItem === "account"
+                          ? "bg-white text-black"
+                          : "bg-white/5 text-white hover:bg-white/10"
+                      }`}
+                    >
+                      Account Settings
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl border border-white/20 text-[11px] font-semibold text-white/80 hover:bg-white/5 transition-colors"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </aside>
+
+                <div className="flex-1 bg-[#F5F5F7] text-black overflow-hidden">
+                  <div className="h-full p-6 md:p-8 flex flex-col gap-4 overflow-hidden">
+                    <div className="text-[11px] uppercase tracking-[0.24em] text-black/50">
+                      {activeItem === "account"
+                        ? "Account settings"
+                        : activeItem === "home"
+                        ? "Overview"
+                        : activeItem === "monthly"
+                        ? "Monthly subscriptions"
+                        : activeItem === "activity"
+                        ? "Activity"
+                        : activeItem === "company"
+                        ? "Company subscriptions"
+                        : activeItem === "payment"
+                        ? "Payment"
+                        : activeItem === "vehicles"
+                        ? "Vehicles"
+                        : activeItem === "promotions"
+                        ? "Promotions"
+                        : activeItem === "rewards"
+                        ? "Rewards"
+                        : "Help"}
+                    </div>
+                    <div className="bg-white p-5 md:p-6 shadow-sm flex-1 flex flex-col justify-between overflow-hidden">
+                      {renderActiveContent()}
+                      <div className="mt-6 text-[11px] text-black/50">
+                        This view is wired for your Supabase project. Connect
+                        real data from your parking sessions, permits, and
+                        enforcement events to power this workspace.
                       </div>
                     </div>
                   </div>
@@ -1093,71 +1077,73 @@ export default function MembersPage() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
-        <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Company
-              </p>
-              <Link href="/about" className="block hover:text-white transition-colors">
-                About
-              </Link>
-              <Link href="/careers" className="block hover:text-white transition-colors">
-                Careers
-              </Link>
-              <Link href="/news" className="block hover:text-white transition-colors">
-                News
-              </Link>
+      {!isSignedIn && (
+        <footer className="border-t border-white/10 bg-[#05020A] font-apple-ui">
+          <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Company
+                </p>
+                <Link href="/about" className="block hover:text-white transition-colors">
+                  About
+                </Link>
+                <Link href="/careers" className="block hover:text-white transition-colors">
+                  Careers
+                </Link>
+                <Link href="/news" className="block hover:text-white transition-colors">
+                  News
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Experience
+                </p>
+                <Link href="/product" className="block hover:text-white transition-colors">
+                  Product
+                </Link>
+                <Link href="/parking" className="block hover:text-white transition-colors">
+                  Parking
+                </Link>
+                <Link href="/security" className="block hover:text-white transition-colors">
+                  Security
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Policies
+                </p>
+                <Link href="/legal" className="block hover:text-white transition-colors">
+                  Legal
+                </Link>
+                <Link href="/privacy" className="block hover:text-white transition-colors">
+                  Privacy
+                </Link>
+                <Link href="/terms" className="block hover:text-white transition-colors">
+                  Terms
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                  Platform
+                </p>
+                <Link href="/locations" className="block hover:text-white transition-colors">
+                  Locations
+                </Link>
+                <Link href="/members" className="block hover:text-white transition-colors">
+                  Members
+                </Link>
+                <Link href="/support" className="block hover:text-white transition-colors">
+                  Support
+                </Link>
+              </div>
             </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Experience
-              </p>
-              <Link href="/product" className="block hover:text-white transition-colors">
-                Product
-              </Link>
-              <Link href="/parking" className="block hover:text-white transition-colors">
-                Parking
-              </Link>
-              <Link href="/security" className="block hover:text-white transition-colors">
-                Security
-              </Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Policies
-              </p>
-              <Link href="/legal" className="block hover:text-white transition-colors">
-                Legal
-              </Link>
-              <Link href="/privacy" className="block hover:text-white transition-colors">
-                Privacy
-              </Link>
-              <Link href="/terms" className="block hover:text-white transition-colors">
-                Terms
-              </Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Platform
-              </p>
-              <Link href="/locations" className="block hover:text-white transition-colors">
-                Locations
-              </Link>
-              <Link href="/members" className="block hover:text-white transition-colors">
-                Members
-              </Link>
-              <Link href="/support" className="block hover:text-white transition-colors">
-                Support
-              </Link>
+            <div className="mt-12 pt-6 border-t border-white/10">
+              <FooterBrand />
             </div>
           </div>
-          <div className="mt-12 pt-6 border-t border-white/10">
-            <FooterBrand />
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

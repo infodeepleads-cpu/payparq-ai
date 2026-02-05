@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseUrl } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret) {
+    return NextResponse.json({ error: 'missing_stripe_secret' }, { status: 500 });
+  }
+  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   const url = new URL(req.url);
   const location_id =
@@ -18,14 +22,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (flow_type === 'setup') {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'setup',
-      success_url: `${url.origin}/success`,
-      cancel_url: `${url.origin}/`,
-      customer_email,
-      payment_method_types: ['card', 'sepa_debit'],
-    });
-    return NextResponse.json({ url: session.url });
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'setup',
+        success_url: `${url.origin}/success`,
+        cancel_url: `${url.origin}/`,
+        customer_email,
+        payment_method_types: ['card', 'sepa_debit'],
+      });
+      return NextResponse.json({ url: session.url });
+    } catch {
+      return NextResponse.json({ error: 'stripe_setup_failed' }, { status: 400 });
+    }
   }
 
   if (location_id) {
@@ -58,36 +66,44 @@ export async function POST(req: NextRequest) {
       if (match) unitAmount = parseInt(match[1], 10) * 100;
     }
   }
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    phone_number_collection: { enabled: true },
-    success_url: `${url.origin}/success`,
-    cancel_url: `${url.origin}/`,
-    payment_method_types: ['card', 'sepa_debit'],
-    line_items: [
-      {
-        price_data: {
-          currency: 'eur',
-          product_data: { name: 'Parking Session' },
-          unit_amount: unitAmount,
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      phone_number_collection: { enabled: true },
+      success_url: `${url.origin}/success`,
+      cancel_url: `${url.origin}/`,
+      payment_method_types: ['card', 'sepa_debit'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: { name: 'Parking Session' },
+            unit_amount: unitAmount,
+          },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      customer_email,
+      payment_intent_data: {
+        metadata: {
+          location_id,
+          plate_number,
+          flow_type,
+        },
       },
-    ],
-    customer_email,
-    payment_intent_data: {
-      metadata: {
-        location_id,
-        plate_number,
-        flow_type,
-      },
-    },
-  });
-  return NextResponse.json({ url: session.url });
+    });
+    return NextResponse.json({ url: session.url });
+  } catch {
+    return NextResponse.json({ error: 'stripe_payment_failed' }, { status: 400 });
+  }
 }
 
 export async function GET(req: NextRequest) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret) {
+    return NextResponse.json({ error: 'missing_stripe_secret' }, { status: 500 });
+  }
+  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const url = new URL(req.url);
   const location_id = url.searchParams.get('loc') || '';
   const plate_number = url.searchParams.get('plate') || '';
@@ -95,14 +111,18 @@ export async function GET(req: NextRequest) {
   const customer_email = url.searchParams.get('email') || undefined;
 
   if (flow_type === 'setup') {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'setup',
-      success_url: `${url.origin}/success`,
-      cancel_url: `${url.origin}/`,
-      customer_email,
-      payment_method_types: ['card', 'sepa_debit'],
-    });
-    return NextResponse.redirect(session.url!, { status: 303 });
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'setup',
+        success_url: `${url.origin}/success`,
+        cancel_url: `${url.origin}/`,
+        customer_email,
+        payment_method_types: ['card', 'sepa_debit'],
+      });
+      return NextResponse.redirect(session.url!, { status: 303 });
+    } catch {
+      return NextResponse.json({ error: 'stripe_setup_failed' }, { status: 400 });
+    }
   }
 
   let unitAmount = 500;
@@ -122,29 +142,33 @@ export async function GET(req: NextRequest) {
       if (match) unitAmount = parseInt(match[1], 10) * 100;
     }
   }
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    phone_number_collection: { enabled: true },
-    success_url: `${url.origin}/success`,
-    cancel_url: `${url.origin}/`,
-    payment_method_types: ['card', 'sepa_debit'],
-    line_items: [
-      {
-        price_data: {
-          currency: 'eur',
-          product_data: { name: 'Parking Session' },
-          unit_amount: unitAmount,
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      phone_number_collection: { enabled: true },
+      success_url: `${url.origin}/success`,
+      cancel_url: `${url.origin}/`,
+      payment_method_types: ['card', 'sepa_debit'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: { name: 'Parking Session' },
+            unit_amount: unitAmount,
+          },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      payment_intent_data: {
+        metadata: {
+          location_id,
+          plate_number,
+          flow_type,
+        },
       },
-    ],
-    payment_intent_data: {
-      metadata: {
-        location_id,
-        plate_number,
-        flow_type,
-      },
-    },
-  });
-  return NextResponse.redirect(session.url!, { status: 303 });
+    });
+    return NextResponse.redirect(session.url!, { status: 303 });
+  } catch {
+    return NextResponse.json({ error: 'stripe_payment_failed' }, { status: 400 });
+  }
 }
