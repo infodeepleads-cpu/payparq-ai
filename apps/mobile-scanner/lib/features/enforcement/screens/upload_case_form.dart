@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import '../../../../theme.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
@@ -227,7 +228,12 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                         _buildTextField(
                           label: 'License Plate',
                           controller: _plateController,
-                          hint: 'ZG-1234-AB',
+                          hint: 'MA679XX',
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'[A-Z0-9]'))
+                          ],
+                          textCapitalization: TextCapitalization.characters,
                           validator: (v) => v!.isEmpty ? 'Required' : null,
                         ),
                         const SizedBox(height: 24),
@@ -351,6 +357,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
     int maxLines = 1,
     bool enabled = true,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,6 +374,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
           maxLines: maxLines,
           validator: validator,
           enabled: enabled,
+          inputFormatters: inputFormatters,
+          textCapitalization: textCapitalization,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400]),
