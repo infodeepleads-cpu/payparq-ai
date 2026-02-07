@@ -100,7 +100,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Text(
                   'Finance',
                   style: GoogleFonts.inter(
@@ -118,94 +117,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                     color: AppTheme.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 48),
-
-                // Stripe Connection Status Card
+                const SizedBox(height: 32),
                 _buildStripeStatusCard(isConnected, accountId),
-
-                const SizedBox(height: 48),
-
-                // Financial Metrics
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 24,
-                  mainAxisSpacing: 24,
-                  childAspectRatio: 1.6,
-                  children: [
-                    _buildFinanceMetricCard(
-                      'PENDING BALANCE',
-                      '€0.00',
-                      Icons.timer_outlined,
-                      'Funds being processed by Stripe',
-                    ),
-                    _buildFinanceMetricCard(
-                      'AVAILABLE BALANCE',
-                      '€0.00',
-                      Icons.account_balance_wallet_outlined,
-                      'Funds ready for payout to IBAN',
-                    ),
-                    _buildFinanceMetricCard(
-                      'LAST PAYOUT',
-                      '€0.00',
-                      Icons.payments_outlined,
-                      'Most recent transfer to your bank',
-                    ),
-                    _buildFinanceMetricCard(
-                      'COMMISSION PAID',
-                      '€0.00',
-                      Icons.receipt_long_outlined,
-                      'Total platform fees collected',
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 48),
-
-                // Placeholder for Earnings History
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(40),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'EARNINGS HISTORY',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          Text(
-                            'Last 30 Days',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 100),
-                      const Icon(Icons.bar_chart,
-                          size: 64, color: Color(0xFFF0F0F0)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Detailed history will appear here once payouts begin.',
-                        style: GoogleFonts.inter(color: AppTheme.textSecondary),
-                      ),
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
               ],
             ),
           );
@@ -353,64 +266,5 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
     );
   }
 
-  Widget _buildFinanceMetricCard(
-      String title, String value, IconData icon, String tooltip) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Icon(icon, color: Colors.white, size: 18),
-              ),
-              Tooltip(
-                message: tooltip,
-                child:
-                    Icon(Icons.info_outline, color: Colors.grey[300], size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed finance metric cards per instruction
 }

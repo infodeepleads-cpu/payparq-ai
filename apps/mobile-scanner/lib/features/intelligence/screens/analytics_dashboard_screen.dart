@@ -57,35 +57,38 @@ class _AnalyticsDashboardScreenState
               const SizedBox(height: 48),
 
               // Row 1: 4 Metric Cubicles
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                crossAxisSpacing: 24,
-                mainAxisSpacing: 24,
-                childAspectRatio: 1.6,
-                children: [
-                  _buildMetricCard(
-                    'DAILY REVENUE',
-                    '€${data.dailyRevenue.toStringAsFixed(2)}',
-                    Icons.euro,
-                  ),
-                  _buildMetricCard(
-                    'MONTHLY REV AVG',
-                    '€${data.monthlyRevenueAvg.toStringAsFixed(2)}',
-                    Icons.calendar_month,
-                  ),
-                  _buildMetricCard(
-                    'DAILY OCCUPANCY',
-                    '${data.dailyOccupancy.toStringAsFixed(1)}%',
-                    Icons.pie_chart_outline,
-                  ),
-                  _buildMetricCard(
-                    'MONTHLY AVG OCCUPANCY',
-                    '${data.monthlyOccupancyAvg.toStringAsFixed(1)}%',
-                    Icons.analytics_outlined,
-                  ),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 60),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 24,
+                  mainAxisSpacing: 24,
+                  childAspectRatio: 1.6,
+                  children: [
+                    _buildMetricCard(
+                      'DAILY REVENUE',
+                      '€${data.dailyRevenue.toStringAsFixed(2)}',
+                      Icons.euro,
+                    ),
+                    _buildMetricCard(
+                      'MONTHLY REV AVG',
+                      '€${data.monthlyRevenueAvg.toStringAsFixed(2)}',
+                      Icons.calendar_month,
+                    ),
+                    _buildMetricCard(
+                      'DAILY OCCUPANCY',
+                      '${data.dailyOccupancy.toStringAsFixed(1)}%',
+                      Icons.pie_chart_outline,
+                    ),
+                    _buildMetricCard(
+                      'MONTHLY AVG OCCUPANCY',
+                      '${data.monthlyOccupancyAvg.toStringAsFixed(1)}%',
+                      Icons.analytics_outlined,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 48),
 
@@ -199,14 +202,8 @@ class _AnalyticsDashboardScreenState
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppTheme.border),
       ),
       child: IconButton(
         icon: Icon(icon, color: Colors.black, size: 20),
@@ -217,25 +214,16 @@ class _AnalyticsDashboardScreenState
 
   Widget _buildMetricCard(String title, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(icon, color: Colors.white, size: 18),
-          ),
-          const SizedBox(height: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -249,14 +237,20 @@ class _AnalyticsDashboardScreenState
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  letterSpacing: -0.5,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: AppTheme.textSecondary),
+                  const SizedBox(width: 8),
+                  Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -275,10 +269,10 @@ class _AnalyticsDashboardScreenState
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 60),
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
@@ -321,6 +315,7 @@ class _AnalyticsDashboardScreenState
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   Row(
@@ -441,7 +436,7 @@ class _AnalyticsDashboardScreenState
           Expanded(
             flex: 2,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   title,
@@ -455,6 +450,7 @@ class _AnalyticsDashboardScreenState
                 const SizedBox(height: 4),
                 Text(
                   'Distribution between penalty charges and regular parking.',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppTheme.textSecondary,

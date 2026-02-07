@@ -768,7 +768,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                         fontSize: 12,
                       ),
                       Text(
-                        '${_formatDate(issuedAt)} • €${violation['fine_amount'] ?? 0}',
+                        _formatDate(issuedAt),
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           color: AppTheme.textSecondary,
@@ -794,6 +794,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             _searchQuery,
             Colors.black,
             Colors.yellow,
+            fontSize: 16,
           ),
           Text(
             _formatDate(issuedAt),
@@ -808,15 +809,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildStatusBadge(status),
-          const SizedBox(width: 24),
-          Text(
-            '€${violation['fine_amount'] ?? 0}',
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Colors.black,
-            ),
-          ),
           const SizedBox(width: 24),
           ElevatedButton(
             onPressed: () => _showEvidence(violation),
@@ -907,6 +899,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     final s = status.toLowerCase();
     final isPaid = s == 'paid' || s == 'active';
     final isWarning = s == 'warning';
+    final isIssued = s == 'issued';
 
     final dotColor = isPaid
         ? Colors.green[400]
@@ -915,7 +908,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             : Colors.red[400];
 
     return Container(
+      constraints:
+          BoxConstraints(minWidth: (isWarning || isIssued) ? 110 : 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -923,6 +919,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             width: 8,

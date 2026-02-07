@@ -52,7 +52,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   bool _autopilotEnabled = false;
   double _dynamicRatio = 1.0; // 100% default
   double _surchargeMultiplier = 1.0; // 100% default
-  String _remoteTerminalTier = 'tier_1';
 
   @override
   void initState() {
@@ -581,73 +580,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   }
 
   Widget _buildStripeLinksSection() {
-    return Align(
-      alignment: Alignment.center,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.link, color: Colors.black),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Stripe Links',
-                    style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: 360,
-                child:
-                    _buildStripeButton('Generate Hourly Link', 'hourly', Colors.black),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: 360,
-                child:
-                    _buildStripeButton('Generate Daily Link', 'daily', Colors.black),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: 360,
-                child: _buildStripeButton(
-                    'Generate Monthly Link', 'monthly', Colors.black),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: 360,
-                child: _buildStripeButton('Open Private Notice Link',
-                    _remoteTerminalTier, Colors.black),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRemoteTerminalTierCard() {
-    final tiers = <String, String>{
-      'tier_0': 'Tier 0 (€0)',
-      'tier_1': 'Tier 1 (€60)',
-      'tier_2': 'Tier 2 (€120)',
-    };
-
     return Container(
+      width: 400,
+      height: 600,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -655,63 +590,40 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.splitscreen_outlined,
-                  size: 18, color: Colors.black),
+              const Icon(Icons.link, color: Colors.black),
               const SizedBox(width: 8),
               Text(
-                'Remote Terminal Tier',
+                'Stripe Links',
                 style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _remoteTerminalTier,
-            items: tiers.entries
-                .map(
-                  (e) => DropdownMenuItem<String>(
-                    value: e.key,
-                    child: Text(e.value,
-                        style: GoogleFonts.inter(
-                            fontSize: 14, color: Colors.black)),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() {
-                _remoteTerminalTier = value;
-              });
-            },
-            decoration: InputDecoration(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppTheme.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppTheme.border),
-              ),
-            ),
-            icon: const Icon(Icons.expand_more, color: Colors.black),
+          SizedBox(
+            width: double.infinity,
+            child: _buildStripeButton(
+                'Generate Hourly Link', 'hourly', Colors.black),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Paid now: 50% off if paid within 3 days.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: AppTheme.textSecondary,
-            ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child:
+                _buildStripeButton('Generate Daily Link', 'daily', Colors.black),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: _buildStripeButton(
+                'Generate Monthly Link', 'monthly', Colors.black),
           ),
         ],
       ),
@@ -821,7 +733,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          'Parking Notice',
+          'Daily Ticket',
           style: GoogleFonts.inter(
             color: Colors.black,
             fontSize: 18,
@@ -854,10 +766,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                         topRight: Radius.circular(12),
                       ),
                     ),
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Parking Notice',
+                      'Daily Ticket',
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 22,
@@ -874,15 +786,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        'Scan to stripe',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -891,6 +794,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                         ),
                         child: Column(
                           children: [
+                            Text(
+                              'Scan to Stripe',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
                             QrImageView(
                               data: stripeUrl,
                               version: QrVersions.auto,
@@ -915,6 +827,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                                     color: Colors.black,
                                   ),
                                 ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chat, color: Colors.green, size: 14),
+                                const SizedBox(width: 6),
                                 Text(
                                   '+385981974035  ID $displayId',
                                   style: GoogleFonts.inter(
@@ -936,7 +851,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   right: 24,
                   bottom: 24,
                   child: Text(
-                    'payparq.ai\nThis invoice is privately issued. Parking notices are issued on private property. For help or to dispute, contact support via the payparq.ai support number.',
+                    'payparq.ai\nThis invoice is privately issued. Parking invoices are issued on private property. For help or to dispute, contact support via the payparq.ai support number.',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Colors.black54,
@@ -1287,63 +1202,56 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             const SizedBox(height: 48),
 
-            _buildRemoteTerminalTierCard(),
-            const SizedBox(height: 32),
             _buildSectionHeader('Payment Terminal Assets'),
             const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildStripeLinksSection(),
+                const SizedBox(width: 48),
                 Expanded(
-                  child: Column(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStripeLinksSection(),
-                      // Admin Flyer Asset removed per layout request
+                      Expanded(
+                        child: _selectedLocation != null
+                            ? _buildSignColumn(
+                                (_selectedLocation!['display_id'] ??
+                                        _selectedLocation!['id'])
+                                    .toString(),
+                                _baseCheckoutUrl('daily'),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                child: const Text('Select a location'),
+                              ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: _selectedLocation != null
+                            ? _buildParkingNoticeColumn(
+                                (_selectedLocation!['display_id'] ??
+                                        _selectedLocation!['id'])
+                                    .toString(),
+                                _baseCheckoutUrl('daily'),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                child: const Text('Select a location'),
+                              ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 48),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _selectedLocation != null
-                          ? _buildSignColumn(
-                              (_selectedLocation!['display_id'] ??
-                                      _selectedLocation!['id'])
-                                  .toString(),
-                              'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=${(_selectedLocation!['display_id'] ?? _selectedLocation!['id']).toString()}&type=hourly',
-                            )
-                          : Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppTheme.border),
-                              ),
-                              child: const Text('Select a location'),
-                            ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: _selectedLocation != null
-                          ? _buildParkingNoticeColumn(
-                              (_selectedLocation!['display_id'] ??
-                                      _selectedLocation!['id'])
-                                  .toString(),
-                              _baseCheckoutUrl(_remoteTerminalTier),
-                            )
-                          : Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppTheme.border),
-                              ),
-                              child: const Text('Select a location'),
-                            ),
-                    ),
-                  ],
                 ),
               ],
             ),

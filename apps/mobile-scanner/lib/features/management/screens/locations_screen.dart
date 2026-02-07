@@ -202,7 +202,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Active Parking Hub',
+                                  isHub
+                                      ? 'Active Parking Hub'
+                                      : 'Active Parking Lot',
                                   style: GoogleFonts.inter(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
@@ -234,7 +236,16 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   child: const Text('View'),
                                 ),
                                 const SizedBox(width: 12),
-                                if (isSuperAdmin)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.black,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDelete(id, displayId),
+                                ),
+                                if (isSuperAdmin) ...[
+                                  const SizedBox(width: 12),
                                   Row(
                                     children: [
                                       Text(
@@ -252,15 +263,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                       ),
                                     ],
                                   ),
-                                const SizedBox(width: 12),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.black,
-                                  ),
-                                  onPressed: () =>
-                                      _confirmDelete(id, displayId),
-                                ),
+                                ],
                               ],
                             ),
                           );
@@ -343,6 +346,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             }
           : null,
       child: Container(
+        constraints: BoxConstraints(minWidth: status == 'verified' ? 0 : 140),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: badgeColor,
@@ -619,8 +623,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             child: StatefulBuilder(
               builder: (context, setState) {
                 final capacityCtrl = TextEditingController(text: '$capacity');
-                final latCtrl = TextEditingController(text: '$latitude');
-                final lngCtrl = TextEditingController(text: '$longitude');
                 bool saving = false;
                 final messenger = ScaffoldMessenger.of(dialogContext);
                 final navigator = Navigator.of(dialogContext);
@@ -630,15 +632,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   try {
                     final newCapacity =
                         int.tryParse(capacityCtrl.text.trim()) ?? capacity;
-                    final newLat =
-                        double.tryParse(latCtrl.text.trim()) ?? latitude;
-                    final newLng =
-                        double.tryParse(lngCtrl.text.trim()) ?? longitude;
                     await Supabase.instance.client.from('locations').update({
                       'capacity': newCapacity,
                       'total_spots': newCapacity,
-                      'latitude': newLat,
-                      'longitude': newLng,
                     }).eq('id', loc['id']);
                     ref.invalidate(locationsStreamProvider);
                     if (dialogContext.mounted) {
@@ -731,63 +727,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               Icon(Icons.location_on_outlined,
                                   size: 18, color: Colors.grey[600]),
                               const SizedBox(width: 8),
-                              if (!canEdit)
-                                Text(
-                                  'Coordinates: $latitude, $longitude',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                )
-                              else ...[
-                                Text(
-                                  'Coordinates',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              Text(
+                                'Coordinates: $latitude, $longitude',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 120,
-                                  child: TextField(
-                                    controller: latCtrl,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                            decimal: true),
-                                    decoration: InputDecoration(
-                                      hintText: 'Latitude',
-                                      filled: true,
-                                      fillColor: AppTheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  width: 120,
-                                  child: TextField(
-                                    controller: lngCtrl,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                            decimal: true),
-                                    decoration: InputDecoration(
-                                      hintText: 'Longitude',
-                                      filled: true,
-                                      fillColor: AppTheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),

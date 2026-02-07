@@ -55,8 +55,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildHeader(bool isDesktop) {
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
-
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 48 : 24,
@@ -71,27 +69,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Home',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: -1,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Home',
+                        style: GoogleFonts.inter(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: -1,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Monitor all parking activity and lot occupancy.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Monitor all parking activity and lot occupancy.',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (kIsWeb)
                   Row(
@@ -190,13 +190,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ],
               ],
             ),
-          if (selectedLocId != null) ...[
-            const SizedBox(height: 24),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [],
-            ),
-          ],
+          // Ensure identical spacing before search as in Cases
           SizedBox(height: isDesktop ? 48 : 32),
           _buildSearchAndFilter(isDesktop),
         ],
@@ -347,7 +341,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ref.invalidate(unifiedDashboardProvider);
               },
               child: ListView.builder(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
                 itemCount: items.length,
                 itemBuilder: (context, index) =>
                     _buildSessionItem(items[index], isDesktop),
@@ -503,7 +497,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        '${s['mobile'] ?? s['contact_phone'] ?? 'N/A'} • ${s['email'] ?? s['contact_email'] ?? 'N/A'}',
+                        s['mobile'] ?? s['contact_phone'] ?? 'N/A',
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           color: AppTheme.textSecondary,
@@ -523,31 +517,31 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     return AdminDataCard(
       leading: _buildPlateBadge(plate),
-      mainContent: Row(
+      mainContent: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
-            child: _buildInfoColumn(
-              'User',
-              s['contact_name'] ??
-                  s['email'] ??
-                  s['contact_email'] ??
-                  'Guest User',
+          Text(
+            s['contact_name'] ??
+                s['email'] ??
+                s['contact_email'] ??
+                'Guest User',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          Expanded(
-            flex: 3,
-            child: _buildInfoColumn(
-              'Phone',
-              s['mobile'] ?? s['contact_phone'] ?? 'N/A',
+          const SizedBox(height: 4),
+          Text(
+            s['mobile'] ?? s['contact_phone'] ?? 'N/A',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
             ),
-          ),
-          Expanded(
-            flex: 4,
-            child: _buildInfoColumn(
-              'Email',
-              s['email'] ?? s['contact_email'] ?? 'N/A',
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -615,32 +609,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 },
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoColumn(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: Colors.grey[400],
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ],
     );
   }
 
