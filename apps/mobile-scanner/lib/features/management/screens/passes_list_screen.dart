@@ -5,7 +5,7 @@ import '../../../../theme.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../repositories/parking_repository.dart';
 import 'add_pass_screen.dart';
-import 'pass_detail_screen.dart';
+import 'pass_detail_screen.dart' as pass_detail;
 import '../../../widgets/admin_data_card.dart';
 
 class PassesListScreen extends ConsumerStatefulWidget {
@@ -159,7 +159,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        PassDetailScreen(permit: permit),
+                                        pass_detail.PassDetailScreen(permit: permit),
                                   ),
                                 );
                               },
@@ -248,8 +248,9 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
               child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               await ref.read(parkingRepositoryProvider).deletePermit(id);
-              if (mounted) Navigator.pop(context);
+              navigator.pop();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),

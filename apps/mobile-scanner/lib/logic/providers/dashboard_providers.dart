@@ -1,19 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../features/management/repositories/parking_repository.dart';
 
 /// Provider for the search query in the dashboard.
-final dashboardSearchProvider = StateProvider<String>((ref) => '');
+final dashboardSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 
 /// Provider for the selected filter in the dashboard.
-final dashboardFilterProvider = StateProvider<String>((ref) => 'All');
+final dashboardFilterProvider = StateProvider.autoDispose<String>((ref) => 'All');
 
 /// Global provider for optimistic violations (to ensure instant UX across screens).
 final optimisticViolationsProvider =
-    StateProvider<List<Map<String, dynamic>>>((ref) => []);
+    StateProvider.autoDispose<List<Map<String, dynamic>>>((ref) => []);
 
 /// Unified provider that merges Permits (Subscribers) and Guest Sessions.
 final unifiedDashboardProvider =
-    Provider<AsyncValue<List<Map<String, dynamic>>>>((ref) {
+    Provider.autoDispose<AsyncValue<List<Map<String, dynamic>>>>((ref) {
   final sessionsAsync = ref.watch(sessionsStreamProvider);
   final permitsAsync = ref.watch(permitsStreamProvider);
   final search = ref.watch(dashboardSearchProvider).toLowerCase();
@@ -87,7 +88,7 @@ final unifiedDashboardProvider =
 
 /// Provider for locations awaiting verification (Super Admin only).
 final verificationApplicantsProvider =
-    Provider<AsyncValue<List<Map<String, dynamic>>>>((ref) {
+    Provider.autoDispose<AsyncValue<List<Map<String, dynamic>>>>((ref) {
   final locationsAsync = ref.watch(locationsStreamProvider);
   final search = ref.watch(dashboardSearchProvider).toLowerCase();
 

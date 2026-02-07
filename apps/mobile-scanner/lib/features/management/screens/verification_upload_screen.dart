@@ -51,7 +51,7 @@ class _VerificationUploadScreenState
       return;
     }
 
-    final bool isWeb = kIsWeb;
+    const bool isWeb = kIsWeb;
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: isWeb ? 15 : 25,
@@ -74,7 +74,7 @@ class _VerificationUploadScreenState
       return;
     }
 
-    final bool isWeb = kIsWeb;
+    const bool isWeb = kIsWeb;
     final List<XFile> images = await _picker.pickMultiImage(
       imageQuality: isWeb ? 15 : 25,
       maxWidth: isWeb ? 800 : 1024,
@@ -344,15 +344,15 @@ class _VerificationUploadScreenState
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.05),
+            color: Colors.grey.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.blue.withValues(alpha: 0.1),
+              color: Colors.grey.withValues(alpha: 0.15),
             ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.blue),
+              Icon(Icons.info_outline, color: Colors.grey[700]),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(

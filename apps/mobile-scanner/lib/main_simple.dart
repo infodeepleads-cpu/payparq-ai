@@ -14,9 +14,9 @@ Future<void> main() async {
       url: 'https://iafjygownkhedereaoxw.supabase.co',
       anonKey: 'sb_publishable_ah4iveg_PBowEdtSgQo4Qg_KjLUzWBV',
     );
-    print('Supabase initialized successfully');
+    debugPrint('Supabase initialized successfully');
   } catch (e) {
-    print('Supabase initialization error: $e');
+    debugPrint('Supabase initialization error: $e');
   }
   
   runApp(const ProviderScope(child: PayParqApp()));

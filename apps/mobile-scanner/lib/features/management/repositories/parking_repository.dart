@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../logic/providers/auth_providers.dart';
 
@@ -132,15 +132,19 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
+  final fallbackLocId = ref.watch(userLocationIdProvider);
 
-  // If no selection, show nothing
-  if (locationUuid == null && displayId == null) return Stream.value([]);
+  if (locationUuid == null && displayId == null && fallbackLocId == null) {
+    return Stream.value([]);
+  }
 
   // Use RLS-backed stream and filter in Flutter to handle mixed UUID/display_id
   return repo.getPermitsStream().map((items) {
     return items.where((item) {
       final locId = item['location_id']?.toString();
-      return locId == locationUuid || locId == displayId;
+      return locId == locationUuid ||
+          locId == displayId ||
+          locId == fallbackLocId;
     }).toList();
   });
 });
@@ -153,13 +157,18 @@ final sessionsStreamProvider =
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
+  final fallbackLocId = ref.watch(userLocationIdProvider);
 
-  if (locationUuid == null && displayId == null) return Stream.value([]);
+  if (locationUuid == null && displayId == null && fallbackLocId == null) {
+    return Stream.value([]);
+  }
 
   return repo.getSessionsStream().map((items) {
     return items.where((item) {
       final locId = item['location_id']?.toString();
-      return locId == locationUuid || locId == displayId;
+      return locId == locationUuid ||
+          locId == displayId ||
+          locId == fallbackLocId;
     }).toList();
   });
 });
@@ -230,13 +239,18 @@ final violationsStreamProvider =
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
+  final fallbackLocId = ref.watch(userLocationIdProvider);
 
-  if (locationUuid == null && displayId == null) return Stream.value([]);
+  if (locationUuid == null && displayId == null && fallbackLocId == null) {
+    return Stream.value([]);
+  }
 
   return repo.getViolationsStream().map((items) {
     return items.where((item) {
       final locId = item['location_id']?.toString();
-      return locId == locationUuid || locId == displayId;
+      return locId == locationUuid ||
+          locId == displayId ||
+          locId == fallbackLocId;
     }).toList();
   });
 });

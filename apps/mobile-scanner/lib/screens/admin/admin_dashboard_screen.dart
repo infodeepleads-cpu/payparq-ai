@@ -1,16 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../instructions_screen.dart';
 import '../../theme.dart';
-import '../../features/management/screens/pass_detail_screen.dart';
+import '../../features/management/screens/pass_detail_screen.dart'
+    as pass_detail;
 import '../../logic/providers/dashboard_providers.dart';
 import '../../logic/providers/auth_providers.dart';
 import '../../widgets/admin_data_card.dart';
@@ -24,188 +20,12 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
-  final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
-  bool _isProcessing = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleQuickAction({required bool isWarning}) async {
-    final profile = ref.read(userProfileProvider).value;
-    if (profile == null) return;
-
-    // Priority: 1. Manually selected location, 2. Profile location
-    final locationDisplayId =
-        ref.read(selectedLocationIdProvider) ?? profile['location_id'];
-
-    if (locationDisplayId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Error: No Location ID selected or assigned.')),
-      );
-      return;
-    }
-
-    // Use the centralized UUID resolver
-    final locUuid = await ref.read(selectedLocationUuidProvider.future);
-    final supabase = Supabase.instance.client;
-
-    if (locUuid == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Invalid Location selected.')),
-        );
-      }
-      return;
-    }
-
-    // Mandatory Plate Entry for Desktop
-    final plateController = TextEditingController();
-    final plate = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(isWarning ? 'Quick Warning' : 'Quick Ticket',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Enter License Plate (e.g. MA679XX)',
-                style: GoogleFonts.inter(
-                    fontSize: 14, color: AppTheme.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: plateController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-              ],
-              decoration: InputDecoration(
-                hintText: 'MA679XX',
-                filled: true,
-                fillColor: AppTheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onSubmitted: (v) {
-                final cleaned =
-                    v.trim().replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
-                if (cleaned.isNotEmpty) Navigator.pop(context, cleaned);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
-                style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final cleaned = plateController.text
-                  .trim()
-                  .replaceAll(RegExp(r'[^A-Z0-9]'), '')
-                  .toUpperCase();
-              if (cleaned.isNotEmpty) {
-                Navigator.pop(context, cleaned);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isWarning ? Colors.orange : Colors.black,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Next: Take Photo'),
-          ),
-        ],
-      ),
-    );
-
-    if (plate == null || plate.isEmpty) return;
-
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: kIsWeb ? 15 : 20,
-      maxWidth: kIsWeb ? 800 : 1024,
-      maxHeight: kIsWeb ? 800 : 1024,
-    );
-    if (image == null) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
-      final issuedAt = DateTime.now().toIso8601String();
-
-      // 2. Immediate Optimistic UI Update (Shared with Cases view)
-      final optimisticRecord = {
-        'plate': plate,
-        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-        'fine_amount': isWarning ? 0.00 : 50.00,
-        'status': isWarning ? 'warning' : 'issued',
-        'issued_at': issuedAt,
-        'evidence_r2_url': fileName,
-        'location_id': locUuid,
-      };
-
-      ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            optimisticRecord,
-            ...state,
-          ]);
-
-      final bytes = await image.readAsBytes();
-
-      await Future.wait<dynamic>([
-        supabase.storage.from('evidence').uploadBinary(
-              fileName,
-              bytes,
-              fileOptions: const FileOptions(contentType: 'image/jpeg'),
-            ),
-        supabase.from('violations').insert({
-          'plate': plate,
-          'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-          'fine_amount': isWarning ? 0.00 : 50.00,
-          'status': isWarning ? 'warning' : 'issued',
-          'location_id': locUuid,
-          'evidence_r2_url': fileName,
-          'issued_at': issuedAt,
-          'is_lpr_scan': false,
-        }),
-      ]).timeout(const Duration(seconds: 25));
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isWarning ? 'Warning Issued!' : 'Ticket Issued!'),
-            backgroundColor: isWarning
-                ? Colors.orange
-                : Colors.green, // Changed to green for success
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
   }
 
   @override
@@ -249,6 +69,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           if (isDesktop)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,38 +194,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             const SizedBox(height: 24),
             Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_isProcessing)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 16.0),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.black),
-                    ),
-                  ),
-                // Only show quick actions on desktop, hide on mobile
-                if (isDesktop) ...[
-                  _buildHeaderActionButton(
-                    icon: Icons.warning_amber_rounded,
-                    label: 'Quick Warning',
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    onTap: () => _handleQuickAction(isWarning: true),
-                    isDesktop: isDesktop,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildHeaderActionButton(
-                    icon: Icons.receipt_long,
-                    label: 'Quick Ticket',
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    onTap: () => _handleQuickAction(isWarning: false),
-                    isDesktop: isDesktop,
-                  ),
-                ],
-              ],
+              children: [],
             ),
           ],
           SizedBox(height: isDesktop ? 48 : 32),
@@ -464,11 +254,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
             ),
@@ -505,7 +295,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : AppTheme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           border: isSelected ? null : Border.all(color: AppTheme.border),
         ),
         child: Text(
@@ -612,7 +402,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(4)),
             ),
           ),
         ],
@@ -663,7 +453,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(color: AppTheme.border),
         ),
         child: Column(
@@ -736,13 +526,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       mainContent: Row(
         children: [
           Expanded(
-            flex: 2,
-            child: _buildInfoColumn(
-              'Amount',
-              s['ui_type'] == 'SUB' ? 'Monthly' : '€${s['price']}',
-            ),
-          ),
-          Expanded(
             flex: 3,
             child: _buildInfoColumn(
               'User',
@@ -783,7 +566,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
               ),
             ),
             child: const Text('View'),
@@ -795,27 +578,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Widget _buildPlateBadge(String plate) {
     return Container(
-      width: 120,
-      height: 36,
+      width: 160,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         plate.toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
           color: Colors.white,
-          letterSpacing: 1.2,
+          letterSpacing: 1,
         ),
       ),
     );
@@ -824,7 +600,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   void _navigateToDetail(Map<String, dynamic> s) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => PassDetailScreen(
+        builder: (context) => pass_detail.PassDetailScreen(
           permit: s['ui_type'] == 'SUB'
               ? s
               : {
@@ -869,53 +645,32 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildStatusBadge(String status, bool isPaid) {
-    Color backgroundColor = isPaid ? Colors.green[50]! : Colors.grey[50]!;
-    Color borderColor = isPaid ? Colors.green[300]! : Colors.grey[300]!;
-    Color textColor = isPaid ? Colors.green[700]! : Colors.grey[700]!;
-    Color dotColor = isPaid ? Colors.green[500]! : Colors.grey[400]!;
-
+    final dotColor = isPaid ? Colors.green[400] : Colors.red[400];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: borderColor,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: borderColor.withValues(alpha: 0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 12,
-            height: 12,
+            width: 8,
+            height: 8,
             decoration: BoxDecoration(
               color: dotColor,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: dotColor.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Text(
             status,
             style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
           ),
         ],

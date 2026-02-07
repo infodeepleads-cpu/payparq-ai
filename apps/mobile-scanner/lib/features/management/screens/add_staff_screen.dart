@@ -6,6 +6,7 @@ import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AddStaffScreen extends ConsumerStatefulWidget {
   const AddStaffScreen({super.key});
@@ -26,7 +27,6 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
     final staffAsync = ref.watch(staffStreamProvider);
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
 
     return profileAsync.when(
       loading: () =>
@@ -312,38 +312,29 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  try {
-                    final response =
-                        await Supabase.instance.client.functions.invoke(
-                      'create-officer',
-                      body: {
-                        'email': email,
-                        'action': 'send_email',
-                      },
-                    );
-
-                    if (response.status == 200) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Notification email sent to user.'),
-                        ),
-                      );
-                    } else {
-                      throw Exception(response.data['error'] ?? 'Email failed');
-                    }
-                  } catch (e) {
+                  final subject =
+                      Uri.encodeComponent('Your payparq.ai staff credentials');
+                  final body = Uri.encodeComponent(
+                      'Welcome,\n\nHere are your login details:\n\nEmail: $email\nPassword: $password\n\nUse the app to sign in and begin.\n');
+                  final mailto = 'mailto:$email?subject=$subject&body=$body';
+                  final uri = Uri.parse(mailto);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
+                      const SnackBar(
+                        content: Text('Unable to open email client'),
                       ),
                     );
                   }
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.email_outlined),
                 label: const Text('Notify User via Email'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[700],
+                  backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -412,10 +403,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
           TextButton(
             onPressed: () async {
               await ref.read(parkingRepositoryProvider).deleteStaff(id);
-              if (mounted) {
-                Navigator.pop(context);
-                ref.invalidate(staffStreamProvider);
-              }
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              ref.invalidate(staffStreamProvider);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),

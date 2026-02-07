@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart' as pdf;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:typed_data';
 import '../../../../theme.dart';
 import '../utils/permit_pdf.dart';
 
@@ -21,7 +18,9 @@ class PassDetailScreen extends StatelessWidget {
     final String plate = permit['plate'] ?? 'UNKNOWN';
     final String locationId = permit['location_id'] ?? 'N/A';
     final double price = (permit['price'] as num?)?.toDouble() ?? 0.00;
-    final int? dailyDuration = permit['daily_duration_hours'];
+    final String contactName = (permit['contact_name'] ?? '').toString();
+    final String contactPhone = (permit['contact_phone'] ?? '').toString();
+    final String contactEmail = (permit['contact_email'] ?? '').toString();
 
     final DateTime? startTime =
         DateTime.tryParse((permit['start_time'] ?? '').toString());
@@ -61,7 +60,13 @@ class PassDetailScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,12 +117,30 @@ class PassDetailScreen extends StatelessWidget {
                   ),
                   const Divider(height: 64, color: AppTheme.border),
 
-                  // Grid of Details
                   Wrap(
                     spacing: 64,
                     runSpacing: 32,
                     children: [
                       _buildDetailItem('Location ID', locationId, Icons.map),
+                      _buildDetailItem(
+                          'Name',
+                          contactName.isNotEmpty ? contactName : '—',
+                          Icons.person),
+                      _buildDetailItem(
+                          'Phone',
+                          contactPhone.isNotEmpty ? contactPhone : '—',
+                          Icons.phone),
+                      _buildDetailItem(
+                          'Email',
+                          contactEmail.isNotEmpty ? contactEmail : '—',
+                          Icons.email_outlined),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 64,
+                    runSpacing: 32,
+                    children: [
                       _buildDetailItem(
                           'Entry Time',
                           startTime != null ? _formatDate(startTime) : '—',
@@ -127,9 +150,6 @@ class PassDetailScreen extends StatelessWidget {
                           endTime != null ? _formatDate(endTime) : '—',
                           Icons.logout),
                       _buildDetailItem('Duration', durationString, Icons.timer),
-                      if (dailyDuration != null)
-                        _buildDetailItem('Daily Limit', '$dailyDuration Hours',
-                            Icons.timelapse),
                       _buildDetailItem('Price', '€${price.toStringAsFixed(2)}',
                           Icons.attach_money),
                     ],
@@ -159,70 +179,36 @@ class PassDetailScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
                         onPressed: () async {
-                          final email =
-                              (permit['contact_email'] ?? '').toString().trim();
-                          if (email.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text('No email on file for this permit')),
-                            );
-                            return;
-                          }
                           try {
                             final bytes = await buildPermitPdf(permit);
-                            final fileName = 'permit_${permit['id']}.pdf';
-                            final storage = Supabase.instance.client.storage
-                                .from('evidence');
-                            await storage.uploadBinary(
-                              fileName,
-                              bytes,
-                              fileOptions: const FileOptions(
-                                contentType: 'application/pdf',
-                                upsert: true,
-                              ),
-                            );
-                            final signedUrl = await storage.createSignedUrl(
-                                fileName, 60 * 60);
-                            final subject =
-                                Uri.encodeComponent('Your Parking Permit');
-                            final plateVal = (permit['plate'] ?? 'UNKNOWN')
+                            final contactEmail = (permit['contact_email'] ?? '')
                                 .toString()
-                                .toUpperCase();
-                            try {
-                              final resp = await Supabase
-                                  .instance.client.functions
-                                  .invoke(
-                                'send-permit-email',
-                                body: {
-                                  'email': email,
-                                  'plate': plateVal,
-                                  'pdf_url': signedUrl,
-                                  'location_id': permit['location_id'],
-                                  'price': price,
-                                },
-                              );
-                              if (resp.status == 200) {
+                                .trim();
+                            if (kIsWeb) {
+                              final subject =
+                                  Uri.encodeComponent('Your Parking Permit');
+                              final plateVal = (permit['plate'] ?? 'UNKNOWN')
+                                  .toString()
+                                  .toUpperCase();
+                              final body = Uri.encodeComponent(
+                                  'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nPlease attach the generated PDF to this email.\n\nThank you.');
+                              final mailto =
+                                  'mailto:${contactEmail.isNotEmpty ? contactEmail : ''}?subject=$subject&body=$body';
+                              final uri = Uri.parse(mailto);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri);
+                              } else {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Email sent via server')),
+                                      content:
+                                          Text('Unable to open email client')),
                                 );
-                                return;
                               }
-                            } catch (_) {}
-                            final body = Uri.encodeComponent(
-                                'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nDownload your PDF here:\n$signedUrl\n\nThank you.');
-                            final uri = Uri.parse(
-                                'mailto:$email?subject=$subject&body=$body');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri);
                             } else {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Unable to open email client')),
+                              await Printing.sharePdf(
+                                bytes: bytes,
+                                filename: 'permit_${permit['id']}.pdf',
                               );
                             }
                           } catch (e) {
@@ -235,8 +221,9 @@ class PassDetailScreen extends StatelessWidget {
                         icon: const Icon(Icons.email_outlined),
                         label: const Text('Email PDF to Holder'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          side: const BorderSide(color: AppTheme.border),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 12),
                         ),

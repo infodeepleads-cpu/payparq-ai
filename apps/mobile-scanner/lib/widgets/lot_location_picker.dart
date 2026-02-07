@@ -84,9 +84,11 @@ class _LotLocationPickerState extends State<LotLocationPicker> {
     try {
       // For Web, we bypass most Geolocator checks as they often fail with MissingPluginException
       if (kIsWeb) {
-        // Direct call to getCurrentPosition on web
         final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
+          locationSettings: WebSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: const Duration(seconds: 10),
+          ),
         );
         final newLatLng = LatLng(position.latitude, position.longitude);
         if (mounted) {
@@ -119,8 +121,10 @@ class _LotLocationPickerState extends State<LotLocationPicker> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 10),
+        ),
       );
 
       final newLatLng = LatLng(position.latitude, position.longitude);

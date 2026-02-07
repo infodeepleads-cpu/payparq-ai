@@ -106,20 +106,20 @@ class VerificationInboxScreen extends ConsumerWidget {
                             color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Column(
+                        child: const Column(
                           children: [
                             RadioListTile<bool>(
-                              title: const Text('Regular Lot',
+                              title: Text('Regular Lot',
                                   style: TextStyle(color: Colors.white)),
-                              subtitle: const Text(
+                              subtitle: Text(
                                   'Admin managed. Standard commissions apply.',
                                   style: TextStyle(color: Colors.grey)),
                               value: false,
                             ),
                             RadioListTile<bool>(
-                              title: const Text('Run by Payparq',
+                              title: Text('Run by Payparq',
                                   style: TextStyle(color: Colors.white)),
-                              subtitle: const Text(
+                              subtitle: Text(
                                   'Payparq managed. 50% flat commission on all shared revenue.',
                                   style: TextStyle(color: Colors.grey)),
                               value: true,

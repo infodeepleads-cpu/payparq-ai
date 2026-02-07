@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UploadCaseScreen extends StatefulWidget {
   const UploadCaseScreen({super.key});
@@ -13,6 +14,7 @@ class UploadCaseScreen extends StatefulWidget {
 class _UploadCaseScreenState extends State<UploadCaseScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _image;
+  bool _isUploading = false;
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(
@@ -72,12 +74,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement upload logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Uploading case...')),
-                    );
-                  },
+                  onPressed: _isUploading ? null : _uploadEvidence,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
@@ -85,7 +82,14 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Submit Case'),
+                  child: _isUploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Submit Case'),
                 ),
               ),
           ],
@@ -185,5 +189,34 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _uploadEvidence() async {
+    if (_image == null) return;
+    setState(() => _isUploading = true);
+    try {
+      final bytes = await _image!.readAsBytes();
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'evidence_$ts.jpg';
+      await Supabase.instance.client.storage
+          .from('evidence')
+          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Evidence uploaded')),
+        );
+        setState(() {
+          _image = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 }

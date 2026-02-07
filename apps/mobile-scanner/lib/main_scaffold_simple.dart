@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../logic/providers/auth_providers_simple.dart';
-import '../screens/hud_screen.dart';
+import '../screens/hud_screen.dart' if (dart.library.html) '../screens/hud_screen_web.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/settings_screen.dart';
-import '../theme.dart';
 
 class MasterScaffold extends ConsumerStatefulWidget {
   const MasterScaffold({super.key});
@@ -23,14 +21,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     });
   }
 
-  Future<void> _handleLogout() async {
-    await Supabase.instance.client.auth.signOut();
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
-    
+
     if (profileAsync.isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -45,7 +39,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     }
 
     final role = profile['role'] ?? 'officer';
-    
+
     // Simple navigation based on role
     Widget getScreenForIndex(int index) {
       if (role == 'admin') {
@@ -75,14 +69,17 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     List<BottomNavigationBarItem> getNavItems() {
       if (role == 'admin') {
         return const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.camera), label: 'Scanner'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
         ];
       } else {
         return const [
           BottomNavigationBarItem(icon: Icon(Icons.camera), label: 'Scanner'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.settings), label: 'Settings'),
         ];
       }
     }

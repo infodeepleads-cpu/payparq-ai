@@ -7,8 +7,6 @@ import 'screens/auth_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/performance_monitor.dart';
 
-import 'widgets/pulsating_loading_screen.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -26,7 +24,7 @@ class BootApp extends StatefulWidget {
 }
 
 class _BootAppState extends State<BootApp> {
-  late final Future<void> _initFuture;
+  late Future<void> _initFuture;
 
   @override
   void initState() {
@@ -78,16 +76,16 @@ class _BootAppState extends State<BootApp> {
     return FutureBuilder<void>(
       future: _initFuture,
       builder: (context, snapshot) {
-        debugPrint('BootApp: FutureBuilder state: ${snapshot.connectionState}');
-        debugPrint('BootApp: hasError: ${snapshot.hasError}');
-        debugPrint('BootApp: timestamp: ${DateTime.now()}');
-
         if (snapshot.connectionState != ConnectionState.done) {
-          debugPrint('BootApp: showing loading screen');
           return MaterialApp(
             title: 'payparq.ai',
             theme: AppTheme.lightTheme,
-            home: const PulsatingLoadingScreen(),
+            home: const Scaffold(
+              backgroundColor: AppTheme.lightBackground,
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
             debugShowCheckedModeBanner: false,
           );
         }
@@ -146,22 +144,11 @@ class PayParqApp extends StatelessWidget {
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
-          debugPrint(
-              'PayParqApp: StreamBuilder state: ${snapshot.connectionState}');
-          debugPrint('PayParqApp: hasData: ${snapshot.hasData}');
-          debugPrint('PayParqApp: timestamp: ${DateTime.now()}');
-
           final session = Supabase.instance.client.auth.currentSession ??
               snapshot.data?.session;
-
-          debugPrint('PayParqApp: session: $session');
-
           if (session != null) {
-            debugPrint('PayParqApp: returning MasterScaffold');
             return const MasterScaffold();
           }
-
-          debugPrint('PayParqApp: returning AuthScreen');
           return const AuthScreen();
         },
       ),

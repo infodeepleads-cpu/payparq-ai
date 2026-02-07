@@ -514,8 +514,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                     letterSpacing: 2,
                     fontFamily: 'Courier',
                     color: Colors.white
-                        .withValues(
-                            alpha: _detectedPlate == null ? 0.3 : 1.0),
+                        .withValues(alpha: _detectedPlate == null ? 0.3 : 1.0),
                   ),
                 ),
               ),
@@ -787,6 +786,24 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       final plate = confirmedPlate;
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
 
+      // Resolve daily price for selected location
+      double dailyPrice = 50.0;
+      try {
+        final List rows = await supabase
+            .from('locations')
+            .select('base_price_daily')
+            .eq('id', locUuid)
+            .limit(1);
+        if (rows.isNotEmpty) {
+          final v = rows.first['base_price_daily'];
+          if (v != null) {
+            dailyPrice = (v is num)
+                ? v.toDouble()
+                : double.tryParse(v.toString()) ?? 50.0;
+          }
+        }
+      } catch (_) {}
+
       final bytes = imageBytes;
       await supabase.storage.from('evidence').uploadBinary(
             fileName,
@@ -798,7 +815,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       await supabase.from('violations').insert({
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-        'fine_amount': isWarning ? 0.00 : 50.00,
+        'fine_amount': isWarning ? 0.00 : dailyPrice,
         'status': isWarning ? 'warning' : 'issued',
         'location_id': locUuid,
         'is_lpr_scan': true,
@@ -892,27 +909,27 @@ class TacticalHudPainter extends CustomPainter {
     // 2. Draw Frame Corners
     // Top Left
     canvas.drawLine(
-        roiRect.topLeft, roiRect.topLeft + Offset(cornerSize, 0), paint);
+        roiRect.topLeft, roiRect.topLeft + const Offset(cornerSize, 0), paint);
     canvas.drawLine(
-        roiRect.topLeft, roiRect.topLeft + Offset(0, cornerSize), paint);
+        roiRect.topLeft, roiRect.topLeft + const Offset(0, cornerSize), paint);
 
     // Top Right
-    canvas.drawLine(
-        roiRect.topRight, roiRect.topRight + Offset(-cornerSize, 0), paint);
-    canvas.drawLine(
-        roiRect.topRight, roiRect.topRight + Offset(0, cornerSize), paint);
+    canvas.drawLine(roiRect.topRight,
+        roiRect.topRight + const Offset(-cornerSize, 0), paint);
+    canvas.drawLine(roiRect.topRight,
+        roiRect.topRight + const Offset(0, cornerSize), paint);
 
     // Bottom Left (Extended for tray)
-    canvas.drawLine(
-        roiRect.bottomLeft, roiRect.bottomLeft + Offset(cornerSize, 0), paint);
-    canvas.drawLine(
-        roiRect.bottomLeft, roiRect.bottomLeft + Offset(0, -cornerSize), paint);
+    canvas.drawLine(roiRect.bottomLeft,
+        roiRect.bottomLeft + const Offset(cornerSize, 0), paint);
+    canvas.drawLine(roiRect.bottomLeft,
+        roiRect.bottomLeft + const Offset(0, -cornerSize), paint);
 
     // Bottom Right (Extended for tray)
     canvas.drawLine(roiRect.bottomRight,
-        roiRect.bottomRight + Offset(-cornerSize, 0), paint);
+        roiRect.bottomRight + const Offset(-cornerSize, 0), paint);
     canvas.drawLine(roiRect.bottomRight,
-        roiRect.bottomRight + Offset(0, -cornerSize), paint);
+        roiRect.bottomRight + const Offset(0, -cornerSize), paint);
 
     // 3. Draw Side Brackets (Industry look)
     final bracketPaint = Paint()
@@ -920,9 +937,9 @@ class TacticalHudPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    canvas.drawLine(roiRect.topLeft + Offset(0, cornerSize),
+    canvas.drawLine(roiRect.topLeft + const Offset(0, cornerSize),
         roiRect.bottomLeft - const Offset(0, 0), bracketPaint);
-    canvas.drawLine(roiRect.topRight + Offset(0, cornerSize),
+    canvas.drawLine(roiRect.topRight + const Offset(0, cornerSize),
         roiRect.bottomRight - const Offset(0, 0), bracketPaint);
 
     // 4. Scanning Laser Beam (Only if scanning)

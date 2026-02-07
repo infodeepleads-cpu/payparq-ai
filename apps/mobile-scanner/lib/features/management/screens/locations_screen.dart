@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
-import '../../../widgets/pulsating_loading_screen.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
@@ -30,7 +28,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     final locationsAsync = ref.watch(locationsStreamProvider);
 
     return profileAsync.when(
-      loading: () => const PulsatingLoadingScreen(),
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
       error: (err, stack) => Scaffold(
         body: Center(
           child: Column(
@@ -120,7 +122,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           const Icon(Icons.warning_amber_rounded,
                               color: Colors.orange, size: 48),
                           const SizedBox(height: 16),
-                          const Text('Database access restricted or error occurred.'),
+                          const Text(
+                              'Database access restricted or error occurred.'),
                           const SizedBox(height: 8),
                           Text(err.toString(),
                               style: const TextStyle(
@@ -159,7 +162,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           final displayId = loc['display_id'] ?? 'N/A';
                           final id = loc['id'].toString();
                           final Map<String, dynamic> meta =
-                              (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+                              (loc['verification_metadata'] ?? {})
+                                  as Map<String, dynamic>;
                           final bool isHub = meta['hub_enabled'] == true;
 
                           return AdminDataCard(
@@ -212,61 +216,24 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 _buildVerificationBadge(loc, isAdmin),
                                 const SizedBox(width: 12),
                                 _buildStatusBadge('ACTIVE'),
-                                const SizedBox(width: 24),
-                                SizedBox(
-                                  width: 120,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      FutureBuilder<int>(
-                                        future: Future.wait([
-                                          Supabase.instance.client
-                                              .from('parking_sessions')
-                                              .select('id')
-                                              .eq('location_id', id)
-                                              .eq('payment_status', 'paid')
-                                              .then(
-                                                  (res) => (res as List).length),
-                                          Supabase.instance.client
-                                              .from('parking_permits')
-                                              .select('id')
-                                              .eq('location_id', id)
-                                              .eq('status', 'active')
-                                              .then(
-                                                  (res) => (res as List).length),
-                                        ]).then(
-                                          (results) =>
-                                              results[0] + results[1],
-                                        ),
-                                        builder: (context, snapshot) {
-                                          final activeCount =
-                                              snapshot.data ?? 0;
-                                          final total = loc['capacity'] ?? 0;
-                                          final available = total - activeCount;
-
-                                          return Text(
-                                            '$available/$total',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      Text(
-                                        'CAPACITY',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.textSecondary,
-                                          letterSpacing: 1,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(width: 12),
+                                ElevatedButton(
+                                  onPressed: () => _showLocationDetail(
+                                      loc, isSuperAdmin, isAdmin),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
+                                  child: const Text('View'),
                                 ),
-                                const SizedBox(width: 24),
+                                const SizedBox(width: 12),
                                 if (isSuperAdmin)
                                   Row(
                                     children: [
@@ -280,12 +247,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                       const SizedBox(width: 8),
                                       Switch(
                                         value: isHub,
-                                        activeColor: Colors.black,
+                                        activeThumbColor: Colors.black,
                                         onChanged: (v) => _toggleHub(loc, v),
                                       ),
                                     ],
                                   ),
-                                const SizedBox(width: 24),
+                                const SizedBox(width: 12),
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete_outline,
@@ -318,35 +285,42 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     Color badgeColor;
     String label;
     bool showAction = false;
+    IconData icon;
 
     switch (status) {
       case 'verified':
-        badgeColor = Colors.green;
+        badgeColor = Colors.green[400]!;
         label = 'VERIFIED';
+        icon = Icons.verified;
         break;
       case 'pending':
-        badgeColor = Colors.orange;
+        badgeColor = const Color(0xFF635BFF);
         label = 'PENDING';
+        icon = Icons.hourglass_bottom;
         break;
       case 'call_scheduled':
-        badgeColor = Colors.blue;
-        label = 'CONTACT REQUIRED';
+        badgeColor = const Color(0xFFFF9500);
+        label = 'ACTION REQUIRED';
+        icon = Icons.warning_amber_outlined;
         showAction = true;
         break;
       case 'contact_required':
-        badgeColor = Colors.blue;
-        label = 'CONTACT REQUIRED';
+        badgeColor = const Color(0xFFFF9500);
+        label = 'ACTION REQUIRED';
+        icon = Icons.warning_amber_outlined;
         showAction = true;
         break;
       case 'rejected':
-        badgeColor = Colors.red;
+        badgeColor = const Color(0xFFFF3B30);
         label = 'REJECTED';
+        icon = Icons.error_outline;
         showAction = isAdmin;
         break;
       case 'unverified':
       default:
-        badgeColor = Colors.deepOrange;
-        label = 'UNVERIFIED';
+        badgeColor = AppTheme.sidebarBackground;
+        label = 'SETUP REQUIRED';
+        icon = Icons.info_outline;
         showAction = isAdmin;
     }
 
@@ -371,30 +345,26 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: badgeColor.withValues(alpha: 0.1),
+          color: badgeColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              status == 'verified' ? Icons.verified : Icons.info_outline,
-              size: 14,
-              color: badgeColor,
-            ),
+            Icon(icon, size: 14, color: Colors.white),
             const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: badgeColor,
+                color: Colors.white,
               ),
             ),
             if (showAction) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey),
+              Icon(Icons.arrow_forward_ios,
+                  size: 10, color: Colors.white.withValues(alpha: 0.8)),
             ],
           ],
         ),
@@ -403,6 +373,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Widget _buildStatusBadge(String status) {
+    final isActive = status.toLowerCase() == 'active';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -417,7 +388,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.green[400],
+              color: isActive ? Colors.green[400] : Colors.red[400],
               shape: BoxShape.circle,
             ),
           ),
@@ -447,6 +418,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               // 1. If this is the currently selected lot, clear selection first
               if (ref.read(selectedLocationIdProvider) == displayId) {
                 ref.read(selectedLocationIdProvider.notifier).state = null;
@@ -457,8 +429,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
 
               // 3. Refresh lists
               ref.invalidate(availableLocationsProvider);
-
-              if (mounted) Navigator.pop(context);
+              if (!context.mounted) return;
+              navigator.pop();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -468,6 +440,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final supabase = Supabase.instance.client;
       final id = loc['id'].toString();
@@ -476,35 +449,31 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
       newMeta['hub_enabled'] = enabled;
       final displayId = (loc['display_id'] ?? '').toString();
-      final slug =
-          displayId.replaceAll(RegExp(r'\s+'), '-').toLowerCase();
+      final slug = displayId.replaceAll(RegExp(r'\s+'), '-').toLowerCase();
       newMeta['hub_slug'] = slug;
       await supabase
           .from('locations')
-          .update({'verification_metadata': newMeta})
-          .eq('id', id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              enabled
-                  ? 'Marked as PayParq hub'
-                  : 'Removed PayParq hub designation',
-            ),
-            backgroundColor: enabled ? Colors.green : Colors.orange,
+          .update({'verification_metadata': newMeta}).eq('id', id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Marked as PayParq hub'
+                : 'Removed PayParq hub designation',
           ),
-        );
-      }
+          backgroundColor: enabled ? Colors.green : Colors.orange,
+        ),
+      );
       ref.invalidate(locationsStreamProvider);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -609,6 +578,279 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 ),
               ),
             ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLocationDetail(
+      Map<String, dynamic> loc, bool isSuperAdmin, bool isAdmin) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        final name = (loc['name'] ?? 'Unnamed Lot').toString();
+        final displayId = (loc['display_id'] ?? 'N/A').toString();
+        final capacity = (loc['capacity'] ?? 0) is int
+            ? loc['capacity'] as int
+            : int.tryParse((loc['capacity'] ?? '0').toString()) ?? 0;
+        final Map<String, dynamic> meta =
+            (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+        final bool isHub = meta['hub_enabled'] == true;
+        final double latitude = (loc['latitude'] is num)
+            ? (loc['latitude'] as num).toDouble()
+            : double.tryParse('${loc['latitude'] ?? 0.0}') ?? 0.0;
+        final double longitude = (loc['longitude'] is num)
+            ? (loc['longitude'] as num).toDouble()
+            : double.tryParse('${loc['longitude'] ?? 0.0}') ?? 0.0;
+        final bool canEdit = isSuperAdmin || isAdmin;
+
+        return AlertDialog(
+          title: Text('Location Details',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          content: SizedBox(
+            width: 420,
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                final capacityCtrl = TextEditingController(text: '$capacity');
+                final latCtrl = TextEditingController(text: '$latitude');
+                final lngCtrl = TextEditingController(text: '$longitude');
+                bool saving = false;
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                final navigator = Navigator.of(dialogContext);
+                Future<void> saveChanges() async {
+                  if (!canEdit) return;
+                  setState(() => saving = true);
+                  try {
+                    final newCapacity =
+                        int.tryParse(capacityCtrl.text.trim()) ?? capacity;
+                    final newLat =
+                        double.tryParse(latCtrl.text.trim()) ?? latitude;
+                    final newLng =
+                        double.tryParse(lngCtrl.text.trim()) ?? longitude;
+                    await Supabase.instance.client.from('locations').update({
+                      'capacity': newCapacity,
+                      'total_spots': newCapacity,
+                      'latitude': newLat,
+                      'longitude': newLng,
+                    }).eq('id', loc['id']);
+                    ref.invalidate(locationsStreamProvider);
+                    if (dialogContext.mounted) {
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Location updated')),
+                      );
+                      navigator.pop();
+                    }
+                  } catch (e) {
+                    if (dialogContext.mounted) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  } finally {
+                    if (dialogContext.mounted) setState(() => saving = false);
+                  }
+                }
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$name • $displayId',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(Icons.local_parking,
+                                  size: 18, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              if (!canEdit)
+                                Text(
+                                  'Capacity: $capacity',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                )
+                              else ...[
+                                Text(
+                                  'Capacity',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 120,
+                                  child: TextField(
+                                    controller: capacityCtrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: 'e.g. 150',
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_outlined,
+                                  size: 18, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              if (!canEdit)
+                                Text(
+                                  'Coordinates: $latitude, $longitude',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                )
+                              else ...[
+                                Text(
+                                  'Coordinates',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 120,
+                                  child: TextField(
+                                    controller: latCtrl,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: InputDecoration(
+                                      hintText: 'Latitude',
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 120,
+                                  child: TextField(
+                                    controller: lngCtrl,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: InputDecoration(
+                                      hintText: 'Longitude',
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (isSuperAdmin)
+                            Row(
+                              children: [
+                                Text(
+                                  'Hub Enabled',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                StatefulBuilder(
+                                  builder: (ctx, setState) => Switch(
+                                    value: isHub,
+                                    activeThumbColor: Colors.black,
+                                    onChanged: (v) async {
+                                      await _toggleHub(loc, v);
+                                      if (!dialogContext.mounted) return;
+                                      Navigator.pop(dialogContext);
+                                      _showLocationDetail(
+                                          loc, isSuperAdmin, isAdmin);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (canEdit) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: saving ? null : saveChanges,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: saving
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2),
+                                      )
+                                    : const Text('Save Changes'),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           actions: [
             TextButton(

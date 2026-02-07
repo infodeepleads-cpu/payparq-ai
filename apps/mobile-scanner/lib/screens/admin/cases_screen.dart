@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme.dart';
+import '../../features/enforcement/screens/cases_list_view.dart';
 
 class CasesScreen extends StatelessWidget {
   const CasesScreen({super.key});
@@ -40,13 +41,16 @@ class CasesScreen extends StatelessWidget {
                 ),
                 child: ListView.separated(
                   itemCount: 10, // Mock count
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final isResolved = index % 3 == 0;
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
                       leading: CircleAvatar(
-                        backgroundColor: isResolved ? Colors.green[100] : Colors.orange[100],
+                        backgroundColor:
+                            isResolved ? Colors.green[100] : Colors.orange[100],
                         child: Icon(
                           isResolved ? Icons.check : Icons.access_time,
                           color: isResolved ? Colors.green : Colors.orange,
@@ -62,24 +66,44 @@ class CasesScreen extends StatelessWidget {
                         style: GoogleFonts.inter(color: Colors.grey[500]),
                       ),
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isResolved
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.orange.withValues(alpha: 0.1),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
                         ),
-                        child: Text(
-                          isResolved ? 'Resolved' : 'Active',
-                          style: GoogleFonts.inter(
-                            color: isResolved ? Colors.green[700] : Colors.orange[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isResolved
+                                    ? Colors.green[400]
+                                    : Colors.orange[400],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isResolved ? 'RESOLVED' : 'ACTIVE',
+                              style: GoogleFonts.inter(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       onTap: () {
-                        // TODO: View case details
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CasesListView(),
+                          ),
+                        );
                       },
                     );
                   },

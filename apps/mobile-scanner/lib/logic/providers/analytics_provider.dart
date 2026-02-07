@@ -37,7 +37,7 @@ class ChartPoint {
   ChartPoint(this.x, this.y);
 }
 
-final analyticsProvider = Provider<AsyncValue<DashboardAnalytics>>((ref) {
+final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((ref) {
   final sessionsAsync = ref.watch(sessionsStreamProvider);
   final permitsAsync = ref.watch(permitsStreamProvider);
   final violationsAsync = ref.watch(violationsStreamProvider);

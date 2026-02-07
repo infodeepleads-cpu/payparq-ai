@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'terms_conditions_screen.dart';
 import '../theme.dart';
+import '../logic/providers/locale_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _orgController = TextEditingController(text: 'PayParq Metropolis');
   final _emailController = TextEditingController(text: 'admin@payparq.ai');
 
@@ -23,6 +24,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
+    final showAdvanced = ref.watch(showAdvancedTabsProvider);
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SingleChildScrollView(
@@ -30,30 +33,135 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Settings',
-              style: GoogleFonts.inter(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: -1,
-              ),
-            ),
+            Text(isCroatian ? 'Postavke' : 'Settings',
+                style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: -1)),
             const SizedBox(height: 8),
             Text(
-              'Manage your organization and system preferences.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+                isCroatian
+                    ? 'Upravljajte svojom organizacijom i postavkama sustava.'
+                    : 'Manage your organization and system preferences.',
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textSecondary)),
+            const SizedBox(height: 48),
+            _buildSection(
+              title:
+                  isCroatian ? 'Profil organizacije' : 'Organization Profile',
+              children: [
+                _buildTextField(
+                    isCroatian ? 'Naziv organizacije' : 'Organization Name',
+                    _orgController),
+                const SizedBox(height: 24),
+                _buildTextField(
+                    isCroatian ? 'E-pošta administratora' : 'Admin Email',
+                    _emailController),
+              ],
             ),
             const SizedBox(height: 48),
             _buildSection(
-              title: 'Organization Profile',
+              title: isCroatian ? 'Jezik' : 'Language',
               children: [
-                _buildTextField('Organization Name', _orgController),
-                const SizedBox(height: 24),
-                _buildTextField('Admin Email', _emailController),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            ref.read(localeIsCroatianProvider.notifier).state =
+                                false;
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: isCroatian
+                                    ? Colors.grey[300]!
+                                    : Colors.black),
+                            backgroundColor:
+                                isCroatian ? Colors.white : Colors.black,
+                          ),
+                          child: Text(
+                            'English',
+                            style: TextStyle(
+                              color: isCroatian ? Colors.black : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            ref.read(localeIsCroatianProvider.notifier).state =
+                                true;
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                                color: isCroatian
+                                    ? Colors.black
+                                    : Colors.grey[300]!),
+                            backgroundColor:
+                                isCroatian ? Colors.black : Colors.white,
+                          ),
+                          child: Text(
+                            'Hrvatski',
+                            style: TextStyle(
+                              color: isCroatian ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
+            _buildSection(
+              title: isCroatian ? 'Napredne kartice' : 'Advanced Tabs',
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isCroatian
+                                ? 'Prikaži Analytics i Dinamičko određivanje cijena'
+                                : 'Show Analytics and Dynamic Pricing',
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isCroatian
+                                ? 'Omogućite kartice bez obzira na ulogu korisnika.'
+                                : 'Enable tabs regardless of user role.',
+                            style: const TextStyle(
+                                fontSize: 13, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: showAdvanced,
+                      activeThumbColor: Colors.black,
+                      onChanged: (v) =>
+                          ref.read(showAdvancedTabsProvider.notifier).state = v,
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 48),
@@ -66,12 +174,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 child: Text(
-                  'Terms & Privacy Policy',
-                  style: GoogleFonts.inter(
-                    color: Colors.grey[500],
-                    fontSize: 13,
-                    decoration: TextDecoration.underline,
-                  ),
+                  isCroatian
+                      ? 'Uvjeti i pravila privatnosti'
+                      : 'Terms & Privacy Policy',
+                  style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 13,
+                      decoration: TextDecoration.underline),
                 ),
               ),
             ),
@@ -93,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4)),
                   ),
-                  child: const Text('Save Changes',
+                  child: Text(isCroatian ? 'Spremi promjene' : 'Save Changes',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -116,14 +225,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black)),
           const SizedBox(height: 32),
           ...children,
         ],
@@ -135,14 +241,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black)),
         const SizedBox(height: 12),
         TextField(
           controller: controller,

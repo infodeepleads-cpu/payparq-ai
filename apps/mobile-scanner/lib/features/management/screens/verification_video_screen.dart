@@ -170,10 +170,10 @@ class _VerificationVideoScreenState
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.05),
+                color: Colors.grey.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: Colors.grey.withValues(alpha: 0.15),
                 ),
               ),
               child: Column(
@@ -181,8 +181,8 @@ class _VerificationVideoScreenState
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.videocam_outlined,
-                          color: Colors.blue, size: 28),
+                      Icon(Icons.videocam_outlined,
+                          color: Colors.grey[700], size: 28),
                       const SizedBox(width: 12),
                       Text(
                         'Video Instructions',

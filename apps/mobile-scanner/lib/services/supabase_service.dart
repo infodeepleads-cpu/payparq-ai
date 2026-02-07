@@ -6,14 +6,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseService {
   static SupabaseService? _instance;
   static SupabaseService get instance => _instance ??= SupabaseService._();
-  
+
   SupabaseService._();
 
   /// Connection pool for managing concurrent requests
   final Map<String, Timer> _connectionTimers = {};
   final Map<String, int> _connectionPool = {};
   static const int _maxConcurrentConnections = 10;
-  
+
   /// Initialize with timeout and error handling
   Future<void> initialize({
     required String url,
@@ -25,11 +25,11 @@ class SupabaseService {
         url: url,
         anonKey: anonKey,
       );
-      
+
       await initFuture.timeout(timeout, onTimeout: () {
-        throw TimeoutException('Supabase initialization timed out after ${timeout.inSeconds} seconds');
+        throw TimeoutException(
+            'Supabase initialization timed out after ${timeout.inSeconds} seconds');
       });
-      
       debugPrint('SupabaseService: Initialized successfully');
     } catch (e) {
       debugPrint('SupabaseService: Initialization failed: $e');
@@ -45,18 +45,19 @@ class SupabaseService {
   }) async {
     // Check connection pool limit
     if (_connectionPool.length >= _maxConcurrentConnections) {
-      throw Exception('Connection pool limit reached ($_maxConcurrentConnections)');
+      throw Exception(
+          'Connection pool limit reached ($_maxConcurrentConnections)');
     }
-    
+
     // Track connection
     _connectionPool[queryId] = (_connectionPool[queryId] ?? 0) + 1;
-    
+
     try {
       final result = await query().timeout(timeout);
-      
+
       // Clean up connection tracking
       _cleanupConnection(queryId);
-      
+
       return result;
     } catch (e) {
       _cleanupConnection(queryId);
@@ -73,12 +74,12 @@ class SupabaseService {
   }) {
     Timer? debounceTimer;
     final controller = StreamController<T>();
-    
+
     final subscription = stream().listen(
       (data) {
         // Cancel previous timer
         debounceTimer?.cancel();
-        
+
         // Set new timer for debouncing
         debounceTimer = Timer(debounceDelay, () {
           if (!controller.isClosed) {
@@ -112,7 +113,7 @@ class SupabaseService {
   void _cleanupConnection(String queryId) {
     _connectionTimers[queryId]?.cancel();
     _connectionTimers.remove(queryId);
-    
+
     final count = _connectionPool[queryId] ?? 0;
     if (count <= 1) {
       _connectionPool.remove(queryId);

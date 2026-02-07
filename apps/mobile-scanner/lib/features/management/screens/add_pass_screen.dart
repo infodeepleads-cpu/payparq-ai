@@ -106,17 +106,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
     }
   }
 
-  void _resetForm() {
-    _plateController.clear();
-    _nameController.clear();
-    _phoneController.clear();
-    _emailController.clear();
-    _locationController.clear();
-    setState(() {
-      _startDate = DateTime.now();
-      _endDate = DateTime.now().add(const Duration(hours: 24));
-    });
-  }
+  // Removed unused _resetForm method to eliminate analyzer warning.
 
   void _updateSubscriptionDates() {
     if (_type == 'subscription') {
@@ -129,7 +119,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.of(context).padding.top;
+    // Removed unused topPadding variable to eliminate analyzer warning.
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -488,10 +478,12 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                 initialDate: current,
                 firstDate: DateTime.now().subtract(const Duration(days: 1)),
                 lastDate: DateTime.now().add(const Duration(days: 365)));
+            if (!mounted) return;
             if (date != null) {
               final time = await showTimePicker(
                   context: context,
                   initialTime: TimeOfDay.fromDateTime(current));
+              if (!mounted) return;
               if (time != null) {
                 onChanged(DateTime(
                     date.year, date.month, date.day, time.hour, time.minute));

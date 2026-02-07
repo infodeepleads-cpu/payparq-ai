@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../responsive/responsive_layout.dart';
 import '../logic/providers/auth_providers.dart';
-import '../widgets/pulsating_loading_screen.dart';
-import '../screens/hud_screen.dart'; // Mobile Scanner
+import '../logic/providers/locale_provider.dart';
+import '../screens/hud_screen.dart'
+    if (dart.library.html) '../screens/hud_screen_web.dart';
 import '../screens/admin/admin_dashboard_screen.dart'; // Users List
 import '../features/enforcement/screens/cases_list_view.dart';
 import '../features/enforcement/screens/upload_case_form.dart';
 import '../features/management/screens/passes_list_screen.dart';
-import '../features/management/screens/locations_screen.dart';
 import '../features/management/screens/add_staff_screen.dart';
-import '../features/intelligence/screens/dynamic_pricing_screen.dart';
-import '../features/intelligence/screens/analytics_dashboard_screen.dart';
-import '../features/intelligence/screens/finance_screen.dart';
+
 import '../features/management/screens/verification_inbox_screen.dart';
+import '../features/management/screens/locations_screen.dart';
 import '../screens/settings_screen.dart';
 import '../theme.dart';
+import '../features/intelligence/deferred/analytics_loader.dart'
+    deferred as analytics_mod;
+import '../features/intelligence/deferred/dynamic_pricing_loader.dart'
+    deferred as pricing_mod;
+import '../features/intelligence/deferred/finance_loader.dart'
+    deferred as finance_mod;
+import '../screens/admin/deferred/admin_loader.dart' deferred as admin_mod;
 
 class MasterScaffold extends ConsumerStatefulWidget {
   const MasterScaffold({super.key});
@@ -28,7 +35,7 @@ class MasterScaffold extends ConsumerStatefulWidget {
 
 class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
-  int _selectedIndex = 2;
+  int _selectedIndex = kIsWeb ? 8 : 2;
 
   @override
   void initState() {
@@ -251,27 +258,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   } // End of _buildScaffoldWithProfile
 
   Widget _buildMobileBody(bool isOfficer) {
-    // Shared indices for both mobile and desktop:
-    // 2: Dashboard (Home)
-    // 1: Scanner
-    // 0: Cases
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Add padding to make the whole screen move down when scrolling
-          const SizedBox(height: 16),
-          IndexedStack(
-            index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
-            children: const [
-              AdminDashboardScreen(),
-              HudScreen(),
-              CasesListView(),
-            ],
-          ),
-          // Add bottom padding for better scrolling experience
-          const SizedBox(height: 32),
-        ],
-      ),
+    return IndexedStack(
+      index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
+      children: const [
+        AdminDashboardScreen(),
+        HudScreen(),
+        CasesListView(),
+      ],
     );
   }
 
@@ -316,7 +309,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     final profileAsync = ref.watch(userProfileProvider);
 
     return profileAsync.when(
-      loading: () => const PulsatingLoadingScreen(),
+      loading: () {
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
       error: (err, stack) => Scaffold(
         body: Center(
           child: Column(
@@ -365,9 +364,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         final isManager = role == 'manager';
         final isSuperAdmin = role == 'super_admin';
         final isAdmin = role == 'admin';
+        final showAdvanced = ref.watch(showAdvancedTabsProvider);
 
         // Helper to determine if a menu item should be visible based on role
         bool shouldShow(int index) {
+          if (showAdvanced && (index == 6 || index == 7)) return true;
           if (index == 10) return isSuperAdmin; // Verification Inbox
           if (isSuperAdmin || isAdmin) return true;
           if (isManager) {
@@ -545,18 +546,31 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           Expanded(
                             child: IndexedStack(
                               index: _selectedIndex,
-                              children: const [
-                                CasesListView(),
-                                UploadCaseForm(),
-                                AdminDashboardScreen(),
-                                PassesListScreen(),
-                                LocationsScreen(),
-                                AddStaffScreen(),
-                                DynamicPricingScreen(),
-                                AnalyticsDashboardScreen(),
-                                SettingsScreen(),
-                                FinanceScreen(),
-                                VerificationInboxScreen(),
+                              children: [
+                                const CasesListView(),
+                                const UploadCaseForm(),
+                                _DeferredPage(
+                                  load: () => admin_mod.loadLibrary(),
+                                  build: () => admin_mod.buildAdminDashboard(),
+                                ),
+                                const PassesListScreen(),
+                                const LocationsScreen(),
+                                const AddStaffScreen(),
+                                _DeferredPage(
+                                  load: () => pricing_mod.loadLibrary(),
+                                  build: () =>
+                                      pricing_mod.buildDynamicPricing(),
+                                ),
+                                _DeferredPage(
+                                  load: () => analytics_mod.loadLibrary(),
+                                  build: () => analytics_mod.buildAnalytics(),
+                                ),
+                                const SettingsScreen(),
+                                _DeferredPage(
+                                  load: () => finance_mod.loadLibrary(),
+                                  build: () => finance_mod.buildFinance(),
+                                ),
+                                const VerificationInboxScreen(),
                               ],
                             ),
                           ),
@@ -679,10 +693,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     );
   }
 
-  Widget _buildFinalizingScreen() {
-    return const PulsatingLoadingScreen();
-  }
-
   Widget _buildSidebarItem(int index, String title, IconData icon,
       {bool isSelected = false, VoidCallback? onTapOverride}) {
     final bool active = isSelected || _selectedIndex == index;
@@ -713,5 +723,36 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         onTap: onTapOverride ?? () => _onItemTapped(index),
       ),
     );
+  }
+}
+
+class _DeferredPage extends StatefulWidget {
+  final Future<void> Function() load;
+  final Widget Function() build;
+  const _DeferredPage({required this.load, required this.build});
+  @override
+  State<_DeferredPage> createState() => _DeferredPageState();
+}
+
+class _DeferredPageState extends State<_DeferredPage> {
+  bool _loaded = false;
+  @override
+  void initState() {
+    super.initState();
+    widget.load().then((_) {
+      if (mounted) {
+        setState(() {
+          _loaded = true;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return widget.build();
   }
 }

@@ -1,3 +1,6 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
-final localeIsCroatianProvider = StateProvider<bool>((ref) => false);
+final localeIsCroatianProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
+final showAdvancedTabsProvider = StateProvider<bool>((ref) => false);

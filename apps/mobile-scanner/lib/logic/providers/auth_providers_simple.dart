@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final authStateProvider = StreamProvider<AuthState>((ref) {
@@ -9,7 +10,7 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 
 final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
-  
+
   if (user == null) {
     return Stream.value(null);
   }
@@ -24,7 +25,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
     'location_id': user.userMetadata?['location_id'],
     'full_name': user.userMetadata?['name'] ?? 'User',
   };
-  
+
   controller.add(immediateFallback);
 
   // Try to fetch from database
@@ -62,7 +63,8 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
   return null;
 });
 
-final availableLocationsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+final availableLocationsProvider =
+    StreamProvider<List<Map<String, dynamic>>>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
@@ -74,7 +76,7 @@ final availableLocationsProvider = StreamProvider<List<Map<String, dynamic>>>((r
   Future<void> fetch() async {
     try {
       dynamic query = Supabase.instance.client.from('locations').select();
-      
+
       if (role == 'admin') {
         query = query.eq('owner_id', user.id);
       } else if (role == 'officer' || role == 'manager') {
@@ -83,7 +85,8 @@ final availableLocationsProvider = StreamProvider<List<Map<String, dynamic>>>((r
             .select('location_id')
             .eq('officer_id', user.id);
 
-        final locIds = assignments.map((a) => a['location_id'] as String).toList();
+        final locIds =
+            assignments.map((a) => a['location_id'] as String).toList();
         if (locIds.isEmpty) {
           if (!controller.isClosed) controller.add([]);
           return;
@@ -92,7 +95,8 @@ final availableLocationsProvider = StreamProvider<List<Map<String, dynamic>>>((r
       }
 
       final data = await query.order('name');
-      final List<Map<String, dynamic>> locations = List<Map<String, dynamic>>.from(data);
+      final List<Map<String, dynamic>> locations =
+          List<Map<String, dynamic>>.from(data);
 
       if (!controller.isClosed) controller.add(locations);
     } catch (e) {

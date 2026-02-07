@@ -10,6 +10,9 @@ Future<Uint8List> buildPermitPdf(Map<String, dynamic> permit) async {
   final plate = (permit['plate'] ?? 'UNKNOWN').toString().toUpperCase();
   final locationId = (permit['location_id'] ?? 'N/A').toString();
   final price = ((permit['price'] as num?)?.toDouble() ?? 0.0);
+  final contactName = (permit['contact_name'] ?? '').toString();
+  final contactPhone = (permit['contact_phone'] ?? '').toString();
+  final contactEmail = (permit['contact_email'] ?? '').toString();
   final duration = (startTime != null && endTime != null)
       ? endTime.difference(startTime)
       : null;
@@ -50,13 +53,15 @@ Future<Uint8List> buildPermitPdf(Map<String, dynamic> permit) async {
                   pw.Container(
                     padding: const pw.EdgeInsets.all(10),
                     decoration: pw.BoxDecoration(
-                      color: pdf.PdfColors.black,
+                      color: pdf.PdfColors.white,
                       shape: pw.BoxShape.circle,
+                      border:
+                          pw.Border.all(color: pdf.PdfColors.black, width: 1),
                     ),
                     child: pw.Text(
                       type == 'subscription' ? 'S' : 'P',
                       style: pw.TextStyle(
-                        color: pdf.PdfColors.white,
+                        color: pdf.PdfColors.black,
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
                       ),
@@ -88,6 +93,25 @@ Future<Uint8List> buildPermitPdf(Map<String, dynamic> permit) async {
                         endTime != null
                             ? "${endTime.day}/${endTime.month}/${endTime.year} ${endTime.hour}:${endTime.minute.toString().padLeft(2, '0')}"
                             : '—'),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 12),
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: _pdfDetail(
+                        'Name', contactName.isNotEmpty ? contactName : '—'),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Expanded(
+                    child: _pdfDetail(
+                        'Phone', contactPhone.isNotEmpty ? contactPhone : '—'),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Expanded(
+                    child: _pdfDetail(
+                        'Email', contactEmail.isNotEmpty ? contactEmail : '—'),
                   ),
                 ],
               ),

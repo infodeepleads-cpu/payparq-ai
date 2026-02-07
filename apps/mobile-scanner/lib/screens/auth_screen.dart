@@ -36,6 +36,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final messenger = ScaffoldMessenger.of(context);
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,37 +58,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         );
 
         if (response.user != null && response.session == null) {
-          // If email confirmation is enabled, session will be null
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Signup successful! Please check your email to verify your account before logging in.'),
-                backgroundColor: Colors.blue,
-                duration: Duration(seconds: 10),
-              ),
-            );
-            setState(() => isSignIn = true); // Switch to sign in tab
-          }
+          if (!context.mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Signup successful! Please check your email to verify your account before logging in.'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 10),
+            ),
+          );
+          if (!mounted) return;
+          setState(() => isSignIn = true);
           return;
         }
       }
 
       // No manual Navigator.pushReplacement here. main.dart handles it.
     } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
-      }
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('An unexpected error occurred'),
-              backgroundColor: Colors.red),
-        );
-      }
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+            content: Text('An unexpected error occurred'),
+            backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -111,9 +109,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               final email = emailCtrl.text.trim();
               if (email.isEmpty) return;
               Navigator.pop(dialogContext);
-              await Supabase.instance.client.auth
-                  .resetPasswordForEmail(email);
-              if (!mounted) return;
+              await Supabase.instance.client.auth.resetPasswordForEmail(email);
+              if (!rootContext.mounted) return;
               ScaffoldMessenger.of(rootContext).showSnackBar(
                 const SnackBar(content: Text('Password reset link sent!')),
               );
@@ -147,119 +144,119 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _title,
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              final current =
-                                  ref.read(localeIsCroatianProvider);
-                              ref
-                                  .read(localeIsCroatianProvider.notifier)
-                                  .state = !current;
-                            },
-                            icon: const Icon(Icons.language,
-                                size: 16, color: Colors.grey),
-                            label: Text(isCroatian ? 'EN' : 'HR',
-                                style: GoogleFonts.inter(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      // Custom Tab Toggle
-                      Row(
-                        children: [
-                          _buildTabButton(_signInTab, true),
-                          const SizedBox(width: 24),
-                          _buildTabButton(_signUpTab, false),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        _subtitle(isCroatian),
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      _buildTextField(
-                          _emailLabel(isCroatian), _emailController),
-                      const SizedBox(height: 24),
-                      _buildTextField(
-                          _passwordLabel(isCroatian), _passwordController,
-                          isPassword: true),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: _handleAuth,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            isSignIn ? _signInTab : _signUpTab,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (!isSignIn) ...[
-                        const SizedBox(height: 24),
-                        Center(
-                          child: InkWell(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const TermsConditionsScreen(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _title,
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
                               ),
                             ),
+                            TextButton.icon(
+                              onPressed: () {
+                                final current =
+                                    ref.read(localeIsCroatianProvider);
+                                ref
+                                    .read(localeIsCroatianProvider.notifier)
+                                    .state = !current;
+                              },
+                              icon: const Icon(Icons.language,
+                                  size: 16, color: Colors.grey),
+                              label: Text(isCroatian ? 'EN' : 'HR',
+                                  style: GoogleFonts.inter(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        // Custom Tab Toggle
+                        Row(
+                          children: [
+                            _buildTabButton(_signInTab, true),
+                            const SizedBox(width: 24),
+                            _buildTabButton(_signUpTab, false),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          _subtitle(isCroatian),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        _buildTextField(
+                            _emailLabel(isCroatian), _emailController),
+                        const SizedBox(height: 24),
+                        _buildTextField(
+                            _passwordLabel(isCroatian), _passwordController,
+                            isPassword: true),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _handleAuth,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              elevation: 0,
+                            ),
                             child: Text(
-                              _termsText(isCroatian),
-                              textAlign: TextAlign.center,
+                              isSignIn ? _signInTab : _signUpTab,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!isSignIn) ...[
+                          const SizedBox(height: 24),
+                          Center(
+                            child: InkWell(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const TermsConditionsScreen(),
+                                ),
+                              ),
+                              child: Text(
+                                _termsText(isCroatian),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        Center(
+                          child: TextButton(
+                            onPressed: _showResetPasswordDialog,
+                            child: Text(
+                              _forgotPassword(isCroatian),
                               style: GoogleFonts.inter(
-                                color: Colors.grey[500],
-                                fontSize: 12,
-                                decoration: TextDecoration.underline,
+                                color: Colors.grey[600],
+                                fontSize: 14,
                               ),
                             ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      Center(
-                        child: TextButton(
-                          onPressed: _showResetPasswordDialog,
-                          child: Text(
-                            _forgotPassword(isCroatian),
-                            style: GoogleFonts.inter(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/foundation.dart';
 
 // v2.5.0: REDESIGN THEME (Grayscale/Minimalist)
 class AppTheme {
@@ -31,12 +32,17 @@ class AppTheme {
       ),
       cardColor: background,
       useMaterial3: true,
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light().textTheme.apply(
+      textTheme: kIsWeb
+          ? ThemeData.light().textTheme.apply(
               bodyColor: textPrimary,
               displayColor: textPrimary,
+            )
+          : GoogleFonts.interTextTheme(
+              ThemeData.light().textTheme.apply(
+                bodyColor: textPrimary,
+                displayColor: textPrimary,
+              ),
             ),
-      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: background,
         elevation: 0,
@@ -74,8 +80,11 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: primary,
-        contentTextStyle: GoogleFonts.inter(
-            color: textOnDark, fontSize: 14, fontWeight: FontWeight.w500),
+        contentTextStyle: kIsWeb
+            ? const TextStyle(
+                color: textOnDark, fontSize: 14, fontWeight: FontWeight.w500)
+            : GoogleFonts.inter(
+                color: textOnDark, fontSize: 14, fontWeight: FontWeight.w500),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         elevation: 8,

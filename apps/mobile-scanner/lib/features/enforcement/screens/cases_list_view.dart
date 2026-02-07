@@ -560,11 +560,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
             ),
@@ -603,7 +603,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         ),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : AppTheme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           border: isSelected ? null : Border.all(color: AppTheme.border),
         ),
         child: Text(
@@ -724,7 +724,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(color: AppTheme.border),
         ),
         child: Column(
@@ -744,7 +744,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(4),
                       ),
                       elevation: 0,
                     ),
@@ -828,7 +828,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
               ),
             ),
             child: const Text('View'),
