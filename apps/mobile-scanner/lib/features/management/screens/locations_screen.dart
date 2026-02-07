@@ -22,6 +22,7 @@ class LocationsScreen extends ConsumerStatefulWidget {
 class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   static const String _supportWhatsappDisplay = '+385 91 5963139';
   static const String _supportWhatsappNumber = '385915963139';
+  String _searchQuery = '';
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
@@ -71,7 +72,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Locations & Lots',
+                          'Locations & Hubs',
                           style: GoogleFonts.inter(
                             fontSize: 40,
                             fontWeight: FontWeight.bold,
@@ -109,6 +110,31 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   ],
                 ),
                 const SizedBox(height: 48),
+                SizedBox(
+                  width: 400,
+                  child: TextField(
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val.trim().toLowerCase();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      filled: true,
+                      fillColor: AppTheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // List
                 Expanded(
@@ -154,10 +180,20 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         );
                       }
 
+                      final filtered = locations.where((loc) {
+                        final name =
+                            (loc['name'] ?? '').toString().toLowerCase();
+                        final displayId =
+                            (loc['display_id'] ?? '').toString().toLowerCase();
+                        if (_searchQuery.isEmpty) return true;
+                        return name.contains(_searchQuery) ||
+                            displayId.contains(_searchQuery);
+                      }).toList();
+
                       return ListView.builder(
-                        itemCount: locations.length,
+                        itemCount: filtered.length,
                         itemBuilder: (context, index) {
-                          final loc = locations[index];
+                          final loc = filtered[index];
                           final name = loc['name'] ?? 'Unnamed Lot';
                           final displayId = loc['display_id'] ?? 'N/A';
                           final id = loc['id'].toString();
@@ -327,6 +363,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         showAction = isAdmin;
     }
 
+    final bool fixedWidthRequired = status == 'contact_required' ||
+        status == 'call_scheduled' ||
+        status == 'unverified';
+
     return InkWell(
       onTap: showAction
           ? () {
@@ -346,7 +386,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             }
           : null,
       child: Container(
-        constraints: BoxConstraints(minWidth: status == 'verified' ? 0 : 140),
+        constraints: BoxConstraints(
+          minWidth: status == 'verified' ? 0 : (fixedWidthRequired ? 160 : 140),
+          maxWidth: fixedWidthRequired ? 160 : double.infinity,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: badgeColor,

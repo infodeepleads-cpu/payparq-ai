@@ -122,7 +122,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: isWarning ? Colors.orange : Colors.black,
+              backgroundColor: Colors.black,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),

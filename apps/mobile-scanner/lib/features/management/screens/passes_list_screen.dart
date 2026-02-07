@@ -16,6 +16,7 @@ class PassesListScreen extends ConsumerStatefulWidget {
 }
 
 class _PassesListScreenState extends ConsumerState<PassesListScreen> {
+  String _searchQuery = '';
   @override
   Widget build(BuildContext context) {
     final permitsAsync = ref.watch(permitsStreamProvider);
@@ -79,6 +80,31 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
               ],
             ),
             const SizedBox(height: 48),
+            SizedBox(
+              width: 400,
+              child: TextField(
+                onChanged: (val) {
+                  setState(() {
+                    _searchQuery = val.trim().toLowerCase();
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: AppTheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // List
             Expanded(
@@ -99,10 +125,18 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                     );
                   }
 
+                  final filtered = permits.where((p) {
+                    final plate = (p['plate'] ?? '').toString().toLowerCase();
+                    final type = (p['type'] ?? '').toString().toLowerCase();
+                    if (_searchQuery.isEmpty) return true;
+                    return plate.contains(_searchQuery) ||
+                        type.contains(_searchQuery);
+                  }).toList();
+
                   return ListView.builder(
-                    itemCount: permits.length,
+                    itemCount: filtered.length,
                     itemBuilder: (context, index) {
-                      final permit = permits[index];
+                      final permit = filtered[index];
                       final type = permit['type'] ?? 'pass';
                       final plate = permit['plate'] ?? 'UNKNOWN';
                       final status = permit['status'] ?? 'active';

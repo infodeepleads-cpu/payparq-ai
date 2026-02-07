@@ -25,7 +25,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
-    final showAdvanced = ref.watch(showAdvancedTabsProvider);
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SingleChildScrollView(
@@ -64,101 +63,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _buildSection(
               title: isCroatian ? 'Jezik' : 'Language',
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 44,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            ref.read(localeIsCroatianProvider.notifier).state =
-                                false;
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: isCroatian ? 'Hrvatski' : 'English',
+                          isExpanded: true,
+                          style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'English', child: Text('English')),
+                            DropdownMenuItem(
+                                value: 'Hrvatski', child: Text('Hrvatski')),
+                          ],
+                          onChanged: (v) {
+                            if (v != null) {
+                              ref
+                                  .read(localeIsCroatianProvider.notifier)
+                                  .state = v == 'Hrvatski';
+                            }
                           },
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: isCroatian
-                                    ? Colors.grey[300]!
-                                    : Colors.black),
-                            backgroundColor:
-                                isCroatian ? Colors.white : Colors.black,
-                          ),
-                          child: Text(
-                            'English',
-                            style: TextStyle(
-                              color: isCroatian ? Colors.black : Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 44,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            ref.read(localeIsCroatianProvider.notifier).state =
-                                true;
-                          },
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: isCroatian
-                                    ? Colors.black
-                                    : Colors.grey[300]!),
-                            backgroundColor:
-                                isCroatian ? Colors.black : Colors.white,
-                          ),
-                          child: Text(
-                            'Hrvatski',
-                            style: TextStyle(
-                              color: isCroatian ? Colors.white : Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 48),
-            _buildSection(
-              title: isCroatian ? 'Napredne kartice' : 'Advanced Tabs',
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isCroatian
-                                ? 'Prikaži Analytics i Dinamičko određivanje cijena'
-                                : 'Show Analytics and Dynamic Pricing',
-                            style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isCroatian
-                                ? 'Omogućite kartice bez obzira na ulogu korisnika.'
-                                : 'Enable tabs regardless of user role.',
-                            style: const TextStyle(
-                                fontSize: 13, color: AppTheme.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: showAdvanced,
-                      activeThumbColor: Colors.black,
-                      onChanged: (v) =>
-                          ref.read(showAdvancedTabsProvider.notifier).state = v,
                     ),
                   ],
                 ),

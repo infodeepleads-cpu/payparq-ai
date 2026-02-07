@@ -616,8 +616,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child:
-                _buildStripeButton('Generate Daily Link', 'daily', Colors.black),
+            child: _buildStripeButton(
+                'Generate Daily Link', 'daily', Colors.black),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -666,7 +666,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final pngBytes = byteData!.buffer.asUint8List();
       if (kIsWeb) {
         final fileName =
-            'parking_notice_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
+            'daily_ticket_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
         downloadFileWeb(pngBytes, fileName);
       } else {
         if (mounted) {
@@ -760,7 +760,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   height: 96,
                   child: Container(
                     decoration: const BoxDecoration(
-                      color: Colors.red,
+                      color: Colors.black,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -828,7 +828,14 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Icon(Icons.chat, color: Colors.green, size: 14),
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: Image.asset(
+                                    'assets/images/whatsapp.jpg',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   '+385981974035  ID $displayId',
@@ -867,7 +874,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         ElevatedButton.icon(
           onPressed: _downloadNotice,
           icon: const Icon(Icons.download),
-          label: const Text('Download Parking Notice'),
+          label: const Text('Download Ticket'),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -888,6 +895,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       child: Container(
         width: 400,
         height: 600,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -897,7 +905,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             Positioned.fill(
               child: Image.asset(
                 'assets/images/sign_template_v2.png',
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 errorBuilder: (context, error, stack) => Container(
                   color: Colors.white,
                   child: Column(
@@ -939,7 +947,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               ),
             ),
             Align(
-              alignment: const Alignment(0, 0.28),
+              alignment: const Alignment(0, 0.24),
               child: SizedBox(
                 width: 180,
                 height: 180,
@@ -982,7 +990,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             Positioned(
               left: 52,
-              bottom: 4,
+              bottom: 44,
               child: Row(
                 children: [
                   Text(
@@ -1026,22 +1034,48 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Dynamic Pricing',
-              style: GoogleFonts.inter(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: -1,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'v1.1.2 • Seasonal & algorithmic price adjustments.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dynamic Pricing',
+                      style: GoogleFonts.inter(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'v1.1.2 • Seasonal & algorithmic price adjustments.',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: _saveSettings,
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: const Text('Save Changes'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 48),
 
@@ -1207,72 +1241,57 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStripeLinksSection(),
-                const SizedBox(width: 48),
                 Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _selectedLocation != null
-                            ? _buildSignColumn(
-                                (_selectedLocation!['display_id'] ??
-                                        _selectedLocation!['id'])
-                                    .toString(),
-                                _baseCheckoutUrl('daily'),
-                              )
-                            : Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.border),
-                                ),
-                                child: const Text('Select a location'),
-                              ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: _selectedLocation != null
-                            ? _buildParkingNoticeColumn(
-                                (_selectedLocation!['display_id'] ??
-                                        _selectedLocation!['id'])
-                                    .toString(),
-                                _baseCheckoutUrl('daily'),
-                              )
-                            : Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.border),
-                                ),
-                                child: const Text('Select a location'),
-                              ),
-                      ),
-                    ],
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: _selectedLocation != null
+                        ? _buildSignColumn(
+                            (_selectedLocation!['display_id'] ??
+                                    _selectedLocation!['id'])
+                                .toString(),
+                            _baseCheckoutUrl('daily'),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: const Text('Select a location'),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: _buildStripeLinksSection(),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: _selectedLocation != null
+                        ? _buildParkingNoticeColumn(
+                            (_selectedLocation!['display_id'] ??
+                                    _selectedLocation!['id'])
+                                .toString(),
+                            _baseCheckoutUrl('daily'),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: const Text('Select a location'),
+                          ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 64),
-            Center(
-              child: SizedBox(
-                width: 200,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _saveSettings,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save Changes'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                  ),
-                ),
-              ),
-            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),

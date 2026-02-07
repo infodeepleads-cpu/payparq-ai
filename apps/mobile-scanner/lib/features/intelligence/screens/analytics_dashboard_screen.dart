@@ -94,7 +94,7 @@ class _AnalyticsDashboardScreenState
 
               // Row 2: 1/4 Graphs with Arrows
               SizedBox(
-                height: 450,
+                height: 520,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -177,8 +177,8 @@ class _AnalyticsDashboardScreenState
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: _currentPage == index
-                                  ? Colors.black
-                                  : Colors.black.withValues(alpha: 0.1),
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade700.withValues(alpha: 0.1),
                             ),
                           ),
                         ),
@@ -206,7 +206,7 @@ class _AnalyticsDashboardScreenState
         border: Border.all(color: AppTheme.border),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.black, size: 20),
+        icon: Icon(icon, color: Colors.grey.shade700, size: 20),
         onPressed: onPressed,
       ),
     );
@@ -288,9 +288,9 @@ class _AnalyticsDashboardScreenState
                   Text(
                     title,
                     style: GoogleFonts.inter(
-                      fontSize: 24,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Colors.grey.shade800,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -314,7 +314,7 @@ class _AnalyticsDashboardScreenState
                     style: GoogleFonts.inter(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Colors.grey.shade800,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -390,7 +390,7 @@ class _AnalyticsDashboardScreenState
                         .map((e) => FlSpot(e.key.toDouble(), e.value.y))
                         .toList(),
                     isCurved: true,
-                    color: Colors.black,
+                    color: Colors.grey.shade700,
                     barWidth: 3,
                     isStrokeCapRound: true,
                     dotData: FlDotData(
@@ -398,14 +398,14 @@ class _AnalyticsDashboardScreenState
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
                         radius: 4,
-                        color: Colors.black,
+                        color: Colors.grey.shade700,
                         strokeWidth: 2,
                         strokeColor: Colors.white,
                       ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.grey.shade700.withValues(alpha: 0.05),
                     ),
                   ),
                 ],
@@ -424,8 +424,8 @@ class _AnalyticsDashboardScreenState
     final normalPct = total > 0 ? (normal / total * 100) : 0;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 60),
-      padding: const EdgeInsets.all(40),
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(64),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -434,16 +434,16 @@ class _AnalyticsDashboardScreenState
       child: Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: 1,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Colors.grey.shade800,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -458,44 +458,50 @@ class _AnalyticsDashboardScreenState
                 ),
                 const Spacer(),
                 _buildSpreadDetail('REGULAR REVENUE', normal,
-                    normalPct.toDouble(), Colors.black, Colors.white),
+                    normalPct.toDouble(), Colors.grey.shade800, Colors.white),
                 const SizedBox(height: 16),
-                _buildSpreadDetail('FINES & PENALTIES', fines,
-                    finesPct.toDouble(), const Color(0xFFE0E0E0), Colors.black),
+                _buildSpreadDetail(
+                    'FINES & PENALTIES',
+                    fines,
+                    finesPct.toDouble(),
+                    const Color(0xFFE0E0E0),
+                    Colors.grey.shade800),
                 const Spacer(),
               ],
             ),
           ),
           Expanded(
-            flex: 3,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 4,
-                centerSpaceRadius: 70,
-                sections: [
-                  PieChartSectionData(
-                    value: fines,
-                    title: '${finesPct.toStringAsFixed(0)}%',
-                    color: const Color(0xFFE0E0E0),
-                    radius: 50,
-                    titleStyle: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+            flex: 1,
+            child: Center(
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 4,
+                  centerSpaceRadius: 120,
+                  sections: [
+                    PieChartSectionData(
+                      value: fines,
+                      title: '${finesPct.toStringAsFixed(0)}%',
+                      color: const Color(0xFFE0E0E0),
+                      radius: 140,
+                      titleStyle: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
-                  ),
-                  PieChartSectionData(
-                    value: normal,
-                    title: '${normalPct.toStringAsFixed(0)}%',
-                    color: Colors.black,
-                    radius: 50,
-                    titleStyle: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    PieChartSectionData(
+                      value: normal,
+                      title: '${normalPct.toStringAsFixed(0)}%',
+                      color: Colors.grey.shade700,
+                      radius: 140,
+                      titleStyle: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
