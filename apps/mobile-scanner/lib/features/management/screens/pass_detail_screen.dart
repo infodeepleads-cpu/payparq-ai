@@ -3,16 +3,19 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../utils/permit_pdf.dart';
+import '../../../logic/providers/locale_provider.dart';
 
-class PassDetailScreen extends StatelessWidget {
+class PassDetailScreen extends ConsumerWidget {
   final Map<String, dynamic> permit;
 
   const PassDetailScreen({super.key, required this.permit});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     // Calculate fields
     final String type = permit['type'] ?? 'pass';
     final String plate = permit['plate'] ?? 'UNKNOWN';
@@ -42,7 +45,7 @@ class PassDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text('Permit Details',
+        title: Text(Lang.sel(isCroatian, 'Permit Details', 'Detalji dozvole'),
             style: GoogleFonts.inter(
                 color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
@@ -121,17 +124,20 @@ class PassDetailScreen extends StatelessWidget {
                     spacing: 64,
                     runSpacing: 32,
                     children: [
-                      _buildDetailItem('Location ID', locationId, Icons.map),
                       _buildDetailItem(
-                          'Name',
+                          Lang.sel(isCroatian, 'Location ID', 'ID lokacije'),
+                          locationId,
+                          Icons.map),
+                      _buildDetailItem(
+                          Lang.sel(isCroatian, 'Name', 'Ime'),
                           contactName.isNotEmpty ? contactName : '—',
                           Icons.person),
                       _buildDetailItem(
-                          'Phone',
+                          Lang.sel(isCroatian, 'Phone', 'Telefon'),
                           contactPhone.isNotEmpty ? contactPhone : '—',
                           Icons.phone),
                       _buildDetailItem(
-                          'Email',
+                          Lang.sel(isCroatian, 'Email', 'Email'),
                           contactEmail.isNotEmpty ? contactEmail : '—',
                           Icons.email_outlined),
                     ],
@@ -142,15 +148,20 @@ class PassDetailScreen extends StatelessWidget {
                     runSpacing: 32,
                     children: [
                       _buildDetailItem(
-                          'Entry Time',
+                          Lang.sel(isCroatian, 'Entry Time', 'Vrijeme ulaza'),
                           startTime != null ? _formatDate(startTime) : '—',
                           Icons.login),
                       _buildDetailItem(
-                          'Exit Time',
+                          Lang.sel(isCroatian, 'Exit Time', 'Vrijeme izlaza'),
                           endTime != null ? _formatDate(endTime) : '—',
                           Icons.logout),
-                      _buildDetailItem('Duration', durationString, Icons.timer),
-                      _buildDetailItem('Price', '€${price.toStringAsFixed(2)}',
+                      _buildDetailItem(
+                          Lang.sel(isCroatian, 'Duration', 'Trajanje'),
+                          durationString,
+                          Icons.timer),
+                      _buildDetailItem(
+                          Lang.sel(isCroatian, 'Price', 'Cijena'),
+                          '€${price.toStringAsFixed(2)}',
                           Icons.attach_money),
                     ],
                   ),
@@ -168,7 +179,8 @@ class PassDetailScreen extends StatelessWidget {
                           );
                         },
                         icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('Generate PDF'),
+                        label:
+                            Text(Lang.sel(isCroatian, 'Generate PDF', 'Generiraj PDF')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
@@ -186,12 +198,18 @@ class PassDetailScreen extends StatelessWidget {
                                 .trim();
                             if (kIsWeb) {
                               final subject =
-                                  Uri.encodeComponent('Your Parking Permit');
+                                  Uri.encodeComponent(Lang.sel(
+                                      isCroatian,
+                                      'Your Parking Permit',
+                                      'Vaša dozvola za parkiranje'));
                               final plateVal = (permit['plate'] ?? 'UNKNOWN')
                                   .toString()
                                   .toUpperCase();
                               final body = Uri.encodeComponent(
-                                  'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nPlease attach the generated PDF to this email.\n\nThank you.');
+                                  Lang.sel(
+                                      isCroatian,
+                                      'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nPlease attach the generated PDF to this email.\n\nThank you.',
+                                      'Poštovani korisniče dozvole,\n\nVaša dozvola za registraciju $plateVal je spremna.\nMolimo priložite generirani PDF uz ovu e-poštu.\n\nHvala.'));
                               final mailto =
                                   'mailto:${contactEmail.isNotEmpty ? contactEmail : ''}?subject=$subject&body=$body';
                               final uri = Uri.parse(mailto);
@@ -200,9 +218,10 @@ class PassDetailScreen extends StatelessWidget {
                               } else {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Unable to open email client')),
+                                  SnackBar(
+                                      content: Text(Lang.sel(isCroatian,
+                                          'Unable to open email client',
+                                          'Nije moguće otvoriti email klijent'))),
                                 );
                               }
                             } else {
@@ -214,12 +233,15 @@ class PassDetailScreen extends StatelessWidget {
                           } catch (e) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
+                              SnackBar(
+                                  content: Text(Lang.sel(isCroatian, 'Error: $e',
+                                      'Greška: $e'))),
                             );
                           }
                         },
                         icon: const Icon(Icons.email_outlined),
-                        label: const Text('Email PDF to Holder'),
+                        label: Text(Lang.sel(
+                            isCroatian, 'Email PDF to Holder', 'Pošalji PDF nositelju')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black,

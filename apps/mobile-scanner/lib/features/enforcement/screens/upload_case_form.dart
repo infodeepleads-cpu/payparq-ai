@@ -12,6 +12,7 @@ import '../../../../theme.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class UploadCaseForm extends ConsumerStatefulWidget {
   const UploadCaseForm({super.key});
@@ -70,7 +71,11 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
     if (!_formKey.currentState!.validate()) return;
     if (_image == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide photographic evidence.')),
+        SnackBar(
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider),
+                'Please provide photographic evidence.',
+                'Molimo priložite fotografijski dokaz.'))),
       );
       return;
     }
@@ -144,7 +149,11 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Case created successfully!')),
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Case created successfully!',
+                  'Predmet je uspješno kreiran!'))),
         );
         _resetForm();
         // Optional: Navigate back to cases list if desired
@@ -158,7 +167,9 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+              content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                  'Error: $e', 'Greška: $e'))),
         );
       }
     } finally {
@@ -183,6 +194,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     // Listen to location changes and update controller
     ref.listen<String?>(selectedLocationIdProvider, (previous, next) {
       if (next != null) {
@@ -200,7 +212,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Upload Case',
+                Lang.sel(isHr, 'Upload Case', 'Prenesi predmet'),
                 style: GoogleFonts.inter(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
@@ -210,7 +222,10 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Manually log a violation. Photographic evidence is required.',
+                Lang.sel(
+                    isHr,
+                    'Manually log a violation. Photographic evidence is required.',
+                    'Ručni unos prekršaja. Potreban je fotografijski dokaz.'),
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
@@ -226,30 +241,37 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                     child: Column(
                       children: [
                         _buildTextField(
-                          label: 'License Plate',
+                          label: Lang.sel(
+                              isHr, 'License Plate', 'Registarska oznaka'),
                           controller: _plateController,
-                          hint: 'MA679XX',
+                          hint: Lang.sel(isHr, 'MA679XX', 'MA679XX'),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
                                 RegExp(r'[A-Z0-9]'))
                           ],
                           textCapitalization: TextCapitalization.characters,
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                          validator: (v) => v!.isEmpty
+                              ? Lang.sel(isHr, 'Required', 'Obavezno')
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         _buildDropdown(),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Location / Zone',
+                          label: Lang.sel(
+                              isHr, 'Location / Zone', 'Lokacija / zona'),
                           controller: _locationController,
-                          hint: 'Zone A, Spot 42',
+                          hint: Lang.sel(
+                              isHr, 'Zone A, Spot 42', 'Zona A, Mjesto 42'),
                           enabled: false, // Fixed to current lot
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Officer Notes',
+                          label: Lang.sel(
+                              isHr, 'Officer Notes', 'Bilješke službenika'),
                           controller: _notesController,
-                          hint: 'Additional context...',
+                          hint: Lang.sel(isHr, 'Additional context...',
+                              'Dodatni kontekst...'),
                           maxLines: 3,
                         ),
                       ],
@@ -263,7 +285,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Evidence',
+                          Lang.sel(isHr, 'Evidence', 'Dokaz'),
                           style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold, fontSize: 14),
                         ),
@@ -292,7 +314,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                                           size: 40, color: Colors.grey[400]),
                                       const SizedBox(height: 12),
                                       Text(
-                                        'Capture Photo',
+                                        Lang.sel(isHr, 'Capture Photo',
+                                            'Snimi fotografiju'),
                                         style: TextStyle(
                                             color: Colors.grey[500],
                                             fontWeight: FontWeight.w500),
@@ -309,10 +332,13 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                               onPressed: () => setState(() => _image = null),
                               icon: const Icon(Icons.delete_outline,
                                   size: 18, color: Colors.red),
-                              label: const Text('Remove Photo',
-                                  style: TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold)),
+                              label: Text(
+                                Lang.sel(
+                                    isHr, 'Remove Photo', 'Ukloni fotografiju'),
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                       ],
@@ -338,9 +364,11 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                           width: 20,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
-                      : const Text('Issue Citation',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(
+                          Lang.sel(isHr, 'Issue Citation', 'Izdaj kaznu'),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
             ],
@@ -397,10 +425,11 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   }
 
   Widget _buildDropdown() {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Violation Type',
+        Text(Lang.sel(isHr, 'Violation Type', 'Vrsta prekršaja'),
             style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
@@ -426,7 +455,24 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                 'Blocking Driveway',
                 'Handicap Zone',
                 'Fire Hydrant'
-              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              ]
+                  .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text({
+                              'Illegal Parking': Lang.sel(isHr,
+                                  'Illegal Parking', 'Nepropisno parkiranje'),
+                              'Time Expired': Lang.sel(
+                                  isHr, 'Time Expired', 'Isteklo vrijeme'),
+                              'Blocking Driveway': Lang.sel(isHr,
+                                  'Blocking Driveway', 'Zatvaranje prilaza'),
+                              'Handicap Zone': Lang.sel(isHr, 'Handicap Zone',
+                                  'Mjesto za osobe s invaliditetom'),
+                              'Fire Hydrant': Lang.sel(
+                                  isHr, 'Fire Hydrant', 'Protupožarni hidrant'),
+                            }[e] ??
+                            e),
+                      ))
+                  .toList(),
               onChanged: (v) => setState(() => _violationType = v!),
             ),
           ),

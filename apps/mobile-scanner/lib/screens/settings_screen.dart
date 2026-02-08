@@ -32,19 +32,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isCroatian ? 'Postavke' : 'Settings',
-                style: const TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: -1)),
-            const SizedBox(height: 8),
-            Text(
-                isCroatian
-                    ? 'Upravljajte svojom organizacijom i postavkama sustava.'
-                    : 'Manage your organization and system preferences.',
-                style: const TextStyle(
-                    fontSize: 14, color: AppTheme.textSecondary)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isCroatian ? 'Postavke' : 'Settings',
+                        style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            letterSpacing: -1)),
+                    const SizedBox(height: 8),
+                    Text(
+                        isCroatian
+                            ? 'Upravljajte svojom organizacijom i postavkama sustava.'
+                            : 'Manage your organization and system preferences.',
+                        style: const TextStyle(
+                            fontSize: 14, color: AppTheme.textSecondary)),
+                  ],
+                ),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(isCroatian
+                                ? 'Postavke su ažurirane'
+                                : 'Settings updated successfully')),
+                      );
+                    },
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: Text(
+                        isCroatian ? 'Spremi promjene' : 'Save Changes'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 48),
             _buildSection(
               title:
@@ -119,29 +153,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       color: Colors.grey[500],
                       fontSize: 13,
                       decoration: TextDecoration.underline),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: SizedBox(
-                width: 200,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Settings updated successfully')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                  ),
-                  child: Text(isCroatian ? 'Spremi promjene' : 'Save Changes',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ),

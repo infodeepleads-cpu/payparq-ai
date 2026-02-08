@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../theme.dart';
+import '../../../logic/providers/locale_provider.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../repositories/parking_repository.dart';
 import 'add_pass_screen.dart';
@@ -19,6 +20,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
   String _searchQuery = '';
   @override
   Widget build(BuildContext context) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     final permitsAsync = ref.watch(permitsStreamProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
 
@@ -37,7 +39,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Permits',
+                      Lang.sel(isCroatian, 'Permits', 'Dozvole'),
                       style: GoogleFonts.inter(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -48,8 +50,10 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                     const SizedBox(height: 8),
                     Text(
                       selectedLocId != null
-                          ? 'Managing access for Lot: $selectedLocId'
-                          : 'Please select a lot in the top bar.',
+                          ? Lang.sel(isCroatian, 'Managing access for Lot: $selectedLocId',
+                              'Upravljanje pristupom za parkiralište: $selectedLocId')
+                          : Lang.sel(isCroatian, 'Please select a lot in the top bar.',
+                              'Odaberite parkiralište u gornjoj traci.'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
@@ -67,7 +71,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                       );
                     },
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add New'),
+                    label: Text(Lang.sel(isCroatian, 'Add New', 'Dodaj novu')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -89,7 +93,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                   });
                 },
                 decoration: InputDecoration(
-                  hintText: 'Search',
+                  hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   filled: true,
                   fillColor: AppTheme.surface,
@@ -118,7 +122,9 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                           Icon(Icons.card_membership_outlined,
                               size: 64, color: Colors.grey[200]),
                           const SizedBox(height: 16),
-                          Text('No permits found.',
+                          Text(
+                              Lang.sel(isCroatian, 'No permits found.',
+                                  'Nije pronađena nijedna dozvola.'),
                               style: TextStyle(color: Colors.grey[400])),
                         ],
                       ),
@@ -166,8 +172,10 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                           children: [
                             Text(
                               type == 'subscription'
-                                  ? 'Monthly Subscription'
-                                  : 'Guest Pass',
+                                  ? Lang.sel(isCroatian, 'Monthly Subscription',
+                                      'Mjesečna pretplata')
+                                  : Lang.sel(isCroatian, 'Guest Pass',
+                                      'Gostujuća dozvola'),
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -175,7 +183,8 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                               ),
                             ),
                             Text(
-                              'Valid until: Dec 2026',
+                              Lang.sel(isCroatian, 'Valid until: Dec 2026',
+                                  'Vrijedi do: Dec 2026'),
                               style: GoogleFonts.inter(
                                 color: AppTheme.textSecondary,
                                 fontSize: 14,
@@ -186,7 +195,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _buildStatusBadge(status),
+                            _buildStatusBadge(status, isCroatian),
                             const SizedBox(width: 24),
                             ElevatedButton(
                               onPressed: () {
@@ -208,7 +217,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
-                              child: const Text('View'),
+                              child: Text(Lang.sel(isCroatian, 'View', 'Pogledaj')),
                             ),
                             const SizedBox(width: 12),
                             IconButton(
@@ -226,7 +235,9 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                 },
                 loading: () => const Center(
                     child: CircularProgressIndicator(color: Colors.black)),
-                error: (err, _) => Center(child: Text('Error: $err')),
+                error: (err, _) => Center(
+                    child: Text(Lang.sel(
+                        isCroatian, 'Error: $err', 'Greška: $err'))),
               ),
             ),
           ],
@@ -235,7 +246,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(String status, bool isHr) {
     bool isActive = status.toLowerCase() == 'active';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -257,7 +268,14 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            status.toUpperCase(),
+            (() {
+              final s = status.toLowerCase();
+              if (s == 'active') return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
+              if (s == 'expired') return Lang.sel(isHr, 'EXPIRED', 'ISTEKLO');
+              if (s == 'revoked') return Lang.sel(isHr, 'REVOKED', 'OPOZVANO');
+              if (s == 'pending') return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              return status.toUpperCase();
+            })(),
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.bold,
@@ -270,23 +288,26 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
   }
 
   void _confirmDelete(String id) {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Permit'),
-        content: const Text(
-            'Are you sure you want to delete this permit? This action cannot be undone.'),
+        title: Text(Lang.sel(isCroatian, 'Delete Permit', 'Obriši dozvolu')),
+        content: Text(Lang.sel(isCroatian,
+            'Are you sure you want to delete this permit? This action cannot be undone.',
+            'Jeste li sigurni da želite obrisati ovu dozvolu? Ova radnja je nepovratna.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(Lang.sel(isCroatian, 'Cancel', 'Odustani'))),
           TextButton(
             onPressed: () async {
               final navigator = Navigator.of(context);
               await ref.read(parkingRepositoryProvider).deletePermit(id);
               navigator.pop();
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(Lang.sel(isCroatian, 'Delete', 'Obriši'),
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),

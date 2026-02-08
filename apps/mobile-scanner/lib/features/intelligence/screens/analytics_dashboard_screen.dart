@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../../../../logic/providers/analytics_provider.dart';
+import '../../../../logic/providers/locale_provider.dart';
 
 class AnalyticsDashboardScreen extends ConsumerStatefulWidget {
   const AnalyticsDashboardScreen({super.key});
@@ -27,6 +28,7 @@ class _AnalyticsDashboardScreenState
   @override
   Widget build(BuildContext context) {
     final analyticsAsync = ref.watch(analyticsProvider);
+    final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -38,7 +40,7 @@ class _AnalyticsDashboardScreenState
             children: [
               // Header
               Text(
-                'Analytics',
+                Lang.sel(isCroatian, 'Analytics', 'Analitika'),
                 style: GoogleFonts.inter(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
@@ -48,7 +50,10 @@ class _AnalyticsDashboardScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                'Monitor performance, revenue, and system risks.',
+                Lang.sel(
+                    isCroatian,
+                    'Monitor performance, revenue, and system risks.',
+                    'Pratite performanse, prihod i sustavne rizike.'),
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
@@ -68,22 +73,25 @@ class _AnalyticsDashboardScreenState
                   childAspectRatio: 1.6,
                   children: [
                     _buildMetricCard(
-                      'DAILY REVENUE',
+                      Lang.sel(isCroatian, 'DAILY REVENUE', 'DNEVNI PRIHOD'),
                       '€${data.dailyRevenue.toStringAsFixed(2)}',
                       Icons.euro,
                     ),
                     _buildMetricCard(
-                      'MONTHLY REV AVG',
+                      Lang.sel(isCroatian, 'MONTHLY REV AVG',
+                          'MJESEČNI PROSJEČNI PRIHOD'),
                       '€${data.monthlyRevenueAvg.toStringAsFixed(2)}',
                       Icons.calendar_month,
                     ),
                     _buildMetricCard(
-                      'DAILY OCCUPANCY',
+                      Lang.sel(
+                          isCroatian, 'DAILY OCCUPANCY', 'DNEVNA POPUNJENOST'),
                       '${data.dailyOccupancy.toStringAsFixed(1)}%',
                       Icons.pie_chart_outline,
                     ),
                     _buildMetricCard(
-                      'MONTHLY AVG OCCUPANCY',
+                      Lang.sel(isCroatian, 'MONTHLY AVG OCCUPANCY',
+                          'MJESEČNA PROSJEČNA POPUNJENOST'),
                       '${data.monthlyOccupancyAvg.toStringAsFixed(1)}%',
                       Icons.analytics_outlined,
                     ),
@@ -107,30 +115,36 @@ class _AnalyticsDashboardScreenState
                       },
                       children: [
                         _buildGraphCard(
-                          'AVG REVENUE',
+                          Lang.sel(
+                              isCroatian, 'AVG REVENUE', 'PROSJEČNI PRIHOD'),
                           data.revenueChart,
                           Colors.black,
                           '€',
-                          'Average daily revenue trends over the last 30 days.',
+                          Lang.sel(
+                              isCroatian,
+                              'Average daily revenue trends over the last 30 days.',
+                              'Prosječni dnevni prihodi zadnjih 30 dana.'),
                         ),
                         _buildGraphCard(
-                          'TOTAL NET',
+                          Lang.sel(isCroatian, 'TOTAL NET', 'UKUPNO NETO'),
                           data.netRevenueChart,
                           Colors.black,
                           '€',
-                          'Net earnings after processing fees and operational costs.',
+                          Lang.sel(
+                              isCroatian,
+                              'Net earnings after processing fees and operational costs.',
+                              'Neto zarada nakon troškova obrade i operativnih troškova.'),
                         ),
                         _buildGraphCard(
-                          'AVG OCCUPANCY',
+                          Lang.sel(isCroatian, 'AVG OCCUPANCY',
+                              'PROSJEČNA POPUNJENOST'),
                           data.occupancyChart,
                           Colors.black,
                           '%',
-                          'Average parking lot occupancy rate distribution.',
-                        ),
-                        _buildSpreadGraph(
-                          'REVENUE SPREAD',
-                          data.revenueFines,
-                          data.revenueNormal,
+                          Lang.sel(
+                              isCroatian,
+                              'Average parking lot occupancy rate distribution.',
+                              'Prosječna popunjenost parkirališta.'),
                         ),
                       ],
                     ),
@@ -151,7 +165,7 @@ class _AnalyticsDashboardScreenState
                     ),
                     Positioned(
                       right: 0,
-                      child: _currentPage < 3
+                      child: _currentPage < 2
                           ? _buildArrowButton(
                               icon: Icons.arrow_forward_ios,
                               onPressed: () {
@@ -169,7 +183,7 @@ class _AnalyticsDashboardScreenState
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
-                          4,
+                          3,
                           (index) => Container(
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             width: 8,
@@ -413,146 +427,6 @@ class _AnalyticsDashboardScreenState
             ),
           ),
           const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpreadGraph(String title, double fines, double normal) {
-    final total = fines + normal;
-    final finesPct = total > 0 ? (fines / total * 100) : 0;
-    final normalPct = total > 0 ? (normal / total * 100) : 0;
-
-    return Container(
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(64),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Distribution between penalty charges and regular parking.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const Spacer(),
-                _buildSpreadDetail('REGULAR REVENUE', normal,
-                    normalPct.toDouble(), Colors.grey.shade800, Colors.white),
-                const SizedBox(height: 16),
-                _buildSpreadDetail(
-                    'FINES & PENALTIES',
-                    fines,
-                    finesPct.toDouble(),
-                    const Color(0xFFE0E0E0),
-                    Colors.grey.shade800),
-                const Spacer(),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 4,
-                  centerSpaceRadius: 120,
-                  sections: [
-                    PieChartSectionData(
-                      value: fines,
-                      title: '${finesPct.toStringAsFixed(0)}%',
-                      color: const Color(0xFFE0E0E0),
-                      radius: 140,
-                      titleStyle: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                    PieChartSectionData(
-                      value: normal,
-                      title: '${normalPct.toStringAsFixed(0)}%',
-                      color: Colors.grey.shade700,
-                      radius: 140,
-                      titleStyle: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpreadDetail(
-      String label, double value, double pct, Color color, Color textColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-        border:
-            color == Colors.white ? Border.all(color: AppTheme.border) : null,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: textColor.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '€${value.toStringAsFixed(2)}',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            '${pct.toStringAsFixed(1)}%',
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: textColor,
-            ),
-          ),
         ],
       ),
     );

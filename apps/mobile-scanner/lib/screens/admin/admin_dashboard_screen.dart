@@ -10,6 +10,7 @@ import '../../features/management/screens/pass_detail_screen.dart'
 import '../../logic/providers/dashboard_providers.dart';
 import '../../logic/providers/auth_providers.dart';
 import '../../widgets/admin_data_card.dart';
+import '../../logic/providers/locale_provider.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -55,6 +56,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildHeader(bool isDesktop) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 48 : 24,
@@ -74,7 +76,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Home',
+                        Lang.sel(isHr, 'Home', 'Početna'),
                         style: GoogleFonts.inter(
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
@@ -84,7 +86,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Monitor all parking activity and lot occupancy.',
+                        Lang.sel(
+                            isHr,
+                            'Monitor all parking activity and lot occupancy.',
+                            'Pratite sve aktivnosti parkiranja i popunjenost parkirališta.'),
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppTheme.textSecondary,
@@ -98,7 +103,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     children: [
                       _buildHeaderActionButton(
                         icon: Icons.menu_book_outlined,
-                        label: 'Instructions',
+                        label: Lang.sel(isHr, 'Instructions', 'Upute'),
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         onTap: () {
@@ -113,7 +118,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       const SizedBox(width: 12),
                       _buildHeaderActionButton(
                         icon: Icons.android,
-                        label: 'Download App',
+                        label: Lang.sel(
+                            isHr, 'Download App', 'Preuzmi aplikaciju'),
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         onTap: () async {
@@ -135,7 +141,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Home',
+                  Lang.sel(isHr, 'Home', 'Početna'),
                   style: GoogleFonts.inter(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -145,7 +151,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Monitor all parking activity and lot occupancy.',
+                  Lang.sel(
+                      isHr,
+                      'Monitor all parking activity and lot occupancy.',
+                      'Pratite sve aktivnosti parkiranja i popunjenost parkirališta.'),
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppTheme.textSecondary,
@@ -157,7 +166,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     children: [
                       _buildHeaderActionButton(
                         icon: Icons.menu_book_outlined,
-                        label: 'Instructions',
+                        label: Lang.sel(isHr, 'Instructions', 'Upute'),
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         onTap: () {
@@ -172,7 +181,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       const SizedBox(width: 12),
                       _buildHeaderActionButton(
                         icon: Icons.android,
-                        label: 'Download App',
+                        label: Lang.sel(
+                            isHr, 'Download App', 'Preuzmi aplikaciju'),
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         onTap: () async {
@@ -233,6 +243,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildSearchAndFilter(bool isDesktop) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -243,7 +254,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             onChanged: (v) =>
                 ref.read(dashboardSearchProvider.notifier).state = v,
             decoration: InputDecoration(
-              hintText: 'Search...',
+              hintText: Lang.sel(isHr, 'Search...', 'Pretraži...'),
               prefixIcon: const Icon(Icons.search, size: 20),
               filled: true,
               fillColor: AppTheme.surface,
@@ -263,11 +274,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterButton('All'),
+              _buildFilterButton(Lang.sel(isHr, 'All', 'Sve')),
               const SizedBox(width: 12),
-              _buildFilterButton('Active'),
+              _buildFilterButton(Lang.sel(isHr, 'Active', 'Aktivno')),
               const SizedBox(width: 12),
-              _buildFilterButton('Inactive'),
+              _buildFilterButton(Lang.sel(isHr, 'Inactive', 'Neaktivno')),
             ],
           ),
         ),
@@ -309,6 +320,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final profile = ref.watch(userProfileProvider).value;
     final isAdmin = profile?['role'] == 'admin';
+    final isHr = ref.watch(localeIsCroatianProvider);
 
     return availableLocsAsync.when(
       data: (locs) {
@@ -327,7 +339,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         size: 64, color: Colors.grey[300]),
                     const SizedBox(height: 16),
                     Text(
-                      'No sessions or subscribers found.',
+                      Lang.sel(isHr, 'No sessions or subscribers found.',
+                          'Nema sesija ili pretplatnika.'),
                       style: GoogleFonts.inter(
                           color: Colors.grey[500], fontSize: 16),
                     ),
@@ -358,6 +371,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildFirstTimeAdminView() {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -373,11 +387,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Welcome to PayParq!',
+            Lang.sel(isHr, 'Welcome to PayParq!', 'Dobrodošli u PayParq!'),
             style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text('To get started, you need to register your first lot.'),
+          Text(Lang.sel(
+              isHr,
+              'To get started, you need to register your first lot.',
+              'Za početak, potrebno je registrirati vaše prvo parkiralište.')),
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
@@ -386,13 +403,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               // In a real app we'd use a router or a callback.
               // For now, let's just show a message.
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content:
-                        Text('Please click "Add Location" in the sidebar.')),
+                SnackBar(
+                    content: Text(Lang.sel(
+                        isHr,
+                        'Please click "Add Location" in the sidebar.',
+                        'Molimo kliknite "Dodaj lokaciju" u bočnoj traci.'))),
               );
             },
             icon: const Icon(Icons.add),
-            label: const Text('Register First Lot'),
+            label: Text(Lang.sel(
+                isHr, 'Register First Lot', 'Registriraj prvo parkiralište')),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
@@ -405,6 +425,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildErrorView(String error) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -414,11 +435,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             const Icon(Icons.wifi_off_outlined,
                 size: 48, color: Colors.orangeAccent),
             const SizedBox(height: 16),
-            Text('Syncing data...',
+            Text(
+                Lang.sel(isHr, 'Syncing data...', 'Sinkronizacija podataka...'),
                 style:
                     GoogleFonts.inter(color: Colors.grey[600], fontSize: 16)),
             const SizedBox(height: 8),
-            Text('We are having trouble connecting to the live stream.',
+            Text(
+                Lang.sel(
+                    isHr,
+                    'We are having trouble connecting to the live stream.',
+                    'Imamo poteškoća s povezivanjem na prijenos uživo.'),
                 textAlign: TextAlign.center,
                 style:
                     GoogleFonts.inter(color: Colors.grey[400], fontSize: 12)),
@@ -429,7 +455,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ref.invalidate(unifiedDashboardProvider);
               },
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry Connection'),
+              label: Text(Lang.sel(
+                  isHr, 'Retry Connection', 'Pokušaj ponovno povezivanje')),
             ),
           ],
         ),
@@ -438,6 +465,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildSessionItem(Map<String, dynamic> s, bool isDesktop) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     final plate = s['plate'] ?? 'UNKNOWN';
     final isPaid = s['payment_status'] == 'paid' || s['status'] == 'active';
 
@@ -524,7 +552,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             s['contact_name'] ??
                 s['email'] ??
                 s['contact_email'] ??
-                'Guest User',
+                Lang.sel(isHr, 'Guest User', 'Gost korisnik'),
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -563,7 +591,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            child: const Text('View'),
+            child: Text(Lang.sel(isHr, 'View', 'Pogledaj')),
           ),
         ],
       ),
@@ -613,6 +641,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Widget _buildStatusBadge(String status, bool isPaid) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     final dotColor = isPaid ? Colors.green[400] : Colors.red[400];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -634,7 +663,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            status,
+            (() {
+              final s = status.toUpperCase();
+              if (s == 'ACTIVE') {
+                return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
+              }
+              if (s == 'INACTIVE') {
+                return Lang.sel(isHr, 'INACTIVE', 'NEAKTIVNO');
+              }
+              return s;
+            })(),
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.bold,

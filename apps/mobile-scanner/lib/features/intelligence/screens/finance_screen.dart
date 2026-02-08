@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
 import '../../../../logic/providers/auth_providers.dart';
+import '../../../../logic/providers/locale_provider.dart';
 
 class FinanceScreen extends ConsumerStatefulWidget {
   const FinanceScreen({super.key});
@@ -40,7 +41,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -73,7 +75,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -86,6 +89,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
+    final isHr = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -101,7 +105,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Finance',
+                  Lang.sel(isHr, 'Finance', 'Financije'),
                   style: GoogleFonts.inter(
                     fontSize: 40,
                     fontWeight: FontWeight.bold,
@@ -111,7 +115,10 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Manage your payouts, commissions, and Stripe connection.',
+                  Lang.sel(
+                      isHr,
+                      'Manage your payouts, commissions, and Stripe connection.',
+                      'Upravljajte isplatama, provizijama i Stripe povezivanjem.'),
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: AppTheme.textSecondary,
@@ -124,12 +131,14 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) =>
+            Center(child: Text(Lang.sel(isHr, 'Error: $e', 'Greška: $e'))),
       ),
     );
   }
 
   Widget _buildStripeStatusCard(bool isConnected, String? accountId) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
@@ -160,7 +169,10 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        isConnected ? 'CONNECTED' : 'ACTION REQUIRED',
+                        isConnected
+                            ? Lang.sel(isHr, 'CONNECTED', 'POVEZANO')
+                            : Lang.sel(
+                                isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA'),
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 10,
@@ -183,8 +195,14 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                 const SizedBox(height: 24),
                 Text(
                   isConnected
-                      ? 'Your account is ready to receive payouts.'
-                      : 'Connect your Stripe Express account to start receiving automated payouts.',
+                      ? Lang.sel(
+                          isHr,
+                          'Your account is ready to receive payouts.',
+                          'Vaš račun je spreman za primanje isplata.')
+                      : Lang.sel(
+                          isHr,
+                          'Connect your Stripe Express account to start receiving automated payouts.',
+                          'Povežite svoj Stripe Express račun za automatske isplate.'),
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 24,
@@ -195,8 +213,14 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                 const SizedBox(height: 8),
                 Text(
                   isConnected
-                      ? 'All parking revenue (minus commissions) is automatically transferred to your IBAN.'
-                      : 'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
+                      ? Lang.sel(
+                          isHr,
+                          'All parking revenue (minus commissions) is automatically transferred to your IBAN.',
+                          'Sav prihod od parkiranja (minus provizije) automatski se prenosi na vaš IBAN.')
+                      : Lang.sel(
+                          isHr,
+                          'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
+                          'Uključivanje traje manje od 2 minute putem sigurnog Stripe sustava.'),
                   style: GoogleFonts.inter(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 14,
@@ -237,7 +261,11 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                           Icon(isConnected ? Icons.dashboard : Icons.add_link),
                           const SizedBox(width: 12),
                           Text(
-                            isConnected ? 'OPEN DASHBOARD' : 'CONNECT STRIPE',
+                            isConnected
+                                ? Lang.sel(isHr, 'OPEN DASHBOARD',
+                                    'OTVORI NADZORNU PLOČU')
+                                : Lang.sel(
+                                    isHr, 'CONNECT STRIPE', 'POVEŽI STRIPE'),
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -252,7 +280,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                   child: TextButton(
                     onPressed: () {}, // Future: Update IBAN/Identity
                     child: Text(
-                      'Update Details',
+                      Lang.sel(isHr, 'Update Details', 'Ažuriraj podatke'),
                       style: GoogleFonts.inter(
                         color: Colors.white.withValues(alpha: 0.6),
                       ),

@@ -153,6 +153,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       String? selectedLocId,
       bool isOfficer) {
     final displayLocId = selectedLocId ?? profile['location_id'];
+    final isHr = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -220,7 +221,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Select Active Lot',
+                                Text(
+                                    Lang.sel(isHr, 'Select Active Lot',
+                                        'Odaberite aktivno parkiralište'),
                                     style: GoogleFonts.inter(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18)),
@@ -269,6 +272,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildMobileBottomNav(bool isOfficer) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return BottomNavigationBar(
       backgroundColor: Colors.white,
       selectedItemColor: AppTheme.primary,
@@ -284,21 +288,21 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           _onItemTapped(0); // Cases
         }
       },
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          activeIcon: Icon(Icons.dashboard),
-          label: 'Home',
+          icon: const Icon(Icons.dashboard_outlined),
+          activeIcon: const Icon(Icons.dashboard),
+          label: Lang.sel(isHr, 'Home', 'Početna'),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.qr_code_scanner_outlined),
-          activeIcon: Icon(Icons.qr_code_scanner),
-          label: 'Scanner',
+          icon: const Icon(Icons.qr_code_scanner_outlined),
+          activeIcon: const Icon(Icons.qr_code_scanner),
+          label: Lang.sel(isHr, 'Scanner', 'Skeniranje'),
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.assignment_outlined),
-          activeIcon: Icon(Icons.assignment),
-          label: 'Cases',
+          icon: const Icon(Icons.assignment_outlined),
+          activeIcon: const Icon(Icons.assignment),
+          label: Lang.sel(isHr, 'Cases', 'Predmeti'),
         ),
       ],
     );
@@ -316,41 +320,47 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           ),
         );
       },
-      error: (err, stack) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              Text(
-                'Could not load your profile',
-                style: GoogleFonts.inter(
-                    fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Check your connection or contact support.',
-                style: GoogleFonts.inter(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () async {
-                  await Supabase.instance.client.auth.refreshSession();
-                  ref.invalidate(userProfileProvider);
-                  ref.invalidate(availableLocationsProvider);
-                },
-                child: const Text('Retry Connection'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => Supabase.instance.client.auth.signOut(),
-                child: const Text('Sign Out'),
-              ),
-            ],
+      error: (err, stack) {
+        final isHr = ref.watch(localeIsCroatianProvider);
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text(
+                  Lang.sel(isHr, 'Could not load your profile',
+                      'Nije moguće učitati vaš profil'),
+                  style: GoogleFonts.inter(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  Lang.sel(isHr, 'Check your connection or contact support.',
+                      'Provjerite vezu ili kontaktirajte podršku.'),
+                  style: GoogleFonts.inter(color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.refreshSession();
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(availableLocationsProvider);
+                  },
+                  child: Text(Lang.sel(
+                      isHr, 'Retry Connection', 'Pokušaj ponovno povezivanje')),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Supabase.instance.client.auth.signOut(),
+                  child: Text(Lang.sel(isHr, 'Sign Out', 'Odjava')),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
       data: (profile) {
         if (profile == null) {
           // If we have a user but no profile, and it's not loading anymore,
@@ -365,6 +375,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         final isSuperAdmin = role == 'super_admin';
         final isAdmin = role == 'admin';
         final showAdvanced = ref.watch(showAdvancedTabsProvider);
+        final isHr = ref.watch(localeIsCroatianProvider);
 
         // Helper to determine if a menu item should be visible based on role
         bool shouldShow(int index) {
@@ -449,42 +460,64 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                               children: [
                                 if (shouldShow(2))
                                   _buildSidebarItem(
-                                      2, 'Home', Icons.dashboard_outlined),
+                                      2,
+                                      Lang.sel(isHr, 'Home', 'Početna'),
+                                      Icons.dashboard_outlined),
                                 if (shouldShow(1))
-                                  _buildSidebarItem(1, 'Upload Case',
+                                  _buildSidebarItem(
+                                      1,
+                                      Lang.sel(isHr, 'Upload Case',
+                                          'Prenesi predmet'),
                                       Icons.drive_folder_upload_outlined),
                                 if (shouldShow(0))
                                   _buildSidebarItem(
-                                      0, 'Cases', Icons.folder_outlined),
+                                      0,
+                                      Lang.sel(isHr, 'Cases', 'Predmeti'),
+                                      Icons.folder_outlined),
                                 if (shouldShow(3) ||
                                     shouldShow(4) ||
                                     shouldShow(5)) ...[
                                   const SizedBox(height: 16),
                                   if (shouldShow(3))
-                                    _buildSidebarItem(3, 'Permits',
+                                    _buildSidebarItem(
+                                        3,
+                                        Lang.sel(isHr, 'Permits', 'Dozvole'),
                                         Icons.card_membership_outlined),
                                   if (shouldShow(4))
-                                    _buildSidebarItem(4, 'Locations',
+                                    _buildSidebarItem(
+                                        4,
+                                        Lang.sel(isHr, 'Locations', 'Lokacije'),
                                         Icons.location_on_outlined),
                                   if (shouldShow(5))
                                     _buildSidebarItem(
-                                        5, 'Staff', Icons.people_outline),
+                                        5,
+                                        Lang.sel(isHr, 'Staff', 'Osoblje'),
+                                        Icons.people_outline),
                                   if (shouldShow(10))
                                     _buildSidebarItem(
-                                        10, 'Inbox', Icons.mail_outline),
+                                        10,
+                                        Lang.sel(isHr, 'Inbox', 'Sandučić'),
+                                        Icons.mail_outline),
                                 ],
                                 if (shouldShow(6) ||
                                     shouldShow(7) ||
                                     shouldShow(9)) ...[
                                   const SizedBox(height: 16),
                                   if (shouldShow(6))
-                                    _buildSidebarItem(6, 'Pricing',
+                                    _buildSidebarItem(
+                                        6,
+                                        Lang.sel(isHr, 'Pricing', 'Cijene'),
                                         Icons.price_change_outlined),
                                   if (shouldShow(7))
-                                    _buildSidebarItem(7, 'Analytics',
+                                    _buildSidebarItem(
+                                        7,
+                                        Lang.sel(
+                                            isHr, 'Analytics', 'Analitika'),
                                         Icons.insights_outlined),
                                   if (shouldShow(9))
-                                    _buildSidebarItem(9, 'Finance',
+                                    _buildSidebarItem(
+                                        9,
+                                        Lang.sel(isHr, 'Finance', 'Financije'),
                                         Icons.account_balance_outlined),
                                 ],
                               ],
@@ -493,7 +526,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: _buildSidebarItem(
-                                99, 'Sign Out', Icons.logout,
+                                99,
+                                Lang.sel(isHr, 'Sign Out', 'Odjava'),
+                                Icons.logout,
                                 onTapOverride: _handleLogout),
                           ),
                           const SizedBox(height: 12),
@@ -590,6 +625,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   Widget _buildHeaderLocationSelector() {
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final isHr = ref.watch(localeIsCroatianProvider);
 
     return Row(
       children: [
@@ -597,7 +633,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           icon: const Icon(Icons.settings_outlined,
               color: Colors.white70, size: 20),
           onPressed: () => _onItemTapped(8), // Navigate to Settings
-          tooltip: 'Settings',
+          tooltip: Lang.sel(isHr, 'Settings', 'Postavke'),
         ),
         const SizedBox(width: 8),
         const VerticalDivider(
@@ -653,6 +689,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildErrorScreen(String message) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Scaffold(
       body: Center(
         child: Padding(
@@ -663,7 +700,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 24),
               Text(
-                'Connection Error',
+                Lang.sel(isHr, 'Connection Error', 'Greška povezivanja'),
                 style: GoogleFonts.inter(
                     fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -679,12 +716,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                   ref.invalidate(userProfileProvider);
                   ref.invalidate(availableLocationsProvider);
                 },
-                child: const Text('Retry Connection'),
+                child: Text(Lang.sel(
+                    isHr, 'Retry Connection', 'Pokušaj ponovno povezivanje')),
               ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: _handleLogout,
-                child: const Text('Sign Out'),
+                child: Text(Lang.sel(isHr, 'Sign Out', 'Odjava')),
               ),
             ],
           ),

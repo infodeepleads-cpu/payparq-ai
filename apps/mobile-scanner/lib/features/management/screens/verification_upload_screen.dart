@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:payparq_scanner/utils/web_download_helper.dart';
 import '../../../../theme.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class VerificationUploadScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> location;
@@ -118,7 +119,11 @@ class _VerificationUploadScreenState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating sign: $e')),
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Error generating sign: $e',
+                  'Greška pri generiranju znaka: $e'))),
         );
       }
     }
@@ -127,7 +132,11 @@ class _VerificationUploadScreenState
   Future<void> _submitVerification() async {
     if (_selectedImages.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload at least 3 photos.')),
+        SnackBar(
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider),
+                'Please upload at least 3 photos.',
+                'Prenesite najmanje 3 fotografije.'))),
       );
       return;
     }
@@ -187,8 +196,11 @@ class _VerificationUploadScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification submitted successfully!'),
+          SnackBar(
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider),
+                'Verification submitted successfully!',
+                'Verifikacija uspješno poslana!')),
             backgroundColor: Colors.green,
           ),
         );
@@ -198,7 +210,8 @@ class _VerificationUploadScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -210,6 +223,7 @@ class _VerificationUploadScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     final String displayId = widget.location['display_id'] ?? 'N/A';
     final String status =
         widget.location['verification_status'] ?? 'unverified';
@@ -230,7 +244,8 @@ class _VerificationUploadScreenState
         elevation: 0,
         centerTitle: false,
         title: Text(
-          'Verify Lot: ${widget.location['name']}',
+          Lang.sel(isHr, 'Verify Lot: ${widget.location['name']}',
+              'Verifikacija lokacije: ${widget.location['name']}'),
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -256,15 +271,21 @@ class _VerificationUploadScreenState
               _buildStatusBanner(
                 Icons.hourglass_empty,
                 Colors.orange,
-                'Verification Pending',
-                'We are currently reviewing your photos. This usually takes 24-48 hours.',
+                Lang.sel(isHr, 'Verification Pending', 'Verifikacija u tijeku'),
+                Lang.sel(
+                    isHr,
+                    'We are currently reviewing your photos. This usually takes 24-48 hours.',
+                    'Trenutno pregledavamo vaše fotografije. Obično traje 24–48 sati.'),
               )
             else if (isVerified)
               _buildStatusBanner(
                 Icons.verified,
                 Colors.green,
-                'Lot Verified',
-                'Your lot has been successfully verified. You can now start managing sessions.',
+                Lang.sel(isHr, 'Lot Verified', 'Lokacija verificirana'),
+                Lang.sel(
+                    isHr,
+                    'Your lot has been successfully verified. You can now start managing sessions.',
+                    'Vaša lokacija je uspješno verificirana. Sada možete upravljati sesijama.'),
               )
             else
               isNarrow
@@ -338,6 +359,7 @@ class _VerificationUploadScreenState
   // Removed call scheduling section and picker button
 
   Widget _buildUploadColumn() {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -356,7 +378,10 @@ class _VerificationUploadScreenState
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  'Please upload 3-5 high-quality photos of your lot showing our signage clearly.',
+                  Lang.sel(
+                      isHr,
+                      'Please upload 3-5 high-quality photos of your lot showing our signage clearly.',
+                      'Prenesite 3–5 fotografija visoke kvalitete koje jasno prikazuju naše oznake na lokaciji.'),
                   style: GoogleFonts.inter(
                     color: Colors.black87,
                     fontSize: 14,
@@ -369,7 +394,8 @@ class _VerificationUploadScreenState
         const SizedBox(height: 32),
         if (_existingPhotoUrls.isNotEmpty) ...[
           Text(
-            'Previously Uploaded (${_existingPhotoUrls.length})',
+            Lang.sel(isHr, 'Previously Uploaded (${_existingPhotoUrls.length})',
+                'Prethodno prenesene (${_existingPhotoUrls.length})'),
             style: GoogleFonts.inter(
               color: Colors.black,
               fontSize: 16,
@@ -402,7 +428,8 @@ class _VerificationUploadScreenState
           const SizedBox(height: 32),
         ],
         Text(
-          'Upload Photos (${_selectedImages.length}/5)',
+          Lang.sel(isHr, 'Upload Photos (${_selectedImages.length}/5)',
+              'Prenesite fotografije (${_selectedImages.length}/5)'),
           style: GoogleFonts.inter(
             color: Colors.black,
             fontSize: 18,
@@ -437,7 +464,8 @@ class _VerificationUploadScreenState
                         children: [
                           ListTile(
                             leading: const Icon(Icons.camera_alt),
-                            title: const Text('Take Photo'),
+                            title: Text(Lang.sel(
+                                isHr, 'Take Photo', 'Snimi fotografiju')),
                             onTap: () {
                               Navigator.pop(context);
                               _pickImage();
@@ -445,7 +473,8 @@ class _VerificationUploadScreenState
                           ),
                           ListTile(
                             leading: const Icon(Icons.photo_library),
-                            title: const Text('Choose from Gallery'),
+                            title: Text(Lang.sel(isHr, 'Choose from Gallery',
+                                'Odaberi iz galerije')),
                             onTap: () {
                               Navigator.pop(context);
                               _pickFromGallery();
@@ -519,7 +548,8 @@ class _VerificationUploadScreenState
             child: _isUploading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : Text(
-                    'Submit for Verification',
+                    Lang.sel(isHr, 'Submit for Verification',
+                        'Pošalji na verifikaciju'),
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -532,7 +562,7 @@ class _VerificationUploadScreenState
           child: TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel & Go Back',
+              Lang.sel(isHr, 'Cancel & Go Back', 'Odustani i vrati se'),
               style: GoogleFonts.inter(
                 color: AppTheme.textSecondary,
                 fontSize: 14,

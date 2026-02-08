@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../logic/providers/auth_providers.dart';
 import 'verification_upload_screen.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class LocationsScreen extends ConsumerStatefulWidget {
   const LocationsScreen({super.key});
@@ -27,6 +28,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
     final locationsAsync = ref.watch(locationsStreamProvider);
+    final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return profileAsync.when(
       loading: () => const Scaffold(
@@ -41,11 +43,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
-              Text('Failed to load profile: $err'),
+              Text(Lang.sel(isCroatian, 'Failed to load profile: $err',
+                  'Neuspjelo učitavanje profila: $err')),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.refresh(userProfileProvider),
-                child: const Text('Retry'),
+                child: Text(Lang.sel(isCroatian, 'Retry', 'Pokušaj ponovo')),
               ),
             ],
           ),
@@ -72,7 +75,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Locations & Hubs',
+                          Lang.sel(isCroatian, 'Locations & Hubs',
+                              'Lokacije i Hubovi'),
                           style: GoogleFonts.inter(
                             fontSize: 40,
                             fontWeight: FontWeight.bold,
@@ -83,8 +87,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         const SizedBox(height: 8),
                         Text(
                           isSuperAdmin
-                              ? 'Super Admin Mode: Viewing all locations'
-                              : 'Managing access for Location ID: $locationId',
+                              ? Lang.sel(
+                                  isCroatian,
+                                  'Super Admin Mode: Viewing all locations',
+                                  'Super Admin način: Prikaz svih lokacija')
+                              : Lang.sel(
+                                  isCroatian,
+                                  'Managing access for Location ID: $locationId',
+                                  'Upravljanje pristupom za ID lokacije: $locationId'),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppTheme.textSecondary,
@@ -97,7 +107,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         onPressed: () =>
                             _showAddLocationDialog(context, locationId),
                         icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add Lot'),
+                        label: Text(Lang.sel(
+                            isCroatian, 'Add Lot', 'Dodaj parkiralište')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
@@ -119,7 +130,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       });
                     },
                     decoration: InputDecoration(
-                      hintText: 'Search',
+                      hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
                       prefixIcon: const Icon(Icons.search, size: 20),
                       filled: true,
                       fillColor: AppTheme.surface,
@@ -148,8 +159,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           const Icon(Icons.warning_amber_rounded,
                               color: Colors.orange, size: 48),
                           const SizedBox(height: 16),
-                          const Text(
-                              'Database access restricted or error occurred.'),
+                          Text(Lang.sel(
+                              isCroatian,
+                              'Database access restricted or error occurred.',
+                              'Pristup bazi ograničen ili je došlo do pogreške.')),
                           const SizedBox(height: 8),
                           Text(err.toString(),
                               style: const TextStyle(
@@ -159,7 +172,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           ElevatedButton(
                             onPressed: () =>
                                 ref.refresh(locationsStreamProvider),
-                            child: const Text('Refresh Data'),
+                            child: Text(Lang.sel(
+                                isCroatian, 'Refresh Data', 'Osvježi podatke')),
                           ),
                         ],
                       ),
@@ -173,7 +187,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               Icon(Icons.location_on_outlined,
                                   size: 64, color: Colors.grey[200]),
                               const SizedBox(height: 16),
-                              Text('No locations found.',
+                              Text(
+                                  Lang.sel(isCroatian, 'No locations found.',
+                                      'Nije pronađena nijedna lokacija.'),
                                   style: TextStyle(color: Colors.grey[400])),
                             ],
                           ),
@@ -194,7 +210,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final loc = filtered[index];
-                          final name = loc['name'] ?? 'Unnamed Lot';
+                          final name = loc['name'] ??
+                              Lang.sel(isCroatian, 'Unnamed Lot',
+                                  'Neimenovano parkiralište');
                           final displayId = loc['display_id'] ?? 'N/A';
                           final id = loc['id'].toString();
                           final Map<String, dynamic> meta =
@@ -239,8 +257,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 Text(
                                   isHub
-                                      ? 'Active Parking Hub'
-                                      : 'Active Parking Lot',
+                                      ? Lang.sel(
+                                          isCroatian,
+                                          'Active Parking Hub',
+                                          'Aktivni parking hub')
+                                      : Lang.sel(
+                                          isCroatian,
+                                          'Active Parking Lot',
+                                          'Aktivno parkiralište'),
                                   style: GoogleFonts.inter(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
@@ -269,7 +293,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
-                                  child: const Text('View'),
+                                  child: Text(
+                                      Lang.sel(isCroatian, 'View', 'Pogledaj')),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
@@ -280,26 +305,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   onPressed: () =>
                                       _confirmDelete(id, displayId),
                                 ),
-                                if (isSuperAdmin) ...[
-                                  const SizedBox(width: 12),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'Hub',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Switch(
-                                        value: isHub,
-                                        activeThumbColor: Colors.black,
-                                        onChanged: (v) => _toggleHub(loc, v),
-                                      ),
-                                    ],
-                                  ),
-                                ],
                               ],
                             ),
                           );
@@ -317,6 +322,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Widget _buildVerificationBadge(Map<String, dynamic> loc, bool isAdmin) {
+    final isHr = ref.read(localeIsCroatianProvider);
     final rawStatus = loc['verification_status'] ?? 'unverified';
     final status =
         rawStatus == 'video_required' ? 'contact_required' : rawStatus;
@@ -329,36 +335,36 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     switch (status) {
       case 'verified':
         badgeColor = Colors.green[400]!;
-        label = 'VERIFIED';
+        label = Lang.sel(isHr, 'VERIFIED', 'VERIFICIRANO');
         icon = Icons.verified;
         break;
       case 'pending':
         badgeColor = const Color(0xFF635BFF);
-        label = 'PENDING';
+        label = Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
         icon = Icons.hourglass_bottom;
         break;
       case 'call_scheduled':
         badgeColor = const Color(0xFFFF9500);
-        label = 'ACTION REQUIRED';
+        label = Lang.sel(isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA');
         icon = Icons.warning_amber_outlined;
         showAction = true;
         break;
       case 'contact_required':
         badgeColor = const Color(0xFFFF9500);
-        label = 'ACTION REQUIRED';
+        label = Lang.sel(isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA');
         icon = Icons.warning_amber_outlined;
         showAction = true;
         break;
       case 'rejected':
         badgeColor = const Color(0xFFFF3B30);
-        label = 'REJECTED';
+        label = Lang.sel(isHr, 'REJECTED', 'ODBIJENO');
         icon = Icons.error_outline;
         showAction = isAdmin;
         break;
       case 'unverified':
       default:
         badgeColor = AppTheme.sidebarBackground;
-        label = 'SETUP REQUIRED';
+        label = Lang.sel(isHr, 'SETUP REQUIRED', 'KONFIGURIRAJ');
         icon = Icons.info_outline;
         showAction = isAdmin;
     }
@@ -395,26 +401,45 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           color: badgeColor,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+        child: (fixedWidthRequired && (isHr && status == 'unverified'))
+            ? Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Icon(icon, size: 14, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Opacity(
+                    opacity: 0.0,
+                    child: Icon(icon, size: 14, color: Colors.white),
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            if (showAction) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_forward_ios,
-                  size: 10, color: Colors.white.withValues(alpha: 0.8)),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -457,12 +482,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Location'),
-        content: const Text('Are you sure you want to delete this location?'),
+        title: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+            'Delete Location', 'Obriši lokaciju')),
+        content: Text(Lang.sel(
+            ref.watch(localeIsCroatianProvider),
+            'Are you sure you want to delete this location?',
+            'Jeste li sigurni da želite obrisati ovu lokaciju?')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(Lang.sel(
+                  ref.watch(localeIsCroatianProvider), 'Cancel', 'Odustani'))),
           TextButton(
             onPressed: () async {
               final navigator = Navigator.of(context);
@@ -479,7 +509,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               if (!context.mounted) return;
               navigator.pop();
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+                Lang.sel(
+                    ref.watch(localeIsCroatianProvider), 'Delete', 'Obriši'),
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -496,19 +529,32 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
       newMeta['hub_enabled'] = enabled;
       final displayId = (loc['display_id'] ?? '').toString();
-      final slug = displayId.replaceAll(RegExp(r'\s+'), '-').toLowerCase();
+      final name = (loc['name'] ?? '').toString().toLowerCase();
+      final safeName = name
+          .replaceAll(RegExp(r'[^a-z0-9\\s-]'), '')
+          .replaceAll(RegExp(r'\\s+'), '-');
+      final slug = (safeName.isNotEmpty ? safeName : displayId).toLowerCase();
       newMeta['hub_slug'] = slug;
       await supabase
           .from('locations')
           .update({'verification_metadata': newMeta}).eq('id', id);
+      if (enabled) {
+        final url = 'https://payparqai.vercel.app/locations/$slug';
+        try {
+          await launchUrl(Uri.parse(url));
+        } catch (_) {}
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(
-            enabled
-                ? 'Marked as PayParq hub'
-                : 'Removed PayParq hub designation',
-          ),
+          content: Text(Lang.sel(
+              ref.read(localeIsCroatianProvider),
+              enabled
+                  ? 'Marked as PayParq hub'
+                  : 'Removed PayParq hub designation',
+              enabled
+                  ? 'Označeno kao PayParq hub'
+                  : 'Uklonjena oznaka PayParq hub')),
           backgroundColor: enabled ? Colors.green : Colors.orange,
         ),
       );
@@ -517,7 +563,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(Lang.sel(
+              ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -529,7 +576,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Contact for verification'),
+          title: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+              'Contact for verification', 'Kontakt za verifikaciju')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,7 +614,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'WhatsApp Support',
+                              Lang.sel(ref.watch(localeIsCroatianProvider),
+                                  'WhatsApp Support', 'WhatsApp podrška'),
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -586,7 +635,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Send message to support for verification.',
+                      Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          'Send message to support for verification.',
+                          'Pošaljite poruku podršci za verifikaciju.'),
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: Colors.grey[800],
@@ -614,7 +666,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           }
                         },
                         child: Text(
-                          'Send message',
+                          Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Send message', 'Pošalji poruku'),
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
                           ),
@@ -629,7 +682,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Close'),
+              child: Text(Lang.sel(
+                  ref.watch(localeIsCroatianProvider), 'Close', 'Zatvori')),
             ),
           ],
         );
@@ -659,7 +713,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final bool canEdit = isSuperAdmin || isAdmin;
 
         return AlertDialog(
-          title: Text('Location Details',
+          title: Text(
+              Lang.sel(ref.watch(localeIsCroatianProvider), 'Location Details',
+                  'Detalji lokacije'),
               style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           content: SizedBox(
             width: 420,
@@ -682,14 +738,22 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     ref.invalidate(locationsStreamProvider);
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
-                        const SnackBar(content: Text('Location updated')),
+                        SnackBar(
+                            content: Text(Lang.sel(
+                                ref.watch(localeIsCroatianProvider),
+                                'Location updated',
+                                'Lokacija ažurirana'))),
                       );
                       navigator.pop();
                     }
                   } catch (e) {
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
+                        SnackBar(
+                            content: Text(Lang.sel(
+                                ref.watch(localeIsCroatianProvider),
+                                'Error: $e',
+                                'Greška: $e'))),
                       );
                     }
                   } finally {
@@ -728,7 +792,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               const SizedBox(width: 8),
                               if (!canEdit)
                                 Text(
-                                  'Capacity: $capacity',
+                                  Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Capacity: $capacity',
+                                      'Kapacitet: $capacity'),
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: Colors.black,
@@ -737,7 +804,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 )
                               else ...[
                                 Text(
-                                  'Capacity',
+                                  Lang.sel(ref.watch(localeIsCroatianProvider),
+                                      'Capacity', 'Kapacitet'),
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: Colors.black,
@@ -771,7 +839,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   size: 18, color: Colors.grey[600]),
                               const SizedBox(width: 8),
                               Text(
-                                'Coordinates: $latitude, $longitude',
+                                Lang.sel(
+                                    ref.watch(localeIsCroatianProvider),
+                                    'Coordinates: $latitude, $longitude',
+                                    'Koordinate: $latitude, $longitude'),
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: Colors.black,
@@ -785,7 +856,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             Row(
                               children: [
                                 Text(
-                                  'Hub Enabled',
+                                  Lang.sel(ref.watch(localeIsCroatianProvider),
+                                      'Hub Enabled', 'Hub omogućen'),
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: Colors.black,
@@ -799,6 +871,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     activeThumbColor: Colors.black,
                                     onChanged: (v) async {
                                       await _toggleHub(loc, v);
+                                      if (v == true) {
+                                        final String displayId =
+                                            (loc['display_id'] ?? '')
+                                                .toString();
+                                        final String name = (loc['name'] ?? '')
+                                            .toString()
+                                            .toLowerCase()
+                                            .replaceAll(
+                                                RegExp(r'[^a-z0-9\\s-]'), '')
+                                            .replaceAll(RegExp(r'\\s+'), '-');
+                                        final String slug = name.isNotEmpty
+                                            ? name
+                                            : displayId.toLowerCase();
+                                        final String url =
+                                            'https://payparqai.vercel.app/locations/$slug';
+                                        try {
+                                          await launchUrl(Uri.parse(url));
+                                        } catch (_) {}
+                                      }
                                       if (!dialogContext.mounted) return;
                                       Navigator.pop(dialogContext);
                                       _showLocationDetail(
@@ -808,6 +899,69 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                               ],
                             ),
+                          if (isSuperAdmin && isHub) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.link,
+                                    size: 18, color: Colors.black),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: SelectableText(
+                                    () {
+                                      final String displayId =
+                                          (loc['display_id'] ?? '').toString();
+                                      final String name = (loc['name'] ?? '')
+                                          .toString()
+                                          .toLowerCase()
+                                          .replaceAll(
+                                              RegExp(r'[^a-z0-9\\s-]'), '')
+                                          .replaceAll(RegExp(r'\\s+'), '-');
+                                      final String slug = name.isNotEmpty
+                                          ? name
+                                          : displayId.toLowerCase();
+                                      return 'https://payparqai.vercel.app/locations/$slug';
+                                    }(),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.blue[800],
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final String displayId =
+                                        (loc['display_id'] ?? '').toString();
+                                    final String name = (loc['name'] ?? '')
+                                        .toString()
+                                        .toLowerCase()
+                                        .replaceAll(
+                                            RegExp(r'[^a-z0-9\\s-]'), '')
+                                        .replaceAll(RegExp(r'\\s+'), '-');
+                                    final String slug = name.isNotEmpty
+                                        ? name
+                                        : displayId.toLowerCase();
+                                    final String url =
+                                        'https://payparqai.vercel.app/locations/$slug';
+                                    await launchUrl(Uri.parse(url));
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                  ),
+                                  child: Text(Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Open Hub Page',
+                                      'Otvori Hub stranicu')),
+                                )
+                              ],
+                            ),
+                          ],
                           if (canEdit) ...[
                             const SizedBox(height: 16),
                             SizedBox(
@@ -830,7 +984,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                             color: Colors.white,
                                             strokeWidth: 2),
                                       )
-                                    : const Text('Save Changes'),
+                                    : Text(Lang.sel(
+                                        ref.watch(localeIsCroatianProvider),
+                                        'Save Changes',
+                                        'Spremi promjene')),
                               ),
                             ),
                           ],
@@ -845,7 +1002,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Close'),
+              child: Text(Lang.sel(
+                  ref.watch(localeIsCroatianProvider), 'Close', 'Zatvori')),
             ),
           ],
         );
@@ -867,7 +1025,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
-            'Register Professional Lot',
+            Lang.sel(
+                ref.watch(localeIsCroatianProvider),
+                'Register Professional Lot',
+                'Registriraj profesionalno parkiralište'),
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
@@ -881,15 +1042,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   children: [
                     TextFormField(
                       controller: nameCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Location Name',
-                          hintText: 'e.g. Downtown Garage',
-                          border: OutlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      decoration: InputDecoration(
+                          labelText: Lang.sel(
+                              ref.watch(localeIsCroatianProvider),
+                              'Location Name',
+                              'Naziv lokacije'),
+                          hintText: Lang.sel(
+                              ref.watch(localeIsCroatianProvider),
+                              'e.g. Downtown Garage',
+                              'npr. Garaža Centar'),
+                          border: const OutlineInputBorder()),
+                      validator: (v) => v!.isEmpty
+                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Required', 'Obavezno')
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Lot Capacity (Spaces)',
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Lot Capacity (Spaces)', 'Kapacitet (mjesta)'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -900,7 +1071,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     TextFormField(
                       controller: capacityCtrl,
                       decoration: InputDecoration(
-                        hintText: 'e.g. 150',
+                        hintText: Lang.sel(ref.watch(localeIsCroatianProvider),
+                            'e.g. 150', 'npr. 150'),
                         filled: true,
                         fillColor: AppTheme.surface,
                         border: OutlineInputBorder(
@@ -909,11 +1081,15 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         ),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                      validator: (v) => v!.isEmpty
+                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Required', 'Obavezno')
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Location on Map',
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Location on Map', 'Lokacija na karti'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -935,7 +1111,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           actions: [
             TextButton(
                 onPressed: isProcessing ? null : () => Navigator.pop(context),
-                child: const Text('Cancel')),
+                child: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'Cancel', 'Odustani'))),
             ElevatedButton(
               onPressed: isProcessing
                   ? null
@@ -943,9 +1120,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       if (formKey.currentState!.validate()) {
                         if (selectedLatLng == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Please select a location on the map')),
+                            SnackBar(
+                                content: Text(Lang.sel(
+                                    ref.watch(localeIsCroatianProvider),
+                                    'Please select a location on the map',
+                                    'Molimo odaberite lokaciju na karti'))),
                           );
                           return;
                         }
@@ -983,8 +1162,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Location created!')),
+                              SnackBar(
+                                  content: Text(Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Location created!',
+                                      'Lokacija je kreirana!'))),
                             );
                           }
                           ref.invalidate(locationsStreamProvider);
@@ -992,7 +1174,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: ${e.toString()}')),
+                              SnackBar(
+                                  content: Text(Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Error: ${e.toString()}',
+                                      'Greška: ${e.toString()}'))),
                             );
                           }
                         } finally {
@@ -1008,7 +1194,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
-                  : const Text('Register Lot'),
+                  : Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+                      'Register Lot', 'Registriraj parkiralište')),
             ),
           ],
         ),

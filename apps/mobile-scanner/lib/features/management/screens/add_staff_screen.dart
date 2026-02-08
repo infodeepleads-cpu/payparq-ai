@@ -7,6 +7,7 @@ import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class AddStaffScreen extends ConsumerStatefulWidget {
   const AddStaffScreen({super.key});
@@ -27,6 +28,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
     final staffAsync = ref.watch(staffStreamProvider);
+    final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return profileAsync.when(
       loading: () =>
@@ -38,11 +40,12 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
-              Text('Failed to load access profile: $err'),
+              Text(Lang.sel(isCroatian, 'Failed to load access profile: $err',
+                  'Neuspjelo učitavanje profila pristupa: $err')),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.refresh(userProfileProvider),
-                child: const Text('Retry'),
+                child: Text(Lang.sel(isCroatian, 'Retry', 'Pokušaj ponovo')),
               ),
             ],
           ),
@@ -69,7 +72,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Staff Accounts',
+                          Lang.sel(isCroatian, 'Staff Accounts',
+                              'Korisnički računi osoblja'),
                           style: GoogleFonts.inter(
                             fontSize: 40,
                             fontWeight: FontWeight.bold,
@@ -80,8 +84,14 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         const SizedBox(height: 8),
                         Text(
                           isSuperAdmin
-                              ? 'Super Admin Mode: Full access to all team members.'
-                              : 'Manage your team, managers, and officers.',
+                              ? Lang.sel(
+                                  isCroatian,
+                                  'Super Admin Mode: Full access to all team members.',
+                                  'Super Admin način: Potpun pristup svim članovima tima.')
+                              : Lang.sel(
+                                  isCroatian,
+                                  'Manage your team, managers, and officers.',
+                                  'Upravljajte timom, menadžerima i službenicima.'),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppTheme.textSecondary,
@@ -93,7 +103,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                       ElevatedButton.icon(
                         onPressed: () => _showAddStaffDialog(context),
                         icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add Staff'),
+                        label: Text(
+                            Lang.sel(isCroatian, 'Add Staff', 'Dodaj osoblje')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
@@ -117,7 +128,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                       });
                     },
                     decoration: InputDecoration(
-                      hintText: 'Search',
+                      hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
                       prefixIcon: const Icon(Icons.search, size: 20),
                       filled: true,
                       fillColor: AppTheme.surface,
@@ -146,12 +157,14 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           const Icon(Icons.error_outline,
                               color: Colors.red, size: 48),
                           const SizedBox(height: 16),
-                          Text('Error loading staff: $err'),
+                          Text(Lang.sel(isCroatian, 'Error loading staff: $err',
+                              'Greška pri učitavanju osoblja: $err')),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () =>
                                 ref.invalidate(staffStreamProvider),
-                            child: const Text('Retry'),
+                            child: Text(Lang.sel(
+                                isCroatian, 'Retry', 'Pokušaj ponovo')),
                           ),
                         ],
                       ),
@@ -174,7 +187,11 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               Icon(Icons.people_outline,
                                   size: 64, color: Colors.grey[200]),
                               const SizedBox(height: 16),
-                              Text('No staff members found.',
+                              Text(
+                                  Lang.sel(
+                                      isCroatian,
+                                      'No staff members found.',
+                                      'Nije pronađen nijedan član osoblja.'),
                                   style: TextStyle(color: Colors.grey[400])),
                             ],
                           ),
@@ -209,7 +226,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user['name'] ?? 'Unknown Name',
+                                  user['name'] ??
+                                      Lang.sel(isCroatian, 'Unknown Name',
+                                          'Nepoznato ime'),
                                   style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -217,7 +236,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                   ),
                                 ),
                                 Text(
-                                  user['email'] ?? 'No Email',
+                                  user['email'] ??
+                                      Lang.sel(isCroatian, 'No Email',
+                                          'Bez e-pošte'),
                                   style: GoogleFonts.inter(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
@@ -235,7 +256,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                 ElevatedButton(
                                   onPressed: () => _showCredentialsDialog(
                                     user['email'] ?? '',
-                                    user['raw_password'] ?? 'Already Changed',
+                                    user['raw_password'] ??
+                                        Lang.sel(isCroatian, 'Already Changed',
+                                            'Već promijenjeno'),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.black,
@@ -248,7 +271,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
-                                  child: const Text('Credentials'),
+                                  child: Text(Lang.sel(isCroatian,
+                                      'Credentials', 'Pristupni podaci')),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
@@ -294,28 +318,41 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   }
 
   void _showCredentialsDialog(String email, String password) {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Staff Credentials'),
+        title: Text(
+            Lang.sel(isCroatian, 'Staff Credentials', 'Podaci za osoblje')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('These credentials can be used to log in immediately.'),
+            Text(Lang.sel(
+                isCroatian,
+                'These credentials can be used to log in immediately.',
+                'Ovi podaci se mogu odmah koristiti za prijavu.')),
             const SizedBox(height: 16),
-            _buildCredentialBox('Email Address', email),
+            _buildCredentialBox(
+                Lang.sel(isCroatian, 'Email Address', 'Email adresa'), email),
             const SizedBox(height: 12),
-            _buildCredentialBox('Generated Password', password),
+            _buildCredentialBox(
+                Lang.sel(
+                    isCroatian, 'Generated Password', 'Generirana lozinka'),
+                password),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final subject =
-                      Uri.encodeComponent('Your payparq.ai staff credentials');
-                  final body = Uri.encodeComponent(
-                      'Welcome,\n\nHere are your login details:\n\nEmail: $email\nPassword: $password\n\nUse the app to sign in and begin.\n');
+                  final subject = Uri.encodeComponent(Lang.sel(
+                      isCroatian,
+                      'Your payparq.ai staff credentials',
+                      'Vaši payparq.ai pristupni podaci'));
+                  final body = Uri.encodeComponent(Lang.sel(
+                      isCroatian,
+                      'Welcome,\n\nHere are your login details:\n\nEmail: $email\nPassword: $password\n\nUse the app to sign in and begin.\n',
+                      'Dobrodošli,\n\nVaši pristupni podaci:\n\nEmail: $email\nLozinka: $password\n\nKoristite aplikaciju za prijavu i početak rada.\n'));
                   final mailto = 'mailto:$email?subject=$subject&body=$body';
                   final uri = Uri.parse(mailto);
                   if (await canLaunchUrl(uri)) {
@@ -323,8 +360,11 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                   } else {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Unable to open email client'),
+                      SnackBar(
+                        content: Text(Lang.sel(
+                            isCroatian,
+                            'Unable to open email client',
+                            'Nije moguće otvoriti email klijent')),
                       ),
                     );
                   }
@@ -332,7 +372,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                   Navigator.pop(context);
                 },
                 icon: const Icon(Icons.email_outlined),
-                label: const Text('Notify User via Email'),
+                label: Text(Lang.sel(isCroatian, 'Notify User via Email',
+                    'Obavijesti korisnika putem e-pošte')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
@@ -344,7 +385,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(Lang.sel(isCroatian, 'Close', 'Zatvori')),
           ),
         ],
       ),
@@ -390,16 +431,20 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   }
 
   void _confirmDelete(String id) {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Staff Member'),
-        content:
-            const Text('Are you sure you want to delete this staff member?'),
+        title: Text(Lang.sel(
+            isCroatian, 'Delete Staff Member', 'Obriši člana osoblja')),
+        content: Text(Lang.sel(
+            isCroatian,
+            'Are you sure you want to delete this staff member?',
+            'Jeste li sigurni da želite obrisati ovog člana osoblja?')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(Lang.sel(isCroatian, 'Cancel', 'Odustani'))),
           TextButton(
             onPressed: () async {
               await ref.read(parkingRepositoryProvider).deleteStaff(id);
@@ -407,7 +452,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
               Navigator.pop(context);
               ref.invalidate(staffStreamProvider);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(Lang.sel(isCroatian, 'Delete', 'Obriši'),
+                style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -441,7 +487,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
           builder: (context, setDialogState) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Add Staff Member'),
+            title: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                'Add Staff Member', 'Dodaj člana osoblja')),
             content: SizedBox(
               width: 450,
               child: Form(
@@ -452,30 +499,42 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                     children: [
                       TextFormField(
                         controller: nameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: Lang.sel(
+                              ref.read(localeIsCroatianProvider),
+                              'Full Name',
+                              'Puno ime'),
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: const OutlineInputBorder(),
                         ),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Name is required' : null,
+                        validator: (v) => v == null || v.isEmpty
+                            ? Lang.sel(ref.read(localeIsCroatianProvider),
+                                'Name is required', 'Ime je obavezno')
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: emailCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: Lang.sel(
+                              ref.read(localeIsCroatianProvider),
+                              'Email Address',
+                              'Email adresa'),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) {
-                            return 'Email is required';
+                            return Lang.sel(ref.read(localeIsCroatianProvider),
+                                'Email is required', 'Email je obavezan');
                           }
                           final emailRegex =
                               RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                           if (!emailRegex.hasMatch(v)) {
-                            return 'Enter a valid email address';
+                            return Lang.sel(
+                                ref.read(localeIsCroatianProvider),
+                                'Enter a valid email address',
+                                'Unesite valjanu email adresu');
                           }
                           return null;
                         },
@@ -483,23 +542,35 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'Role',
-                          prefixIcon: Icon(Icons.shield_outlined),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: Lang.sel(
+                              ref.read(localeIsCroatianProvider),
+                              'Role',
+                              'Uloga'),
+                          prefixIcon: const Icon(Icons.shield_outlined),
+                          border: const OutlineInputBorder(),
                         ),
                         items: [
                           if (isSuperAdmin)
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                                 value: 'admin',
-                                child: Text('Admin (Full Access)')),
+                                child: Text(Lang.sel(
+                                    ref.read(localeIsCroatianProvider),
+                                    'Admin (Full Access)',
+                                    'Admin (potpuni pristup)'))),
                           if (!isManagerCreator)
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                                 value: 'manager',
-                                child: Text('Manager (Full Access)')),
-                          const DropdownMenuItem(
+                                child: Text(Lang.sel(
+                                    ref.read(localeIsCroatianProvider),
+                                    'Manager (Full Access)',
+                                    'Menadžer (potpuni pristup)'))),
+                          DropdownMenuItem(
                               value: 'officer',
-                              child: Text('Officer (Enforcement Only)')),
+                              child: Text(Lang.sel(
+                                  ref.read(localeIsCroatianProvider),
+                                  'Officer (Enforcement Only)',
+                                  'Službenik (samo nadzor)'))),
                         ],
                         onChanged: (v) =>
                             setDialogState(() => selectedRole = v!),
@@ -510,7 +581,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            'Assign Locations:',
+                            Lang.sel(ref.read(localeIsCroatianProvider),
+                                'Assign Locations:', 'Dodijeli lokacije:'),
                             style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold, fontSize: 14),
                           ),
@@ -532,8 +604,13 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                   selectedLocationIds.contains(locId);
 
                               return CheckboxListTile(
-                                title: Text(loc['name'] ?? 'Lot $locId'),
-                                subtitle: Text('ID: $locId'),
+                                title: Text(loc['name'] ??
+                                    Lang.sel(ref.read(localeIsCroatianProvider),
+                                        'Lot $locId', 'Parkiralište $locId')),
+                                subtitle: Text(Lang.sel(
+                                    ref.read(localeIsCroatianProvider),
+                                    'ID: $locId',
+                                    'ID: $locId')),
                                 value: isSelected,
                                 onChanged: (val) {
                                   setDialogState(() {
@@ -557,7 +634,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(Lang.sel(
+                    ref.read(localeIsCroatianProvider), 'Cancel', 'Odustani')),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -570,9 +648,11 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         if (formKey.currentState!.validate()) {
                           if (selectedLocationIds.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Please select at least one location.'),
+                              SnackBar(
+                                content: Text(Lang.sel(
+                                    ref.read(localeIsCroatianProvider),
+                                    'Please select at least one location.',
+                                    'Molimo odaberite barem jednu lokaciju.')),
                                 backgroundColor: Colors.orange,
                               ),
                             );
@@ -639,18 +719,27 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               showDialog(
                                 context: parentContext,
                                 builder: (context) => AlertDialog(
-                                  title: const Text('Account Created!'),
-                                  content: const Column(
+                                  title: Text(Lang.sel(
+                                      ref.read(localeIsCroatianProvider),
+                                      'Account Created!',
+                                      'Račun je kreiran!')),
+                                  content: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                          'The staff account is now active and ready for use.'),
+                                      Text(Lang.sel(
+                                          ref.read(localeIsCroatianProvider),
+                                          'The staff account is now active and ready for use.',
+                                          'Korisnički račun je sada aktivan i spreman za korištenje.')),
                                       SizedBox(height: 16),
                                       Text(
-                                          'You can view and manage their credentials directly from the staff list.',
-                                          style: TextStyle(
+                                          Lang.sel(
+                                              ref.read(
+                                                  localeIsCroatianProvider),
+                                              'You can view and manage their credentials directly from the staff list.',
+                                              'Podatke možete pregledati i upravljati njima iz liste osoblja.'),
+                                          style: const TextStyle(
                                               fontSize: 13,
                                               color: Colors.grey)),
                                     ],
@@ -658,7 +747,10 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(context),
-                                      child: const Text('Great'),
+                                      child: Text(Lang.sel(
+                                          ref.read(localeIsCroatianProvider),
+                                          'Great',
+                                          'Odlično')),
                                     ),
                                   ],
                                 ),
@@ -690,7 +782,10 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Error: $displayError'),
+                                  content: Text(Lang.sel(
+                                      ref.read(localeIsCroatianProvider),
+                                      'Error: $displayError',
+                                      'Greška: $displayError')),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -709,7 +804,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
-                    : const Text('Create Account'),
+                    : Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                        'Create Account', 'Kreiraj račun')),
               ),
             ],
           ),

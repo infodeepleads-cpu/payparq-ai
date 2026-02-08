@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class VerificationVideoScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> location;
@@ -58,7 +59,10 @@ class _VerificationVideoScreenState
   Future<void> _submitVideo() async {
     if (_selectedVideo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select or record a video first.')),
+        SnackBar(
+            content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                'Please select or record a video first.',
+                'Najprije odaberite ili snimite video.'))),
       );
       return;
     }
@@ -121,8 +125,9 @@ class _VerificationVideoScreenState
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Video uploaded successfully!'),
+          SnackBar(
+            content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                'Video uploaded successfully!', 'Video uspješno prenesen!')),
             backgroundColor: Colors.green,
           ),
         );
@@ -132,7 +137,8 @@ class _VerificationVideoScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                'Error: $e', 'Greška: $e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -144,6 +150,7 @@ class _VerificationVideoScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       appBar: AppBar(
@@ -151,7 +158,7 @@ class _VerificationVideoScreenState
         elevation: 0,
         centerTitle: false,
         title: Text(
-          'Video Verification',
+          Lang.sel(isHr, 'Video Verification', 'Video verifikacija'),
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -185,7 +192,7 @@ class _VerificationVideoScreenState
                           color: Colors.grey[700], size: 28),
                       const SizedBox(width: 12),
                       Text(
-                        'Video Instructions',
+                        Lang.sel(isHr, 'Video Instructions', 'Upute za video'),
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -196,22 +203,28 @@ class _VerificationVideoScreenState
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Please record a short video (max 30 seconds) showing:',
+                    Lang.sel(isHr,
+                        'Please record a short video (max 30 seconds) showing:',
+                        'Snimite kratki video (najviše 30 sekundi) koji prikazuje:'),
                     style:
                         GoogleFonts.inter(color: Colors.black87, fontSize: 15),
                   ),
                   const SizedBox(height: 12),
-                  _buildInstructionItem(
-                      'The main entrance of your parking lot'),
-                  _buildInstructionItem(
-                      'Our installed physical signage clearly'),
-                  _buildInstructionItem('A quick pan of the overall lot area'),
+                  _buildInstructionItem(Lang.sel(isHr,
+                      'The main entrance of your parking lot',
+                      'Glavni ulaz vašeg parkirališta')),
+                  _buildInstructionItem(Lang.sel(isHr,
+                      'Our installed physical signage clearly',
+                      'Našu jasno vidljivu fizičku signalizaciju')),
+                  _buildInstructionItem(Lang.sel(isHr,
+                      'A quick pan of the overall lot area',
+                      'Brzi pregled cijelog područja parkirališta')),
                 ],
               ),
             ),
             const SizedBox(height: 40),
             Text(
-              'Select Video',
+              Lang.sel(isHr, 'Select Video', 'Odaberite video'),
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -254,7 +267,7 @@ class _VerificationVideoScreenState
                     child: _buildActionButton(
                       onTap: _pickVideo,
                       icon: Icons.videocam,
-                      label: 'Record Video',
+                      label: Lang.sel(isHr, 'Record Video', 'Snimi video'),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -262,7 +275,7 @@ class _VerificationVideoScreenState
                     child: _buildActionButton(
                       onTap: _pickFromGallery,
                       icon: Icons.video_library,
-                      label: 'From Gallery',
+                      label: Lang.sel(isHr, 'From Gallery', 'Iz galerije'),
                     ),
                   ),
                 ],
@@ -284,7 +297,7 @@ class _VerificationVideoScreenState
                 child: _isUploading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        'Upload Video',
+                        Lang.sel(isHr, 'Upload Video', 'Prenesi video'),
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -297,7 +310,7 @@ class _VerificationVideoScreenState
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text(
-                  'Cancel & Go Back',
+                  Lang.sel(isHr, 'Cancel & Go Back', 'Odustani i vrati se'),
                   style: GoogleFonts.inter(
                     color: AppTheme.textSecondary,
                     fontSize: 14,

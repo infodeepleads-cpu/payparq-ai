@@ -3,15 +3,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../logic/providers/locale_provider.dart';
 
-class UploadCaseScreen extends StatefulWidget {
+class UploadCaseScreen extends ConsumerStatefulWidget {
   const UploadCaseScreen({super.key});
 
   @override
-  State<UploadCaseScreen> createState() => _UploadCaseScreenState();
+  ConsumerState<UploadCaseScreen> createState() => _UploadCaseScreenState();
 }
 
-class _UploadCaseScreenState extends State<UploadCaseScreen> {
+class _UploadCaseScreenState extends ConsumerState<UploadCaseScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _image;
   bool _isUploading = false;
@@ -32,6 +34,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       body: Padding(
@@ -40,7 +43,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Upload Case',
+              Lang.sel(isHr, 'Upload Case', 'Prenesi predmet'),
               style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -49,7 +52,8 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a new enforcement case by uploading evidence.',
+              Lang.sel(isHr, 'Create a new enforcement case by uploading evidence.',
+                  'Kreirajte novi predmet nadzora prijenosom dokaza.'),
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -89,7 +93,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('Submit Case'),
+                      : Text(Lang.sel(isHr, 'Submit Case', 'Predaj predmet')),
                 ),
               ),
           ],
@@ -99,12 +103,14 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
         onPressed: () => _pickImage(ImageSource.camera),
         backgroundColor: AppTheme.primary,
         icon: const Icon(Icons.camera_alt, color: Colors.white),
-        label: const Text('Open Camera', style: TextStyle(color: Colors.white)),
+        label: Text(Lang.sel(isHr, 'Open Camera', 'Otvori kameru'),
+            style: const TextStyle(color: Colors.white)),
       ),
     );
   }
 
   Widget _buildUploadPlaceholder() {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Container(
       width: double.infinity,
       height: 400,
@@ -131,7 +137,8 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Drag & drop or click to upload',
+            Lang.sel(isHr, 'Drag & drop or click to upload',
+                'Povucite i ispustite ili kliknite za prijenos'),
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -139,7 +146,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Support for JPG, PNG',
+            Lang.sel(isHr, 'Support for JPG, PNG', 'Podrška za JPG, PNG'),
             style: GoogleFonts.inter(
               color: Colors.grey[500],
             ),
@@ -154,7 +161,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Select File'),
+            child: Text(Lang.sel(isHr, 'Select File', 'Odaberi datoteku')),
           ),
         ],
       ),
@@ -162,6 +169,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
   }
 
   Widget _buildImagePreview() {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -185,13 +193,15 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
             });
           },
           icon: const Icon(Icons.delete, color: Colors.red),
-          label: const Text('Remove Image', style: TextStyle(color: Colors.red)),
+          label: Text(Lang.sel(isHr, 'Remove Image', 'Ukloni sliku'),
+              style: const TextStyle(color: Colors.red)),
         ),
       ],
     );
   }
 
   Future<void> _uploadEvidence() async {
+    final isHr = ref.read(localeIsCroatianProvider);
     if (_image == null) return;
     setState(() => _isUploading = true);
     try {
@@ -203,7 +213,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
           .uploadBinary(fileName, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg'));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Evidence uploaded')),
+          SnackBar(content: Text(Lang.sel(isHr, 'Evidence uploaded', 'Dokaz prenesen'))),
         );
         setState(() {
           _image = null;
@@ -212,7 +222,7 @@ class _UploadCaseScreenState extends State<UploadCaseScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(Lang.sel(isHr, 'Error: $e', 'Greška: $e'))),
         );
       }
     } finally {

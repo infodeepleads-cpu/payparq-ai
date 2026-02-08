@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../logic/providers/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:payparq_scanner/utils/web_download_helper.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class DynamicPricingScreen extends ConsumerStatefulWidget {
   const DynamicPricingScreen({super.key});
@@ -276,7 +277,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final updatePayload = {
+      final pricePayload = {
         'rate_per_hour': newHourly,
         'base_price_daily': newDaily,
         'base_price_monthly': newMonthly,
@@ -286,6 +287,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'rate_per_hour_floor': newHourlyFloor,
         'base_price_daily_floor': newDailyFloor,
         'base_price_monthly_floor': newMonthlyFloor,
+      };
+      final flagsPayload = {
         'dynamic_pricing_enabled': _dynamicEnabled,
         'surcharge_enabled': _surchargeEnabled,
         'autopilot_enabled': _autopilotEnabled,
@@ -293,65 +296,79 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'surcharge_multiplier': _surchargeMultiplier,
       };
 
-      debugPrint('🚨 ATTEMPTING SAVE TO ID: $targetId');
-      debugPrint('📦 PAYLOAD: $updatePayload');
+      debugPrint('🚨 ATTEMPTING PRICE SAVE TO ID: $targetId');
+      debugPrint('📦 PRICE PAYLOAD: $pricePayload');
 
-      // 1. Perform update and FORCE it to return the row so we know if it worked
-      final response = await supabase
-          .from('locations')
-          .update(updatePayload)
-          .eq('id', targetId)
-          .select();
-
-      debugPrint('📡 SERVER RESPONSE: $response');
-
-      if (response.isNotEmpty) {
-        final updatedData = response.first;
-        debugPrint('✅ SUCCESS! RETURNED ID: ${updatedData['id']}');
-
-        setState(() {
-          final index =
-              _locations.indexWhere((l) => l['id'].toString() == targetId);
-          if (index != -1) {
-            _locations[index] = updatedData;
-          }
-          _selectedLocation = updatedData;
-
-          // Force text controllers to the new saved values
-          _hourlyController.text =
-              (updatedData['rate_per_hour'] ?? 0.0).toString();
-          _dailyController.text =
-              (updatedData['base_price_daily'] ?? 0.0).toString();
-          _monthlyController.text =
-              (updatedData['base_price_monthly'] ?? 0.0).toString();
-
-          _hourlyCeilingController.text =
-              (updatedData['rate_per_hour_ceiling'] ?? 0.0).toString();
-          _dailyCeilingController.text =
-              (updatedData['base_price_daily_ceiling'] ?? 0.0).toString();
-          _monthlyCeilingController.text =
-              (updatedData['base_price_monthly_ceiling'] ?? 0.0).toString();
-          _hourlyFloorController.text =
-              (updatedData['rate_per_hour_floor'] ?? 0.0).toString();
-          _dailyFloorController.text =
-              (updatedData['base_price_daily_floor'] ?? 0.0).toString();
-          _monthlyFloorController.text =
-              (updatedData['base_price_monthly_floor'] ?? 0.0).toString();
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ SAVED! New Price: $newHourly'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 4),
-            ),
-          );
+      try {
+        await supabase
+            .from('locations')
+            .update(pricePayload)
+            .eq('id', targetId);
+      } catch (_) {
+        final displayId = _selectedLocation!['display_id']?.toString();
+        if (displayId != null && displayId.isNotEmpty) {
+          await supabase
+              .from('locations')
+              .update(pricePayload)
+              .eq('display_id', displayId);
+        } else {
+          rethrow;
         }
-      } else {
-        debugPrint('❌ NO ROWS UPDATED! SERVER RETURNED EMPTY RESPONSE.');
-        throw Exception(
-            'Update failed: Location $targetId not found or update blocked.');
+      }
+
+      try {
+        await supabase
+            .from('locations')
+            .update(flagsPayload)
+            .eq('id', targetId);
+      } catch (_) {
+        final displayId = _selectedLocation!['display_id']?.toString();
+        if (displayId != null && displayId.isNotEmpty) {
+          await supabase
+              .from('locations')
+              .update(flagsPayload)
+              .eq('display_id', displayId);
+        }
+      }
+
+      setState(() {
+        final index =
+            _locations.indexWhere((l) => l['id'].toString() == targetId);
+        final Map<String, dynamic> data =
+            Map<String, dynamic>.from(_selectedLocation ?? <String, dynamic>{});
+        data.addAll(pricePayload);
+        data.addAll(flagsPayload);
+        if (index != -1) {
+          _locations[index] = data;
+        }
+        _selectedLocation = data;
+
+        _hourlyController.text = (data['rate_per_hour'] ?? 0.0).toString();
+        _dailyController.text = (data['base_price_daily'] ?? 0.0).toString();
+        _monthlyController.text =
+            (data['base_price_monthly'] ?? 0.0).toString();
+        _hourlyCeilingController.text =
+            (data['rate_per_hour_ceiling'] ?? 0.0).toString();
+        _dailyCeilingController.text =
+            (data['base_price_daily_ceiling'] ?? 0.0).toString();
+        _monthlyCeilingController.text =
+            (data['base_price_monthly_ceiling'] ?? 0.0).toString();
+        _hourlyFloorController.text =
+            (data['rate_per_hour_floor'] ?? 0.0).toString();
+        _dailyFloorController.text =
+            (data['base_price_daily_floor'] ?? 0.0).toString();
+        _monthlyFloorController.text =
+            (data['base_price_monthly_floor'] ?? 0.0).toString();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ SAVED! New Price: $newHourly'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e) {
       final errorStr = e.toString();
@@ -395,13 +412,20 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment link generated!')),
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Payment link generated!',
+                  'Link za plaćanje je generiran!'))),
         );
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open Stripe link')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider),
+                'Could not open Stripe link',
+                'Nije moguće otvoriti Stripe link'))));
       }
     }
   }
@@ -427,13 +451,19 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Smart AutoPilot',
+              Text(
+                  Lang.sel(ref.watch(localeIsCroatianProvider),
+                      'Smart AutoPilot', 'Pametni AutoPilot'),
                   style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text('Seasonal & Time-based algorithmic adjustments',
+              Text(
+                  Lang.sel(
+                      ref.watch(localeIsCroatianProvider),
+                      'Seasonal & Time-based algorithmic adjustments',
+                      'Sezonska i vremenski temeljena algoritamska podešavanja'),
                   style:
                       GoogleFonts.inter(color: Colors.white70, fontSize: 13)),
             ],
@@ -480,7 +510,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             children: [
               Icon(icon, size: 16, color: Colors.grey),
               const SizedBox(width: 8),
-              Text(label,
+              Text(
+                  Lang.sel(
+                      ref.watch(localeIsCroatianProvider),
+                      label,
+                      {
+                            'Base Hourly Price': 'Osnovna cijena po satu',
+                            'Base Daily Price': 'Osnovna dnevna cijena',
+                          }[label] ??
+                          label),
                   style:
                       GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
             ],
@@ -524,10 +562,34 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
+                  Text(
+                      Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          title,
+                          {
+                                'Hourly Pricing': 'Cijene po satu',
+                                'Daily Pricing': 'Dnevne cijene',
+                                'Monthly Subscriptions': 'Mjesečne pretplate',
+                                'Seasonal Multiplier': 'Sezonski multiplikator',
+                              }[title] ??
+                              title),
                       style: GoogleFonts.inter(
                           fontSize: 16, fontWeight: FontWeight.bold)),
-                  Text(subtitle,
+                  Text(
+                      Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          subtitle,
+                          {
+                                'Adjust base prices and enable real-time updates.':
+                                    'Prilagodite osnovne cijene i omogućite ažuriranja u stvarnom vremenu.',
+                                'Configure daily rates and ticket formatting.':
+                                    'Konfigurirajte dnevne cijene i formatiranje karata.',
+                                'Offer monthly subscriptions for frequent users.':
+                                    'Ponudite mjesečne pretplate za redovite korisnike.',
+                                'Scale prices based on season and time of day.':
+                                    'Mijenjajte cijene prema sezoni i dobu dana.',
+                              }[subtitle] ??
+                              subtitle),
                       style: GoogleFonts.inter(
                           fontSize: 12, color: Colors.grey[600])),
                 ],
@@ -560,7 +622,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         ),
         child: Text(
-          label.toUpperCase(),
+          Lang.sel(
+              ref.watch(localeIsCroatianProvider),
+              label.toUpperCase(),
+              {
+                    'GENERATE HOURLY LINK': 'GENERIRAJ LINK ZA SAT',
+                    'GENERATE DAILY LINK': 'GENERIRAJ LINK ZA DAN',
+                    'GENERATE MONTHLY LINK': 'GENERIRAJ LINK ZA MJESEC',
+                  }[label.toUpperCase()] ??
+                  label.toUpperCase()),
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -599,7 +669,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               const Icon(Icons.link, color: Colors.black),
               const SizedBox(width: 8),
               Text(
-                'Stripe Links',
+                Lang.sel(ref.watch(localeIsCroatianProvider), 'Stripe Links',
+                    'Stripe linkovi'),
                 style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -611,19 +682,28 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           SizedBox(
             width: double.infinity,
             child: _buildStripeButton(
-                'Generate Hourly Link', 'hourly', Colors.black),
+                Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'Generate Hourly Link', 'Generiraj link za sat'),
+                'hourly',
+                Colors.black),
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: _buildStripeButton(
-                'Generate Daily Link', 'daily', Colors.black),
+                Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'Generate Daily Link', 'Generiraj link za dan'),
+                'daily',
+                Colors.black),
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: _buildStripeButton(
-                'Generate Monthly Link', 'monthly', Colors.black),
+                Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'Generate Monthly Link', 'Generiraj link za mjesec'),
+                'monthly',
+                Colors.black),
           ),
         ],
       ),
@@ -644,14 +724,22 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download supported on Web only.')),
+            SnackBar(
+                content: Text(Lang.sel(
+                    ref.read(localeIsCroatianProvider),
+                    'Download supported on Web only.',
+                    'Preuzimanje je podržano samo na webu.'))),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating sign: $e')),
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Error generating sign: $e',
+                  'Greška pri generiranju znaka: $e'))),
         );
       }
     }
@@ -671,25 +759,34 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download supported on Web only.')),
+            SnackBar(
+                content: Text(Lang.sel(
+                    ref.read(localeIsCroatianProvider),
+                    'Download supported on Web only.',
+                    'Preuzimanje je podržano samo na webu.'))),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating notice: $e')),
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Error generating notice: $e',
+                  'Greška pri generiranju obavijesti: $e'))),
         );
       }
     }
   }
 
   Widget _buildSignColumn(String displayId, String stripeUrl) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          'Your Parking Sign',
+          Lang.sel(isCroatian, 'Your Parking Sign', 'Vaša parkirna oznaka'),
           style: GoogleFonts.inter(
             color: Colors.black,
             fontSize: 18,
@@ -713,7 +810,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         ElevatedButton.icon(
           onPressed: _downloadSign,
           icon: const Icon(Icons.download),
-          label: const Text('Download Sign'),
+          label: Text(Lang.sel(isCroatian, 'Download Sign', 'Preuzmi znak')),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -729,11 +826,12 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   }
 
   Widget _buildParkingNoticeColumn(String displayId, String stripeUrl) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          'Daily Ticket',
+          Lang.sel(isCroatian, 'Daily Ticket', 'Dnevna karta'),
           style: GoogleFonts.inter(
             color: Colors.black,
             fontSize: 18,
@@ -769,7 +867,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                     alignment: Alignment.center,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Daily Ticket',
+                      Lang.sel(isCroatian, 'Daily Ticket', 'Dnevna karta'),
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 22,
@@ -795,7 +893,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Scan to Stripe',
+                              Lang.sel(isCroatian, 'Scan to Stripe',
+                                  'Skenirajte za Stripe'),
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 color: Colors.black,
@@ -821,7 +920,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Terms&Help ',
+                                  Lang.sel(isCroatian, 'Terms&Help ',
+                                      'Uvjeti&Pomoć '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: Colors.black,
@@ -837,12 +937,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                Text(
-                                  '+385981974035  ID $displayId',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold,
+                                Transform.translate(
+                                  offset: Offset(isCroatian ? -5.0 : 0.0, 0.0),
+                                  child: Text(
+                                    '+385981974035  ID $displayId',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: isCroatian ? -0.1 : 0.0,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -858,7 +962,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   right: 24,
                   bottom: 24,
                   child: Text(
-                    'payparq.ai\nThis invoice is privately issued. Parking invoices are issued on private property. For help or to dispute, contact support via the payparq.ai support number.',
+                    Lang.sel(
+                        isCroatian,
+                        'payparq.ai\nThis invoice is privately issued. Parking invoices are issued on private property. For help or to dispute, contact support via the payparq.ai support number.',
+                        'payparq.ai\nOva faktura je privatno izdana. Parkirne fakture izdaju se na privatnom posjedu. Za pomoć ili prigovor, kontaktirajte podršku putem broja payparq.ai.'),
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Colors.black54,
@@ -874,7 +981,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         ElevatedButton.icon(
           onPressed: _downloadNotice,
           icon: const Icon(Icons.download),
-          label: const Text('Download Ticket'),
+          label: Text(Lang.sel(isCroatian, 'Download Ticket', 'Preuzmi kartu')),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.black,
             foregroundColor: Colors.white,
@@ -915,12 +1022,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                           color: Colors.grey, size: 48),
                       const SizedBox(height: 8),
                       Text(
-                        'Template not found',
+                        Lang.sel(ref.watch(localeIsCroatianProvider),
+                            'Template not found', 'Predložak nije pronađen'),
                         style:
                             GoogleFonts.inter(color: Colors.grey, fontSize: 12),
                       ),
                       Text(
-                        'assets/images/your_photo.png',
+                        Lang.sel(
+                            ref.watch(localeIsCroatianProvider),
+                            'assets/images/your_photo.png',
+                            'assets/images/your_photo.png'),
                         style:
                             GoogleFonts.inter(color: Colors.grey, fontSize: 10),
                       ),
@@ -990,7 +1101,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             Positioned(
               left: 52,
-              bottom: 44,
+              bottom: 56,
               child: Row(
                 children: [
                   Text(
@@ -1012,6 +1123,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     // Watch the global selection and trigger a re-fetch if it changes
     ref.listen(selectedLocationIdProvider, (previous, next) {
       if (next != null && next != previous) {
@@ -1041,7 +1153,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Dynamic Pricing',
+                      Lang.sel(isCroatian, 'Dynamic Pricing',
+                          'Dinamičko određivanje cijena'),
                       style: GoogleFonts.inter(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -1051,7 +1164,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'v1.1.2 • Seasonal & algorithmic price adjustments.',
+                      Lang.sel(
+                          isCroatian,
+                          'v1.1.2 • Seasonal & algorithmic price adjustments.',
+                          'v1.1.2 • Sezonska i algoritamska podešavanja cijena.'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
@@ -1064,7 +1180,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   child: ElevatedButton.icon(
                     onPressed: _saveSettings,
                     icon: const Icon(Icons.save_outlined, size: 18),
-                    label: const Text('Save Changes'),
+                    label: Text(Lang.sel(
+                        isCroatian, 'Save Changes', 'Spremi promjene')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -1084,20 +1201,27 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             const SizedBox(height: 48),
 
             // Base Pricing
-            _buildSectionHeader('Standard Base Rates'),
+            _buildSectionHeader(Lang.sel(isCroatian, 'Standard Base Rates',
+                'Standardne osnovne cijene')),
             const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
-                    child: _buildPriceInput('Hourly Rate', _hourlyController,
+                    child: _buildPriceInput(
+                        Lang.sel(isCroatian, 'Hourly Rate', 'Cijena po satu'),
+                        _hourlyController,
                         Icons.timer_outlined)),
                 const SizedBox(width: 24),
                 Expanded(
                     child: _buildPriceInput(
-                        'Daily Rate', _dailyController, Icons.today_outlined)),
+                        Lang.sel(isCroatian, 'Daily Rate', 'Dnevna cijena'),
+                        _dailyController,
+                        Icons.today_outlined)),
                 const SizedBox(width: 24),
                 Expanded(
-                    child: _buildPriceInput('Monthly Rate', _monthlyController,
+                    child: _buildPriceInput(
+                        Lang.sel(isCroatian, 'Monthly Rate', 'Mjesečna cijena'),
+                        _monthlyController,
                         Icons.calendar_month_outlined)),
               ],
             ),
@@ -1105,21 +1229,31 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
             // Ceiling Pricing (Only if AutoPilot is ON)
             if (_autopilotEnabled) ...[
-              _buildSectionHeader('Smart AutoPilot Constraints'),
+              _buildSectionHeader(Lang.sel(
+                  isCroatian,
+                  'Smart AutoPilot Constraints',
+                  'Ograničenja pametnog AutoPilota')),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                      child: _buildPriceInput('Hourly Minimum',
-                          _hourlyFloorController, Icons.timer_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput('Daily Minimum',
-                          _dailyFloorController, Icons.today_outlined)),
+                      child: _buildPriceInput(
+                          Lang.sel(isCroatian, 'Hourly Minimum',
+                              'Minimalno po satu'),
+                          _hourlyFloorController,
+                          Icons.timer_outlined)),
                   const SizedBox(width: 24),
                   Expanded(
                       child: _buildPriceInput(
-                          'Monthly Minimum',
+                          Lang.sel(
+                              isCroatian, 'Daily Minimum', 'Minimalno po danu'),
+                          _dailyFloorController,
+                          Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          Lang.sel(isCroatian, 'Monthly Minimum',
+                              'Minimalno mjesečno'),
                           _monthlyFloorController,
                           Icons.calendar_month_outlined)),
                 ],
@@ -1128,16 +1262,23 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               Row(
                 children: [
                   Expanded(
-                      child: _buildPriceInput('Hourly Ceiling',
-                          _hourlyCeilingController, Icons.timer_outlined)),
-                  const SizedBox(width: 24),
-                  Expanded(
-                      child: _buildPriceInput('Daily Ceiling',
-                          _dailyCeilingController, Icons.today_outlined)),
+                      child: _buildPriceInput(
+                          Lang.sel(isCroatian, 'Hourly Ceiling',
+                              'Maksimalno po satu'),
+                          _hourlyCeilingController,
+                          Icons.timer_outlined)),
                   const SizedBox(width: 24),
                   Expanded(
                       child: _buildPriceInput(
-                          'Monthly Ceiling',
+                          Lang.sel(isCroatian, 'Daily Ceiling',
+                              'Maksimalno po danu'),
+                          _dailyCeilingController,
+                          Icons.today_outlined)),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: _buildPriceInput(
+                          Lang.sel(isCroatian, 'Monthly Ceiling',
+                              'Maksimalno mjesečno'),
                           _monthlyCeilingController,
                           Icons.calendar_month_outlined)),
                 ],
@@ -1154,11 +1295,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader('Demand Sensitivity'),
+                      _buildSectionHeader(Lang.sel(isCroatian,
+                          'Demand Sensitivity', 'Osjetljivost potražnje')),
                       const SizedBox(height: 16),
                       _buildControlCard(
-                        title: 'Demand Ratio',
-                        subtitle: 'Adjustment benchmark (0% - 200%)',
+                        title: Lang.sel(
+                            isCroatian, 'Demand Ratio', 'Omjer potražnje'),
+                        subtitle: Lang.sel(
+                            isCroatian,
+                            'Adjustment benchmark (0% - 200%)',
+                            'Referentna vrijednost prilagodbe (0% - 200%)'),
                         enabled: _dynamicEnabled,
                         onToggle: (val) =>
                             setState(() => _dynamicEnabled = val),
@@ -1177,7 +1323,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                                   : null,
                             ),
                             Text(
-                              'Manual Benchmark: ${(_dynamicRatio * 100).toInt()}%',
+                              Lang.sel(
+                                  isCroatian,
+                                  'Manual Benchmark: ${(_dynamicRatio * 100).toInt()}%',
+                                  'Ručna referentna vrijednost: ${(_dynamicRatio * 100).toInt()}%'),
                               style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
@@ -1194,11 +1343,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader('Congestion Surcharge'),
+                      _buildSectionHeader(Lang.sel(isCroatian,
+                          'Congestion Surcharge', 'Dodatak zbog gužve')),
                       const SizedBox(height: 16),
                       _buildControlCard(
-                        title: 'Surcharge Multiplier',
-                        subtitle: 'Peak-traffic premium (1x - 10x)',
+                        title: Lang.sel(isCroatian, 'Surcharge Multiplier',
+                            'Multiplikator dodatka'),
+                        subtitle: Lang.sel(
+                            isCroatian,
+                            'Peak-traffic premium (1x - 10x)',
+                            'Dodatak u vršnom prometu (1x - 10x)'),
                         enabled: _surchargeEnabled,
                         onToggle: (val) =>
                             setState(() => _surchargeEnabled = val),
@@ -1220,7 +1374,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Manual Benchmark: ${_surchargeMultiplier}x',
+                              Lang.sel(
+                                  isCroatian,
+                                  'Manual Benchmark: ${_surchargeMultiplier}x',
+                                  'Ručna referentna vrijednost: ${_surchargeMultiplier}x'),
                               style: GoogleFonts.inter(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
@@ -1236,7 +1393,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             const SizedBox(height: 48),
 
-            _buildSectionHeader('Payment Terminal Assets'),
+            _buildSectionHeader(Lang.sel(isCroatian, 'Payment Terminal Assets',
+                'Resursi platnog terminala')),
             const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,7 +1416,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: AppTheme.border),
                             ),
-                            child: const Text('Select a location'),
+                            child: Text(Lang.sel(isCroatian,
+                                'Select a location', 'Odaberite lokaciju')),
                           ),
                   ),
                 ),
@@ -1285,7 +1444,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: AppTheme.border),
                             ),
-                            child: const Text('Select a location'),
+                            child: Text(Lang.sel(isCroatian,
+                                'Select a location', 'Odaberite lokaciju')),
                           ),
                   ),
                 ),

@@ -12,6 +12,7 @@ import '../../../widgets/admin_data_card.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
+import '../../../logic/providers/locale_provider.dart';
 
 class CasesListView extends ConsumerStatefulWidget {
   const CasesListView({super.key});
@@ -34,6 +35,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Future<void> _handleQuickAction({required bool isWarning}) async {
+    final isHr = ref.read(localeIsCroatianProvider);
     final profile = ref.read(userProfileProvider).value;
     if (profile == null) return;
 
@@ -71,13 +73,17 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(isWarning ? 'Quick Warning' : 'Quick Ticket',
+        title: Text(isWarning ? Lang.sel(isHr, 'Quick Warning', 'Brzo upozorenje')
+            : Lang.sel(isHr, 'Quick Ticket', 'Brza kazna'),
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Column(
+        content: SizedBox(
+          width: 500,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Enter License Plate (e.g. MA679XX)',
+            Text(Lang.sel(isHr, 'Enter License Plate (e.g. MA679XX)',
+                'Unesite registarsku oznaku (npr. MA679XX)'),
                 style: GoogleFonts.inter(
                     fontSize: 14, color: AppTheme.textSecondary)),
             const SizedBox(height: 12),
@@ -104,11 +110,12 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               },
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
+            child: Text(Lang.sel(isHr, 'Cancel', 'Odustani'),
                 style: GoogleFonts.inter(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
@@ -127,7 +134,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Next: Take Photo'),
+            child: Text(Lang.sel(isHr, 'Next: Take Photo', 'Sljedeće: Snimi fotografiju')),
           ),
         ],
       ),
@@ -210,7 +217,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isWarning ? 'Warning Issued!' : 'Ticket Issued!'),
+            content: Text(isWarning
+                ? Lang.sel(isHr, 'Warning Issued!', 'Upozorenje izdano!')
+                : Lang.sel(isHr, 'Ticket Issued!', 'Kazna izdana!')),
             backgroundColor: isWarning ? Colors.orange : Colors.red,
           ),
         );
@@ -272,9 +281,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text('Evidence: $plate',
+        title: Text('${Lang.sel(ref.read(localeIsCroatianProvider), 'Evidence', 'Dokaz')}: $plate',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        content: Column(
+        content: SizedBox(
+          width: 500,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -305,7 +316,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                               Icon(Icons.broken_image_outlined,
                                   size: 48, color: Colors.grey),
                               SizedBox(height: 8),
-                              Text('Image not found',
+                              Text('Slika nije pronađena',
                                   style: TextStyle(
                                       color: Colors.grey, fontSize: 12)),
                             ],
@@ -313,16 +324,19 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                         ),
                       ),
                     )
-                  : const Center(
+                  : Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported_outlined,
+                          const Icon(Icons.image_not_supported_outlined,
                               size: 48, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('No photo attached',
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 16),
+                          Text(
+                            Lang.sel(ref.read(localeIsCroatianProvider),
+                                'No photo attached', 'Nema priložene fotografije'),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
@@ -331,7 +345,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Violation:',
+                Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Violation:', 'Prekršaj:'),
                     style: GoogleFonts.inter(color: AppTheme.textSecondary)),
                 Text(violation['violation_type'] ?? 'General',
                     style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
@@ -341,7 +355,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Fine Amount:',
+                Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Fine Amount:', 'Iznos kazne:'),
                     style: GoogleFonts.inter(color: AppTheme.textSecondary)),
                 Text('€${violation['fine_amount'] ?? 0}',
                     style: GoogleFonts.inter(
@@ -349,11 +363,12 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               ],
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close',
+            child: Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
                 style: GoogleFonts.inter(
                     color: Colors.black, fontWeight: FontWeight.bold)),
           ),
@@ -392,6 +407,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Widget _buildHeader(bool isDesktop, String? selectedLocId) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isDesktop ? 48 : 24,
@@ -410,7 +426,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cases',
+                      Lang.sel(isCroatian, 'Cases', 'Predmeti'),
                       style: GoogleFonts.inter(
                         fontSize: isDesktop ? 40 : 32,
                         fontWeight: FontWeight.bold,
@@ -421,8 +437,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                     const SizedBox(height: 8),
                     Text(
                       selectedLocId != null
-                          ? 'Monitoring all enforcement activity.'
-                          : 'Please select a lot in the top bar.',
+                          ? Lang.sel(isCroatian, 'Monitoring all enforcement activity.',
+                              'Praćenje svih aktivnosti nadzora.')
+                          : Lang.sel(isCroatian, 'Please select a lot in the top bar.',
+                              'Molimo odaberite parkiralište u gornjoj traci.'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppTheme.textSecondary,
@@ -436,7 +454,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   children: [
                     _buildHeaderActionButton(
                       icon: Icons.warning_amber_rounded,
-                      label: 'Quick Warning',
+                      label: Lang.sel(isCroatian, 'Quick Warning', 'Brzo upozorenje'),
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       onTap: () => _handleQuickAction(isWarning: true),
@@ -445,7 +463,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                     const SizedBox(width: 12),
                     _buildHeaderActionButton(
                       icon: Icons.receipt_long,
-                      label: 'Quick Ticket',
+                      label: Lang.sel(isCroatian, 'Quick Ticket', 'Brza kazna'),
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
                       onTap: () => _handleQuickAction(isWarning: false),
@@ -501,6 +519,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Widget _buildQuickActions(bool isDesktop) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -516,7 +535,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ),
         _buildHeaderActionButton(
           icon: Icons.warning_amber_rounded,
-          label: 'Quick Warning',
+          label: Lang.sel(isHr, 'Quick Warning', 'Brzo upozorenje'),
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           onTap: () => _handleQuickAction(isWarning: true),
@@ -525,7 +544,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         const SizedBox(width: 12),
         _buildHeaderActionButton(
           icon: Icons.receipt_long,
-          label: 'Quick Ticket',
+          label: Lang.sel(isHr, 'Quick Ticket', 'Brza kazna'),
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           onTap: () => _handleQuickAction(isWarning: false),
@@ -536,6 +555,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Widget _buildSearchAndFilter(bool isDesktop) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -555,7 +575,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               });
             },
             decoration: InputDecoration(
-              hintText: 'Search...',
+              hintText: Lang.sel(isHr, 'Search...', 'Pretraži...'),
               prefixIcon: const Icon(Icons.search, size: 20),
               filled: true,
               fillColor: AppTheme.surface,
@@ -575,11 +595,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterButton('All', isDesktop),
+              _buildFilterButton(Lang.sel(isHr, 'All', 'Sve'), isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton('Tickets', isDesktop),
+              _buildFilterButton(Lang.sel(isHr, 'Tickets', 'Kazne'), isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton('Warnings', isDesktop),
+              _buildFilterButton(Lang.sel(isHr, 'Warnings', 'Upozorenja'), isDesktop),
             ],
           ),
         ),
@@ -625,7 +645,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     return violationsAsync.when(
       loading: () =>
           const Center(child: CircularProgressIndicator(color: Colors.black)),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      error: (err, stack) => Center(
+          child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Error: $err', 'Greška: $err'))),
+      // Translate empty states and search messages
       data: (violations) {
         // Deduplicate: keep optimistic item unless the SAME record (by evidence + timestamp) arrived
         final optimisticItems = optimisticViolations.where((ov) {
@@ -685,8 +707,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 const SizedBox(height: 16),
                 Text(
                     _searchQuery.isNotEmpty
-                        ? 'No matches for "$_searchQuery"'
-                        : 'No active cases found.',
+                        ? Lang.sel(ref.read(localeIsCroatianProvider),
+                            'No matches for "$_searchQuery"',
+                            'Nema podudaranja za "$_searchQuery"')
+                        : Lang.sel(ref.read(localeIsCroatianProvider),
+                            'No active cases found.', 'Nema aktivnih predmeta.'),
                     style: TextStyle(color: Colors.grey[400])),
               ],
             ),
@@ -748,7 +773,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text('View', style: TextStyle(fontSize: 11)),
+                    child: Text(
+                      Lang.sel(ref.read(localeIsCroatianProvider), 'View', 'Pogledaj'),
+                      style: const TextStyle(fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -823,7 +851,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             borderRadius: BorderRadius.circular(4),
               ),
             ),
-            child: const Text('View'),
+            child: Text(Lang.sel(ref.read(localeIsCroatianProvider), 'View', 'Pogledaj')),
           ),
         ],
       ),
@@ -896,6 +924,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Widget _buildStatusBadge(String status) {
+    final isHr = ref.watch(localeIsCroatianProvider);
     final s = status.toLowerCase();
     final isPaid = s == 'paid' || s == 'active';
     final isWarning = s == 'warning';
@@ -907,9 +936,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             ? Colors.orange[400]
             : Colors.red[400];
 
+    final fixedBadgeWidth =
+        (isHr && (isWarning || isIssued)) ? 140.0 : ((isWarning || isIssued) ? 110.0 : 0.0);
     return Container(
-      constraints:
-          BoxConstraints(minWidth: (isWarning || isIssued) ? 110 : 0),
+      constraints: BoxConstraints(minWidth: fixedBadgeWidth),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -931,7 +961,14 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ),
           const SizedBox(width: 8),
           Text(
-            status.toUpperCase(),
+            (() {
+              final up = status.toUpperCase();
+              if (up == 'ISSUED') return Lang.sel(isHr, 'ISSUED', 'IZDANO');
+              if (up == 'WARNING') return Lang.sel(isHr, 'WARNING', 'UPOZORENJE');
+              if (up == 'PAID') return Lang.sel(isHr, 'PAID', 'PLAĆENO');
+              if (up == 'ACTIVE') return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
+              return up;
+            })(),
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.bold,
