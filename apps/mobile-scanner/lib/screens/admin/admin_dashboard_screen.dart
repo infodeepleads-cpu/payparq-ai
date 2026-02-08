@@ -32,7 +32,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isDesktop = size.width >= 1100;
+    final params = Uri.base.queryParameters;
+    final bool forceMobile =
+        (params['mobile'] == '1') || (params['render'] == 'mobile');
+    final isDesktop = !forceMobile && size.width >= 1100;
 
     // Watch global lot selection to force a data refresh if it changes
     ref.listen(selectedLocationIdProvider, (previous, next) {
@@ -160,44 +163,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     color: AppTheme.textSecondary,
                   ),
                 ),
-                if (kIsWeb) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _buildHeaderActionButton(
-                        icon: Icons.menu_book_outlined,
-                        label: Lang.sel(isHr, 'Instructions', 'Upute'),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const InstructionsScreen()),
-                          );
-                        },
-                        isDesktop: false,
-                      ),
-                      const SizedBox(width: 12),
-                      _buildHeaderActionButton(
-                        icon: Icons.android,
-                        label: Lang.sel(
-                            isHr, 'Download App', 'Preuzmi aplikaciju'),
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        onTap: () async {
-                          final url = Uri.parse(
-                              'https://payparq-d-6rex95.web.app/app-release.apk');
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        },
-                        isDesktop: false,
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           // Ensure identical spacing before search as in Cases
@@ -471,8 +436,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     if (!isDesktop) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.all(6),
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(4),
@@ -482,31 +447,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           children: [
             Row(
               children: [
-                _buildPlateBadge(plate),
+                _buildPlateBadge(plate, isDesktop: false),
                 const SizedBox(width: 8),
-                _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
-                const Spacer(),
-                SizedBox(
-                  height: 28,
-                  child: ElevatedButton(
-                    onPressed: () => _navigateToDetail(s),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text('View', style: TextStyle(fontSize: 11)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,6 +478,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 26,
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToDetail(s),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('View', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
               ],
             ),
           ],
@@ -544,7 +503,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
 
     return AdminDataCard(
-      leading: _buildPlateBadge(plate),
+      leading: _buildPlateBadge(plate, isDesktop: true),
       mainContent: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -598,10 +557,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildPlateBadge(String plate) {
+  Widget _buildPlateBadge(String plate, {bool isDesktop = false}) {
     return Container(
-      width: 160,
-      height: 48,
+      width: isDesktop ? 160 : 120,
+      height: isDesktop ? 48 : 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
@@ -610,7 +569,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: Text(
         plate.toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 18,
+          fontSize: isDesktop ? 18 : 16,
           fontWeight: FontWeight.bold,
           color: Colors.white,
           letterSpacing: 1,

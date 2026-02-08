@@ -6,8 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../responsive/responsive_layout.dart';
 import '../logic/providers/auth_providers.dart';
 import '../logic/providers/locale_provider.dart';
-import '../screens/hud_screen.dart'
-    if (dart.library.html) '../screens/hud_screen_web.dart';
+import '../screens/hud_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart'; // Users List
 import '../features/enforcement/screens/cases_list_view.dart';
 import '../features/enforcement/screens/upload_case_form.dart';

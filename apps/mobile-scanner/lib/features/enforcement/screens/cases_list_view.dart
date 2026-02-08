@@ -26,7 +26,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedFilter = 'All';
-  bool _isProcessing = false;
 
   @override
   void dispose() {
@@ -73,43 +72,48 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(isWarning ? Lang.sel(isHr, 'Quick Warning', 'Brzo upozorenje')
-            : Lang.sel(isHr, 'Quick Ticket', 'Brza kazna'),
+        title: Text(
+            isWarning
+                ? Lang.sel(isHr, 'Quick Warning', 'Brzo upozorenje')
+                : Lang.sel(isHr, 'Quick Ticket', 'Brza kazna'),
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 500,
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(Lang.sel(isHr, 'Enter License Plate (e.g. MA679XX)',
-                'Unesite registarsku oznaku (npr. MA679XX)'),
-                style: GoogleFonts.inter(
-                    fontSize: 14, color: AppTheme.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: plateController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.characters,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
-              ],
-              decoration: InputDecoration(
-                hintText: 'MA679XX',
-                filled: true,
-                fillColor: AppTheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                  Lang.sel(isHr, 'Enter License Plate (e.g. MA679XX)',
+                      'Unesite registarsku oznaku (npr. MA679XX)'),
+                  style: GoogleFonts.inter(
+                      fontSize: 14, color: AppTheme.textSecondary)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: plateController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9]')),
+                ],
+                decoration: InputDecoration(
+                  hintText: 'MA679XX',
+                  filled: true,
+                  fillColor: AppTheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
+                onSubmitted: (v) {
+                  final cleaned = v
+                      .trim()
+                      .replaceAll(RegExp(r'[^A-Z0-9]'), '')
+                      .toUpperCase();
+                  if (cleaned.isNotEmpty) Navigator.pop(context, cleaned);
+                },
               ),
-              onSubmitted: (v) {
-                final cleaned =
-                    v.trim().replaceAll(RegExp(r'[^A-Z0-9]'), '').toUpperCase();
-                if (cleaned.isNotEmpty) Navigator.pop(context, cleaned);
-              },
-            ),
-          ],
+            ],
           ),
         ),
         actions: [
@@ -134,7 +138,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: Text(Lang.sel(isHr, 'Next: Take Photo', 'Sljedeće: Snimi fotografiju')),
+            child: Text(Lang.sel(
+                isHr, 'Next: Take Photo', 'Sljedeće: Snimi fotografiju')),
           ),
         ],
       ),
@@ -151,8 +156,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
     if (image == null) return;
     if (!context.mounted) return;
-
-    setState(() => _isProcessing = true);
 
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
@@ -246,15 +249,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           SnackBar(content: Text('Error: $e')),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-          // Keep optimistic item until the real stream shows the inserted record,
-          // then remove it in the listener above. This prevents flicker/disappear.
-        });
-      }
-    }
+    } finally {}
   }
 
   Future<void> _showEvidence(Map<String, dynamic> violation) async {
@@ -281,94 +276,103 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text('${Lang.sel(ref.read(localeIsCroatianProvider), 'Evidence', 'Dokaz')}: $plate',
+        title: Text(
+            '${Lang.sel(ref.read(localeIsCroatianProvider), 'Evidence', 'Dokaz')}: $plate',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 500,
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 300,
-              width: 300,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: fullImageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        fullImageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                              child: CircularProgressIndicator(
-                                  color: Colors.black));
-                        },
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.broken_image_outlined,
-                                  size: 48, color: Colors.grey),
-                              SizedBox(height: 8),
-                              Text('Slika nije pronađena',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12)),
-                            ],
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 300,
+                width: 300,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: fullImageUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          fullImageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    color: Colors.black));
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image_outlined,
+                                    size: 48, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('Slika nije pronađena',
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12)),
+                              ],
+                            ),
                           ),
                         ),
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.image_not_supported_outlined,
+                                size: 48, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            Text(
+                              Lang.sel(
+                                  ref.read(localeIsCroatianProvider),
+                                  'No photo attached',
+                                  'Nema priložene fotografije'),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 12),
+                            ),
+                          ],
+                        ),
                       ),
-                    )
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.image_not_supported_outlined,
-                              size: 48, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(
-                            Lang.sel(ref.read(localeIsCroatianProvider),
-                                'No photo attached', 'Nema priložene fotografije'),
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Violation:', 'Prekršaj:'),
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-                Text(violation['violation_type'] ?? 'General',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Fine Amount:', 'Iznos kazne:'),
-                    style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-                Text('€${violation['fine_amount'] ?? 0}',
-                    style: GoogleFonts.inter(
-                        fontWeight: FontWeight.bold, color: Colors.red)),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                      Lang.sel(ref.read(localeIsCroatianProvider), 'Violation:',
+                          'Prekršaj:'),
+                      style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                  Text(violation['violation_type'] ?? 'General',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                      Lang.sel(ref.read(localeIsCroatianProvider),
+                          'Fine Amount:', 'Iznos kazne:'),
+                      style: GoogleFonts.inter(color: AppTheme.textSecondary)),
+                  Text('€${violation['fine_amount'] ?? 0}',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold, color: Colors.red)),
+                ],
+              ),
+            ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(Lang.sel(ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
+            child: Text(
+                Lang.sel(
+                    ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
                 style: GoogleFonts.inter(
                     color: Colors.black, fontWeight: FontWeight.bold)),
           ),
@@ -437,9 +441,13 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                     const SizedBox(height: 8),
                     Text(
                       selectedLocId != null
-                          ? Lang.sel(isCroatian, 'Monitoring all enforcement activity.',
+                          ? Lang.sel(
+                              isCroatian,
+                              'Monitoring all enforcement activity.',
                               'Praćenje svih aktivnosti nadzora.')
-                          : Lang.sel(isCroatian, 'Please select a lot in the top bar.',
+                          : Lang.sel(
+                              isCroatian,
+                              'Please select a lot in the top bar.',
                               'Molimo odaberite parkiralište u gornjoj traci.'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -454,7 +462,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   children: [
                     _buildHeaderActionButton(
                       icon: Icons.warning_amber_rounded,
-                      label: Lang.sel(isCroatian, 'Quick Warning', 'Brzo upozorenje'),
+                      label: Lang.sel(
+                          isCroatian, 'Quick Warning', 'Brzo upozorenje'),
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       onTap: () => _handleQuickAction(isWarning: true),
@@ -473,10 +482,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 ),
             ],
           ),
-          if (selectedLocId != null && !isDesktop) ...[
-            const SizedBox(height: 24),
-            _buildQuickActions(isDesktop),
-          ],
           SizedBox(height: isDesktop ? 48 : 32),
           _buildSearchAndFilter(isDesktop),
         ],
@@ -518,42 +523,6 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildQuickActions(bool isDesktop) {
-    final isHr = ref.watch(localeIsCroatianProvider);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_isProcessing)
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.black),
-            ),
-          ),
-        _buildHeaderActionButton(
-          icon: Icons.warning_amber_rounded,
-          label: Lang.sel(isHr, 'Quick Warning', 'Brzo upozorenje'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          onTap: () => _handleQuickAction(isWarning: true),
-          isDesktop: isDesktop,
-        ),
-        const SizedBox(width: 12),
-        _buildHeaderActionButton(
-          icon: Icons.receipt_long,
-          label: Lang.sel(isHr, 'Quick Ticket', 'Brza kazna'),
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          onTap: () => _handleQuickAction(isWarning: false),
-          isDesktop: isDesktop,
-        ),
-      ],
-    );
-  }
-
   Widget _buildSearchAndFilter(bool isDesktop) {
     final isHr = ref.watch(localeIsCroatianProvider);
     return Column(
@@ -580,11 +549,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide.none,
               ),
             ),
@@ -599,7 +568,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               const SizedBox(width: 12),
               _buildFilterButton(Lang.sel(isHr, 'Tickets', 'Kazne'), isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton(Lang.sel(isHr, 'Warnings', 'Upozorenja'), isDesktop),
+              _buildFilterButton(
+                  Lang.sel(isHr, 'Warnings', 'Upozorenja'), isDesktop),
             ],
           ),
         ),
@@ -646,7 +616,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       loading: () =>
           const Center(child: CircularProgressIndicator(color: Colors.black)),
       error: (err, stack) => Center(
-          child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Error: $err', 'Greška: $err'))),
+          child: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+              'Error: $err', 'Greška: $err'))),
       // Translate empty states and search messages
       data: (violations) {
         // Deduplicate: keep optimistic item unless the SAME record (by evidence + timestamp) arrived
@@ -707,11 +678,14 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 const SizedBox(height: 16),
                 Text(
                     _searchQuery.isNotEmpty
-                        ? Lang.sel(ref.read(localeIsCroatianProvider),
+                        ? Lang.sel(
+                            ref.read(localeIsCroatianProvider),
                             'No matches for "$_searchQuery"',
                             'Nema podudaranja za "$_searchQuery"')
-                        : Lang.sel(ref.read(localeIsCroatianProvider),
-                            'No active cases found.', 'Nema aktivnih predmeta.'),
+                        : Lang.sel(
+                            ref.read(localeIsCroatianProvider),
+                            'No active cases found.',
+                            'Nema aktivnih predmeta.'),
                     style: TextStyle(color: Colors.grey[400])),
               ],
             ),
@@ -745,8 +719,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
     if (!isDesktop) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.all(6),
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(4),
@@ -756,34 +730,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           children: [
             Row(
               children: [
-                _buildPlateBadge(plate),
+                _buildPlateBadge(plate, isDesktop: false),
                 const SizedBox(width: 8),
-                _buildStatusBadge(status),
-                const Spacer(),
-                SizedBox(
-                  height: 28,
-                  child: ElevatedButton(
-                    onPressed: () => _showEvidence(violation),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      Lang.sel(ref.read(localeIsCroatianProvider), 'View', 'Pogledaj'),
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,8 +749,31 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                           fontSize: 10,
                           color: AppTheme.textSecondary,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 26,
+                  child: ElevatedButton(
+                    onPressed: () => _showEvidence(violation),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      Lang.sel(ref.read(localeIsCroatianProvider), 'View',
+                          'Pogledaj'),
+                      style: const TextStyle(fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -813,7 +784,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     }
 
     return AdminDataCard(
-      leading: _buildPlateBadge(plate),
+      leading: _buildPlateBadge(plate, isDesktop: true),
       mainContent: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -848,28 +819,33 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 vertical: 12,
               ),
               shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(4),
               ),
             ),
-            child: Text(Lang.sel(ref.read(localeIsCroatianProvider), 'View', 'Pogledaj')),
+            child: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider), 'View', 'Pogledaj')),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPlateBadge(String plate) {
+  Widget _buildPlateBadge(String plate, {bool isDesktop = false}) {
     return Container(
-      width: 160,
-      height: 48,
+      width: isDesktop ? 160 : 120,
+      height: isDesktop ? 48 : 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(4),
       ),
       child: _highlightText(
-          plate.toUpperCase(), _searchQuery, Colors.white, Colors.yellow,
-          fontSize: 18),
+        plate.toUpperCase(),
+        _searchQuery,
+        Colors.white,
+        Colors.yellow,
+        fontSize: isDesktop ? 18 : 16,
+      ),
     );
   }
 
@@ -936,8 +912,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             ? Colors.orange[400]
             : Colors.red[400];
 
-    final fixedBadgeWidth =
-        (isHr && (isWarning || isIssued)) ? 140.0 : ((isWarning || isIssued) ? 110.0 : 0.0);
+    final fixedBadgeWidth = (isHr && (isWarning || isIssued))
+        ? 140.0
+        : ((isWarning || isIssued) ? 110.0 : 0.0);
     return Container(
       constraints: BoxConstraints(minWidth: fixedBadgeWidth),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -964,7 +941,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             (() {
               final up = status.toUpperCase();
               if (up == 'ISSUED') return Lang.sel(isHr, 'ISSUED', 'IZDANO');
-              if (up == 'WARNING') return Lang.sel(isHr, 'WARNING', 'UPOZORENJE');
+              if (up == 'WARNING') {
+                return Lang.sel(isHr, 'WARNING', 'UPOZORENJE');
+              }
               if (up == 'PAID') return Lang.sel(isHr, 'PAID', 'PLAĆENO');
               if (up == 'ACTIVE') return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
               return up;

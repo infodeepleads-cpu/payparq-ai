@@ -52,10 +52,13 @@ class PassDetailScreen extends ConsumerWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(48.0),
-        child: Column(
-          children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth >= 1100;
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isDesktop ? 48.0 : 16.0),
+            child: Column(
+              children: [
             // Card Container
             Container(
               width: double.infinity,
@@ -257,8 +260,10 @@ class PassDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          ],
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

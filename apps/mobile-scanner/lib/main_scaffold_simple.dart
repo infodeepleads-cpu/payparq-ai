@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers/auth_providers_simple.dart';
-import '../screens/hud_screen.dart' if (dart.library.html) '../screens/hud_screen_web.dart';
+import '../screens/hud_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/settings_screen.dart';
 
