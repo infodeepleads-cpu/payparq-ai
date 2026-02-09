@@ -262,14 +262,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _monthlyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthlyCeiling = double.tryParse(rawMonthlyCeiling) ?? 0.0;
 
-    final String rawHourlyFloor =
-        _hourlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
-    final double newHourlyFloor = double.tryParse(rawHourlyFloor) ?? 0.0;
-
-    final String rawMonthlyFloor =
-        _monthlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
-    final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
-
     setState(() => _isLoading = true);
 
     try {
@@ -280,8 +272,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'rate_per_hour_ceiling': newHourlyCeiling,
         'base_price_daily_ceiling': newDailyCeiling,
         'base_price_monthly_ceiling': newMonthlyCeiling,
-        'rate_per_hour_floor': newHourlyFloor,
-        'base_price_monthly_floor': newMonthlyFloor,
       };
       final flagsPayload = {
         'dynamic_pricing_enabled': _dynamicEnabled,
@@ -298,20 +288,22 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         await supabase
             .from('locations')
             .update(pricePayload)
-            .eq('id', targetId)
-            .select(
-                'id,rate_per_hour,base_price_daily,base_price_monthly,rate_per_hour_ceiling,base_price_daily_ceiling,base_price_monthly_ceiling,rate_per_hour_floor,base_price_monthly_floor');
-      } catch (_) {
+            .eq('id', targetId);
+      } catch (e1) {
+        debugPrint('⚠️ ID update failed: $e1');
         final displayId = _selectedLocation!['display_id']?.toString();
         if (displayId != null && displayId.isNotEmpty) {
-          await supabase
-              .from('locations')
-              .update(pricePayload)
-              .eq('display_id', displayId)
-              .select(
-                  'id,rate_per_hour,base_price_daily,base_price_monthly,rate_per_hour_ceiling,base_price_daily_ceiling,base_price_monthly_ceiling,rate_per_hour_floor,base_price_monthly_floor');
+          try {
+            await supabase
+                .from('locations')
+                .update(pricePayload)
+                .eq('display_id', displayId);
+          } catch (e2) {
+            debugPrint('🔥 Both ID and DisplayID updates failed: $e2');
+            throw 'Price update failed: $e2';
+          }
         } else {
-          rethrow;
+          throw 'Price update failed: $e1';
         }
       }
 
@@ -319,18 +311,22 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         await supabase
             .from('locations')
             .update(flagsPayload)
-            .eq('id', targetId)
-            .select(
-                'id,dynamic_pricing_enabled,surcharge_enabled,autopilot_enabled,dynamic_pricing_ratio,surcharge_multiplier');
-      } catch (_) {
+            .eq('id', targetId);
+      } catch (e1) {
+        debugPrint('⚠️ Flags ID update failed: $e1');
         final displayId = _selectedLocation!['display_id']?.toString();
         if (displayId != null && displayId.isNotEmpty) {
-          await supabase
-              .from('locations')
-              .update(flagsPayload)
-              .eq('display_id', displayId)
-              .select(
-                  'id,dynamic_pricing_enabled,surcharge_enabled,autopilot_enabled,dynamic_pricing_ratio,surcharge_multiplier');
+          try {
+            await supabase
+                .from('locations')
+                .update(flagsPayload)
+                .eq('display_id', displayId);
+          } catch (e2) {
+            debugPrint('🔥 Both Flags ID and DisplayID updates failed: $e2');
+            throw 'Flags update failed: $e2';
+          }
+        } else {
+          throw 'Flags update failed: $e1';
         }
       }
 
@@ -367,8 +363,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ SAVED! New Price: $newHourly'),
-            backgroundColor: Colors.green,
+            content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                'Price saved', 'Cijena je spremljena')),
+            backgroundColor: Colors.black,
             duration: const Duration(seconds: 4),
           ),
         );
@@ -1320,6 +1317,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                               divisions: 20,
                               label: '${(_dynamicRatio * 100).toInt()}%',
                               thumbColor: Colors.black,
+                              activeColor: Colors.black,
                               inactiveColor: AppTheme.surface,
                               onChanged: (_dynamicEnabled && !_autopilotEnabled)
                                   ? (val) => setState(() => _dynamicRatio = val)
