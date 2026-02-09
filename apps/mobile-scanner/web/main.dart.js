@@ -220761,7 +220761,7 @@
           switch ($async$goto) {
             case 0:
               // Function start
-              url = A.Uri_parse("https://mobile-scanner-flax.vercel.app/app-release.apk", 0, null);
+              url = A.Uri_parse("https://mobile-scanner-flax-static.vercel.app/app-release.apk", 0, null);
               $async$goto = 4;
               return A._asyncAwait(A.canLaunchUrl(url), $async$call$0);
             case 4:
