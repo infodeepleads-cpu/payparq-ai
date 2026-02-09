@@ -358,7 +358,7 @@ $__dart_deferred_initializers__.current = function(hunkHelpers, init, holdersLis
               $async$self.setState$1(new C._DynamicPricingScreenState__saveSettings_closure0($async$self));
               $async$handler = 4;
               t1 = type$.String;
-              pricePayload = A.LinkedHashMap_LinkedHashMap$_literal(["rate_per_hour", newHourly, "base_price_daily", newDaily, "base_price_monthly", newMonthly, "rate_per_hour_ceiling", newHourlyCeiling, "base_price_daily_ceiling", newDailyCeiling, "base_price_monthly_ceiling", newMonthlyCeiling, "rate_per_hour_floor", newHourlyFloor, "base_price_daily_floor", newDailyFloor, "base_price_monthly_floor", newMonthlyFloor], t1, type$.double);
+              pricePayload = A.LinkedHashMap_LinkedHashMap$_literal(["rate_per_hour", newHourly, "base_price_daily", newDaily, "base_price_monthly", newMonthly, "rate_per_hour_ceiling", newHourlyCeiling, "base_price_daily_ceiling", newDailyCeiling, "base_price_monthly_ceiling", newMonthlyCeiling, "rate_per_hour_floor", newHourlyFloor, "base_price_monthly_floor", newMonthlyFloor], t1, type$.double);
               flagsPayload = A.LinkedHashMap_LinkedHashMap$_literal(["dynamic_pricing_enabled", $async$self._dynamicEnabled, "surcharge_enabled", $async$self._surchargeEnabled, "autopilot_enabled", $async$self._autopilotEnabled, "dynamic_pricing_ratio", $async$self._dynamicRatio, "surcharge_multiplier", $async$self._surchargeMultiplier], t1, type$.Object);
               A.print__debugPrintThrottled$closure().call$1("\ud83d\udea8 ATTEMPTING PRICE SAVE TO ID: " + A.S(targetId));
               A.print__debugPrintThrottled$closure().call$1("\ud83d\udce6 PRICE PAYLOAD: " + A.S(pricePayload));

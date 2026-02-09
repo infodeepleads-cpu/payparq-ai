@@ -10,6 +10,7 @@ import 'package:vibration/vibration.dart';
 import 'package:flutter/services.dart';
 import '../logic/providers/auth_providers.dart';
 import '../features/management/repositories/parking_repository.dart';
+import '../logic/providers/locale_provider.dart';
 
 class HudScreen extends ConsumerStatefulWidget {
   const HudScreen({super.key});
@@ -40,6 +41,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     super.initState();
     _currentTempId =
         'LPR-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    _statusMessage = Lang.sel(
+        ref.read(localeIsCroatianProvider), "SCANNING...", "SKENIRANJE...");
     _initializeCamera();
   }
 
@@ -48,7 +51,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         setState(() {
-          _statusMessage = "NO CAMERAS FOUND";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "NO CAMERAS FOUND", "KAMERA NIJE PRONAĐENA");
         });
         return;
       }
@@ -117,7 +121,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     } catch (e) {
       debugPrint("Camera Init Error: $e");
       setState(() {
-        _statusMessage = "CAMERA ERROR: $e";
+        _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+            "CAMERA ERROR: $e", "POGREŠKA KAMERE: $e");
       });
     }
   }
@@ -261,13 +266,15 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     try {
       _isBusy = true;
       setState(() {
-        _statusMessage = "MANUAL SCAN...";
+        _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+            "MANUAL SCAN...", "RUČNO SKENIRANJE...");
         _statusColor = Colors.yellowAccent;
       });
 
       // On Web, Plate Scan is not supported, so we should fail gracefully
       if (kIsWeb) {
-        throw Exception("LPR NOT SUPPORTED ON WEB");
+        throw Exception(Lang.sel(ref.read(localeIsCroatianProvider),
+            "LPR NOT SUPPORTED ON WEB", "LPR NIJE PODRŽAN NA WEBU"));
       }
 
       final image = await _controller!.takePicture().timeout(
@@ -295,7 +302,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         _confirmPlate(foundPlate);
       } else {
         setState(() {
-          _statusMessage = "NO PLATE DETECTED";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "NO PLATE DETECTED", "NEMA REGISTRACIJE");
           _statusColor = Colors.orange;
         });
         await Future.delayed(const Duration(seconds: 2));
@@ -303,7 +311,11 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     } catch (e) {
       debugPrint("Manual Validation Error: $e");
       setState(() {
-        _statusMessage = kIsWeb ? "USE MOBILE FOR SCAN" : "SCAN ERROR";
+        _statusMessage = kIsWeb
+            ? Lang.sel(ref.read(localeIsCroatianProvider),
+                "USE MOBILE FOR SCAN", "KORISTITE MOBILNI ZA SKENIRANJE")
+            : Lang.sel(ref.read(localeIsCroatianProvider), "SCAN ERROR",
+                "POGREŠKA SKENIRANJA");
         _statusColor = Colors.redAccent;
       });
       await Future.delayed(const Duration(seconds: 2));
@@ -311,7 +323,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       _isBusy = false;
       if (mounted && _isScanning) {
         setState(() {
-          _statusMessage = "SCANNING...";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "SCANNING...", "SKENIRANJE...");
           _statusColor = Colors.white;
         });
       }
@@ -325,7 +338,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     setState(() {
       _isScanning = false;
       _detectedPlate = plate;
-      _statusMessage = "SEARCHING DASHBOARD...";
+      _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+          "SEARCHING DASHBOARD...", "PRETRAŽIVANJE NADZORNE PLOČE...");
       _statusColor = Colors.yellowAccent;
       _showValidationPulse = true;
     });
@@ -353,23 +367,28 @@ class _HudScreenState extends ConsumerState<HudScreen> {
 
       if (activeSession.isNotEmpty) {
         setState(() {
-          _statusMessage = "ACTIVE SESSION FOUND";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "ACTIVE SESSION FOUND", "AKTIVNA SESIJA PRONAĐENA");
           _statusColor = Colors.greenAccent;
         });
       } else if (activePermit.isNotEmpty) {
         setState(() {
-          _statusMessage = "VALID PERMIT FOUND";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "VALID PERMIT FOUND", "VALJANA DOZVOLA PRONAĐENA");
           _statusColor = Colors.greenAccent;
         });
       } else if (recentViolation.isNotEmpty) {
         setState(() {
-          _statusMessage =
-              "RECENT VIOLATION: ${recentViolation['violation_type']}";
+          _statusMessage = Lang.sel(
+              ref.read(localeIsCroatianProvider),
+              "RECENT VIOLATION: ${recentViolation['violation_type']}",
+              "NEDAVNI PREKRŠAJ: ${recentViolation['violation_type']}");
           _statusColor = Colors.orangeAccent;
         });
       } else {
         setState(() {
-          _statusMessage = "NO ACTIVE RECORD";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "NO ACTIVE RECORD", "NEMA AKTIVNOG ZAPISA");
           _statusColor = Colors.redAccent;
         });
       }
@@ -449,15 +468,15 @@ class _HudScreenState extends ConsumerState<HudScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _statusColor.withValues(alpha: 0.3),
-                  width: 1.5,
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _statusColor.withValues(alpha: 0.1),
+                    color: Colors.black.withValues(alpha: 0.4),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -468,8 +487,14 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildStatusBadge("SYSTEM ACTIVE", Colors.blueAccent),
-                      _buildStatusBadge("LPR READY", Colors.greenAccent),
+                      _buildStatusBadge(
+                          Lang.sel(ref.watch(localeIsCroatianProvider),
+                              "SYSTEM ACTIVE", "SUSTAV AKTIVAN"),
+                          Colors.white),
+                      _buildStatusBadge(
+                          Lang.sel(ref.watch(localeIsCroatianProvider),
+                              "LPR READY", "LPR SPREMNO"),
+                          Colors.white),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -477,10 +502,10 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                     _statusMessage,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _statusColor,
+                      color: Colors.white,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
-                      letterSpacing: 2.5,
+                      letterSpacing: 2,
                       fontFamily: 'Courier',
                       shadows: [
                         Shadow(
@@ -507,7 +532,9 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                 height: 35,
                 alignment: Alignment.center,
                 child: Text(
-                  _detectedPlate ?? "no plate",
+                  _detectedPlate ??
+                      Lang.sel(ref.watch(localeIsCroatianProvider), "no plate",
+                          "nema registracije"),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -531,14 +558,16 @@ class _HudScreenState extends ConsumerState<HudScreen> {
               children: [
                 _buildActionButton(
                   icon: Icons.warning_amber_rounded,
-                  label: "WARNING",
+                  label: Lang.sel(ref.watch(localeIsCroatianProvider),
+                      "WARNING", "UPOZORENJE"),
                   color: Colors.orangeAccent,
                   onTap: () => _handleQuickAction(isWarning: true),
                 ),
                 const SizedBox(width: 30),
                 _buildActionButton(
                   icon: Icons.receipt_long,
-                  label: "TICKET",
+                  label: Lang.sel(
+                      ref.watch(localeIsCroatianProvider), "TICKET", "KAZNA"),
                   color: Colors.redAccent,
                   isPrimary: true,
                   onTap: () => _handleQuickAction(isWarning: false),
@@ -546,14 +575,18 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                 const SizedBox(width: 30),
                 _buildActionButton(
                   icon: Icons.check_circle_outline,
-                  label: "VALIDATE",
+                  label: Lang.sel(ref.watch(localeIsCroatianProvider),
+                      "VALIDATE", "POTVRDI"),
                   color: Colors.greenAccent,
                   onTap: () async {
                     if (!_isScanning) {
                       setState(() {
                         _isScanning = true;
                         _detectedPlate = null;
-                        _statusMessage = "SCANNING...";
+                        _statusMessage = Lang.sel(
+                            ref.read(localeIsCroatianProvider),
+                            "SCANNING...",
+                            "SKENIRANJE...");
                         _statusColor = Colors.white;
                         _showValidationPulse = false;
                         _consecutiveHits.clear();
@@ -575,14 +608,14 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        border: Border.all(color: color),
+        color: Colors.black.withValues(alpha: 0.6),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: color,
+          color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
@@ -605,22 +638,23 @@ class _HudScreenState extends ConsumerState<HudScreen> {
           Container(
             padding: EdgeInsets.all(isPrimary ? 24 : 16),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: Colors.black.withValues(alpha: 0.7),
               shape: BoxShape.circle,
-              border: Border.all(color: color, width: 2),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15), width: 2),
               boxShadow: isPrimary
                   ? [
                       BoxShadow(
-                        color: color.withValues(alpha: 0.5),
-                        blurRadius: 15,
-                        spreadRadius: 2,
+                        color: Colors.white.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        spreadRadius: 1,
                       )
                     ]
                   : [],
             ),
             child: Icon(
               icon,
-              color: color,
+              color: Colors.white,
               size: isPrimary ? 40 : 28,
             ),
           ),
@@ -628,7 +662,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
           Text(
             label,
             style: TextStyle(
-              color: color,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -658,7 +692,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     }
 
     // Use the centralized UUID resolver
-    final locUuid = await ref.read(selectedLocationUuidProvider.future);
+    final locUuid = await ref.read(selectedLocationUuidProvider.future) ??
+        ref.read(userLocationIdProvider);
     final supabase = Supabase.instance.client;
 
     if (locUuid == null) {
@@ -676,7 +711,11 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     try {
       setState(() {
         _isProcessing = true;
-        _statusMessage = isWarning ? "CAPTURING..." : "CAPTURING...";
+        _statusMessage = isWarning
+            ? Lang.sel(ref.read(localeIsCroatianProvider), "CAPTURING...",
+                "SNIMANJE...")
+            : Lang.sel(ref.read(localeIsCroatianProvider), "CAPTURING...",
+                "SNIMANJE...");
         _statusColor = isWarning ? Colors.orange : Colors.red;
       });
 
@@ -696,7 +735,11 @@ class _HudScreenState extends ConsumerState<HudScreen> {
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(color: isWarning ? Colors.orange : Colors.red)),
           title: Text(
-            isWarning ? 'CONFIRM WARNING' : 'CONFIRM TICKET',
+            isWarning
+                ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'CONFIRM WARNING', 'POTVRDI UPOZORENJE')
+                : Lang.sel(ref.watch(localeIsCroatianProvider),
+                    'CONFIRM TICKET', 'POTVRDI KAZNU'),
             style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -715,9 +758,10 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                "VERIFY LICENSE PLATE",
-                style: TextStyle(color: Colors.white70, fontSize: 12),
+              Text(
+                Lang.sel(ref.watch(localeIsCroatianProvider),
+                    "VERIFY LICENSE PLATE", "PROVJERI REGISTRACIJU"),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -749,8 +793,11 @@ class _HudScreenState extends ConsumerState<HudScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child:
-                  const Text('CANCEL', style: TextStyle(color: Colors.white54)),
+              child: Text(
+                Lang.sel(
+                    ref.watch(localeIsCroatianProvider), 'CANCEL', 'ODUSTANI'),
+                style: const TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -763,7 +810,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
                 backgroundColor: isWarning ? Colors.orange : Colors.red,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('CONFIRM & ISSUE'),
+              child: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+                  'CONFIRM & ISSUE', 'POTVRDI I IZDAJ')),
             ),
           ],
         ),
@@ -772,14 +820,19 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       if (confirmedPlate == null || confirmedPlate.isEmpty) {
         setState(() {
           _isProcessing = false;
-          _statusMessage = "SCANNING...";
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "SCANNING...", "SKENIRANJE...");
           _statusColor = Colors.white;
         });
         return;
       }
 
       setState(() {
-        _statusMessage = isWarning ? "ISSUING WARNING..." : "ISSUING TICKET...";
+        _statusMessage = isWarning
+            ? Lang.sel(ref.read(localeIsCroatianProvider), "ISSUING WARNING...",
+                "IZDAVANJE UPOZORENJA...")
+            : Lang.sel(ref.read(localeIsCroatianProvider), "ISSUING TICKET...",
+                "IZDAVANJE KAZNE...");
         _statusColor = isWarning ? Colors.orange : Colors.red;
       });
 
@@ -823,17 +876,23 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         'issued_at': DateTime.now().toIso8601String(),
         'issuer_role': issuerRole,
       }).select();
+      ref.invalidate(violationsStreamProvider);
 
       if (mounted) {
         setState(() {
           _detectedPlate = plate;
-          _statusMessage = "VALIDATED";
+          _statusMessage = Lang.sel(
+              ref.read(localeIsCroatianProvider), "VALIDATED", "POTVRĐENO");
           _statusColor = Colors.greenAccent;
           _showValidationPulse = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isWarning ? 'Warning Issued!' : 'Ticket Issued!'),
+            content: Text(isWarning
+                ? Lang.sel(ref.read(localeIsCroatianProvider),
+                    'Warning Issued!', 'Upozorenje izdano!')
+                : Lang.sel(ref.read(localeIsCroatianProvider), 'Ticket Issued!',
+                    'Kazna izdana!')),
             backgroundColor: isWarning ? Colors.orange : Colors.red,
           ),
         );
@@ -841,7 +900,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         if (mounted) {
           setState(() {
             _showValidationPulse = false;
-            _statusMessage = "SCANNING...";
+            _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+                "SCANNING...", "SKENIRANJE...");
             _statusColor = Colors.white;
           });
         }

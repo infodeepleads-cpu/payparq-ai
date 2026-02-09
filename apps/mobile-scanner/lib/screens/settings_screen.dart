@@ -25,58 +25,89 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width >= 1100;
     return Scaffold(
       backgroundColor: AppTheme.background,
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              backgroundColor: Colors.black,
+              title: Text(isCroatian ? 'Postavke' : 'Settings'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.save_outlined, color: Colors.white),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(isCroatian
+                              ? 'Postavke su ažurirane'
+                              : 'Settings updated successfully')),
+                    );
+                  },
+                ),
+              ],
+            ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(48.0),
+        padding: EdgeInsets.all(isDesktop ? 48.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isCroatian ? 'Postavke' : 'Settings',
-                        style: const TextStyle(
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            letterSpacing: -1)),
-                    const SizedBox(height: 8),
-                    Text(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isDesktop)
+                        Text(isCroatian ? 'Postavke' : 'Settings',
+                            style: const TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                letterSpacing: -1)),
+                      if (isDesktop) const SizedBox(height: 8),
+                      Text(
                         isCroatian
                             ? 'Upravljajte svojom organizacijom i postavkama sustava.'
                             : 'Manage your organization and system preferences.',
                         style: const TextStyle(
-                            fontSize: 14, color: AppTheme.textSecondary)),
-                  ],
-                ),
-                SizedBox(
-                  height: 44,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(isCroatian
-                                ? 'Postavke su ažurirane'
-                                : 'Settings updated successfully')),
-                      );
-                    },
-                    icon: const Icon(Icons.save_outlined, size: 18),
-                    label: Text(
-                        isCroatian ? 'Spremi promjene' : 'Save Changes'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4)),
-                    ),
+                            fontSize: 14, color: AppTheme.textSecondary),
+                        softWrap: true,
+                      ),
+                    ],
                   ),
                 ),
+                if (isDesktop)
+                  SizedBox(
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(isCroatian
+                                  ? 'Postavke su ažurirane'
+                                  : 'Settings updated successfully')),
+                        );
+                      },
+                      icon: const Icon(Icons.save_outlined, size: 18),
+                      label: Text(
+                          isCroatian ? 'Spremi promjene' : 'Save Changes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 48),

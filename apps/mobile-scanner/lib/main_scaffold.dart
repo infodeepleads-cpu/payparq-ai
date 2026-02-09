@@ -249,6 +249,14 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               error: (_, __) => const SizedBox(),
             ),
           IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.white),
+            tooltip: Lang.sel(isHr, 'Settings', 'Postavke'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout_outlined, color: Colors.white),
             onPressed: _handleLogout,
           ),

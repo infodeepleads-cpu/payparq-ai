@@ -33,10 +33,10 @@ final updateCheckProvider = FutureProvider<AppUpdateInfo?>((ref) async {
     final packageInfo = await PackageInfo.fromPlatform();
     final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-    // 2. Fetch remote version info from the dashboard deployment
-    // This assumes you will place a version.json file in your web project's 'web' folder
-    final response = await http.get(Uri.parse('https://payparq-d-6rex95.web.app/version.json'));
-    
+    // 2. Fetch remote version info from the static Vercel alias (hosts assets)
+    final response = await http.get(Uri.parse(
+        'https://mobile-scanner-flax-static.vercel.app/version.json'));
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final updateInfo = AppUpdateInfo.fromJson(data);

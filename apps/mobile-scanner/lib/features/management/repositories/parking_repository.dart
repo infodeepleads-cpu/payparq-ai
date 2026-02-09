@@ -234,12 +234,12 @@ final locationsStreamProvider =
 final violationsStreamProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(parkingRepositoryProvider);
-  final profile = ref.watch(userProfileProvider).value;
-  if (profile == null) return Stream.value([]);
+  final user = Supabase.instance.client.auth.currentUser;
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
-  final fallbackLocId = ref.watch(userLocationIdProvider);
+  final fallbackLocId =
+      ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
 
   if (locationUuid == null && displayId == null && fallbackLocId == null) {
     return Stream.value([]);

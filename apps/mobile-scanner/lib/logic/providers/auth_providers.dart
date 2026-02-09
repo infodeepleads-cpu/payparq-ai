@@ -188,7 +188,7 @@ final availableLocationsProvider =
           if (!controller.isClosed) controller.add([]);
           return;
         }
-        query = query.filter('display_id', 'in', locIds);
+        query = query.filter('id', 'in', locIds);
       }
 
       final data = await query.order('name');

@@ -59,207 +59,217 @@ class PassDetailScreen extends ConsumerWidget {
             padding: EdgeInsets.all(isDesktop ? 48.0 : 16.0),
             child: Column(
               children: [
-            // Card Container
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
+                // Card Container
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header: Plate & Type
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header: Plate & Type
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            plate.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              letterSpacing: -1,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                plate.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                type.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            type.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Colors.black,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              type == 'subscription'
+                                  ? Icons.loop
+                                  : Icons.confirmation_number,
+                              color: Colors.white,
+                              size: 32,
                             ),
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          type == 'subscription'
-                              ? Icons.loop
-                              : Icons.confirmation_number,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 64, color: AppTheme.border),
+                      const Divider(height: 64, color: AppTheme.border),
 
-                  Wrap(
-                    spacing: 64,
-                    runSpacing: 32,
-                    children: [
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Location ID', 'ID lokacije'),
-                          locationId,
-                          Icons.map),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Name', 'Ime'),
-                          contactName.isNotEmpty ? contactName : '—',
-                          Icons.person),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Phone', 'Telefon'),
-                          contactPhone.isNotEmpty ? contactPhone : '—',
-                          Icons.phone),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Email', 'Email'),
-                          contactEmail.isNotEmpty ? contactEmail : '—',
-                          Icons.email_outlined),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 64,
-                    runSpacing: 32,
-                    children: [
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Entry Time', 'Vrijeme ulaza'),
-                          startTime != null ? _formatDate(startTime) : '—',
-                          Icons.login),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Exit Time', 'Vrijeme izlaza'),
-                          endTime != null ? _formatDate(endTime) : '—',
-                          Icons.logout),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Duration', 'Trajanje'),
-                          durationString,
-                          Icons.timer),
-                      _buildDetailItem(
-                          Lang.sel(isCroatian, 'Price', 'Cijena'),
-                          '€${price.toStringAsFixed(2)}',
-                          Icons.attach_money),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          final bytes = await buildPermitPdf(permit);
-                          if (!context.mounted) return;
-                          await Printing.sharePdf(
-                            bytes: bytes,
-                            filename: 'permit_${permit['id']}.pdf',
-                          );
-                        },
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label:
-                            Text(Lang.sel(isCroatian, 'Generate PDF', 'Generiraj PDF')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                        ),
+                      Wrap(
+                        spacing: 64,
+                        runSpacing: 32,
+                        children: [
+                          _buildDetailItem(
+                              Lang.sel(
+                                  isCroatian, 'Location ID', 'ID lokacije'),
+                              locationId,
+                              Icons.map),
+                          _buildDetailItem(
+                              Lang.sel(isCroatian, 'Name', 'Ime'),
+                              contactName.isNotEmpty ? contactName : '—',
+                              Icons.person),
+                          _buildDetailItem(
+                              Lang.sel(isCroatian, 'Phone', 'Telefon'),
+                              contactPhone.isNotEmpty ? contactPhone : '—',
+                              Icons.phone),
+                          _buildDetailItem(
+                              Lang.sel(isCroatian, 'Email', 'Email'),
+                              contactEmail.isNotEmpty ? contactEmail : '—',
+                              Icons.email_outlined),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          try {
-                            final bytes = await buildPermitPdf(permit);
-                            final contactEmail = (permit['contact_email'] ?? '')
-                                .toString()
-                                .trim();
-                            if (kIsWeb) {
-                              final subject =
-                                  Uri.encodeComponent(Lang.sel(
-                                      isCroatian,
-                                      'Your Parking Permit',
-                                      'Vaša dozvola za parkiranje'));
-                              final plateVal = (permit['plate'] ?? 'UNKNOWN')
-                                  .toString()
-                                  .toUpperCase();
-                              final body = Uri.encodeComponent(
-                                  Lang.sel(
-                                      isCroatian,
-                                      'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nPlease attach the generated PDF to this email.\n\nThank you.',
-                                      'Poštovani korisniče dozvole,\n\nVaša dozvola za registraciju $plateVal je spremna.\nMolimo priložite generirani PDF uz ovu e-poštu.\n\nHvala.'));
-                              final mailto =
-                                  'mailto:${contactEmail.isNotEmpty ? contactEmail : ''}?subject=$subject&body=$body';
-                              final uri = Uri.parse(mailto);
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri);
-                              } else {
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 64,
+                        runSpacing: 32,
+                        children: [
+                          _buildDetailItem(
+                              Lang.sel(
+                                  isCroatian, 'Entry Time', 'Vrijeme ulaza'),
+                              startTime != null ? _formatDate(startTime) : '—',
+                              Icons.login),
+                          _buildDetailItem(
+                              Lang.sel(
+                                  isCroatian, 'Exit Time', 'Vrijeme izlaza'),
+                              endTime != null ? _formatDate(endTime) : '—',
+                              Icons.logout),
+                          _buildDetailItem(
+                              Lang.sel(isCroatian, 'Duration', 'Trajanje'),
+                              durationString,
+                              Icons.timer),
+                          _buildDetailItem(
+                              Lang.sel(isCroatian, 'Price', 'Cijena'),
+                              '€${price.toStringAsFixed(2)}',
+                              Icons.attach_money),
+                        ],
+                      ),
+
+                      if (isDesktop) ...[
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                final bytes = await buildPermitPdf(permit);
                                 if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(Lang.sel(isCroatian,
-                                          'Unable to open email client',
-                                          'Nije moguće otvoriti email klijent'))),
+                                await Printing.sharePdf(
+                                  bytes: bytes,
+                                  filename: 'permit_${permit['id']}.pdf',
                                 );
-                              }
-                            } else {
-                              await Printing.sharePdf(
-                                bytes: bytes,
-                                filename: 'permit_${permit['id']}.pdf',
-                              );
-                            }
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(Lang.sel(isCroatian, 'Error: $e',
-                                      'Greška: $e'))),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.email_outlined),
-                        label: Text(Lang.sel(
-                            isCroatian, 'Email PDF to Holder', 'Pošalji PDF nositelju')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          side: const BorderSide(color: AppTheme.border),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                              },
+                              icon: const Icon(Icons.picture_as_pdf),
+                              label: Text(Lang.sel(
+                                  isCroatian, 'Generate PDF', 'Generiraj PDF')),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                try {
+                                  final bytes = await buildPermitPdf(permit);
+                                  final contactEmail =
+                                      (permit['contact_email'] ?? '')
+                                          .toString()
+                                          .trim();
+                                  if (kIsWeb) {
+                                    final subject = Uri.encodeComponent(
+                                        Lang.sel(
+                                            isCroatian,
+                                            'Your Parking Permit',
+                                            'Vaša dozvola za parkiranje'));
+                                    final plateVal =
+                                        (permit['plate'] ?? 'UNKNOWN')
+                                            .toString()
+                                            .toUpperCase();
+                                    final body = Uri.encodeComponent(Lang.sel(
+                                        isCroatian,
+                                        'Dear Pass Holder,\n\nYour permit for plate $plateVal is ready.\nPlease attach the generated PDF to this email.\n\nThank you.',
+                                        'Poštovani korisniče dozvole,\n\nVaša dozvola za registraciju $plateVal je spremna.\nMolimo priložite generirani PDF uz ovu e-poštu.\n\nHvala.'));
+                                    final mailto =
+                                        'mailto:${contactEmail.isNotEmpty ? contactEmail : ''}?subject=$subject&body=$body';
+                                    final uri = Uri.parse(mailto);
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(Lang.sel(
+                                                isCroatian,
+                                                'Unable to open email client',
+                                                'Nije moguće otvoriti email klijent'))),
+                                      );
+                                    }
+                                  } else {
+                                    await Printing.sharePdf(
+                                      bytes: bytes,
+                                      filename: 'permit_${permit['id']}.pdf',
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(Lang.sel(isCroatian,
+                                            'Error: $e', 'Greška: $e'))),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.email_outlined),
+                              label: Text(Lang.sel(
+                                  isCroatian,
+                                  'Email PDF to Holder',
+                                  'Pošalji PDF nositelju')),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black,
+                                side: const BorderSide(color: AppTheme.border),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
+
+                      const SizedBox(height: 48),
                     ],
                   ),
-
-                  const SizedBox(height: 48),
-                ],
-              ),
-            ),
+                ),
               ],
             ),
           );

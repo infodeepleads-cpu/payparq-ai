@@ -127,7 +127,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         foregroundColor: Colors.white,
                         onTap: () async {
                           final url = Uri.parse(
-                              'https://payparq-d-6rex95.web.app/app-release.apk');
+                              'https://mobile-scanner-flax-static.vercel.app/app-release.apk');
                           if (await canLaunchUrl(url)) {
                             await launchUrl(url,
                                 mode: LaunchMode.externalApplication);

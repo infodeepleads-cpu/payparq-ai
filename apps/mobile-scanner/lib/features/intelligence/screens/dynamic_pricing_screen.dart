@@ -266,10 +266,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _hourlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newHourlyFloor = double.tryParse(rawHourlyFloor) ?? 0.0;
 
-    final String rawDailyFloor =
-        _dailyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
-    final double newDailyFloor = double.tryParse(rawDailyFloor) ?? 0.0;
-
     final String rawMonthlyFloor =
         _monthlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
@@ -285,7 +281,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'base_price_daily_ceiling': newDailyCeiling,
         'base_price_monthly_ceiling': newMonthlyCeiling,
         'rate_per_hour_floor': newHourlyFloor,
-        'base_price_daily_floor': newDailyFloor,
         'base_price_monthly_floor': newMonthlyFloor,
       };
       final flagsPayload = {
@@ -303,14 +298,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         await supabase
             .from('locations')
             .update(pricePayload)
-            .eq('id', targetId);
+            .eq('id', targetId)
+            .select(
+                'id,rate_per_hour,base_price_daily,base_price_monthly,rate_per_hour_ceiling,base_price_daily_ceiling,base_price_monthly_ceiling,rate_per_hour_floor,base_price_monthly_floor');
       } catch (_) {
         final displayId = _selectedLocation!['display_id']?.toString();
         if (displayId != null && displayId.isNotEmpty) {
           await supabase
               .from('locations')
               .update(pricePayload)
-              .eq('display_id', displayId);
+              .eq('display_id', displayId)
+              .select(
+                  'id,rate_per_hour,base_price_daily,base_price_monthly,rate_per_hour_ceiling,base_price_daily_ceiling,base_price_monthly_ceiling,rate_per_hour_floor,base_price_monthly_floor');
         } else {
           rethrow;
         }
@@ -320,14 +319,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         await supabase
             .from('locations')
             .update(flagsPayload)
-            .eq('id', targetId);
+            .eq('id', targetId)
+            .select(
+                'id,dynamic_pricing_enabled,surcharge_enabled,autopilot_enabled,dynamic_pricing_ratio,surcharge_multiplier');
       } catch (_) {
         final displayId = _selectedLocation!['display_id']?.toString();
         if (displayId != null && displayId.isNotEmpty) {
           await supabase
               .from('locations')
               .update(flagsPayload)
-              .eq('display_id', displayId);
+              .eq('display_id', displayId)
+              .select(
+                  'id,dynamic_pricing_enabled,surcharge_enabled,autopilot_enabled,dynamic_pricing_ratio,surcharge_multiplier');
         }
       }
 

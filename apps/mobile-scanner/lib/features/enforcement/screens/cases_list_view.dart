@@ -25,7 +25,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _selectedFilter = 'All';
+  String _selectedFilterKey = 'all';
 
   @override
   void dispose() {
@@ -255,6 +255,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   Future<void> _showEvidence(Map<String, dynamic> violation) async {
     final plate = violation['plate'] ?? 'UNKNOWN';
     final evidenceUrl = violation['evidence_r2_url'];
+    final issuedAtIso = (violation['issued_at'] ?? '').toString();
+    final issuedAtDt = DateTime.tryParse(issuedAtIso);
 
     String? fullImageUrl;
     if (evidenceUrl != null) {
@@ -301,8 +303,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return const Center(
-                                child: CircularProgressIndicator(
-                                    color: Colors.black));
+                              child:
+                                  CircularProgressIndicator(color: Colors.black),
+                            );
                           },
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(
@@ -312,9 +315,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                                 Icon(Icons.broken_image_outlined,
                                     size: 48, color: Colors.grey),
                                 SizedBox(height: 8),
-                                Text('Slika nije pronađena',
-                                    style: TextStyle(
-                                        color: Colors.grey, fontSize: 12)),
+                                Text(
+                                  'Slika nije pronađena',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12),
+                                ),
                               ],
                             ),
                           ),
@@ -356,14 +361,40 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                      Lang.sel(ref.read(localeIsCroatianProvider),
-                          'Fine Amount:', 'Iznos kazne:'),
-                      style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-                  Text('€${violation['fine_amount'] ?? 0}',
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.bold, color: Colors.red)),
+                    Lang.sel(ref.read(localeIsCroatianProvider), 'Fine Amount:',
+                        'Iznos kazne:'),
+                    style:
+                        GoogleFonts.inter(color: AppTheme.textSecondary),
+                  ),
+                  Text(
+                    '€${violation['fine_amount'] ?? 0}',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, color: Colors.red),
+                  ),
                 ],
               ),
+              if (MediaQuery.of(context).size.width < 1100) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    issuedAtDt != null
+                        ? Lang.sel(
+                            ref.read(localeIsCroatianProvider),
+                            'Issued: ${issuedAtDt.day}/${issuedAtDt.month}/${issuedAtDt.year} ${issuedAtDt.hour}:${issuedAtDt.minute.toString().padLeft(2, '0')}',
+                            'Izdano: ${issuedAtDt.day}/${issuedAtDt.month}/${issuedAtDt.year} ${issuedAtDt.hour}:${issuedAtDt.minute.toString().padLeft(2, '0')}')
+                        : Lang.sel(ref.read(localeIsCroatianProvider),
+                            'Issued: —', 'Izdano: —'),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -371,10 +402,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-                Lang.sel(
-                    ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
-                style: GoogleFonts.inter(
-                    color: Colors.black, fontWeight: FontWeight.bold)),
+              Lang.sel(ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
+              style: GoogleFonts.inter(
+                  color: Colors.black, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -564,11 +595,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterButton(Lang.sel(isHr, 'All', 'Sve'), isDesktop),
+              _buildFilterButton('all', Lang.sel(isHr, 'All', 'Sve'), isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton(Lang.sel(isHr, 'Tickets', 'Kazne'), isDesktop),
+              _buildFilterButton('tickets', Lang.sel(isHr, 'Tickets', 'Kazne'), isDesktop),
               const SizedBox(width: 12),
-              _buildFilterButton(
+              _buildFilterButton('warnings',
                   Lang.sel(isHr, 'Warnings', 'Upozorenja'), isDesktop),
             ],
           ),
@@ -577,13 +608,13 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildFilterButton(String label, bool isDesktop) {
-    final isSelected = _selectedFilter == label;
+  Widget _buildFilterButton(String key, String label, bool isDesktop) {
+    final isSelected = _selectedFilterKey == key;
 
     return InkWell(
       onTap: () {
         setState(() {
-          _selectedFilter = label;
+          _selectedFilterKey = key;
         });
       },
       child: Container(
@@ -645,13 +676,13 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           }).toList();
         }
 
-        // 2. Filter by Tab Selection
-        if (_selectedFilter != 'All') {
+        // 2. Filter by Tab Selection (language-agnostic keys)
+        if (_selectedFilterKey != 'all') {
           allViolations = allViolations.where((v) {
             final status = (v['status'] ?? '').toString().toLowerCase();
-            if (_selectedFilter == 'Tickets') {
+            if (_selectedFilterKey == 'tickets') {
               return status == 'issued' || status == 'paid';
-            } else if (_selectedFilter == 'Warnings') {
+            } else if (_selectedFilterKey == 'warnings') {
               return status == 'warning';
             }
             return true;
