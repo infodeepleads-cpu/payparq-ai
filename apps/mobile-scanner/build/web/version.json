@@ -1,6 +1,6 @@
 {
   "version": "1.0.4",
   "buildNumber": 5,
-  "url": "https://mobile-scanner-flax.vercel.app/app-release.apk",
+  "url": "https://mobile-scanner-flax-static.vercel.app/app-release.apk",
   "mandatory": false
 }
