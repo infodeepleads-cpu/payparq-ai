@@ -139,7 +139,7 @@ class PayParqApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'payparq.ai',
+      title: 'payparq.ai [MARKER_8087]',
       theme: AppTheme.lightTheme, // Default to Light Theme
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
