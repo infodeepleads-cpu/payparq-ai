@@ -1,6 +1,6 @@
 {
   "buildCommand": "",
-  "outputDirectory": "build/web",
+  "outputDirectory": "web",
   "headers": [
     {
       "source": "/version.json",
