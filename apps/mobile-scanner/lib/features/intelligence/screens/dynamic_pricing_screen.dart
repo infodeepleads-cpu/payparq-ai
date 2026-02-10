@@ -185,8 +185,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final monthlyCeiling =
           (loc['base_price_monthly_ceiling'] ?? 0.0).toString();
       final hourlyFloor = (loc['rate_per_hour_floor'] ?? 0.0).toString();
-      final dailyFloor = (loc['base_price_daily_floor'] ?? 0.0).toString();
-      final monthlyFloor = (loc['base_price_monthly_floor'] ?? 0.0).toString();
+      final dailyFloor =
+          ((loc['minimum_daily_price'] ?? loc['base_price_daily_floor']) ?? 0.0)
+              .toString();
+      final monthlyFloor =
+          (loc['base_price_monthly_floor'] ?? 0.0).toString();
 
       _hourlyController.text = hourly;
       _dailyController.text = daily;
@@ -262,6 +265,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _monthlyCeilingController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthlyCeiling = double.tryParse(rawMonthlyCeiling) ?? 0.0;
 
+    final String rawHourlyFloor =
+        _hourlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newHourlyFloor = double.tryParse(rawHourlyFloor) ?? 0.0;
+    final String rawDailyFloor =
+        _dailyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newDailyFloor = double.tryParse(rawDailyFloor) ?? 0.0;
+    final double? newDailyMinimum =
+        rawDailyFloor.isEmpty ? null : double.tryParse(rawDailyFloor);
+    final String rawMonthlyFloor =
+        _monthlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
+    final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
+
     setState(() => _isLoading = true);
 
     try {
@@ -272,6 +287,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'rate_per_hour_ceiling': newHourlyCeiling,
         'base_price_daily_ceiling': newDailyCeiling,
         'base_price_monthly_ceiling': newMonthlyCeiling,
+        'rate_per_hour_floor': newHourlyFloor,
+        'base_price_daily_floor': newDailyFloor,
+        'base_price_monthly_floor': newMonthlyFloor,
+        'minimum_daily_price': newDailyFloor,
       };
       final flagsPayload = {
         'dynamic_pricing_enabled': _dynamicEnabled,
@@ -282,6 +301,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       };
 
       debugPrint('🚨 ATTEMPTING PRICE SAVE TO ID: $targetId');
+      debugPrint('🔎 Parsed minimum_daily_price: $newDailyMinimum');
       debugPrint('📦 PRICE PAYLOAD: $pricePayload');
 
       try {
@@ -330,6 +350,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         }
       }
 
+      try {
+        final verify = await supabase
+            .from('locations')
+            .select('minimum_daily_price')
+            .eq('id', targetId)
+            .limit(1);
+        debugPrint(
+            '✅ minimum_daily_price after save: ${verify.isNotEmpty ? verify.first['minimum_daily_price'] : 'n/a'}');
+      } catch (e) {
+        debugPrint('⚠️ Verification read failed: $e');
+      }
+
       setState(() {
         final index =
             _locations.indexWhere((l) => l['id'].toString() == targetId);
@@ -355,7 +387,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _hourlyFloorController.text =
             (data['rate_per_hour_floor'] ?? 0.0).toString();
         _dailyFloorController.text =
-            (data['base_price_daily_floor'] ?? 0.0).toString();
+            ((data['minimum_daily_price'] ?? data['base_price_daily_floor']) ??
+                    0.0)
+                .toString();
         _monthlyFloorController.text =
             (data['base_price_monthly_floor'] ?? 0.0).toString();
       });
@@ -1012,7 +1046,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             Positioned.fill(
               child: Image.asset(
                 'assets/images/sign_template_v2.png',
-                fit: BoxFit.contain,
+                fit: BoxFit.cover,
                 errorBuilder: (context, error, stack) => Container(
                   color: Colors.white,
                   child: Column(
@@ -1100,11 +1134,14 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               ),
             ),
             Positioned(
-              left: 52,
-              bottom: 56,
-              child: Row(
-                children: [
-                  Text(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 52, bottom: 40),
+                  child: Text(
                     displayId,
                     style: GoogleFonts.inter(
                       color: Colors.black,
@@ -1112,7 +1149,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],

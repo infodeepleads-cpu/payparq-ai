@@ -27,6 +27,88 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   String _searchQuery = '';
   String _selectedFilterKey = 'all';
 
+  Future<void> _deleteViolation(Map<String, dynamic> violation) async {
+    final profile = ref.read(userProfileProvider).value;
+    if (profile == null || (profile['role'] ?? '') != 'super_admin') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Only super admin can delete cases'),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+      return;
+    }
+    final id = violation['id'];
+    if (id == null) return;
+    final isHr = ref.read(localeIsCroatianProvider);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          Lang.sel(isHr, 'Delete Case', 'Obriši predmet'),
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          Lang.sel(
+            isHr,
+            'Are you sure you want to permanently delete this case?',
+            'Jeste li sigurni da želite trajno obrisati ovaj predmet?',
+          ),
+          style: GoogleFonts.inter(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              Lang.sel(isHr, 'Cancel', 'Odustani'),
+              style: GoogleFonts.inter(color: AppTheme.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(Lang.sel(isHr, 'Delete', 'Obriši')),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await Supabase.instance.client
+          .from('violations')
+          .delete()
+          .eq('id', id);
+      ref.invalidate(violationsStreamProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Case deleted'),
+            backgroundColor: Colors.black,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -856,6 +938,14 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             child: Text(Lang.sel(
                 ref.read(localeIsCroatianProvider), 'View', 'Pogledaj')),
           ),
+          const SizedBox(width: 12),
+          if ((ref.watch(userProfileProvider).value?['role'] ?? '') ==
+              'super_admin')
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              tooltip: 'Delete Case',
+              onPressed: () => _deleteViolation(violation),
+            ),
         ],
       ),
     );

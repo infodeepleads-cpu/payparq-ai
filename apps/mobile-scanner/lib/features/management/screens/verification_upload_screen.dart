@@ -718,11 +718,14 @@ class _VerificationUploadScreenState
               ),
             ),
             Positioned(
-              left: 52,
-              bottom: 4,
-              child: Row(
-                children: [
-                  Text(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 52, bottom: 4),
+                  child: Text(
                     displayId,
                     style: GoogleFonts.inter(
                       color: Colors.black,
@@ -730,7 +733,7 @@ class _VerificationUploadScreenState
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
