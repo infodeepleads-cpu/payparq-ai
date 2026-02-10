@@ -288,7 +288,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'base_price_daily_ceiling': newDailyCeiling,
         'base_price_monthly_ceiling': newMonthlyCeiling,
         'rate_per_hour_floor': newHourlyFloor,
-        'base_price_daily_floor': newDailyFloor,
         'base_price_monthly_floor': newMonthlyFloor,
         'minimum_daily_price': newDailyFloor,
       };
@@ -398,7 +397,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
-                'Price saved', 'Cijena je spremljena')),
+                'Change saved', 'Promjene spremljene')),
             backgroundColor: Colors.black,
             duration: const Duration(seconds: 4),
           ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,7 +33,7 @@ class MasterScaffold extends ConsumerStatefulWidget {
 
 class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
-  int _selectedIndex = kIsWeb ? 8 : 2;
+  int _selectedIndex = 2;
 
   @override
   void initState() {
