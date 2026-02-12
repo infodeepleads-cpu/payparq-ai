@@ -4,13 +4,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:vibration/vibration.dart';
 import 'package:flutter/services.dart';
 import '../logic/providers/auth_providers.dart';
 import '../features/management/repositories/parking_repository.dart';
 import '../logic/providers/locale_provider.dart';
+import '../logic/utils/location_resolver.dart';
+import '../features/enforcement/providers/enforcement_controller.dart';
+import '../services/error_mapper.dart';
+import '../utils/async_action_handler.dart';
 
 class HudScreen extends ConsumerStatefulWidget {
   const HudScreen({super.key});
@@ -19,7 +22,8 @@ class HudScreen extends ConsumerStatefulWidget {
   ConsumerState<HudScreen> createState() => _HudScreenState();
 }
 
-class _HudScreenState extends ConsumerState<HudScreen> {
+class _HudScreenState extends ConsumerState<HudScreen>
+    with WidgetsBindingObserver {
   CameraController? _controller;
   bool _isCameraInitialized = false;
   bool _isScanning = true;
@@ -32,6 +36,10 @@ class _HudScreenState extends ConsumerState<HudScreen> {
 
   final TextRecognizer _textRecognizer = TextRecognizer();
   bool _isBusy = false;
+  bool _isAppActive = true;
+  DateTime? _lastProcessAt;
+  final Duration _processCooldown = const Duration(milliseconds: 500);
+  final List<ProviderSubscription<dynamic>> _streamSubs = [];
 
   // Frame averaging
   final List<String> _consecutiveHits = [];
@@ -39,11 +47,47 @@ class _HudScreenState extends ConsumerState<HudScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentTempId =
         'LPR-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
     _statusMessage = Lang.sel(
         ref.read(localeIsCroatianProvider), "SCANNING...", "SKENIRANJE...");
     _initializeCamera();
+    _streamSubs.add(ref.listenManual(sessionsStreamProvider, (_, __) {}));
+    _streamSubs.add(ref.listenManual(permitsStreamProvider, (_, __) {}));
+    _streamSubs.add(ref.listenManual(violationsStreamProvider, (_, __) {}));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isAppActive = state == AppLifecycleState.resumed;
+    if (!_isAppActive) {
+      _webLPRTimer?.cancel();
+      if (!kIsWeb) {
+        try {
+          _controller?.stopImageStream();
+        } catch (_) {}
+      }
+      return;
+    }
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (kIsWeb) {
+      _startWebLPRTimer();
+    } else {
+      if (!(_controller?.value.isStreamingImages ?? false)) {
+        _controller?.startImageStream(_processCameraImage);
+      }
+    }
+  }
+
+  bool _canProcess() {
+    final now = DateTime.now();
+    final last = _lastProcessAt;
+    if (last != null && now.difference(last) < _processCooldown) {
+      return false;
+    }
+    _lastProcessAt = now;
+    return true;
   }
 
   Future<void> _initializeCamera() async {
@@ -135,9 +179,13 @@ class _HudScreenState extends ConsumerState<HudScreen> {
         Timer.periodic(const Duration(milliseconds: 1500), (timer) async {
       if (!_isScanning ||
           _isBusy ||
+          !_isAppActive ||
           !mounted ||
           _controller == null ||
           !_controller!.value.isInitialized) {
+        return;
+      }
+      if (!_canProcess()) {
         return;
       }
 
@@ -210,7 +258,7 @@ class _HudScreenState extends ConsumerState<HudScreen> {
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    if (_isBusy || !_isScanning || !mounted) return;
+    if (_isBusy || !_isScanning || !mounted || !_canProcess()) return;
     await _processImage(image);
   }
 
@@ -416,6 +464,11 @@ class _HudScreenState extends ConsumerState<HudScreen> {
 
   @override
   void dispose() {
+    _webLPRTimer?.cancel();
+    for (final sub in _streamSubs) {
+      sub.close();
+    }
+    WidgetsBinding.instance.removeObserver(this);
     _textRecognizer.close();
     _controller?.dispose();
     super.dispose();
@@ -678,8 +731,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
     if (profile == null) return;
     final issuerRole = profile['role'] == 'super_admin' ? 'payparq' : 'admin';
 
-    final locationDisplayId =
-        ref.read(selectedLocationIdProvider) ?? profile['location_id'];
+    final resolution = await LocationResolver.resolve(ref);
+    final locationDisplayId = resolution.effectiveDisplayId;
 
     if (locationDisplayId == null) {
       if (mounted) {
@@ -691,12 +744,8 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       return;
     }
 
-    // Use the centralized UUID resolver
-    final locUuid = await ref.read(selectedLocationUuidProvider.future) ??
-        ref.read(userLocationIdProvider);
-    final supabase = Supabase.instance.client;
-
-    if (locUuid == null) {
+    final locationUuid = resolution.uuid ?? resolution.fallbackId;
+    if (locationUuid == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Invalid Location selected.')),
@@ -837,46 +886,20 @@ class _HudScreenState extends ConsumerState<HudScreen> {
       });
 
       final plate = confirmedPlate;
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
-
-      // Resolve daily price for selected location
-      double dailyPrice = 50.0;
-      try {
-        final List rows = await supabase
-            .from('locations')
-            .select('base_price_daily')
-            .eq('id', locUuid)
-            .limit(1);
-        if (rows.isNotEmpty) {
-          final v = rows.first['base_price_daily'];
-          if (v != null) {
-            dailyPrice = (v is num)
-                ? v.toDouble()
-                : double.tryParse(v.toString()) ?? 50.0;
-          }
-        }
-      } catch (_) {}
-
-      final bytes = imageBytes;
-      await supabase.storage.from('evidence').uploadBinary(
-            fileName,
-            bytes,
-            fileOptions: const FileOptions(contentType: 'image/jpeg'),
-          );
-
-      // Log to 'violations' table (formerly 'cases')
-      await supabase.from('violations').insert({
-        'plate': plate,
-        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-        'fine_amount': isWarning ? 0.00 : dailyPrice,
-        'status': isWarning ? 'warning' : 'issued',
-        'location_id': locUuid,
-        'is_lpr_scan': true,
-        'evidence_r2_url': fileName,
-        'issued_at': DateTime.now().toIso8601String(),
-        'issuer_role': issuerRole,
-      }).select();
-      ref.invalidate(violationsStreamProvider);
+      final controller = ref.read(enforcementControllerProvider);
+      if (!mounted) return;
+      await AsyncActionHandler.run<void>(
+        context: context,
+        action: () => controller.issueQuickAction(
+          plate: plate,
+          isWarning: isWarning,
+          locationUuid: locationUuid,
+          bytes: imageBytes,
+          isLprScan: true,
+          issuerRole: issuerRole,
+        ),
+        errorBuilder: ErrorMapper.message,
+      );
 
       if (mounted) {
         setState(() {

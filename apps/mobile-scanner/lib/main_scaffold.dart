@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../responsive/responsive_layout.dart';
 import '../logic/providers/auth_providers.dart';
 import '../logic/providers/locale_provider.dart';
-import '../screens/hud_screen.dart';
-import '../screens/admin/admin_dashboard_screen.dart'; // Users List
-import '../features/enforcement/screens/cases_list_view.dart';
-import '../features/enforcement/screens/upload_case_form.dart';
-import '../features/management/screens/passes_list_screen.dart';
-import '../features/management/screens/add_staff_screen.dart';
-
-import '../features/management/screens/verification_inbox_screen.dart';
-import '../features/management/screens/locations_screen.dart';
-import '../screens/settings_screen.dart';
+import '../logic/providers/auth_controller.dart';
+import '../utils/async_action_handler.dart';
+import '../services/error_mapper.dart';
+import '../screens/deferred/hud_loader.dart' deferred as hud_mod;
+import '../features/enforcement/deferred/cases_loader.dart'
+    deferred as cases_mod;
+import '../features/enforcement/deferred/upload_case_loader.dart'
+    deferred as upload_case_mod;
+import '../features/management/deferred/passes_loader.dart'
+    deferred as passes_mod;
+import '../features/management/deferred/add_staff_loader.dart'
+    deferred as staff_mod;
+import '../features/management/deferred/verification_inbox_loader.dart'
+    deferred as verification_mod;
+import '../features/management/deferred/locations_loader.dart'
+    deferred as locations_mod;
+import '../screens/deferred/settings_loader.dart' deferred as settings_mod;
 import '../theme.dart';
 import '../features/intelligence/deferred/analytics_loader.dart'
     deferred as analytics_mod;
@@ -47,6 +53,28 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Future<void> _handleLogout() async {
+    final isHr = ref.read(localeIsCroatianProvider);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(Lang.sel(isHr, 'Sign Out', 'Odjava')),
+        content: Text(Lang.sel(
+            isHr, 'Are you sure you want to sign out?', 'Jeste li sigurni?')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(Lang.sel(isHr, 'Cancel', 'Odustani')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(Lang.sel(isHr, 'Sign Out', 'Odjava')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirm != true) return;
+
     // 1. Reset all lot-related state
     ref.read(selectedLocationIdProvider.notifier).state = null;
 
@@ -55,8 +83,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     ref.invalidate(availableLocationsProvider);
     ref.invalidate(authStateProvider);
 
-    // 3. Sign out from Supabase
-    await Supabase.instance.client.auth.signOut();
+    if (!mounted) return;
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () => ref.read(authControllerProvider).signOut(),
+      successMessage: Lang.sel(isHr, 'Signed out', 'Odjavljeni ste'),
+      errorBuilder: ErrorMapper.message,
+    );
   }
 
   @override
@@ -108,7 +141,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         debugPrint(
             'MasterScaffold: profile is null and not loading - using emergency fallback');
         // Emergency fallback - use basic user data from session
-        final user = Supabase.instance.client.auth.currentUser;
+        final user = ref.read(authControllerProvider).currentUser();
         if (user != null) {
           final emergencyProfile = {
             'id': user.id,
@@ -250,10 +283,16 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
             tooltip: Lang.sel(isHr, 'Settings', 'Postavke'),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () async {
+              await settings_mod.loadLibrary();
+              if (!mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => settings_mod.buildSettingsScreen(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout_outlined, color: Colors.white),
@@ -269,10 +308,19 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   Widget _buildMobileBody(bool isOfficer) {
     return IndexedStack(
       index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
-      children: const [
-        AdminDashboardScreen(),
-        HudScreen(),
-        CasesListView(),
+      children: [
+        _DeferredPage(
+          load: () => admin_mod.loadLibrary(),
+          build: () => admin_mod.buildAdminDashboard(),
+        ),
+        _DeferredPage(
+          load: () => hud_mod.loadLibrary(),
+          build: () => hud_mod.buildHudScreen(),
+        ),
+        _DeferredPage(
+          load: () => cases_mod.loadLibrary(),
+          build: () => cases_mod.buildCasesListView(),
+        ),
       ],
     );
   }
@@ -350,7 +398,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () async {
-                    await Supabase.instance.client.auth.refreshSession();
+                    await AsyncActionHandler.run<void>(
+                      context: context,
+                      action: () =>
+                          ref.read(authControllerProvider).refreshSession(),
+                      errorBuilder: ErrorMapper.message,
+                    );
                     ref.invalidate(userProfileProvider);
                     ref.invalidate(availableLocationsProvider);
                   },
@@ -359,7 +412,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => Supabase.instance.client.auth.signOut(),
+                  onPressed: () => AsyncActionHandler.run<void>(
+                    context: context,
+                    action: () => ref.read(authControllerProvider).signOut(),
+                    errorBuilder: ErrorMapper.message,
+                  ),
                   child: Text(Lang.sel(isHr, 'Sign Out', 'Odjava')),
                 ),
               ],
@@ -389,8 +446,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           if (index == 10) return isSuperAdmin; // Verification Inbox
           if (isSuperAdmin || isAdmin) return true;
           if (isManager) {
-            // Managers see everything except Add Location (4) and Finance (9)
-            return index != 4 && index != 9;
+            // Managers align with assigned-location data access
+            return [0, 1, 2, 3, 5, 8].contains(index);
           }
           if (isOfficer) {
             // Officers see: Cases (0), OCR (1), Dashboard (2), Settings (8)
@@ -588,15 +645,33 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                             child: IndexedStack(
                               index: _selectedIndex,
                               children: [
-                                const CasesListView(),
-                                const UploadCaseForm(),
+                                _DeferredPage(
+                                  load: () => cases_mod.loadLibrary(),
+                                  build: () => cases_mod.buildCasesListView(),
+                                ),
+                                _DeferredPage(
+                                  load: () => upload_case_mod.loadLibrary(),
+                                  build: () =>
+                                      upload_case_mod.buildUploadCaseForm(),
+                                ),
                                 _DeferredPage(
                                   load: () => admin_mod.loadLibrary(),
                                   build: () => admin_mod.buildAdminDashboard(),
                                 ),
-                                const PassesListScreen(),
-                                const LocationsScreen(),
-                                const AddStaffScreen(),
+                                _DeferredPage(
+                                  load: () => passes_mod.loadLibrary(),
+                                  build: () =>
+                                      passes_mod.buildPassesListScreen(),
+                                ),
+                                _DeferredPage(
+                                  load: () => locations_mod.loadLibrary(),
+                                  build: () =>
+                                      locations_mod.buildLocationsScreen(),
+                                ),
+                                _DeferredPage(
+                                  load: () => staff_mod.loadLibrary(),
+                                  build: () => staff_mod.buildAddStaffScreen(),
+                                ),
                                 _DeferredPage(
                                   load: () => pricing_mod.loadLibrary(),
                                   build: () =>
@@ -606,12 +681,20 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                   load: () => analytics_mod.loadLibrary(),
                                   build: () => analytics_mod.buildAnalytics(),
                                 ),
-                                const SettingsScreen(),
+                                _DeferredPage(
+                                  load: () => settings_mod.loadLibrary(),
+                                  build: () =>
+                                      settings_mod.buildSettingsScreen(),
+                                ),
                                 _DeferredPage(
                                   load: () => finance_mod.loadLibrary(),
                                   build: () => finance_mod.buildFinance(),
                                 ),
-                                const VerificationInboxScreen(),
+                                _DeferredPage(
+                                  load: () => verification_mod.loadLibrary(),
+                                  build: () => verification_mod
+                                      .buildVerificationInboxScreen(),
+                                ),
                               ],
                             ),
                           ),

@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../features/management/repositories/parking_repository.dart';
+import '../../utils/date_sort_helpers.dart';
 
 /// Provider for the search query in the dashboard.
 final dashboardSearchProvider = StateProvider.autoDispose<String>((ref) => '');
 
 /// Provider for the selected filter in the dashboard.
-final dashboardFilterProvider = StateProvider.autoDispose<String>((ref) => 'All');
+final dashboardFilterProvider =
+    StateProvider.autoDispose<String>((ref) => 'All');
 
 /// Global provider for optimistic violations (to ensure instant UX across screens).
 final optimisticViolationsProvider =
@@ -24,7 +26,17 @@ final unifiedDashboardProvider =
   List<Map<String, dynamic>> extractData(
       AsyncValue<List<Map<String, dynamic>>> asyncVal, String type) {
     return asyncVal.maybeWhen(
-      data: (data) => data.map((item) => {...item, 'ui_type': type}).toList(),
+      data: (data) => data
+          .map((item) {
+            DateSortHelpers.ensureCachedDate(
+              item,
+              'created_at',
+              'ui_created_at',
+              fallback: DateTime(2000),
+            );
+            return {...item, 'ui_type': type};
+          })
+          .toList(),
       orElse: () => [],
     );
   }
@@ -73,15 +85,7 @@ final unifiedDashboardProvider =
     return true;
   }).toList();
 
-  // Sort by created_at - put second place plates first (newest first)
-  filtered.sort((a, b) {
-    final dateA =
-        DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000);
-    final dateB =
-        DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000);
-    return dateB
-        .compareTo(dateA); // Show newest first (second place plates first)
-  });
+  DateSortHelpers.sortByCachedDate(filtered, 'ui_created_at');
 
   return AsyncValue.data(filtered);
 });

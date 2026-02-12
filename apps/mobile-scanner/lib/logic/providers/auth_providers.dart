@@ -51,7 +51,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   SupabaseService.instance
       .executeQuery<Map<String, dynamic>?>(
     queryId: 'profile_${user.id}',
-    timeout: const Duration(seconds: 1),
+    timeout: const Duration(seconds: 5),
     query: () => Supabase.instance.client
         .from('profiles')
         .select()
@@ -184,6 +184,8 @@ final availableLocationsProvider =
 
         final locIds =
             assignments.map((a) => a['location_id'] as String).toList();
+        debugPrint(
+            'availableLocationsProvider role=$role user=${user.id} location_ids=$locIds');
         if (locIds.isEmpty) {
           if (!controller.isClosed) controller.add([]);
           return;
@@ -204,13 +206,10 @@ final availableLocationsProvider =
           (currentSelectedId == null || selectionInvalid)) {
         final firstId = locations.first['display_id'];
         if (firstId != null) {
-          // Use a delayed microtask to avoid Riverpod dependency issues
-          Future.delayed(Duration.zero, () {
-            if (ref.read(selectedLocationIdProvider) == null ||
-                selectionInvalid) {
-              ref.read(selectedLocationIdProvider.notifier).state = firstId;
-            }
-          });
+          if (ref.read(selectedLocationIdProvider) == null ||
+              selectionInvalid) {
+            ref.read(selectedLocationIdProvider.notifier).state = firstId;
+          }
         }
       }
 
@@ -223,13 +222,18 @@ final availableLocationsProvider =
 
   fetch();
 
-  // Subscribe to changes (simplified)
+  Timer? fetchDebounce;
   final subscription = Supabase.instance.client
       .from('locations')
-      .stream(primaryKey: ['id']).listen((_) => fetch(),
-          onError: (e) => debugPrint('Loc Stream Error: $e'));
+      .stream(primaryKey: ['id']).listen((_) {
+    fetchDebounce?.cancel();
+    fetchDebounce = Timer(const Duration(milliseconds: 800), () {
+      fetch();
+    });
+  }, onError: (e) => debugPrint('Loc Stream Error: $e'));
 
   ref.onDispose(() {
+    fetchDebounce?.cancel();
     subscription.cancel();
     controller.close();
   });

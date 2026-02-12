@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../../../widgets/skeleton_loader.dart';
+import '../../../utils/list_search_filter.dart';
+import '../../../utils/async_action_handler.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
+import '../providers/staff_controller.dart';
+import '../../../services/error_mapper.dart';
 
 class AddStaffScreen extends ConsumerStatefulWidget {
   const AddStaffScreen({super.key});
@@ -18,10 +24,30 @@ class AddStaffScreen extends ConsumerStatefulWidget {
 
 class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   String _searchQuery = '';
+  Timer? _searchDebounce;
+  final Set<String> _optimisticDeletedIds = {};
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 20;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -31,8 +57,13 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
     final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return profileAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Padding(
+          padding: const EdgeInsets.all(48.0),
+          child: _buildSkeletonList(),
+        ),
+      ),
       error: (err, stack) => Scaffold(
         body: Center(
           child: Column(
@@ -123,9 +154,17 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                   width: 400,
                   child: TextField(
                     onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val.trim().toLowerCase();
-                      });
+                      _searchDebounce?.cancel();
+                      _searchDebounce = Timer(
+                        const Duration(milliseconds: 250),
+                        () {
+                          if (!mounted) return;
+                          setState(() {
+                            _searchQuery = val.trim().toLowerCase();
+                            _visibleCount = 20;
+                          });
+                        },
+                      );
                     },
                     decoration: InputDecoration(
                       hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
@@ -148,8 +187,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                 // --- STAFF LIST ---
                 Expanded(
                   child: staffAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator(color: Colors.black)),
+                    loading: () => _buildSkeletonList(),
                     error: (err, stack) => Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -170,13 +208,17 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                       ),
                     ),
                     data: (allStaff) {
-                      final filteredStaff = allStaff.where((user) {
-                        final name =
-                            (user['name'] ?? '').toString().toLowerCase();
-                        final email =
-                            (user['email'] ?? '').toString().toLowerCase();
-                        return name.contains(_searchQuery) ||
-                            email.contains(_searchQuery);
+                      final filteredStaff = ListSearchFilter.filter(
+                        items: allStaff,
+                        query: _searchQuery,
+                        fields: (user) => [
+                          user['name']?.toString(),
+                          user['email']?.toString(),
+                        ],
+                      ).where((user) {
+                        final id = user['id']?.toString();
+                        if (id == null) return true;
+                        return !_optimisticDeletedIds.contains(id);
                       }).toList();
 
                       if (filteredStaff.isEmpty) {
@@ -198,9 +240,13 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         );
                       }
 
+                      final visibleCount = _visibleCount > filteredStaff.length
+                          ? filteredStaff.length
+                          : _visibleCount;
                       return ListView.builder(
+                        controller: _scrollController,
                         padding: const EdgeInsets.all(0),
-                        itemCount: filteredStaff.length,
+                        itemCount: visibleCount,
                         itemBuilder: (context, index) {
                           final user = filteredStaff[index];
                           final isOfficer = (user['role'] == 'officer');
@@ -250,7 +296,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildStatusBadge(
-                                  (user['role'] ?? 'staff').toUpperCase(),
+                                  (user['role'] ?? 'officer').toUpperCase(),
                                 ),
                                 const SizedBox(width: 24),
                                 ElevatedButton(
@@ -293,6 +339,26 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return AdminDataCard(
+          leading: SkeletonLoader(width: 160, height: 48),
+          mainContent: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 220, height: 14),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: 140, height: 12),
+            ],
+          ),
+          trailing: SkeletonLoader(width: 90, height: 32),
         );
       },
     );
@@ -432,31 +498,33 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
 
   void _confirmDelete(String id) {
     final isCroatian = ref.read(localeIsCroatianProvider);
-    showDialog(
+    AsyncActionHandler.run<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(Lang.sel(
-            isCroatian, 'Delete Staff Member', 'Obriši člana osoblja')),
-        content: Text(Lang.sel(
-            isCroatian,
-            'Are you sure you want to delete this staff member?',
-            'Jeste li sigurni da želite obrisati ovog člana osoblja?')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(Lang.sel(isCroatian, 'Cancel', 'Odustani'))),
-          TextButton(
-            onPressed: () async {
-              await ref.read(parkingRepositoryProvider).deleteStaff(id);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-              ref.invalidate(staffStreamProvider);
-            },
-            child: Text(Lang.sel(isCroatian, 'Delete', 'Obriši'),
-                style: const TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      action: () async {
+        final confirm = await showConfirmDeleteDialog(
+          context: context,
+          title: Lang.sel(
+              isCroatian, 'Delete Staff Member', 'Obriši člana osoblja'),
+          message: Lang.sel(
+              isCroatian,
+              'Are you sure you want to delete this staff member?',
+              'Jeste li sigurni da želite obrisati ovog člana osoblja?'),
+          confirmLabel: Lang.sel(isCroatian, 'Delete', 'Obriši'),
+          cancelLabel: Lang.sel(isCroatian, 'Cancel', 'Odustani'),
+        );
+        if (confirm != true) return;
+        setState(() {
+          _optimisticDeletedIds.add(id);
+        });
+        await ref.read(staffControllerProvider).deleteStaff(id);
+      },
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _optimisticDeletedIds.remove(id);
+        });
+      },
     );
   }
 
@@ -662,58 +730,18 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           setDialogState(() => isProcessing = true);
 
                           try {
-                            // 1. Call the Edge Function to create the user
-                            final response =
-                                await Supabase.instance.client.functions.invoke(
-                              'create-officer',
-                              body: {
-                                'email': emailCtrl.text.trim(),
-                                'name': nameCtrl.text.trim(),
-                                'role': selectedRole,
-                                'location_id': selectedLocationIds.first,
-                              },
+                            final controller =
+                                ref.read(staffControllerProvider);
+                            await controller.createStaff(
+                              email: emailCtrl.text.trim(),
+                              name: nameCtrl.text.trim(),
+                              role: selectedRole,
+                              locationIds: selectedLocationIds,
                             );
-
-                            if (response.status != 200) {
-                              final errorMsg = response.data is Map
-                                  ? (response.data['error'] ?? 'Server Error')
-                                  : 'Staff creation failed.';
-                              throw Exception(errorMsg);
-                            }
-
-                            final newStaffId = response.data['user']['id'];
-
-                            // 2. Create ADDITIONAL multi-location assignments if needed
-                            // (The Edge Function already handles the first one)
-                            if (selectedLocationIds.length > 1) {
-                              final extraAssignments = selectedLocationIds
-                                  .skip(1)
-                                  .map((lid) => {
-                                        'officer_id': newStaffId,
-                                        'location_id': lid,
-                                        'assigned_by': Supabase.instance.client
-                                            .auth.currentUser?.id,
-                                      })
-                                  .toList();
-
-                              await Supabase.instance.client
-                                  .from('officer_assignments')
-                                  .insert(extraAssignments);
-                            }
 
                             // On success:
                             if (context.mounted) {
                               Navigator.pop(context); // Close dialog
-
-                              // Give the Supabase trigger and RLS a moment to settle
-                              Future.delayed(const Duration(milliseconds: 1500),
-                                  () {
-                                if (mounted) {
-                                  ref.invalidate(staffStreamProvider);
-                                  // Also force a refresh of the user profile just in case
-                                  ref.invalidate(userProfileProvider);
-                                }
-                              });
 
                               // Show success message
                               showDialog(
@@ -759,33 +787,12 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           } catch (e) {
                             // On error:
                             if (context.mounted) {
-                              String displayError = e.toString();
-                              // Clean up common Supabase function error formats
-                              if (displayError.contains('Invalid format')) {
-                                displayError =
-                                    'The email address format is invalid.';
-                              } else if (displayError
-                                  .contains('already in use')) {
-                                displayError =
-                                    'This email is already registered.';
-                              } else if (displayError
-                                  .contains('FunctionException')) {
-                                // Try to extract the details message if it's a map
-                                try {
-                                  final details = (e as dynamic).details;
-                                  if (details is Map &&
-                                      details.containsKey('error')) {
-                                    displayError = details['error'];
-                                  }
-                                } catch (_) {}
-                              }
-
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(Lang.sel(
                                       ref.read(localeIsCroatianProvider),
-                                      'Error: $displayError',
-                                      'Greška: $displayError')),
+                                      'Error: ${ErrorMapper.message(e)}',
+                                      'Greška: ${ErrorMapper.message(e)}')),
                                   backgroundColor: Colors.red,
                                 ),
                               );

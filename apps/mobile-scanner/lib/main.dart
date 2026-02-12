@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'theme.dart';
 import 'main_scaffold.dart';
 import 'screens/auth_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/performance_monitor.dart';
+import 'config/app_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +32,20 @@ class _BootAppState extends State<BootApp> {
   @override
   void initState() {
     super.initState();
+    _logBuildInfo();
     _initFuture = _initSupabase();
+  }
+
+  Future<void> _logBuildInfo() async {
+    final env = kReleaseMode ? 'prod' : (kProfileMode ? 'profile' : 'debug');
+    final info = await PackageInfo.fromPlatform();
+    final version = '${info.version}+${info.buildNumber}';
+    final buildDate =
+        AppConfig.buildDate.isEmpty ? 'unknown' : AppConfig.buildDate;
+    debugPrint('Build date: $buildDate');
+    debugPrint('Environment: $env');
+    debugPrint('App version: $version');
+    debugPrint('Supabase URL: ${AppConfig.supabaseUrl}');
   }
 
   Future<void> _initSupabase() async {
@@ -39,9 +55,18 @@ class _BootAppState extends State<BootApp> {
     final stopwatch = Stopwatch()..start();
 
     try {
+      if (kReleaseMode) {
+        if (!(AppConfig.env == 'prod' && AppConfig.productionGuard == '1')) {
+          throw Exception('Invalid production configuration');
+        }
+      } else {
+        if (AppConfig.env == 'prod' || AppConfig.productionGuard == '1') {
+          throw Exception('Dev build cannot use production configuration');
+        }
+      }
       await SupabaseService.instance.initialize(
-        url: 'https://iafjygownkhedereaoxw.supabase.co',
-        anonKey: 'sb_publishable_ah4iveg_PBowEdtSgQo4Qg_KjLUzWBV',
+        url: AppConfig.supabaseUrl,
+        anonKey: AppConfig.supabaseAnonKey,
         timeout: const Duration(seconds: 5),
       );
 
@@ -139,7 +164,7 @@ class PayParqApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'payparq.ai [MARKER_8087]',
+      title: 'payparq.ai',
       theme: AppTheme.lightTheme, // Default to Light Theme
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,

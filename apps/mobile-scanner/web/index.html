@@ -30,7 +30,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='black' stroke='white' stroke-width='2'/><text x='16' y='22' font-family='Arial' font-size='18' font-weight='bold' fill='white' text-anchor='middle'>P</text></svg>"/>
 
   <!-- Browser Tab Identity -->
-  <title>payparq.ai [MARKER_8087]</title>
+  <title>payparq.ai</title>
   <meta name="apple-mobile-web-app-title" content="payparq.ai">
   <link rel="manifest" href="manifest.json">
   <style>
@@ -58,18 +58,19 @@
   </style>
   <script>
     if ('serviceWorker' in navigator) {
-      // Delay check to avoid "document in invalid state" in sandboxed environments
       window.addEventListener('load', function() {
-        try {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for (let registration of registrations) {
-              registration.unregister();
-            }
-          }).catch(function(err) {
-            console.warn('Service worker unregistration failed:', err);
-          });
-        } catch (e) {
-          console.warn('Service worker access blocked:', e);
+        if (window.__devNoSW === true) {
+          try {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for (let registration of registrations) {
+                registration.unregister();
+              }
+            }).catch(function(err) {
+              console.warn('Service worker unregistration failed:', err);
+            });
+          } catch (e) {
+            console.warn('Service worker access blocked:', e);
+          }
         }
       });
     }
@@ -118,9 +119,9 @@ if (!window._flutter) {
 }
 _flutter.buildConfig = {"engineRevision":"587c18f873b8ab57330422bce09047420d9c7f42","builds":[{"compileTarget":"dart2js","renderer":"canvaskit","mainJsPath":"main.dart.js"},{}]};
 
-_flutter.loader.load({
-  serviceWorkerSettings: null
-});
+const __serviceWorkerSettings = null;
+window.__devNoSW = (__serviceWorkerSettings === null);
+_flutter.loader.load({ serviceWorkerSettings: __serviceWorkerSettings });
 
   </script>
 </body>

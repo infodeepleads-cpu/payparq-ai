@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,6 +11,9 @@ import '../../../logic/providers/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:payparq_scanner/utils/web_download_helper.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../providers/dynamic_pricing_controller.dart';
+import '../../../services/error_mapper.dart';
+import '../../../config/app_config.dart';
 
 class DynamicPricingScreen extends ConsumerStatefulWidget {
   const DynamicPricingScreen({super.key});
@@ -22,7 +24,6 @@ class DynamicPricingScreen extends ConsumerStatefulWidget {
 }
 
 class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
-  final supabase = Supabase.instance.client;
   List<Map<String, dynamic>> _locations = [];
   Map<String, dynamic>? _selectedLocation;
   bool _isLoading = true;
@@ -81,35 +82,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         return;
       }
 
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
-
-      final isSuperAdmin = profile['role'] == 'super_admin';
-      final isAdmin = profile['role'] == 'admin';
-
-      debugPrint(
-          '🔍 FETCHING LOCATIONS. ROLE: ${profile['role']} | ID: ${profile['location_id']}');
-
-      var query = supabase.from('locations').select();
-
-      // If not super admin, filter accordingly
-      if (isSuperAdmin) {
-        // Super admin sees all
-      } else if (isAdmin) {
-        // Admin sees all locations they own
-        query = query.eq('owner_id', user.id);
-      } else {
-        // Others (Officers) see their assigned location
-        if (profile['location_id'] != null) {
-          query = query.eq('display_id', profile['location_id']);
-        }
-      }
-
-      final data = await query;
-      final List<Map<String, dynamic>> newLocations =
-          List<Map<String, dynamic>>.from(data);
-
-      debugPrint('✅ RECEIVED ${newLocations.length} LOCATIONS');
+      final userId = ref.read(userProfileProvider).value?['id']?.toString();
+      if (userId == null) return;
+      final newLocations = await ref
+          .read(dynamicPricingControllerProvider)
+          .fetchLocations(profile: profile, userId: userId);
 
       if (mounted) {
         setState(() {
@@ -137,11 +114,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ FETCH ERROR: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(Lang.sel(
+                  ref.read(localeIsCroatianProvider),
+                  'Error: ${ErrorMapper.message(e)}',
+                  'Greška: ${ErrorMapper.message(e)}'))),
+        );
       }
     }
   }
@@ -185,11 +168,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       final monthlyCeiling =
           (loc['base_price_monthly_ceiling'] ?? 0.0).toString();
       final hourlyFloor = (loc['rate_per_hour_floor'] ?? 0.0).toString();
-      final dailyFloor =
-          ((loc['minimum_daily_price'] ?? loc['base_price_daily_floor']) ?? 0.0)
-              .toString();
-      final monthlyFloor =
-          (loc['base_price_monthly_floor'] ?? 0.0).toString();
+      final dailyFloor = (loc['base_price_daily_floor'] ?? 0.0).toString();
+      final monthlyFloor = (loc['base_price_monthly_floor'] ?? 0.0).toString();
 
       _hourlyController.text = hourly;
       _dailyController.text = daily;
@@ -271,8 +251,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final String rawDailyFloor =
         _dailyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newDailyFloor = double.tryParse(rawDailyFloor) ?? 0.0;
-    final double? newDailyMinimum =
-        rawDailyFloor.isEmpty ? null : double.tryParse(rawDailyFloor);
     final String rawMonthlyFloor =
         _monthlyFloorController.text.replaceAll(RegExp(r'[^\d.]'), '');
     final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
@@ -289,7 +267,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'base_price_monthly_ceiling': newMonthlyCeiling,
         'rate_per_hour_floor': newHourlyFloor,
         'base_price_monthly_floor': newMonthlyFloor,
-        'minimum_daily_price': newDailyFloor,
+        'base_price_daily_floor': newDailyFloor,
       };
       final flagsPayload = {
         'dynamic_pricing_enabled': _dynamicEnabled,
@@ -299,67 +277,12 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'surcharge_multiplier': _surchargeMultiplier,
       };
 
-      debugPrint('🚨 ATTEMPTING PRICE SAVE TO ID: $targetId');
-      debugPrint('🔎 Parsed minimum_daily_price: $newDailyMinimum');
-      debugPrint('📦 PRICE PAYLOAD: $pricePayload');
-
-      try {
-        await supabase
-            .from('locations')
-            .update(pricePayload)
-            .eq('id', targetId);
-      } catch (e1) {
-        debugPrint('⚠️ ID update failed: $e1');
-        final displayId = _selectedLocation!['display_id']?.toString();
-        if (displayId != null && displayId.isNotEmpty) {
-          try {
-            await supabase
-                .from('locations')
-                .update(pricePayload)
-                .eq('display_id', displayId);
-          } catch (e2) {
-            debugPrint('🔥 Both ID and DisplayID updates failed: $e2');
-            throw 'Price update failed: $e2';
-          }
-        } else {
-          throw 'Price update failed: $e1';
-        }
-      }
-
-      try {
-        await supabase
-            .from('locations')
-            .update(flagsPayload)
-            .eq('id', targetId);
-      } catch (e1) {
-        debugPrint('⚠️ Flags ID update failed: $e1');
-        final displayId = _selectedLocation!['display_id']?.toString();
-        if (displayId != null && displayId.isNotEmpty) {
-          try {
-            await supabase
-                .from('locations')
-                .update(flagsPayload)
-                .eq('display_id', displayId);
-          } catch (e2) {
-            debugPrint('🔥 Both Flags ID and DisplayID updates failed: $e2');
-            throw 'Flags update failed: $e2';
-          }
-        } else {
-          throw 'Flags update failed: $e1';
-        }
-      }
-
-      try {
-        final verify = await supabase
-            .from('locations')
-            .select('minimum_daily_price')
-            .eq('id', targetId)
-            .limit(1);
-        debugPrint(
-            '✅ minimum_daily_price after save: ${verify.isNotEmpty ? verify.first['minimum_daily_price'] : 'n/a'}');
-      } catch (e) {
-        debugPrint('⚠️ Verification read failed: $e');
-      }
+      await ref.read(dynamicPricingControllerProvider).updatePricing(
+            pricePayload: pricePayload,
+            flagsPayload: flagsPayload,
+            targetId: targetId,
+            displayId: _selectedLocation!['display_id']?.toString(),
+          );
 
       setState(() {
         final index =
@@ -386,9 +309,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         _hourlyFloorController.text =
             (data['rate_per_hour_floor'] ?? 0.0).toString();
         _dailyFloorController.text =
-            ((data['minimum_daily_price'] ?? data['base_price_daily_floor']) ??
-                    0.0)
-                .toString();
+            (data['base_price_daily_floor'] ?? 0.0).toString();
         _monthlyFloorController.text =
             (data['base_price_monthly_floor'] ?? 0.0).toString();
       });
@@ -404,9 +325,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         );
       }
     } catch (e) {
-      final errorStr = e.toString();
-      debugPrint('🔥 CRITICAL SAVE ERROR: $errorStr');
-
+      final errorStr = ErrorMapper.message(e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -427,17 +346,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
   void _generateStripeLink(String type) async {
     if (_selectedLocation == null) return;
-    // Use the 5-digit display_id for the user-facing Stripe link
-    final locationId =
-        (_selectedLocation!['display_id'] ?? _selectedLocation!['id'])
-            .toString();
+    final locationId = (_selectedLocation!['id']).toString();
 
-    // Add timestamp cache-buster to prevent browser from returning old Stripe sessions
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    const baseUrl =
-        'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout';
-    final url =
-        Uri.parse('$baseUrl?location_id=$locationId&type=$type&t=$timestamp');
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final url = Uri.parse(AppConfig.createCheckoutUrl(
+        locationId: locationId, type: type, timestamp: timestamp));
 
     debugPrint('Opening Checkout: $url');
 
@@ -676,10 +589,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
   String _baseCheckoutUrl(String type) {
     if (_selectedLocation == null) return '';
-    final locationId =
-        (_selectedLocation!['display_id'] ?? _selectedLocation!['id'])
-            .toString();
-    return 'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=$locationId&type=$type';
+    final locationId = (_selectedLocation!['id']).toString();
+    return AppConfig.createCheckoutUrl(locationId: locationId, type: type);
   }
 
   Widget _buildStripeLinksSection() {
@@ -745,15 +656,30 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
   Future<void> _downloadSign() async {
     try {
+      final double pr = kIsWeb ? (View.of(context).devicePixelRatio * 2) : 6.0;
+      // Ensure layout and assets are ready
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+      await precacheImage(
+          const AssetImage('assets/images/sign_template_v2.png'), context);
+      if (!mounted) return;
+
       final boundary =
           _signKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 6.0);
+      final image = await boundary.toImage(pixelRatio: pr);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final pngBytes = byteData!.buffer.asUint8List();
       if (kIsWeb) {
         final fileName =
             'parking_sign_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
         downloadFileWeb(pngBytes, fileName);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                    'Sign downloaded', 'Znak je preuzet'))),
+          );
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -771,8 +697,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           SnackBar(
               content: Text(Lang.sel(
                   ref.read(localeIsCroatianProvider),
-                  'Error generating sign: $e',
-                  'Greška pri generiranju znaka: $e'))),
+                  'Error generating sign: ${ErrorMapper.message(e)}',
+                  'Greška pri generiranju znaka: ${ErrorMapper.message(e)}'))),
         );
       }
     }
@@ -780,15 +706,27 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
   Future<void> _downloadNotice() async {
     try {
+      final double pr = kIsWeb ? (View.of(context).devicePixelRatio * 2) : 6.0;
+      // Ensure layout settles for consistent capture
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+
       final boundary = _noticeKey.currentContext!.findRenderObject()
           as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 6.0);
+      final image = await boundary.toImage(pixelRatio: pr);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final pngBytes = byteData!.buffer.asUint8List();
       if (kIsWeb) {
         final fileName =
             'daily_ticket_${(_selectedLocation?['display_id'] ?? _selectedLocation?['id']).toString()}.png';
         downloadFileWeb(pngBytes, fileName);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                    'Notice downloaded', 'Obavijest je preuzeta'))),
+          );
+        }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -806,8 +744,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           SnackBar(
               content: Text(Lang.sel(
                   ref.read(localeIsCroatianProvider),
-                  'Error generating notice: $e',
-                  'Greška pri generiranju obavijesti: $e'))),
+                  'Error generating notice: ${ErrorMapper.message(e)}',
+                  'Greška pri generiranju obavijesti: ${ErrorMapper.message(e)}'))),
         );
       }
     }
@@ -827,18 +765,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        LayoutBuilder(builder: (context, constraints) {
-          final double scale =
-              constraints.maxWidth < 400 ? constraints.maxWidth / 400 : 1.0;
-          if (scale < 1.0) {
-            return Transform.scale(
-              scale: scale,
-              alignment: Alignment.topCenter,
-              child: _buildSignContent(displayId, stripeUrl),
-            );
-          }
-          return _buildSignContent(displayId, stripeUrl);
-        }),
+        FittedBox(
+          fit: BoxFit.contain,
+          alignment: Alignment.topCenter,
+          child: _buildSignContent(displayId, stripeUrl),
+        ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: _downloadSign,
@@ -1092,43 +1023,46 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             Align(
               alignment: const Alignment(0, 0.24),
-              child: SizedBox(
-                width: 180,
-                height: 180,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    QrImageView(
-                      data: stripeUrl,
-                      version: QrVersions.auto,
-                      size: 120.0,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Colors.black,
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'P',
-                        style: GoogleFonts.montserrat(
+              child: Transform.translate(
+                offset: const Offset(0, 12),
+                child: SizedBox(
+                  width: 180,
+                  height: 180,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      QrImageView(
+                        data: stripeUrl,
+                        version: QrVersions.auto,
+                        size: 120.0,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
                           color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: Colors.black,
                         ),
                       ),
-                    ),
-                  ],
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'P',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1444,7 +1378,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                             (_selectedLocation!['display_id'] ??
                                     _selectedLocation!['id'])
                                 .toString(),
-                            _baseCheckoutUrl('daily'),
+                            _baseCheckoutUrl('hourly'),
                           )
                         : Container(
                             padding: const EdgeInsets.all(32),

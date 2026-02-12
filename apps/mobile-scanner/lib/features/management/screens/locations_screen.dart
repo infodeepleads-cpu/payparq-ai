@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
@@ -12,6 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../logic/providers/auth_providers.dart';
 import 'verification_upload_screen.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../../../widgets/skeleton_loader.dart';
+import '../widgets/locations_header.dart';
+import '../../../utils/list_search_filter.dart';
+import '../../../utils/async_action_handler.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
+import '../providers/locations_controller.dart';
+import '../../../services/error_mapper.dart';
 
 class LocationsScreen extends ConsumerStatefulWidget {
   const LocationsScreen({super.key});
@@ -24,6 +31,33 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   static const String _supportWhatsappDisplay = '+385 91 5963139';
   static const String _supportWhatsappNumber = '385915963139';
   String _searchQuery = '';
+  Timer? _searchDebounce;
+  final Set<String> _optimisticDeletedIds = {};
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 20;
+  final Map<String, Map<String, dynamic>> _locOverrides = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
@@ -31,9 +65,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return profileAsync.when(
-      loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+      loading: () => Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Padding(
+          padding: const EdgeInsets.all(48.0),
+          child: _buildSkeletonList(),
         ),
       ),
       error: (err, stack) => Scaffold(
@@ -67,91 +103,32 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          Lang.sel(isCroatian, 'Locations & Hubs',
-                              'Lokacije i Hubovi'),
-                          style: GoogleFonts.inter(
-                            fontSize: 40,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          isSuperAdmin
-                              ? Lang.sel(
-                                  isCroatian,
-                                  'Super Admin Mode: Viewing all locations',
-                                  'Super Admin način: Prikaz svih lokacija')
-                              : Lang.sel(
-                                  isCroatian,
-                                  'Managing access for Location ID: $locationId',
-                                  'Upravljanje pristupom za ID lokacije: $locationId'),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isAdmin || isSuperAdmin)
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            _showAddLocationDialog(context, locationId),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: Text(Lang.sel(
-                            isCroatian, 'Add Lot', 'Dodaj parkiralište')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4)),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 48),
-                SizedBox(
-                  width: 400,
-                  child: TextField(
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val.trim().toLowerCase();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      filled: true,
-                      fillColor: AppTheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
+                LocationsHeader(
+                  isSuperAdmin: isSuperAdmin,
+                  isAdmin: isAdmin,
+                  locationId: locationId,
+                  onAddLocation: () => _showAddLocationDialog(
+                      context, locationId, profile?['id']?.toString()),
+                  onSearchChanged: (val) {
+                    _searchDebounce?.cancel();
+                    _searchDebounce = Timer(
+                      const Duration(milliseconds: 250),
+                      () {
+                        if (!mounted) return;
+                        setState(() {
+                          _searchQuery = val.trim().toLowerCase();
+                          _visibleCount = 20;
+                        });
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
                 // List
                 Expanded(
                   child: locationsAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator(color: Colors.black)),
+                    loading: () => _buildSkeletonList(),
                     error: (err, stack) => Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -196,20 +173,38 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         );
                       }
 
-                      final filtered = locations.where((loc) {
-                        final name =
-                            (loc['name'] ?? '').toString().toLowerCase();
-                        final displayId =
-                            (loc['display_id'] ?? '').toString().toLowerCase();
-                        if (_searchQuery.isEmpty) return true;
-                        return name.contains(_searchQuery) ||
-                            displayId.contains(_searchQuery);
+                      final mergedLocations = locations.map((loc) {
+                        final id = loc['id']?.toString() ?? '';
+                        final override = _locOverrides[id];
+                        return override != null ? {...loc, ...override} : loc;
                       }).toList();
 
+                      final filtered = ListSearchFilter.filter(
+                        items: mergedLocations,
+                        query: _searchQuery,
+                        fields: (loc) => [
+                          loc['name']?.toString(),
+                          loc['display_id']?.toString(),
+                        ],
+                      ).where((loc) {
+                        final id = loc['id']?.toString();
+                        if (id == null) return true;
+                        return !_optimisticDeletedIds.contains(id);
+                      }).toList();
+
+                      final visibleCount = _visibleCount > filtered.length
+                          ? filtered.length
+                          : _visibleCount;
                       return ListView.builder(
-                        itemCount: filtered.length,
+                        controller: _scrollController,
+                        itemCount: visibleCount,
                         itemBuilder: (context, index) {
-                          final loc = filtered[index];
+                          var loc = filtered[index];
+                          final override =
+                              _locOverrides[loc['id']?.toString() ?? ''];
+                          if (override != null) {
+                            loc = {...loc, ...override};
+                          }
                           final name = loc['name'] ??
                               Lang.sel(isCroatian, 'Unnamed Lot',
                                   'Neimenovano parkiralište');
@@ -275,7 +270,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildVerificationBadge(loc, isAdmin),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 160),
+                                  child: _buildVerificationBadge(loc, isAdmin),
+                                ),
                                 const SizedBox(width: 12),
                                 _buildStatusBadge('ACTIVE'),
                                 const SizedBox(width: 12),
@@ -316,6 +315,26 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return AdminDataCard(
+          leading: SkeletonLoader(width: 160, height: 48),
+          mainContent: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 220, height: 14),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: 160, height: 12),
+            ],
+          ),
+          trailing: SkeletonLoader(width: 90, height: 32),
         );
       },
     );
@@ -394,7 +413,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       child: Container(
         constraints: BoxConstraints(
           minWidth: status == 'verified' ? 0 : (fixedWidthRequired ? 160 : 140),
-          maxWidth: fixedWidthRequired ? 160 : double.infinity,
+          maxWidth: 160,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -411,6 +430,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     child: Text(
                       label,
                       textAlign: TextAlign.center,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -430,12 +452,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 children: [
                   Icon(icon, size: 14, color: Colors.white),
                   const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -479,65 +506,47 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   void _confirmDelete(String id, String displayId) {
-    showDialog(
+    final isHr = ref.read(localeIsCroatianProvider);
+    AsyncActionHandler.run<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
-            'Delete Location', 'Obriši lokaciju')),
-        content: Text(Lang.sel(
-            ref.watch(localeIsCroatianProvider),
-            'Are you sure you want to delete this location?',
-            'Jeste li sigurni da želite obrisati ovu lokaciju?')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(Lang.sel(
-                  ref.watch(localeIsCroatianProvider), 'Cancel', 'Odustani'))),
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              // 1. If this is the currently selected lot, clear selection first
-              if (ref.read(selectedLocationIdProvider) == displayId) {
-                ref.read(selectedLocationIdProvider.notifier).state = null;
-              }
-
-              // 2. Perform deletion
-              await ref.read(parkingRepositoryProvider).deleteLocation(id);
-
-              // 3. Refresh lists
-              ref.invalidate(availableLocationsProvider);
-              if (!context.mounted) return;
-              navigator.pop();
-            },
-            child: Text(
-                Lang.sel(
-                    ref.watch(localeIsCroatianProvider), 'Delete', 'Obriši'),
-                style: const TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      action: () async {
+        final confirm = await showConfirmDeleteDialog(
+          context: context,
+          title: Lang.sel(isHr, 'Delete Location', 'Obriši lokaciju'),
+          message: Lang.sel(
+              isHr,
+              'Are you sure you want to delete this location?',
+              'Jeste li sigurni da želite obrisati ovu lokaciju?'),
+          confirmLabel: Lang.sel(isHr, 'Delete', 'Obriši'),
+          cancelLabel: Lang.sel(isHr, 'Cancel', 'Odustani'),
+        );
+        if (confirm != true) return;
+        setState(() {
+          _optimisticDeletedIds.add(id);
+        });
+        await ref
+            .read(locationsControllerProvider)
+            .deleteLocation(id, displayId);
+      },
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _optimisticDeletedIds.remove(id);
+        });
+      },
     );
   }
 
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
     final messenger = ScaffoldMessenger.of(context);
+    final Map<String, dynamic> meta =
+        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+    final bool previous = meta['hub_enabled'] == true;
     try {
-      final supabase = Supabase.instance.client;
-      final id = loc['id'].toString();
-      final Map<String, dynamic> meta =
-          (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
-      final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
-      newMeta['hub_enabled'] = enabled;
-      final displayId = (loc['display_id'] ?? '').toString();
-      final name = (loc['name'] ?? '').toString().toLowerCase();
-      final safeName = name
-          .replaceAll(RegExp(r'[^a-z0-9\\s-]'), '')
-          .replaceAll(RegExp(r'\\s+'), '-');
-      final slug = (safeName.isNotEmpty ? safeName : displayId).toLowerCase();
-      newMeta['hub_slug'] = slug;
-      await supabase
-          .from('locations')
-          .update({'verification_metadata': newMeta}).eq('id', id);
+      final slug = await ref
+          .read(locationsControllerProvider)
+          .updateHubDesignation(loc, enabled);
       if (enabled) {
         final url = 'https://payparqai.vercel.app/locations/$slug';
         try {
@@ -558,13 +567,15 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           backgroundColor: enabled ? Colors.green : Colors.orange,
         ),
       );
-      ref.invalidate(locationsStreamProvider);
     } catch (e) {
+      meta['hub_enabled'] = previous;
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
           content: Text(Lang.sel(
-              ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
+              ref.read(localeIsCroatianProvider),
+              'Error: ${ErrorMapper.message(e)}',
+              'Greška: ${ErrorMapper.message(e)}')),
           backgroundColor: Colors.red,
         ),
       );
@@ -698,9 +709,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       builder: (dialogContext) {
         final name = (loc['name'] ?? 'Unnamed Lot').toString();
         final displayId = (loc['display_id'] ?? 'N/A').toString();
-        final capacity = (loc['capacity'] ?? 0) is int
-            ? loc['capacity'] as int
-            : int.tryParse((loc['capacity'] ?? '0').toString()) ?? 0;
+        final String idStr = loc['id'].toString();
+        final Map<String, dynamic>? override = _locOverrides[idStr];
+        final effectiveLoc = override != null ? {...loc, ...override} : loc;
+        final capacity = (effectiveLoc['capacity'] ?? 0) is int
+            ? effectiveLoc['capacity'] as int
+            : int.tryParse((effectiveLoc['capacity'] ?? '0').toString()) ?? 0;
         final Map<String, dynamic> meta =
             (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
         final bool isHub = meta['hub_enabled'] == true;
@@ -731,11 +745,22 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   try {
                     final newCapacity =
                         int.tryParse(capacityCtrl.text.trim()) ?? capacity;
-                    await Supabase.instance.client.from('locations').update({
-                      'capacity': newCapacity,
-                      'total_spots': newCapacity,
-                    }).eq('id', loc['id']);
-                    ref.invalidate(locationsStreamProvider);
+                    await ref
+                        .read(locationsControllerProvider)
+                        .updateCapacity(loc['id'].toString(), newCapacity);
+                    setState(() {
+                      loc['capacity'] = newCapacity;
+                      loc['total_spots'] = newCapacity;
+                    });
+                    if (mounted) {
+                      // Update parent list immediately to avoid any flicker from stream re-emits
+                      this.setState(() {
+                        _locOverrides[loc['id'].toString()] = {
+                          'capacity': newCapacity,
+                          'total_spots': newCapacity,
+                        };
+                      });
+                    }
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
                         SnackBar(
@@ -752,8 +777,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         SnackBar(
                             content: Text(Lang.sel(
                                 ref.watch(localeIsCroatianProvider),
-                                'Error: $e',
-                                'Greška: $e'))),
+                                'Error: ${ErrorMapper.message(e)}',
+                                'Greška: ${ErrorMapper.message(e)}'))),
                       );
                     }
                   } finally {
@@ -838,15 +863,20 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               Icon(Icons.location_on_outlined,
                                   size: 18, color: Colors.grey[600]),
                               const SizedBox(width: 8),
-                              Text(
-                                Lang.sel(
-                                    ref.watch(localeIsCroatianProvider),
-                                    'Coordinates: $latitude, $longitude',
-                                    'Koordinate: $latitude, $longitude'),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w500,
+                              Expanded(
+                                child: Text(
+                                  Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Coordinates: $latitude, $longitude',
+                                      'Koordinate: $latitude, $longitude'),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
@@ -865,37 +895,40 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                StatefulBuilder(
-                                  builder: (ctx, setState) => Switch(
-                                    value: isHub,
-                                    activeThumbColor: Colors.black,
-                                    onChanged: (v) async {
-                                      await _toggleHub(loc, v);
-                                      if (v == true) {
-                                        final String displayId =
-                                            (loc['display_id'] ?? '')
-                                                .toString();
-                                        final String name = (loc['name'] ?? '')
-                                            .toString()
-                                            .toLowerCase()
-                                            .replaceAll(
-                                                RegExp(r'[^a-z0-9\\s-]'), '')
-                                            .replaceAll(RegExp(r'\\s+'), '-');
-                                        final String slug = name.isNotEmpty
-                                            ? name
-                                            : displayId.toLowerCase();
-                                        final String url =
-                                            'https://payparqai.vercel.app/locations/$slug';
-                                        try {
-                                          await launchUrl(Uri.parse(url));
-                                        } catch (_) {}
-                                      }
-                                      if (!dialogContext.mounted) return;
-                                      Navigator.pop(dialogContext);
-                                      _showLocationDetail(
-                                          loc, isSuperAdmin, isAdmin);
-                                    },
-                                  ),
+                                Switch(
+                                  value: isHub,
+                                  activeThumbColor: Colors.black,
+                                  onChanged: (v) async {
+                                    setState(() {
+                                      final Map<String, dynamic> meta =
+                                          (loc['verification_metadata'] ?? {})
+                                              as Map<String, dynamic>;
+                                      meta['hub_enabled'] = v;
+                                    });
+                                    await _toggleHub(loc, v);
+                                    if (v == true) {
+                                      final String displayId =
+                                          (loc['display_id'] ?? '').toString();
+                                      final String name = (loc['name'] ?? '')
+                                          .toString()
+                                          .toLowerCase()
+                                          .replaceAll(
+                                              RegExp(r'[^a-z0-9\\s-]'), '')
+                                          .replaceAll(RegExp(r'\\s+'), '-');
+                                      final String slug = name.isNotEmpty
+                                          ? name
+                                          : displayId.toLowerCase();
+                                      final String url =
+                                          'https://payparqai.vercel.app/locations/$slug';
+                                      try {
+                                        await launchUrl(Uri.parse(url));
+                                      } catch (_) {}
+                                    }
+                                    if (!dialogContext.mounted) return;
+                                    Navigator.pop(dialogContext);
+                                    _showLocationDetail(
+                                        loc, isSuperAdmin, isAdmin);
+                                  },
                                 ),
                               ],
                             ),
@@ -1011,7 +1044,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
-  void _showAddLocationDialog(BuildContext context, String? locationId) {
+  void _showAddLocationDialog(
+      BuildContext context, String? locationId, String? ownerId) {
     final nameCtrl = TextEditingController();
     final capacityCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -1131,34 +1165,16 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
 
                         setDialogState(() => isProcessing = true);
                         try {
-                          final user =
-                              Supabase.instance.client.auth.currentUser;
-
-                          final response = await Supabase.instance.client
-                              .from('locations')
-                              .insert({
-                                'name': nameCtrl.text,
-                                'address': selectedAddress,
-                                'latitude': selectedLatLng!.latitude,
-                                'longitude': selectedLatLng!.longitude,
-                                'capacity':
-                                    int.tryParse(capacityCtrl.text) ?? 0,
-                                'total_spots':
-                                    int.tryParse(capacityCtrl.text) ?? 0,
-                                'owner_id': user?.id,
-                              })
-                              .select()
-                              .maybeSingle();
-
-                          if (response == null) {
-                            throw Exception(
-                                'Failed to create location record.');
-                          }
-
-                          final newDisplayId = response['display_id'];
-
-                          ref.read(selectedLocationIdProvider.notifier).state =
-                              newDisplayId;
+                          await ref
+                              .read(locationsControllerProvider)
+                              .createLocation(
+                                name: nameCtrl.text,
+                                address: selectedAddress,
+                                latitude: selectedLatLng!.latitude,
+                                longitude: selectedLatLng!.longitude,
+                                capacity: int.tryParse(capacityCtrl.text) ?? 0,
+                                ownerId: ownerId,
+                              );
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1169,16 +1185,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                       'Lokacija je kreirana!'))),
                             );
                           }
-                          ref.invalidate(locationsStreamProvider);
-                          ref.invalidate(availableLocationsProvider);
                         } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                   content: Text(Lang.sel(
                                       ref.watch(localeIsCroatianProvider),
-                                      'Error: ${e.toString()}',
-                                      'Greška: ${e.toString()}'))),
+                                      'Error: ${ErrorMapper.message(e)}',
+                                      'Greška: ${ErrorMapper.message(e)}'))),
                             );
                           }
                         } finally {

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../../../logic/providers/auth_providers.dart';
+import '../providers/passes_controller.dart';
+import '../../../utils/async_action_handler.dart';
+import '../../../services/error_mapper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AddPassScreen extends ConsumerStatefulWidget {
   const AddPassScreen({super.key});
@@ -59,50 +62,72 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
     setState(() => _isProcessing = true);
 
-    try {
-      final supabase = Supabase.instance.client;
-
-      final Map<String, dynamic> data = {
-        'plate': _plateController.text.toUpperCase(),
-        'type': _type,
-        'contact_name': _nameController.text,
-        'contact_phone': _phoneController.text,
-        'contact_email': _emailController.text,
-        'location_id': _locationController.text,
-        'start_time': _startDate.toIso8601String(),
-        'end_time': _endDate.toIso8601String(),
-        'status': 'active',
-        'daily_duration_hours':
-            _type == 'subscription' ? _dailyDurationHours.toInt() : null,
-      };
-
-      if (_type == 'subscription' && !_is24_7) {
-        data['daily_start_time'] =
-            '${_dailyStart.hour}:${_dailyStart.minute}:00';
-        data['daily_end_time'] = '${_dailyEnd.hour}:${_dailyEnd.minute}:00';
+    // Always resolve to UUID from selected location, not display_id
+    String? locationUuid = await ref.read(selectedLocationUuidProvider.future);
+    if (locationUuid == null || locationUuid.isEmpty) {
+      // Fallback: if user manually typed a display_id, map it to UUID
+      final locText = _locationController.text.trim();
+      final uuidRegex = RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false);
+      if (uuidRegex.hasMatch(locText.toLowerCase())) {
+        locationUuid = locText;
+      } else {
+        final res = await Supabase.instance.client
+            .from('locations')
+            .select('id')
+            .eq('display_id', locText)
+            .maybeSingle();
+        locationUuid = res?['id']?.toString();
       }
+    }
+    if (locationUuid == null || locationUuid.isEmpty) {
+      setState(() => _isProcessing = false);
+      return;
+    }
 
-      await supabase.from('parking_permits').insert(data);
+    debugPrint(
+        'AddPass submit resolved locationUuid=$locationUuid typed=${_locationController.text}');
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${_type == 'pass' ? 'Guest Pass' : 'Subscription'} Added!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Return to the previous screen (the list)
+    final Map<String, dynamic> data = {
+      'plate': _plateController.text.toUpperCase(),
+      'type': _type,
+      'contact_name': _nameController.text,
+      'contact_phone': _phoneController.text,
+      'contact_email': _emailController.text,
+      'location_id': locationUuid,
+      'start_time': _startDate.toIso8601String(),
+      'end_time': _endDate.toIso8601String(),
+      'status': 'active',
+      'daily_duration_hours':
+          _type == 'subscription' ? _dailyDurationHours.toInt() : null,
+    };
+
+    if (_type == 'subscription' && !_is24_7) {
+      data['daily_start_time'] = '${_dailyStart.hour}:${_dailyStart.minute}:00';
+      data['daily_end_time'] = '${_dailyEnd.hour}:${_dailyEnd.minute}:00';
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final success = await AsyncActionHandler.run<bool>(
+      context: context,
+      action: () async {
+        await ref.read(passesControllerProvider).createPermit(data);
+        return true;
+      },
+      successMessage:
+          '${_type == 'pass' ? 'Guest Pass' : 'Subscription'} Added!',
+      successColor: Colors.green,
+      errorBuilder: ErrorMapper.message,
+    );
+    if (mounted) {
+      if (success == true) {
         Navigator.pop(context);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      setState(() => _isProcessing = false);
     }
   }
 

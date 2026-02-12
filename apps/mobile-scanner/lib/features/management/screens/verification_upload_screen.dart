@@ -7,11 +7,14 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:payparq_scanner/utils/web_download_helper.dart';
 import '../../../../theme.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../providers/verification_controller.dart';
+import '../../../../services/error_mapper.dart';
+import '../../../../utils/async_action_handler.dart';
+import '../../../../config/app_config.dart';
 
 class VerificationUploadScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> location;
@@ -99,7 +102,8 @@ class _VerificationUploadScreenState
     try {
       RenderRepaintBoundary boundary =
           _signKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 6.0);
+      final pixelRatio = kIsWeb ? 3.0 : 6.0;
+      ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
       ByteData? byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
@@ -107,6 +111,15 @@ class _VerificationUploadScreenState
       if (kIsWeb) {
         downloadFileWeb(
             pngBytes, "parking_sign_${widget.location['display_id']}.png");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(Lang.sel(
+                    ref.read(localeIsCroatianProvider),
+                    'Sign downloaded',
+                    'Znak je preuzet'))),
+          );
+        }
       } else {
         // Handle mobile download if needed, but the user is likely on web
         if (mounted) {
@@ -143,81 +156,28 @@ class _VerificationUploadScreenState
 
     setState(() => _isUploading = true);
 
-    try {
-      final supabase = Supabase.instance.client;
-      final locationId = widget.location['id'];
-      // Parallel Upload for Speed
-      final List<Future<String>> uploadFutures = [];
-
-      for (var i = 0; i < _selectedImages.length; i++) {
-        final image = _selectedImages[i];
-
-        uploadFutures.add(() async {
-          final bytes = await image.readAsBytes();
-
-          String fileExt = 'jpg';
-          if (image.name.contains('.')) {
-            fileExt = image.name.split('.').last.toLowerCase();
-          } else if (image.path.contains('.')) {
-            fileExt = image.path.split('.').last.toLowerCase();
-          }
-
-          if (!['jpg', 'jpeg', 'png', 'webp'].contains(fileExt)) {
-            fileExt = 'jpg';
-          }
-
-          final String mimeType = fileExt == 'jpg' || fileExt == 'jpeg'
-              ? 'image/jpeg'
-              : 'image/$fileExt';
-
-          final fileName =
-              '${locationId}_${DateTime.now().millisecondsSinceEpoch}_$i.$fileExt';
-
-          await supabase.storage.from('location-verification').uploadBinary(
-                fileName,
-                bytes,
-                fileOptions: FileOptions(contentType: mimeType, upsert: true),
-              );
-
-          return supabase.storage
-              .from('location-verification')
-              .getPublicUrl(fileName);
-        }());
-      }
-
-      final List<String> uploadedUrls =
-          await Future.wait(uploadFutures).timeout(const Duration(seconds: 40));
-
-      await supabase.from('locations').update({
-        'verification_status': 'pending',
-        'verification_photos': uploadedUrls,
-        'verification_submitted_at': DateTime.now().toIso8601String(),
-      }).eq('id', locationId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(Lang.sel(
-                ref.read(localeIsCroatianProvider),
-                'Verification submitted successfully!',
-                'Verifikacija uspješno poslana!')),
-            backgroundColor: Colors.green,
-          ),
-        );
+    final locationId = widget.location['id'].toString();
+    final success = await AsyncActionHandler.run<bool>(
+      context: context,
+      action: () async {
+        await ref.read(verificationControllerProvider).submitVerification(
+              locationId: locationId,
+              images: _selectedImages,
+            );
+        return true;
+      },
+      successMessage: Lang.sel(
+          ref.read(localeIsCroatianProvider),
+          'Verification submitted successfully!',
+          'Verifikacija uspješno poslana!'),
+      successColor: Colors.green,
+      errorBuilder: ErrorMapper.message,
+    );
+    if (mounted) {
+      if (success == true) {
         Navigator.pop(context, true);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(Lang.sel(
-                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
+      setState(() => _isUploading = false);
     }
   }
 
@@ -227,8 +187,8 @@ class _VerificationUploadScreenState
     final String displayId = widget.location['display_id'] ?? 'N/A';
     final String status =
         widget.location['verification_status'] ?? 'unverified';
-    final String stripeUrl =
-        'https://iafjygownkhedereaoxw.supabase.co/functions/v1/create-checkout?location_id=$displayId&type=hourly';
+    final String stripeUrl = AppConfig.createCheckoutUrl(
+        locationId: displayId, type: 'hourly');
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
     // Determine what to show based on status

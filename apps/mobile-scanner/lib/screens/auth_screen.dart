@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terms_conditions_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
 import '../logic/providers/locale_provider.dart';
+import '../logic/providers/auth_controller.dart';
+import '../services/error_mapper.dart';
+import '../utils/async_action_handler.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -45,47 +47,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
 
-    try {
-      if (isSignIn) {
-        await Supabase.instance.client.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
-      } else {
-        final response = await Supabase.instance.client.auth.signUp(
-          email: email,
-          password: password,
-        );
+    final result = await AsyncActionHandler.run<AuthActionResult>(
+      context: context,
+      action: () => ref.read(authControllerProvider).handleAuth(
+            isSignIn: isSignIn,
+            email: email,
+            password: password,
+          ),
+      errorBuilder: ErrorMapper.message,
+    );
 
-        if (response.user != null && response.session == null) {
-          if (!context.mounted) return;
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Signup successful! Please check your email to verify your account before logging in.'),
-              backgroundColor: Colors.blue,
-              duration: Duration(seconds: 10),
-            ),
-          );
-          if (!mounted) return;
-          setState(() => isSignIn = true);
-          return;
-        }
-      }
-
-      // No manual Navigator.pushReplacement here. main.dart handles it.
-    } on AuthException catch (e) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (e) {
+    if (result?.requiresEmailVerification == true) {
       if (!context.mounted) return;
       messenger.showSnackBar(
         const SnackBar(
-            content: Text('An unexpected error occurred'),
-            backgroundColor: Colors.red),
+          content: Text(
+              'Signup successful! Please check your email to verify your account before logging in.'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 10),
+        ),
       );
+      if (!mounted) return;
+      setState(() => isSignIn = true);
+      return;
     }
   }
 
@@ -109,10 +93,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               final email = emailCtrl.text.trim();
               if (email.isEmpty) return;
               Navigator.pop(dialogContext);
-              await Supabase.instance.client.auth.resetPasswordForEmail(email);
-              if (!rootContext.mounted) return;
-              ScaffoldMessenger.of(rootContext).showSnackBar(
-                const SnackBar(content: Text('Password reset link sent!')),
+              await AsyncActionHandler.run<void>(
+                context: rootContext,
+                action: () =>
+                    ref.read(authControllerProvider).resetPassword(email),
+                successMessage: 'Password reset link sent!',
+                errorBuilder: ErrorMapper.message,
               );
             },
             child: const Text('Send Reset Link'),

@@ -1,7 +1,32 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../logic/providers/auth_providers.dart';
+
+List<Map<String, dynamic>> _decodeList(String raw) {
+  final decoded = jsonDecode(raw);
+  if (decoded is! List) return [];
+  return decoded
+      .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
+}
+
+Stream<List<Map<String, dynamic>>> _cachedStream(
+    String key, Stream<List<Map<String, dynamic>>> live) async* {
+  final prefs = await SharedPreferences.getInstance();
+  final cached = prefs.getString(key);
+  if (cached != null) {
+    yield _decodeList(cached);
+  }
+  yield* live.map((data) {
+    prefs.setString(key, jsonEncode(data));
+    return data;
+  });
+}
 
 /// Repository for handling all parking-related data interactions with Supabase.
 /// This abstracts the data layer from the UI, following Clean Architecture principles.
@@ -12,6 +37,7 @@ class ParkingRepository {
 
   /// Streams list of parking permits (users/subscriptions).
   Stream<List<Map<String, dynamic>>> getPermitsStream({String? locationId}) {
+    debugPrint('getPermitsStream locationId=$locationId');
     if (locationId != null) {
       return _client
           .from('parking_permits')
@@ -19,6 +45,7 @@ class ParkingRepository {
           .eq('location_id', locationId)
           .order('created_at', ascending: false);
     }
+    debugPrint('getPermitsStream global stream');
     return _client
         .from('parking_permits')
         .stream(primaryKey: ['id']).order('created_at', ascending: false);
@@ -26,6 +53,7 @@ class ParkingRepository {
 
   /// Streams list of active parking sessions (scan/pay).
   Stream<List<Map<String, dynamic>>> getSessionsStream({String? locationId}) {
+    debugPrint('getSessionsStream locationId=$locationId');
     if (locationId != null) {
       return _client
           .from('parking_sessions')
@@ -33,6 +61,7 @@ class ParkingRepository {
           .eq('location_id', locationId)
           .order('created_at', ascending: false);
     }
+    debugPrint('getSessionsStream global stream');
     return _client
         .from('parking_sessions')
         .stream(primaryKey: ['id']).order('created_at', ascending: false);
@@ -41,6 +70,7 @@ class ParkingRepository {
   /// Streams location data (occupancy, settings).
   Stream<List<Map<String, dynamic>>> getLocationsStream(
       {String? locationId, String? ownerId}) {
+    debugPrint('getLocationsStream locationId=$locationId ownerId=$ownerId');
     if (ownerId != null) {
       return _client
           .from('locations')
@@ -58,6 +88,7 @@ class ParkingRepository {
           .eq(isUuid ? 'id' : 'display_id', locationId)
           .order('updated_at', ascending: false);
     }
+    debugPrint('getLocationsStream global stream');
 
     return _client
         .from('locations')
@@ -66,6 +97,7 @@ class ParkingRepository {
 
   /// Streams list of enforcement violations (cases).
   Stream<List<Map<String, dynamic>>> getViolationsStream({String? locationId}) {
+    debugPrint('getViolationsStream locationId=$locationId');
     if (locationId != null) {
       // Check if it's a UUID or display_id
       final isUuid = RegExp(
@@ -80,6 +112,7 @@ class ParkingRepository {
             .order('issued_at', ascending: false);
       }
     }
+    debugPrint('getViolationsStream global stream');
     return _client
         .from('violations')
         .stream(primaryKey: ['id']).order('issued_at', ascending: false);
@@ -128,63 +161,132 @@ final parkingRepositoryProvider = Provider<ParkingRepository>((ref) {
 final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(parkingRepositoryProvider);
   final profile = ref.watch(userProfileProvider).value;
-  if (profile == null) return Stream.value([]);
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return Stream.value([]);
 
-  final locationUuid = ref.watch(selectedLocationUuidProvider).value;
-  final displayId = ref.watch(selectedLocationIdProvider);
-  final fallbackLocId = ref.watch(userLocationIdProvider);
+  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final isSuperAdmin = role == 'super_admin';
+  final isAdmin = role == 'admin';
+  final isManager = role == 'manager';
+  final isOfficer = role == 'officer';
+  if (isSuperAdmin) {
+    debugPrint('permitsStreamProvider role=$role user=${user.id} path=global');
+    final cacheKey = 'permits_all';
+    return _cachedStream(cacheKey, repo.getPermitsStream());
+  }
 
-  if (locationUuid == null && displayId == null && fallbackLocId == null) {
+  if (isAdmin || isManager || isOfficer) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    if (!locationsAsync.hasValue) return Stream.value([]);
+    final locs = locationsAsync.value ?? [];
+    final ownedIds = locs.map((l) => (l['id'] ?? '').toString()).toSet();
+    final cacheKey = 'permits_scope_${user.id}';
+    debugPrint(
+        'permitsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
+    return _cachedStream(cacheKey, repo.getPermitsStream()).map((items) {
+      return items
+          .where(
+              (it) => ownedIds.contains((it['location_id'] ?? '').toString()))
+          .toList();
+    });
+  }
+
+  final locationUuidAsync = ref.watch(selectedLocationUuidProvider);
+  if (!locationUuidAsync.hasValue || locationUuidAsync.value == null) {
     return Stream.value([]);
   }
 
-  // Use RLS-backed stream and filter in Flutter to handle mixed UUID/display_id
-  return repo.getPermitsStream().map((items) {
-    return items.where((item) {
-      final locId = item['location_id']?.toString();
-      return locId == locationUuid ||
-          locId == displayId ||
-          locId == fallbackLocId;
-    }).toList();
-  });
+  final uuid = locationUuidAsync.value!;
+  final cacheKey = 'permits_$uuid';
+  return _cachedStream(cacheKey, repo.getPermitsStream(locationId: uuid));
 });
 
 final sessionsStreamProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(parkingRepositoryProvider);
   final profile = ref.watch(userProfileProvider).value;
-  if (profile == null) return Stream.value([]);
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return Stream.value([]);
 
-  final locationUuid = ref.watch(selectedLocationUuidProvider).value;
-  final displayId = ref.watch(selectedLocationIdProvider);
-  final fallbackLocId = ref.watch(userLocationIdProvider);
+  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final isSuperAdmin = role == 'super_admin';
+  final isAdmin = role == 'admin';
+  final isManager = role == 'manager';
+  final isOfficer = role == 'officer';
+  if (isSuperAdmin) {
+    debugPrint('sessionsStreamProvider role=$role user=${user.id} path=global');
+    final cacheKey = 'sessions_all';
+    return _cachedStream(cacheKey, repo.getSessionsStream());
+  }
 
-  if (locationUuid == null && displayId == null && fallbackLocId == null) {
+  if (isAdmin || isManager || isOfficer) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    if (!locationsAsync.hasValue) return Stream.value([]);
+    final locs = locationsAsync.value ?? [];
+    final ownedIds = locs.map((l) => (l['id'] ?? '').toString()).toSet();
+    final cacheKey = 'sessions_scope_${user.id}';
+    debugPrint(
+        'sessionsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
+    return _cachedStream(cacheKey, repo.getSessionsStream()).map((items) {
+      return items
+          .where(
+              (it) => ownedIds.contains((it['location_id'] ?? '').toString()))
+          .toList();
+    });
+  }
+
+  final locationUuidAsync = ref.watch(selectedLocationUuidProvider);
+  if (!locationUuidAsync.hasValue || locationUuidAsync.value == null) {
     return Stream.value([]);
   }
 
-  return repo.getSessionsStream().map((items) {
-    return items.where((item) {
-      final locId = item['location_id']?.toString();
-      return locId == locationUuid ||
-          locId == displayId ||
-          locId == fallbackLocId;
-    }).toList();
-  });
+  final uuid = locationUuidAsync.value!;
+  final cacheKey = 'sessions_$uuid';
+  return _cachedStream(cacheKey, repo.getSessionsStream(locationId: uuid));
 });
 
 final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(parkingRepositoryProvider);
   final profile = ref.watch(userProfileProvider).value;
-  if (profile == null) return Stream.value([]);
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) return Stream.value([]);
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
-  final isSuperAdmin = profile['role'] == 'super_admin';
+  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final isSuperAdmin = role == 'super_admin';
+  final isAdmin = role == 'admin';
+  final isManager = role == 'manager';
+  final isOfficer = role == 'officer';
 
   if (isSuperAdmin) return repo.getStaffStream();
+  if (isAdmin || isManager || isOfficer) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    if (!locationsAsync.hasValue) return Stream.value([]);
+    final locs = locationsAsync.value ?? [];
+    final ownedIds = locs.map((l) => (l['id'] ?? '').toString()).toSet();
+    final cacheKey = 'staff_scope_${user.id}';
+    debugPrint(
+        'staffStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
+    return _cachedStream(cacheKey, repo.getStaffStream()).map((items) {
+      return items
+          .where(
+              (it) => ownedIds.contains((it['location_id'] ?? '').toString()))
+          .toList();
+    });
+  }
 
-  return repo.getStaffStream().map((items) {
+  final uuidRegExp =
+      RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+  final locationFilter = locationUuid ??
+      (uuidRegExp.hasMatch((displayId ?? '').toLowerCase()) ? displayId : null);
+  final baseStream = locationFilter != null
+      ? repo.getStaffStream(locationId: locationFilter)
+      : repo.getStaffStream();
+
+  final cacheKey = 'staff_${locationFilter ?? 'all'}';
+  return _cachedStream(cacheKey, baseStream).map((items) {
+    if (locationUuid == null && displayId == null) return items;
     return items.where((item) {
       final locId = item['location_id']?.toString();
       return locId == locationUuid || locId == displayId;
@@ -210,42 +312,59 @@ final locationsStreamProvider =
         locationId: locationUuid ?? displayId ?? profile['location_id']);
   }
 
-  final controller = StreamController<List<Map<String, dynamic>>>();
-  void fetch() async {
-    try {
-      final data = await getBaseStream().first;
-      if (!controller.isClosed) controller.add(data);
-    } catch (e) {
-      if (!controller.isClosed) controller.add([]);
-    }
-  }
-
-  fetch();
-  final sub = getBaseStream().listen((d) {
-    if (!controller.isClosed) controller.add(d);
-  });
-  ref.onDispose(() {
-    sub.cancel();
-    controller.close();
-  });
-  return controller.stream;
+  final cacheKey = isSuperAdmin
+      ? 'locations_all'
+      : isAdmin
+          ? 'locations_owner_${profile['id']}'
+          : 'locations_${locationUuid ?? displayId ?? profile['location_id'] ?? 'none'}';
+  return _cachedStream(cacheKey, getBaseStream());
 });
 
 final violationsStreamProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(parkingRepositoryProvider);
   final user = Supabase.instance.client.auth.currentUser;
+  final profile = ref.watch(userProfileProvider).value;
+  if (user == null) return Stream.value([]);
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
   final fallbackLocId =
-      ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
+      ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
 
-  if (locationUuid == null && displayId == null && fallbackLocId == null) {
-    return Stream.value([]);
+  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final isSuperAdmin = role == 'super_admin';
+  final isAdmin = role == 'admin';
+  final isManager = role == 'manager';
+  final isOfficer = role == 'officer';
+  if (isSuperAdmin) {
+    debugPrint(
+        'violationsStreamProvider role=$role user=${user.id} path=global');
+    final cacheKey = 'violations_all';
+    return _cachedStream(cacheKey, repo.getViolationsStream());
   }
 
-  return repo.getViolationsStream().map((items) {
+  if (isAdmin || isManager || isOfficer) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    if (!locationsAsync.hasValue) return Stream.value([]);
+    final locs = locationsAsync.value ?? [];
+    final ownedIds = locs.map((l) => (l['id'] ?? '').toString()).toSet();
+    final cacheKey = 'violations_scope_${user.id}';
+    debugPrint(
+        'violationsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
+    return _cachedStream(cacheKey, repo.getViolationsStream()).map((items) {
+      return items
+          .where(
+              (it) => ownedIds.contains((it['location_id'] ?? '').toString()))
+          .toList();
+    });
+  }
+
+  final locationFilter = locationUuid ?? displayId ?? fallbackLocId;
+  final cacheKey = 'violations_${locationFilter ?? 'all'}';
+  return _cachedStream(
+          cacheKey, repo.getViolationsStream(locationId: locationFilter))
+      .map((items) {
     return items.where((item) {
       final locId = item['location_id']?.toString();
       return locId == locationUuid ||

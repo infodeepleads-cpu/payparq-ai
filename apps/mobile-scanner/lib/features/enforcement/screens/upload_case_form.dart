@@ -4,15 +4,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import '../../../../theme.dart';
-import '../../management/repositories/parking_repository.dart';
+import '../providers/enforcement_controller.dart';
 import '../../../logic/providers/auth_providers.dart';
-import '../../../logic/providers/dashboard_providers.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../../../logic/utils/location_resolver.dart';
+import '../../../services/error_mapper.dart';
+import '../../../utils/async_action_handler.dart';
 
 class UploadCaseForm extends ConsumerStatefulWidget {
   const UploadCaseForm({super.key});
@@ -83,94 +84,40 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
     setState(() => _isUploading = true);
 
     try {
-      final supabase = Supabase.instance.client;
-      final selectedLocId = ref.read(selectedLocationIdProvider);
       final profile = ref.read(userProfileProvider).value;
       final issuerRole =
           profile?['role'] == 'super_admin' ? 'payparq' : 'admin';
+      final resolution = await LocationResolver.resolve(ref);
+      final selectedLocId = resolution.effectiveDisplayId;
 
       if (selectedLocId == null) {
         throw Exception(
             'No location selected. Please select a lot in the top bar.');
       }
 
-      // Use the centralized UUID resolver
-      final locUuid = await ref.read(selectedLocationUuidProvider.future);
-      if (locUuid == null) {
+      final locationUuid = resolution.uuid ?? resolution.fallbackId;
+      if (locationUuid == null) {
         throw Exception('Invalid Location ID. Please reselect the lot.');
       }
 
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${_plateController.text}.jpg';
-
-      // 0. Add Optimistic Item
-      final optimisticViolation = {
-        'plate': _plateController.text.toUpperCase(),
-        'violation_type': _violationType,
-        'fine_amount': 50.00,
-        'status': 'issued',
-        'location_id': locUuid,
-        'evidence_r2_url': null,
-        'issued_at': DateTime.now().toIso8601String(),
-      };
-      ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            optimisticViolation,
-            ...state,
-          ]);
-
-      // 1 & 2. Parallel Upload and DB Insert
       final bytes = await _image!.readAsBytes();
-      final issuedAt = DateTime.now().toIso8601String();
-
-      await Future.wait<dynamic>([
-        supabase.storage.from('evidence').uploadBinary(
-              fileName,
-              bytes,
-              fileOptions: const FileOptions(contentType: 'image/jpeg'),
-            ),
-        supabase.from('violations').insert({
-          'plate': _plateController.text.toUpperCase(),
-          'violation_type': _violationType,
-          'fine_amount': 50.00,
-          'status': 'issued',
-          'location_id': locUuid,
-          'evidence_r2_url': fileName,
-          'issued_at': issuedAt,
-          'issuer_role': issuerRole,
-        }),
-      ]).timeout(const Duration(seconds: 25));
-
-      ref.invalidate(violationsStreamProvider);
-
-      // 3. Cleanup Optimistic Item
-      ref.read(optimisticViolationsProvider.notifier).update((state) => state
-          .where((v) => v['plate'] != _plateController.text.toUpperCase())
-          .toList());
-
+      if (!mounted) return;
+      final controller = ref.read(enforcementControllerProvider);
+      await AsyncActionHandler.run<void>(
+        context: context,
+        action: () => controller.createCase(
+          plate: _plateController.text.toUpperCase(),
+          violationType: _violationType,
+          locationUuid: locationUuid,
+          bytes: bytes,
+          issuerRole: issuerRole,
+        ),
+        successMessage: Lang.sel(ref.read(localeIsCroatianProvider),
+            'Case created successfully!', 'Predmet je uspješno kreiran!'),
+        errorBuilder: ErrorMapper.message,
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(Lang.sel(
-                  ref.read(localeIsCroatianProvider),
-                  'Case created successfully!',
-                  'Predmet je uspješno kreiran!'))),
-        );
         _resetForm();
-        // Optional: Navigate back to cases list if desired
-        // Navigator.pop(context);
-      }
-    } catch (e) {
-      // Cleanup Optimistic Item on failure
-      ref.read(optimisticViolationsProvider.notifier).update((state) => state
-          .where((v) => v['plate'] != _plateController.text.toUpperCase())
-          .toList());
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
-                  'Error: $e', 'Greška: $e'))),
-        );
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);

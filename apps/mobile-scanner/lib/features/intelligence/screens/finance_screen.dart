@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
 import '../../../../logic/providers/auth_providers.dart';
 import '../../../../logic/providers/locale_provider.dart';
+import '../providers/finance_controller.dart';
+import '../../../../services/error_mapper.dart';
+import '../../../../utils/async_action_handler.dart';
 
 class FinanceScreen extends ConsumerStatefulWidget {
   const FinanceScreen({super.key});
@@ -21,69 +23,43 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   Future<void> _handleStripeConnect() async {
     setState(() => _isConnecting = true);
 
-    try {
-      final response = await Supabase.instance.client.functions
-          .invoke('create-connect-account');
-
-      if (response.status != 200) {
-        throw 'Failed to create connect account: ${response.data['error'] ?? 'Unknown error'}';
-      }
-
-      final url = response.data['url'];
-      if (url == null) throw 'No onboarding URL returned';
-
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch onboarding URL';
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(Lang.sel(
-                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isConnecting = false);
-    }
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () async {
+        final url = await ref.read(financeControllerProvider).createConnectAccount();
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Could not launch onboarding URL');
+        }
+      },
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (mounted) setState(() => _isConnecting = false);
+      },
+    );
+    if (mounted) setState(() => _isConnecting = false);
   }
 
   Future<void> _handleOpenDashboard() async {
     setState(() => _isLoadingDashboard = true);
 
-    try {
-      final response = await Supabase.instance.client.functions
-          .invoke('get-stripe-dashboard-link');
-
-      if (response.status != 200) {
-        throw 'Failed to get dashboard link: ${response.data['error'] ?? 'Unknown error'}';
-      }
-
-      final url = response.data['url'];
-      if (url == null) throw 'No dashboard URL returned';
-
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch dashboard URL';
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(Lang.sel(
-                ref.read(localeIsCroatianProvider), 'Error: $e', 'Greška: $e')),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoadingDashboard = false);
-    }
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () async {
+        final url = await ref.read(financeControllerProvider).getDashboardLink();
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Could not launch dashboard URL');
+        }
+      },
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (mounted) setState(() => _isLoadingDashboard = false);
+      },
+    );
+    if (mounted) setState(() => _isLoadingDashboard = false);
   }
 
   @override

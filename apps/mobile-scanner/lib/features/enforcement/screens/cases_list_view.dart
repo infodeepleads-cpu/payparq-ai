@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -6,13 +7,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
+import '../../../widgets/skeleton_loader.dart';
+import '../widgets/cases_header.dart';
+import '../providers/enforcement_controller.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/dashboard_providers.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../../../logic/utils/location_resolver.dart';
+import '../../../utils/list_search_filter.dart';
+import '../../../utils/date_sort_helpers.dart';
+import '../../../utils/async_action_handler.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
+import '../../../services/error_mapper.dart';
 
 class CasesListView extends ConsumerStatefulWidget {
   const CasesListView({super.key});
@@ -24,8 +33,26 @@ class CasesListView extends ConsumerStatefulWidget {
 class _CasesListViewState extends ConsumerState<CasesListView> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   String _selectedFilterKey = 'all';
+  Timer? _searchDebounce;
+  final Set<String> _optimisticDeletedIds = {};
+  int _visibleCount = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
 
   Future<void> _deleteViolation(Map<String, dynamic> violation) async {
     final profile = ref.read(userProfileProvider).value;
@@ -43,75 +70,43 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     final id = violation['id'];
     if (id == null) return;
     final isHr = ref.read(localeIsCroatianProvider);
-    final confirm = await showDialog<bool>(
+    final confirm = await showConfirmDeleteDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          Lang.sel(isHr, 'Delete Case', 'Obriši predmet'),
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          Lang.sel(
-            isHr,
-            'Are you sure you want to permanently delete this case?',
-            'Jeste li sigurni da želite trajno obrisati ovaj predmet?',
-          ),
-          style: GoogleFonts.inter(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              Lang.sel(isHr, 'Cancel', 'Odustani'),
-              style: GoogleFonts.inter(color: AppTheme.textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(Lang.sel(isHr, 'Delete', 'Obriši')),
-          ),
-        ],
+      title: Lang.sel(isHr, 'Delete Case', 'Obriši predmet'),
+      message: Lang.sel(
+        isHr,
+        'Are you sure you want to permanently delete this case?',
+        'Jeste li sigurni da želite trajno obrisati ovaj predmet?',
       ),
+      confirmLabel: Lang.sel(isHr, 'Delete', 'Obriši'),
+      cancelLabel: Lang.sel(isHr, 'Cancel', 'Odustani'),
     );
     if (confirm != true) return;
-    try {
-      await Supabase.instance.client
-          .from('violations')
-          .delete()
-          .eq('id', id);
-      ref.invalidate(violationsStreamProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Case deleted'),
-            backgroundColor: Colors.black,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Delete failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    if (!mounted) return;
+    setState(() {
+      _optimisticDeletedIds.add(id.toString());
+    });
+    final controller = ref.read(enforcementControllerProvider);
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () => controller.deleteViolation(id.toString()),
+      successMessage: Lang.sel(isHr, 'Case deleted', 'Predmet obrisan'),
+      successColor: Colors.black,
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _optimisticDeletedIds.remove(id.toString());
+        });
+      },
+    );
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -120,11 +115,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     final profile = ref.read(userProfileProvider).value;
     if (profile == null) return;
 
-    // Priority: 1. Manually selected location, 2. Profile location
-    final locationDisplayId =
-        ref.read(selectedLocationIdProvider) ?? profile['location_id'];
+    final resolution = await LocationResolver.resolve(ref);
+    final locationDisplayId = resolution.effectiveDisplayId;
 
     if (locationDisplayId == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Error: No Location ID selected or assigned.')),
@@ -132,11 +127,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       return;
     }
 
-    // Use the centralized UUID resolver
-    final locUuid = await ref.read(selectedLocationUuidProvider.future);
-    final supabase = Supabase.instance.client;
-
-    if (locUuid == null) {
+    final locationUuid = resolution.uuid ?? resolution.fallbackId;
+    if (locationUuid == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Invalid Location selected.')),
@@ -239,99 +231,24 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     if (image == null) return;
     if (!context.mounted) return;
 
-    try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
-      final issuedAt = DateTime.now().toIso8601String();
-
-      // 1. Resolve daily price for the selected location
-      double dailyPrice = 50.0;
-      try {
-        final List rows = await supabase
-            .from('locations')
-            .select('base_price_daily')
-            .eq('id', locUuid)
-            .limit(1);
-        if (rows.isNotEmpty) {
-          final v = rows.first['base_price_daily'];
-          if (v != null) {
-            dailyPrice = (v is num)
-                ? v.toDouble()
-                : double.tryParse(v.toString()) ?? 50.0;
-          }
-        }
-      } catch (_) {}
-
-      // 2. Immediate Optimistic UI Update
-      final optimisticRecord = {
-        'plate': plate,
-        'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-        'fine_amount': isWarning ? 0.00 : dailyPrice,
-        'status': isWarning ? 'warning' : 'issued',
-        'issued_at': issuedAt,
-        'evidence_r2_url': fileName,
-        'location_id': locUuid,
-      };
-
-      ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            optimisticRecord,
-            ...state,
-          ]);
-
-      final bytes = await image.readAsBytes();
-
-      await Future.wait<dynamic>([
-        supabase.storage.from('evidence').uploadBinary(
-              fileName,
-              bytes,
-              fileOptions: const FileOptions(contentType: 'image/jpeg'),
-            ),
-        supabase.from('violations').insert({
-          'plate': plate,
-          'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
-          'fine_amount': isWarning ? 0.00 : dailyPrice,
-          'status': isWarning ? 'warning' : 'issued',
-          'location_id': locUuid,
-          'evidence_r2_url': fileName,
-          'issued_at': issuedAt,
-          'is_lpr_scan': false,
-        }),
-      ]).timeout(const Duration(seconds: 25));
-
-      ref.invalidate(violationsStreamProvider);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isWarning
-                ? Lang.sel(isHr, 'Warning Issued!', 'Upozorenje izdano!')
-                : Lang.sel(isHr, 'Ticket Issued!', 'Kazna izdana!')),
-            backgroundColor: isWarning ? Colors.orange : Colors.red,
-          ),
-        );
-      }
-
-      ref.listen(violationsStreamProvider, (prev, next) {
-        final violations = next.value ?? [];
-        final exists = violations.any((v) =>
-            (v['plate'] ?? '') == plate &&
-            (v['evidence_r2_url'] ?? '') == fileName &&
-            (v['issued_at'] ?? '') != null);
-        if (exists) {
-          ref.read(optimisticViolationsProvider.notifier).update((state) =>
-              state
-                  .where((v) =>
-                      (v['plate'] ?? '') != plate ||
-                      (v['evidence_r2_url'] ?? '') != fileName)
-                  .toList());
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    } finally {}
+    final controller = ref.read(enforcementControllerProvider);
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () => controller.issueQuickAction(
+        plate: plate,
+        isWarning: isWarning,
+        locationUuid: locationUuid,
+        bytes: bytes,
+        isLprScan: false,
+      ),
+      successMessage: isWarning
+          ? Lang.sel(isHr, 'Warning Issued!', 'Upozorenje izdano!')
+          : Lang.sel(isHr, 'Ticket Issued!', 'Kazna izdana!'),
+      successColor: isWarning ? Colors.orange : Colors.red,
+      errorBuilder: ErrorMapper.message,
+    );
   }
 
   Future<void> _showEvidence(Map<String, dynamic> violation) async {
@@ -342,15 +259,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
     String? fullImageUrl;
     if (evidenceUrl != null) {
-      try {
-        fullImageUrl = await Supabase.instance.client.storage
-            .from('evidence')
-            .createSignedUrl(evidenceUrl, 3600);
-      } catch (_) {
-        fullImageUrl = Supabase.instance.client.storage
-            .from('evidence')
-            .getPublicUrl(evidenceUrl);
-      }
+      final controller = ref.read(enforcementControllerProvider);
+      fullImageUrl = await controller.getEvidenceUrl(evidenceUrl);
     }
 
     if (!mounted) return;
@@ -385,8 +295,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return const Center(
-                              child:
-                                  CircularProgressIndicator(color: Colors.black),
+                              child: CircularProgressIndicator(
+                                  color: Colors.black),
                             );
                           },
                           errorBuilder: (context, error, stackTrace) =>
@@ -445,8 +355,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   Text(
                     Lang.sel(ref.read(localeIsCroatianProvider), 'Fine Amount:',
                         'Iznos kazne:'),
-                    style:
-                        GoogleFonts.inter(color: AppTheme.textSecondary),
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary),
                   ),
                   Text(
                     '€${violation['fine_amount'] ?? 0}',
@@ -513,7 +422,39 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       backgroundColor: AppTheme.lightBackground,
       body: Column(
         children: [
-          _buildHeader(isDesktop, selectedLocId),
+          CasesHeader(
+            isDesktop: isDesktop,
+            selectedLocId: selectedLocId,
+            searchController: _searchController,
+            selectedFilterKey: _selectedFilterKey,
+            onSearchSubmitted: (v) {
+              setState(() {
+                _searchQuery = v.trim().toLowerCase();
+                _visibleCount = 20;
+              });
+            },
+            onSearchChanged: (v) {
+              _searchDebounce?.cancel();
+              _searchDebounce = Timer(
+                const Duration(milliseconds: 250),
+                () {
+                  if (!mounted) return;
+                  setState(() {
+                    _searchQuery = v.trim().toLowerCase();
+                    _visibleCount = 20;
+                  });
+                },
+              );
+            },
+            onFilterSelected: (key) {
+              setState(() {
+                _selectedFilterKey = key;
+                _visibleCount = 20;
+              });
+            },
+            onQuickWarning: () => _handleQuickAction(isWarning: true),
+            onQuickTicket: () => _handleQuickAction(isWarning: false),
+          ),
           Expanded(
             child: _buildDataList(
                 isDesktop, violationsAsync, optimisticViolations),
@@ -523,211 +464,12 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildHeader(bool isDesktop, String? selectedLocId) {
-    final isCroatian = ref.watch(localeIsCroatianProvider);
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isDesktop ? 48 : 24,
-        vertical: isDesktop ? 48 : 32,
-      ),
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      Lang.sel(isCroatian, 'Cases', 'Predmeti'),
-                      style: GoogleFonts.inter(
-                        fontSize: isDesktop ? 40 : 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        letterSpacing: -1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      selectedLocId != null
-                          ? Lang.sel(
-                              isCroatian,
-                              'Monitoring all enforcement activity.',
-                              'Praćenje svih aktivnosti nadzora.')
-                          : Lang.sel(
-                              isCroatian,
-                              'Please select a lot in the top bar.',
-                              'Molimo odaberite parkiralište u gornjoj traci.'),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (selectedLocId != null && isDesktop)
-                Row(
-                  children: [
-                    _buildHeaderActionButton(
-                      icon: Icons.warning_amber_rounded,
-                      label: Lang.sel(
-                          isCroatian, 'Quick Warning', 'Brzo upozorenje'),
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      onTap: () => _handleQuickAction(isWarning: true),
-                      isDesktop: true,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildHeaderActionButton(
-                      icon: Icons.receipt_long,
-                      label: Lang.sel(isCroatian, 'Quick Ticket', 'Brza kazna'),
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      onTap: () => _handleQuickAction(isWarning: false),
-                      isDesktop: true,
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          SizedBox(height: isDesktop ? 48 : 32),
-          _buildSearchAndFilter(isDesktop),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderActionButton({
-    required IconData icon,
-    required String label,
-    required Color backgroundColor,
-    required Color foregroundColor,
-    required VoidCallback onTap,
-    required bool isDesktop,
-  }) {
-    final hasBorder = backgroundColor == Colors.white;
-
-    return ElevatedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: isDesktop ? 18 : 16),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor,
-        foregroundColor: foregroundColor,
-        side: hasBorder ? const BorderSide(color: AppTheme.border) : null,
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 20 : 12,
-          vertical: isDesktop ? 12 : 8,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
-        elevation: 0,
-        textStyle: GoogleFonts.inter(
-          fontSize: isDesktop ? 14 : 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchAndFilter(bool isDesktop) {
-    final isHr = ref.watch(localeIsCroatianProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: isDesktop ? 400 : double.infinity,
-          child: TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (v) {
-              setState(() {
-                _searchQuery = v.trim().toLowerCase();
-              });
-            },
-            onChanged: (v) {
-              setState(() {
-                _searchQuery = v.trim().toLowerCase();
-              });
-            },
-            decoration: InputDecoration(
-              hintText: Lang.sel(isHr, 'Search...', 'Pretraži...'),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: AppTheme.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFilterButton('all', Lang.sel(isHr, 'All', 'Sve'), isDesktop),
-              const SizedBox(width: 12),
-              _buildFilterButton('tickets', Lang.sel(isHr, 'Tickets', 'Kazne'), isDesktop),
-              const SizedBox(width: 12),
-              _buildFilterButton('warnings',
-                  Lang.sel(isHr, 'Warnings', 'Upozorenja'), isDesktop),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterButton(String key, String label, bool isDesktop) {
-    final isSelected = _selectedFilterKey == key;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedFilterKey = key;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 24 : 16,
-          vertical: isDesktop ? 10 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.black : AppTheme.surface,
-          borderRadius: BorderRadius.circular(4),
-          border: isSelected ? null : Border.all(color: AppTheme.border),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: isDesktop ? 14 : 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.black,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildDataList(
       bool isDesktop,
       AsyncValue<List<Map<String, dynamic>>> violationsAsync,
       List<Map<String, dynamic>> optimisticViolations) {
     return violationsAsync.when(
-      loading: () =>
-          const Center(child: CircularProgressIndicator(color: Colors.black)),
+      loading: () => _buildSkeletonList(isDesktop),
       error: (err, stack) => Center(
           child: Text(Lang.sel(ref.watch(localeIsCroatianProvider),
               'Error: $err', 'Greška: $err'))),
@@ -748,15 +490,29 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ...optimisticItems,
           ...violations,
         ];
-
-        // 1. Filter by Search Query
-        if (_searchQuery.isNotEmpty) {
-          allViolations = allViolations.where((v) {
-            final plate = (v['plate'] ?? '').toString().toLowerCase();
-            final type = (v['violation_type'] ?? '').toString().toLowerCase();
-            return plate.contains(_searchQuery) || type.contains(_searchQuery);
-          }).toList();
+        allViolations = allViolations.where((v) {
+          final vId = v['id']?.toString();
+          if (vId == null) return true;
+          return !_optimisticDeletedIds.contains(vId);
+        }).toList();
+        for (final v in allViolations) {
+          DateSortHelpers.ensureCachedDate(
+            v,
+            'issued_at',
+            'ui_issued_at',
+            fallback: DateTime.fromMillisecondsSinceEpoch(0),
+          );
         }
+
+        allViolations = ListSearchFilter.filter(
+          items: allViolations,
+          query: _searchQuery,
+          fields: (v) => [
+            v['plate']?.toString(),
+            v['violation_type']?.toString(),
+            v['status']?.toString(),
+          ],
+        );
 
         // 2. Filter by Tab Selection (language-agnostic keys)
         if (_selectedFilterKey != 'all') {
@@ -771,15 +527,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           }).toList();
         }
 
-        // Put second place plates first (newest first)
-        allViolations.sort((a, b) {
-          final aTime = DateTime.tryParse(a['issued_at'] ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          final bTime = DateTime.tryParse(b['issued_at'] ?? '') ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          return bTime.compareTo(
-              aTime); // Show newest first (second place plates first)
-        });
+        DateSortHelpers.sortByCachedDate(allViolations, 'ui_issued_at');
 
         if (allViolations.isEmpty) {
           return Center(
@@ -805,19 +553,45 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           );
         }
 
+        final visibleCount = min(_visibleCount, allViolations.length);
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(violationsStreamProvider);
           },
           child: ListView.builder(
+            controller: _scrollController,
             padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
-            itemCount: allViolations.length,
+            itemCount: visibleCount,
             itemBuilder: (context, index) {
               final violation = allViolations[index];
 
               return _buildViolationItem(violation, isDesktop);
             },
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonList(bool isDesktop) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return AdminDataCard(
+          leading: SkeletonLoader(
+            width: isDesktop ? 160 : 120,
+            height: isDesktop ? 48 : 40,
+          ),
+          mainContent: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: isDesktop ? 220 : 160, height: 14),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: isDesktop ? 160 : 120, height: 12),
+            ],
+          ),
+          trailing: SkeletonLoader(width: isDesktop ? 90 : 70, height: 32),
         );
       },
     );

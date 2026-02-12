@@ -2,56 +2,70 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../theme.dart';
+import '../../../../widgets/skeleton_loader.dart';
+import '../providers/verification_controller.dart';
+import '../../../../utils/async_action_handler.dart';
+import '../../../../services/error_mapper.dart';
 
-final pendingVerificationsProvider =
-    StreamProvider<List<Map<String, dynamic>>>((ref) {
-  return Supabase.instance.client
-      .from('locations')
-      .stream(primaryKey: ['id'])
-      .eq('verification_status', 'pending')
-      .order('verification_submitted_at', ascending: false);
-});
-
-class VerificationInboxScreen extends ConsumerWidget {
+class VerificationInboxScreen extends ConsumerStatefulWidget {
   const VerificationInboxScreen({super.key});
+
+  @override
+  ConsumerState<VerificationInboxScreen> createState() =>
+      _VerificationInboxScreenState();
+}
+
+class _VerificationInboxScreenState
+    extends ConsumerState<VerificationInboxScreen> {
+  final Set<String> _optimisticResolvedIds = {};
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _updateStatus(
       BuildContext context, String locationId, String status,
       {bool? isRunByPayparq}) async {
-    try {
-      final updates = <String, dynamic>{
-        'verification_status': status,
-        'verification_reviewed_at': DateTime.now().toIso8601String(),
-        'verification_reviewed_by':
-            Supabase.instance.client.auth.currentUser?.id,
-      };
-
-      if (isRunByPayparq != null) {
-        updates['is_run_by_payparq'] = isRunByPayparq;
-      }
-
-      await Supabase.instance.client
-          .from('locations')
-          .update(updates)
-          .eq('id', locationId);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Status updated to $status'),
-              backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
+    setState(() {
+      _optimisticResolvedIds.add(locationId);
+    });
+    await AsyncActionHandler.run<void>(
+      context: context,
+      action: () => ref.read(verificationControllerProvider).updateStatus(
+            locationId,
+            status,
+            isRunByPayparq: isRunByPayparq,
+          ),
+      successMessage: 'Status updated',
+      successColor: Colors.green,
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _optimisticResolvedIds.remove(locationId);
+        });
+      },
+    );
   }
 
   void _showVerificationDetail(BuildContext context, Map<String, dynamic> loc) {
@@ -263,7 +277,7 @@ class VerificationInboxScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final pendingVerifications = ref.watch(pendingVerificationsProvider);
 
     return Scaffold(
@@ -308,11 +322,15 @@ class VerificationInboxScreen extends ConsumerWidget {
             const SizedBox(height: 48),
             Expanded(
               child: pendingVerifications.when(
-                loading: () => const Center(
-                    child: CircularProgressIndicator(color: Colors.black)),
+                loading: () => _buildSkeletonList(),
                 error: (err, stack) => Center(child: Text('Error: $err')),
                 data: (locations) {
-                  if (locations.isEmpty) {
+                  final visibleLocations = locations.where((loc) {
+                    final id = loc['id']?.toString();
+                    if (id == null) return true;
+                    return !_optimisticResolvedIds.contains(id);
+                  }).toList();
+                  if (visibleLocations.isEmpty) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -329,10 +347,14 @@ class VerificationInboxScreen extends ConsumerWidget {
                     );
                   }
 
+                  final visibleCount = _visibleCount > visibleLocations.length
+                      ? visibleLocations.length
+                      : _visibleCount;
                   return ListView.builder(
-                    itemCount: locations.length,
+                    controller: _scrollController,
+                    itemCount: visibleCount,
                     itemBuilder: (context, index) {
-                      final loc = locations[index];
+                      final loc = visibleLocations[index];
                       final name = loc['name'] ?? 'Unnamed Lot';
                       final displayId = loc['display_id'] ?? 'N/A';
                       final submittedAt =
@@ -410,6 +432,40 @@ class VerificationInboxScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Row(
+            children: [
+              SkeletonLoader(width: 80, height: 80),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLoader(width: 220, height: 16),
+                    const SizedBox(height: 8),
+                    SkeletonLoader(width: 180, height: 12),
+                  ],
+                ),
+              ),
+              SkeletonLoader(width: 90, height: 36),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -11,6 +11,7 @@ import '../../logic/providers/dashboard_providers.dart';
 import '../../logic/providers/auth_providers.dart';
 import '../../widgets/admin_data_card.dart';
 import '../../logic/providers/locale_provider.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -22,10 +23,27 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -216,8 +234,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           width: isDesktop ? 400 : double.infinity,
           child: TextField(
             controller: _searchController,
-            onChanged: (v) =>
-                ref.read(dashboardSearchProvider.notifier).state = v,
+            onChanged: (v) {
+              ref.read(dashboardSearchProvider.notifier).state = v;
+              setState(() {
+                _visibleCount = 20;
+              });
+            },
             decoration: InputDecoration(
               hintText: Lang.sel(isHr, 'Search...', 'Pretraži...'),
               prefixIcon: const Icon(Icons.search, size: 20),
@@ -257,7 +279,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final isDesktop = MediaQuery.of(context).size.width >= 1100;
 
     return InkWell(
-      onTap: () => ref.read(dashboardFilterProvider.notifier).state = label,
+      onTap: () {
+        ref.read(dashboardFilterProvider.notifier).state = label;
+        setState(() {
+          _visibleCount = 20;
+        });
+      },
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: isDesktop ? 24 : 16,
@@ -314,24 +341,51 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               );
             }
 
+            final visibleCount =
+                _visibleCount > items.length ? items.length : _visibleCount;
             return RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(unifiedDashboardProvider);
               },
               child: ListView.builder(
+                controller: _scrollController,
                 padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
-                itemCount: items.length,
+                itemCount: visibleCount,
                 itemBuilder: (context, index) =>
                     _buildSessionItem(items[index], isDesktop),
               ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => _buildSkeletonList(isDesktop),
           error: (e, _) => _buildErrorView(e.toString()),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => _buildSkeletonList(isDesktop),
       error: (e, _) => _buildErrorView(e.toString()),
+    );
+  }
+
+  Widget _buildSkeletonList(bool isDesktop) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 48 : 24),
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return AdminDataCard(
+          leading: SkeletonLoader(
+            width: isDesktop ? 160 : 120,
+            height: isDesktop ? 48 : 40,
+          ),
+          mainContent: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: isDesktop ? 220 : 160, height: 14),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: isDesktop ? 160 : 120, height: 12),
+            ],
+          ),
+          trailing: SkeletonLoader(width: isDesktop ? 90 : 70, height: 32),
+        );
+      },
     );
   }
 

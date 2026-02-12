@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +9,11 @@ import '../repositories/parking_repository.dart';
 import 'add_pass_screen.dart';
 import 'pass_detail_screen.dart' as pass_detail;
 import '../../../widgets/admin_data_card.dart';
+import '../../../widgets/skeleton_loader.dart';
+import '../../../utils/list_search_filter.dart';
+import '../../../utils/async_action_handler.dart';
+import '../../../widgets/confirm_delete_dialog.dart';
+import '../../../services/error_mapper.dart';
 
 class PassesListScreen extends ConsumerStatefulWidget {
   const PassesListScreen({super.key});
@@ -18,6 +24,52 @@ class PassesListScreen extends ConsumerStatefulWidget {
 
 class _PassesListScreenState extends ConsumerState<PassesListScreen> {
   String _searchQuery = '';
+  Timer? _searchDebounce;
+  final Set<String> _optimisticDeletedIds = {};
+  final ScrollController _scrollController = ScrollController();
+  int _visibleCount = 20;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!mounted) return;
+        setState(() {
+          _visibleCount += 20;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 8,
+      itemBuilder: (context, index) {
+        return AdminDataCard(
+          leading: SkeletonLoader(width: 160, height: 48),
+          mainContent: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 220, height: 14),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: 140, height: 12),
+            ],
+          ),
+          trailing: SkeletonLoader(width: 90, height: 32),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
@@ -50,9 +102,13 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                     const SizedBox(height: 8),
                     Text(
                       selectedLocId != null
-                          ? Lang.sel(isCroatian, 'Managing access for Lot: $selectedLocId',
+                          ? Lang.sel(
+                              isCroatian,
+                              'Managing access for Lot: $selectedLocId',
                               'Upravljanje pristupom za parkiralište: $selectedLocId')
-                          : Lang.sel(isCroatian, 'Please select a lot in the top bar.',
+                          : Lang.sel(
+                              isCroatian,
+                              'Please select a lot in the top bar.',
                               'Odaberite parkiralište u gornjoj traci.'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -88,9 +144,17 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
               width: 400,
               child: TextField(
                 onChanged: (val) {
-                  setState(() {
-                    _searchQuery = val.trim().toLowerCase();
-                  });
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(
+                    const Duration(milliseconds: 250),
+                    () {
+                      if (!mounted) return;
+                      setState(() {
+                        _searchQuery = val.trim().toLowerCase();
+                        _visibleCount = 20;
+                      });
+                    },
+                  );
                 },
                 decoration: InputDecoration(
                   hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
@@ -131,16 +195,27 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                     );
                   }
 
-                  final filtered = permits.where((p) {
-                    final plate = (p['plate'] ?? '').toString().toLowerCase();
-                    final type = (p['type'] ?? '').toString().toLowerCase();
-                    if (_searchQuery.isEmpty) return true;
-                    return plate.contains(_searchQuery) ||
-                        type.contains(_searchQuery);
+                  final filtered = ListSearchFilter.filter(
+                    items: permits,
+                    query: _searchQuery,
+                    fields: (p) => [
+                      p['plate']?.toString(),
+                      p['type']?.toString(),
+                      p['contact_name']?.toString(),
+                      p['id']?.toString(),
+                    ],
+                  ).where((p) {
+                    final pid = p['id']?.toString();
+                    if (pid == null) return true;
+                    return !_optimisticDeletedIds.contains(pid);
                   }).toList();
 
+                  final visibleCount = _visibleCount > filtered.length
+                      ? filtered.length
+                      : _visibleCount;
                   return ListView.builder(
-                    itemCount: filtered.length,
+                    controller: _scrollController,
+                    itemCount: visibleCount,
                     itemBuilder: (context, index) {
                       final permit = filtered[index];
                       final type = permit['type'] ?? 'pass';
@@ -202,7 +277,8 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        pass_detail.PassDetailScreen(permit: permit),
+                                        pass_detail.PassDetailScreen(
+                                            permit: permit),
                                   ),
                                 );
                               },
@@ -217,7 +293,8 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
-                              child: Text(Lang.sel(isCroatian, 'View', 'Pogledaj')),
+                              child: Text(
+                                  Lang.sel(isCroatian, 'View', 'Pogledaj')),
                             ),
                             const SizedBox(width: 12),
                             IconButton(
@@ -233,11 +310,10 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                     },
                   );
                 },
-                loading: () => const Center(
-                    child: CircularProgressIndicator(color: Colors.black)),
+                loading: () => _buildSkeletonList(),
                 error: (err, _) => Center(
-                    child: Text(Lang.sel(
-                        isCroatian, 'Error: $err', 'Greška: $err'))),
+                    child: Text(
+                        Lang.sel(isCroatian, 'Error: $err', 'Greška: $err'))),
               ),
             ),
           ],
@@ -273,7 +349,9 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
               if (s == 'active') return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
               if (s == 'expired') return Lang.sel(isHr, 'EXPIRED', 'ISTEKLO');
               if (s == 'revoked') return Lang.sel(isHr, 'REVOKED', 'OPOZVANO');
-              if (s == 'pending') return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              if (s == 'pending') {
+                return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              }
               return status.toUpperCase();
             })(),
             style: GoogleFonts.inter(
@@ -289,28 +367,33 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
 
   void _confirmDelete(String id) {
     final isCroatian = ref.read(localeIsCroatianProvider);
-    showDialog(
+    AsyncActionHandler.run<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(Lang.sel(isCroatian, 'Delete Permit', 'Obriši dozvolu')),
-        content: Text(Lang.sel(isCroatian,
-            'Are you sure you want to delete this permit? This action cannot be undone.',
-            'Jeste li sigurni da želite obrisati ovu dozvolu? Ova radnja je nepovratna.')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(Lang.sel(isCroatian, 'Cancel', 'Odustani'))),
-          TextButton(
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              await ref.read(parkingRepositoryProvider).deletePermit(id);
-              navigator.pop();
-            },
-            child: Text(Lang.sel(isCroatian, 'Delete', 'Obriši'),
-                style: const TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      action: () async {
+        final confirm = await showConfirmDeleteDialog(
+          context: context,
+          title: Lang.sel(isCroatian, 'Delete Permit', 'Obriši dozvolu'),
+          message: Lang.sel(
+              isCroatian,
+              'Are you sure you want to delete this permit? This action cannot be undone.',
+              'Jeste li sigurni da želite obrisati ovu dozvolu? Ova radnja je nepovratna.'),
+          confirmLabel: Lang.sel(isCroatian, 'Delete', 'Obriši'),
+          cancelLabel: Lang.sel(isCroatian, 'Cancel', 'Odustani'),
+        );
+        if (confirm != true) return;
+        setState(() {
+          _optimisticDeletedIds.add(id);
+        });
+        await ref.read(parkingRepositoryProvider).deletePermit(id);
+        ref.invalidate(permitsStreamProvider);
+      },
+      errorBuilder: ErrorMapper.message,
+      onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _optimisticDeletedIds.remove(id);
+        });
+      },
     );
   }
 }

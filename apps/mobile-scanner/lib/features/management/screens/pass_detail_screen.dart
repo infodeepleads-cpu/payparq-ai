@@ -178,12 +178,31 @@ class PassDetailScreen extends ConsumerWidget {
                           children: [
                             ElevatedButton.icon(
                               onPressed: () async {
-                                final bytes = await buildPermitPdf(permit);
-                                if (!context.mounted) return;
-                                await Printing.sharePdf(
-                                  bytes: bytes,
-                                  filename: 'permit_${permit['id']}.pdf',
-                                );
+                                try {
+                                  final bytes = await buildPermitPdf(permit);
+                                  if (!context.mounted) return;
+                                  await Printing.sharePdf(
+                                    bytes: bytes,
+                                    filename: 'permit_${permit['id']}.pdf',
+                                  );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(Lang.sel(
+                                            isCroatian,
+                                            'PDF shared successfully',
+                                            'PDF je uspješno podijeljen'))),
+                                  );
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(Lang.sel(
+                                            isCroatian,
+                                            'PDF share failed',
+                                            'Dijeljenje PDF-a nije uspjelo'))),
+                                  );
+                                }
                               },
                               icon: const Icon(Icons.picture_as_pdf),
                               label: Text(Lang.sel(
