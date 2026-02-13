@@ -76,6 +76,17 @@ class LocationsController {
       capacity: capacity,
       ownerId: ownerId,
     );
+    final newLocId = response['id']?.toString();
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (newLocId != null && currentUserId != null) {
+      try {
+        await Supabase.instance.client.from('officer_assignments').insert({
+          'officer_id': currentUserId,
+          'location_id': newLocId,
+          'assigned_by': currentUserId,
+        });
+      } catch (_) {}
+    }
     final newDisplayId = response['display_id'];
     if (newDisplayId == null) {
       throw const AppError('Location created without display ID');

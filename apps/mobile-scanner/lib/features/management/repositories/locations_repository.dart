@@ -37,7 +37,7 @@ class LocationsRepository {
           'longitude': longitude,
           'capacity': capacity,
           'total_spots': capacity,
-          'owner_id': ownerId,
+          'owner_id': ownerId ?? Supabase.instance.client.auth.currentUser?.id,
         })
         .select()
         .maybeSingle();

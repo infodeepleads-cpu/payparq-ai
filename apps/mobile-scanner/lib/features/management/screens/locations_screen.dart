@@ -745,15 +745,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   try {
                     final newCapacity =
                         int.tryParse(capacityCtrl.text.trim()) ?? capacity;
-                    await ref
-                        .read(locationsControllerProvider)
-                        .updateCapacity(loc['id'].toString(), newCapacity);
-                    setState(() {
-                      loc['capacity'] = newCapacity;
-                      loc['total_spots'] = newCapacity;
-                    });
+                    // Optimistically update override to prevent old value flicker
                     if (mounted) {
-                      // Update parent list immediately to avoid any flicker from stream re-emits
                       this.setState(() {
                         _locOverrides[loc['id'].toString()] = {
                           'capacity': newCapacity,
@@ -761,6 +754,13 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         };
                       });
                     }
+                    await ref
+                        .read(locationsControllerProvider)
+                        .updateCapacity(loc['id'].toString(), newCapacity);
+                    setState(() {
+                      loc['capacity'] = newCapacity;
+                      loc['total_spots'] = newCapacity;
+                    });
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
                         SnackBar(
@@ -772,6 +772,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       navigator.pop();
                     }
                   } catch (e) {
+                    // Revert optimistic override on error
+                    if (mounted) {
+                      this.setState(() {
+                        _locOverrides.remove(loc['id'].toString());
+                      });
+                    }
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
                         SnackBar(

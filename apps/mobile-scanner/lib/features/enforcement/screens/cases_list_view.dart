@@ -127,7 +127,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       return;
     }
 
-    final locationUuid = resolution.uuid ?? resolution.fallbackId;
+    final locationUuid =
+        await ref.read(selectedEffectiveLocationUuidProvider.future);
     if (locationUuid == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -242,6 +243,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         locationUuid: locationUuid,
         bytes: bytes,
         isLprScan: false,
+        issuerRole: profile['role']?.toString(),
       ),
       successMessage: isWarning
           ? Lang.sel(isHr, 'Warning Issued!', 'Upozorenje izdano!')
@@ -256,6 +258,30 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     final evidenceUrl = violation['evidence_r2_url'];
     final issuedAtIso = (violation['issued_at'] ?? '').toString();
     final issuedAtDt = DateTime.tryParse(issuedAtIso);
+    final rawLocId = (violation['location_id'] ?? '').toString();
+    final enrichedDid = (violation['location_display_id'] ?? '').toString();
+    final selectedDid = ref.read(selectedLocationIdProvider) ??
+        ref.read(userLocationIdProvider);
+    String locationDisplayId =
+        enrichedDid.isNotEmpty ? enrichedDid : rawLocId.toString();
+    final uuidRegExp = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        caseSensitive: false);
+    if (uuidRegExp.hasMatch(locationDisplayId.toLowerCase())) {
+      final locsAsync = ref.read(availableLocationsProvider);
+      if (locsAsync.hasValue) {
+        final idToDisplay = <String, String>{};
+        for (final l in (locsAsync.value ?? [])) {
+          final id = (l['id'] ?? '').toString();
+          final did = (l['display_id'] ?? '').toString();
+          if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+        }
+        locationDisplayId =
+            idToDisplay[rawLocId] ?? (selectedDid?.toString() ?? 'N/A');
+      } else {
+        locationDisplayId = selectedDid?.toString() ?? 'N/A';
+      }
+    }
 
     String? fullImageUrl;
     if (evidenceUrl != null) {
@@ -364,6 +390,22 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    Lang.sel(ref.read(localeIsCroatianProvider), 'Location ID:',
+                        'ID lokacije:'),
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                  ),
+                  Text(
+                    locationDisplayId,
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
+                ],
+              ),
               if (MediaQuery.of(context).size.width < 1100) ...[
                 const SizedBox(height: 8),
                 Align(
@@ -408,7 +450,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 1100;
     final violationsAsync = ref.watch(violationsStreamProvider);
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final selectedLocId = ref.watch(selectedLocationIdProvider) ??
+        ref.watch(userLocationIdProvider);
     final optimisticViolations = ref.watch(optimisticViolationsProvider);
 
     // Watch global selection
@@ -494,6 +537,37 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           final vId = v['id']?.toString();
           if (vId == null) return true;
           return !_optimisticDeletedIds.contains(vId);
+        }).toList();
+        final selectedDid = ref.read(selectedLocationIdProvider) ??
+            ref.read(userLocationIdProvider);
+        final effUuid = ref.read(selectedEffectiveLocationUuidProvider).value;
+        final locsAsync = ref.read(availableLocationsProvider);
+        final idToDisplay = <String, String>{};
+        if (locsAsync.hasValue) {
+          for (final l in (locsAsync.value ?? [])) {
+            final id = (l['id'] ?? '').toString();
+            final did = (l['display_id'] ?? '').toString();
+            if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+          }
+        }
+        allViolations = allViolations.where((v) {
+          final raw = (v['location_id'] ?? '').toString();
+          final did =
+              (v['location_display_id'] ?? idToDisplay[raw])?.toString();
+          if (effUuid != null && effUuid.isNotEmpty && raw == effUuid) {
+            return true;
+          }
+          if (selectedDid != null &&
+              selectedDid.isNotEmpty &&
+              did == selectedDid) {
+            return true;
+          }
+          if (selectedDid != null &&
+              selectedDid.isNotEmpty &&
+              raw == selectedDid) {
+            return true;
+          }
+          return false;
         }).toList();
         for (final v in allViolations) {
           DateSortHelpers.ensureCachedDate(

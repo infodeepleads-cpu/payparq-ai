@@ -29,6 +29,7 @@ import '../features/intelligence/deferred/dynamic_pricing_loader.dart'
 import '../features/intelligence/deferred/finance_loader.dart'
     deferred as finance_mod;
 import '../screens/admin/deferred/admin_loader.dart' deferred as admin_mod;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterScaffold extends ConsumerStatefulWidget {
   const MasterScaffold({super.key});
@@ -233,53 +234,126 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           ],
         ),
         actions: [
-          if (!isOfficer)
-            availableLocsAsync.when(
-              data: (locs) => locs.isEmpty
-                  ? const SizedBox()
-                  : IconButton(
-                      icon: const Icon(Icons.location_on_outlined,
-                          color: Colors.white),
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(20)),
-                          ),
-                          builder: (context) => Container(
-                            padding: const EdgeInsets.symmetric(vertical: 24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                    Lang.sel(isHr, 'Select Active Lot',
-                                        'Odaberite aktivno parkiralište'),
-                                    style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18)),
-                                const SizedBox(height: 16),
-                                ...locs.map((l) => ListTile(
-                                      leading: const Icon(Icons.location_on),
-                                      title: Text(l['name']),
-                                      subtitle: Text(l['display_id']),
-                                      onTap: () {
-                                        ref
-                                            .read(selectedLocationIdProvider
-                                                .notifier)
-                                            .state = l['display_id'];
-                                        Navigator.pop(context);
-                                      },
-                                    )),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+          IconButton(
+            icon: const Icon(Icons.location_on_outlined, color: Colors.white),
+            onPressed: () {
+              final fallbackId = ref.read(userLocationIdProvider) ??
+                  (profile['location_id']?.toString());
+              availableLocsAsync.when(
+                data: (locs) {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                     ),
-              loading: () => const SizedBox(),
-              error: (_, __) => const SizedBox(),
-            ),
+                    builder: (context) => Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                              Lang.sel(isHr, 'Select Active Lot',
+                                  'Odaberite aktivno parkiralište'),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold, fontSize: 18)),
+                          const SizedBox(height: 16),
+                          if (locs.isEmpty && (fallbackId == null))
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                Lang.sel(isHr, 'No lots available yet.',
+                                    'Još nema dostupnih parkirališta.'),
+                                style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.white.withValues(alpha: 0.7)),
+                              ),
+                            ),
+                          if (locs.isEmpty && (fallbackId != null))
+                            ListTile(
+                              leading: const Icon(Icons.location_on),
+                              title: Text(
+                                  Lang.sel(isHr, 'Fallback Lot', 'Rezervno')),
+                              subtitle: Text(fallbackId),
+                              onTap: () {
+                                ref
+                                    .read(selectedLocationIdProvider.notifier)
+                                    .state = fallbackId;
+                                () async {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                    final isDid =
+                                        RegExp(r'^\d{5}$').hasMatch(fallbackId);
+                                    if (isDid) {
+                                      await prefs.setString(
+                                          'selected_location_display_id',
+                                          fallbackId);
+                                    }
+                                }();
+                                Navigator.pop(context);
+                              },
+                            ),
+                          ...locs.map((l) => ListTile(
+                                leading: const Icon(Icons.location_on),
+                                title: Text(l['name']),
+                                subtitle: Text(l['display_id']),
+                                onTap: () {
+                                  final did =
+                                      (l['display_id'] ?? '').toString();
+                                  ref
+                                      .read(selectedLocationIdProvider.notifier)
+                                      .state = did;
+                                  () async {
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    if (did.isNotEmpty) {
+                                      await prefs.setString(
+                                          'selected_location_display_id', did);
+                                    }
+                                  }();
+                                  Navigator.pop(context);
+                                },
+                              )),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => const SizedBox(
+                      height: 120,
+                    ),
+                  );
+                },
+                error: (_, __) {
+                  showModalBottomSheet(
+                    context: context,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (context) => Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        Lang.sel(isHr, 'Failed to load locations.',
+                            'Ne mogu učitati parkirališta.'),
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.7)),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.white),
             tooltip: Lang.sel(isHr, 'Settings', 'Postavke'),
@@ -502,7 +576,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                         ),
                       ],
                     ),
-                    if (!isOfficer) _buildHeaderLocationSelector(),
+                    _buildHeaderLocationSelector(),
                   ],
                 ),
               ),
@@ -616,7 +690,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                         size: 14, color: Colors.white),
                                   ),
                                   title: Text(
-                                    profile['name'] ?? 'Admin User',
+                                    profile['full_name'] ??
+                                        profile['name'] ??
+                                        profile['email'] ??
+                                        (profile['role'] ?? 'User'),
                                     style: GoogleFonts.inter(
                                         color: Colors.white,
                                         fontSize: 14,

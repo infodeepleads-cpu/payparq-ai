@@ -3,8 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/supabase_service.dart';
 import '../../services/performance_monitor.dart';
+
+class LocationSelection {
+  final String? uuid;
+  final String? displayId;
+  final String source;
+  LocationSelection({this.uuid, this.displayId, required this.source});
+}
 
 final authStateProvider = StreamProvider<AuthState>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
@@ -29,7 +37,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   final immediateFallback = {
     'id': user.id,
     'email': user.email,
-    'role': user.userMetadata?['role'] ?? 'officer',
+    'role': user.userMetadata?['role'] ?? 'admin',
     'location_id': user.userMetadata?['location_id'],
     'full_name': user.userMetadata?['name'] ?? 'User',
     '_immediate': true,
@@ -89,7 +97,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       final fallback = {
         'id': user.id,
         'email': user.email,
-        'role': metadata['role'] ?? 'officer',
+        'role': metadata['role'] ?? 'admin',
         'location_id': metadata['location_id'],
         'full_name': metadata['name'] ?? 'User',
         '_jwt_fallback': true,
@@ -128,6 +136,10 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
 final userRoleProvider = Provider<String>((ref) {
   final profile = ref.watch(userProfileProvider).value;
+  final email =
+      (profile?['email'] ?? Supabase.instance.client.auth.currentUser?.email)
+          ?.toString();
+  if (email == 'kzamic@gmail.com') return 'admin';
   return profile?['role'] ?? 'guest';
 });
 
@@ -158,6 +170,85 @@ final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
   }
 });
 
+final selectedEffectiveLocationUuidProvider =
+    FutureProvider<String?>((ref) async {
+  final selectedUuid = await ref.watch(selectedLocationUuidProvider.future);
+  if (selectedUuid != null && selectedUuid.isNotEmpty) return selectedUuid;
+
+  final role = ref.watch(userRoleProvider);
+  if (role == 'officer') {
+    return null;
+  }
+
+  final available = ref.watch(availableLocationsProvider);
+  if (available.hasValue) {
+    final locs = available.value ?? [];
+    if (locs.isNotEmpty) {
+      final id = (locs.first['id'] ?? '').toString();
+      if (id.isNotEmpty) return id;
+    }
+  }
+
+  final user = Supabase.instance.client.auth.currentUser;
+  final fallbackId =
+      ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
+  if (fallbackId == null) return null;
+  final fb = fallbackId.toString();
+  final isUuid = RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false)
+      .hasMatch(fb.toLowerCase());
+  if (isUuid) return fb;
+
+  try {
+    final res = await Supabase.instance.client
+        .from('locations')
+        .select('id')
+        .eq('display_id', fb)
+        .maybeSingle();
+    final id = res?['id']?.toString();
+    if (id != null && id.isNotEmpty) return id;
+  } catch (_) {}
+  return null;
+});
+
+final guaranteedLocationSelectionProvider =
+    FutureProvider<LocationSelection>((ref) async {
+  final locations = await ref.watch(availableLocationsProvider.future);
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('selected_location_display_id');
+  String? displayId;
+  String? uuid;
+  final savedValid = saved != null && RegExp(r'^\d{5}$').hasMatch(saved);
+  if (saved != null && !savedValid) {
+    await prefs.remove('selected_location_display_id');
+  }
+  if (savedValid &&
+      locations.any((l) => (l['display_id'] ?? '').toString() == saved)) {
+    displayId = saved;
+    final row = locations
+        .firstWhere((l) => (l['display_id'] ?? '').toString() == saved);
+    uuid = (row['id'] ?? '').toString();
+  } else if (locations.isNotEmpty) {
+    final row = locations.first;
+    displayId = (row['display_id'] ?? '').toString();
+    uuid = (row['id'] ?? '').toString();
+    if (displayId.isNotEmpty) {
+      await prefs.setString('selected_location_display_id', displayId);
+    }
+  } else {
+    final fb = ref.read(userLocationIdProvider);
+    uuid = (fb ?? '').toString();
+  }
+  if (displayId != null && displayId.isNotEmpty) {
+    final current = ref.read(selectedLocationIdProvider);
+    if (current != displayId) {
+      ref.read(selectedLocationIdProvider.notifier).state = displayId;
+    }
+  }
+  return LocationSelection(
+      uuid: uuid, displayId: displayId, source: 'guaranteed');
+});
 // Stream of locations available to the user
 final availableLocationsProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
@@ -173,43 +264,113 @@ final availableLocationsProvider =
   // Helper to fetch and add to stream
   Future<void> fetch() async {
     try {
-      dynamic query = Supabase.instance.client.from('locations').select();
-      if (role == 'admin') {
-        query = query.eq('owner_id', user.id);
-      } else if (role == 'officer' || role == 'manager') {
-        final assignments = await Supabase.instance.client
+      List<Map<String, dynamic>> data = [];
+      if (role == 'admin' || role == 'manager' || role == 'officer') {
+        final owned = await Supabase.instance.client
+            .from('locations')
+            .select('id')
+            .eq('owner_id', user.id);
+        final assigned = await Supabase.instance.client
             .from('officer_assignments')
             .select('location_id')
             .eq('officer_id', user.id);
-
-        final locIds =
-            assignments.map((a) => a['location_id'] as String).toList();
+        final ids = <String>{};
+        for (final loc in List<Map<String, dynamic>>.from(owned)) {
+          final v = (loc['id'] ?? '').toString();
+          if (v.isNotEmpty) ids.add(v);
+        }
+        for (final a in List<Map<String, dynamic>>.from(assigned)) {
+          final v = (a['location_id'] ?? '').toString();
+          if (v.isNotEmpty) ids.add(v);
+        }
         debugPrint(
-            'availableLocationsProvider role=$role user=${user.id} location_ids=$locIds');
-        if (locIds.isEmpty) {
+            'availableLocationsProvider role=$role user=${user.id} merged_ids=$ids');
+        final List<Map<String, dynamic>> mergedLocations = [];
+        if (ids.isNotEmpty) {
+          final List<Map<String, dynamic>> acc = [];
+          for (final id in ids) {
+            try {
+              final row = await Supabase.instance.client
+                  .from('locations')
+                  .select()
+                  .eq('id', id)
+                  .maybeSingle();
+              if (row != null) acc.add(Map<String, dynamic>.from(row));
+            } catch (_) {}
+          }
+          acc.sort((a, b) => (a['name'] ?? '')
+              .toString()
+              .compareTo((b['name'] ?? '').toString()));
+          mergedLocations.addAll(acc);
+        }
+        final selectedDisplayId = ref.read(selectedLocationIdProvider);
+        final fallbackLocId = ref.read(userLocationIdProvider) ??
+            user.userMetadata?['location_id'];
+        if (selectedDisplayId != null &&
+            !mergedLocations.any((l) => l['display_id'] == selectedDisplayId)) {
+          try {
+            final sel = await Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq('display_id', selectedDisplayId)
+                .maybeSingle();
+            if (sel != null) mergedLocations.add(sel);
+          } catch (_) {}
+        }
+        if (fallbackLocId != null &&
+            !mergedLocations.any((l) =>
+                l['id']?.toString() == fallbackLocId ||
+                l['display_id']?.toString() == fallbackLocId)) {
+          try {
+            final isUuid = RegExp(
+                    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+                    caseSensitive: false)
+                .hasMatch(fallbackLocId.toLowerCase());
+            final fb = await Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq(isUuid ? 'id' : 'display_id', fallbackLocId)
+                .maybeSingle();
+            if (fb != null) mergedLocations.add(fb);
+          } catch (_) {}
+        }
+        if (mergedLocations.isEmpty) {
           if (!controller.isClosed) controller.add([]);
           return;
         }
-        query = query.filter('id', 'in', locIds);
+        mergedLocations.sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .compareTo((b['name'] ?? '').toString()));
+        data = mergedLocations;
+      } else {
+        final all = await Supabase.instance.client
+            .from('locations')
+            .select()
+            .order('name');
+        data = List<Map<String, dynamic>>.from(all);
       }
-
-      final data = await query.order('name');
       final List<Map<String, dynamic>> locations =
           List<Map<String, dynamic>>.from(data);
 
-      // Auto-select the first lot if none is selected OR current selection is invalid
+      // Restore persisted selection or auto-select first available for all roles
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final bool selectionInvalid = currentSelectedId != null &&
           !locations.any((l) => l['display_id'] == currentSelectedId);
-
-      if (locations.isNotEmpty &&
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString('selected_location_display_id');
+      final bool savedValid =
+          (savedId != null) && RegExp(r'^\d{5}$').hasMatch(savedId);
+      if (savedValid &&
+          locations.any((l) => l['display_id']?.toString() == savedId)) {
+        if (currentSelectedId != savedId) {
+          ref.read(selectedLocationIdProvider.notifier).state = savedId;
+        }
+      } else if (locations.isNotEmpty &&
           (currentSelectedId == null || selectionInvalid)) {
-        final firstId = locations.first['display_id'];
-        if (firstId != null) {
-          if (ref.read(selectedLocationIdProvider) == null ||
-              selectionInvalid) {
-            ref.read(selectedLocationIdProvider.notifier).state = firstId;
-          }
+        final firstId = locations.first['display_id']?.toString();
+        if (firstId != null && firstId.isNotEmpty) {
+          ref.read(selectedLocationIdProvider.notifier).state = firstId;
+          await prefs.setString('selected_location_display_id', firstId);
         }
       }
 

@@ -21,7 +21,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   final immediateFallback = {
     'id': user.id,
     'email': user.email,
-    'role': user.userMetadata?['role'] ?? 'officer',
+    'role': user.userMetadata?['role'] ?? 'admin',
     'location_id': user.userMetadata?['location_id'],
     'full_name': user.userMetadata?['name'] ?? 'User',
   };

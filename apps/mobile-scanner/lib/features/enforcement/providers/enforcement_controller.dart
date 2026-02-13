@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../logic/providers/dashboard_providers.dart';
+import '../../../logic/providers/auth_providers.dart';
 import '../../management/repositories/parking_repository.dart';
 import '../repositories/enforcement_repository.dart';
 import '../../../services/app_error.dart';
@@ -57,9 +58,22 @@ class EnforcementController {
           normalizedUuid = id;
         }
       }
+      String displayId = locationUuid;
+      if (uuidRegex.hasMatch(normalizedUuid.toLowerCase())) {
+        final locsAsync = _ref.read(availableLocationsProvider);
+        if (locsAsync.hasValue) {
+          for (final l in (locsAsync.value ?? [])) {
+            final id = (l['id'] ?? '').toString();
+            if (id == normalizedUuid) {
+              displayId = (l['display_id'] ?? '').toString();
+              break;
+            }
+          }
+        }
+      }
       final dailyPrice =
           isWarning ? 0.0 : await _repo.getDailyBasePrice(normalizedUuid);
-      final record = {
+      final dbRecord = {
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
         'fine_amount': isWarning ? 0.00 : dailyPrice,
@@ -70,23 +84,22 @@ class EnforcementController {
         'is_lpr_scan': isLprScan,
         if (issuerRole != null) 'issuer_role': issuerRole,
       };
+      final uiRecord = {
+        ...dbRecord,
+        'location_display_id': displayId,
+      };
 
       _ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            record,
+            uiRecord,
             ...state,
           ]);
 
       await Future.wait([
         _repo.uploadEvidence(bytes, fileName),
-        _repo.insertViolation(record),
+        _repo.insertViolation(dbRecord),
       ]).timeout(const Duration(seconds: 25));
 
       _ref.invalidate(violationsStreamProvider);
-      _ref.read(optimisticViolationsProvider.notifier).update((state) => state
-          .where((v) =>
-              (v['plate'] ?? '') != plate ||
-              (v['evidence_r2_url'] ?? '') != fileName)
-          .toList());
     } catch (e) {
       _ref.read(optimisticViolationsProvider.notifier).update((state) => state
           .where((v) =>
@@ -121,7 +134,20 @@ class EnforcementController {
         normalizedUuid = id;
       }
     }
-    final record = {
+    String displayId = locationUuid;
+    if (uuidRegex.hasMatch(normalizedUuid.toLowerCase())) {
+      final locsAsync = _ref.read(availableLocationsProvider);
+      if (locsAsync.hasValue) {
+        for (final l in (locsAsync.value ?? [])) {
+          final id = (l['id'] ?? '').toString();
+          if (id == normalizedUuid) {
+            displayId = (l['display_id'] ?? '').toString();
+            break;
+          }
+        }
+      }
+    }
+    final dbRecord = {
       'plate': plate,
       'violation_type': violationType,
       'fine_amount': 50.00,
@@ -131,21 +157,20 @@ class EnforcementController {
       'issued_at': issuedAt,
       'issuer_role': issuerRole,
     };
+    final uiRecord = {
+      ...dbRecord,
+      'location_display_id': displayId,
+    };
     try {
       _ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            record,
+            uiRecord,
             ...state,
           ]);
       await Future.wait([
         _repo.uploadEvidence(bytes, fileName),
-        _repo.insertViolation(record),
+        _repo.insertViolation(dbRecord),
       ]).timeout(const Duration(seconds: 25));
       _ref.invalidate(violationsStreamProvider);
-      _ref.read(optimisticViolationsProvider.notifier).update((state) => state
-          .where((v) =>
-              (v['plate'] ?? '') != plate ||
-              (v['evidence_r2_url'] ?? '') != fileName)
-          .toList());
     } catch (e) {
       _ref.read(optimisticViolationsProvider.notifier).update((state) => state
           .where((v) =>

@@ -714,7 +714,11 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                     ? null
                     : () async {
                         if (formKey.currentState!.validate()) {
-                          if (selectedLocationIds.isEmpty) {
+                          final requiresAssignment =
+                              selectedRole == 'manager' ||
+                                  selectedRole == 'officer';
+                          if (requiresAssignment &&
+                              selectedLocationIds.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(Lang.sel(

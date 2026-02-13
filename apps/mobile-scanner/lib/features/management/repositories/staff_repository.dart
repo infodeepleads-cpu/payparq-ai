@@ -9,17 +9,18 @@ class StaffRepository {
     required String email,
     required String name,
     required String role,
-    required String locationId,
+    String? locationId,
   }) async {
-    final response = await _client.functions.invoke(
-      'create-officer',
-      body: {
-        'email': email,
-        'name': name,
-        'role': role,
-        'location_id': locationId,
-      },
-    );
+    final Map<String, dynamic> body = {
+      'email': email,
+      'name': name,
+      'role': role,
+    };
+    if (locationId != null && locationId.isNotEmpty) {
+      body['location_id'] = locationId;
+    }
+    final response =
+        await _client.functions.invoke('create-officer', body: body);
     if (response.status != 200) {
       final errorMsg = response.data is Map
           ? (response.data['error'] ?? 'Server Error')

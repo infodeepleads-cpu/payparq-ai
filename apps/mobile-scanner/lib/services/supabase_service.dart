@@ -21,6 +21,13 @@ class SupabaseService {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     try {
+      debugPrint('SupabaseService: About to initialize');
+      debugPrint('SupabaseService: DEBUG url=$url');
+      debugPrint('SupabaseService: DEBUG anon key length=${anonKey.length}');
+      final prefix = anonKey.isNotEmpty
+          ? (anonKey.length > 20 ? anonKey.substring(0, 20) : anonKey)
+          : '<empty>';
+      debugPrint('SupabaseService: DEBUG anon key prefix=$prefix...');
       final initFuture = Supabase.initialize(
         url: url,
         anonKey: anonKey,

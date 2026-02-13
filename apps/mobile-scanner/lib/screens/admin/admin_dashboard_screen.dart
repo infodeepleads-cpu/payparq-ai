@@ -261,11 +261,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterButton(Lang.sel(isHr, 'All', 'Sve')),
+              _buildFilterButton('All', Lang.sel(isHr, 'All', 'Sve')),
               const SizedBox(width: 12),
-              _buildFilterButton(Lang.sel(isHr, 'Active', 'Aktivno')),
+              _buildFilterButton('Active', Lang.sel(isHr, 'Active', 'Aktivno')),
               const SizedBox(width: 12),
-              _buildFilterButton(Lang.sel(isHr, 'Inactive', 'Neaktivno')),
+              _buildFilterButton(
+                  'Inactive', Lang.sel(isHr, 'Inactive', 'Neaktivno')),
             ],
           ),
         ),
@@ -273,14 +274,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildFilterButton(String label) {
+  Widget _buildFilterButton(String key, String label) {
     final selectedFilter = ref.watch(dashboardFilterProvider);
-    final isSelected = selectedFilter == label;
+    final isSelected = selectedFilter == key;
     final isDesktop = MediaQuery.of(context).size.width >= 1100;
 
     return InkWell(
       onTap: () {
-        ref.read(dashboardFilterProvider.notifier).state = label;
+        ref.read(dashboardFilterProvider.notifier).state = key;
         setState(() {
           _visibleCount = 20;
         });
@@ -310,16 +311,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildDataList(bool isDesktop) {
     final unifiedDataAsync = ref.watch(unifiedDashboardProvider);
     final availableLocsAsync = ref.watch(availableLocationsProvider);
-    final profile = ref.watch(userProfileProvider).value;
-    final isAdmin = profile?['role'] == 'admin';
     final isHr = ref.watch(localeIsCroatianProvider);
 
     return availableLocsAsync.when(
       data: (locs) {
-        if (locs.isEmpty && isAdmin) {
-          return _buildFirstTimeAdminView();
-        }
-
         return unifiedDataAsync.when(
           data: (items) {
             if (items.isEmpty) {
@@ -386,60 +381,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           trailing: SkeletonLoader(width: isDesktop ? 90 : 70, height: 32),
         );
       },
-    );
-  }
-
-  Widget _buildFirstTimeAdminView() {
-    final isHr = ref.watch(localeIsCroatianProvider);
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.blue[50],
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.add_location_alt_outlined,
-                size: 64, color: Colors.blue),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            Lang.sel(isHr, 'Welcome to PayParq!', 'Dobrodošli u PayParq!'),
-            style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(Lang.sel(
-              isHr,
-              'To get started, you need to register your first lot.',
-              'Za početak, potrebno je registrirati vaše prvo parkiralište.')),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              // Navigate to Add Location tab (index 4)
-              // This is a bit tricky since we are in MasterScaffold.
-              // In a real app we'd use a router or a callback.
-              // For now, let's just show a message.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(Lang.sel(
-                        isHr,
-                        'Please click "Add Location" in the sidebar.',
-                        'Molimo kliknite "Dodaj lokaciju" u bočnoj traci.'))),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: Text(Lang.sel(
-                isHr, 'Register First Lot', 'Registriraj prvo parkiralište')),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4)),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

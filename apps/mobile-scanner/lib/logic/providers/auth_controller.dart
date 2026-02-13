@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/app_error.dart';
+import '../../config/app_config.dart';
 
 class AuthActionResult {
   final bool requiresEmailVerification;
@@ -24,25 +26,37 @@ class AuthController {
   }) async {
     try {
       if (isSignIn) {
+        debugPrint('AuthController: signInWithPassword email=$email');
         await _auth.signInWithPassword(email: email, password: password);
+        debugPrint('AuthController: signInWithPassword success');
         return const AuthActionResult();
       } else {
-        final response = await _auth.signUp(email: email, password: password);
+        final redirectBase = AppConfig.supabaseRedirectUrl;
+        final response = await _auth.signUp(
+          email: email,
+          password: password,
+          data: {'role': 'admin'},
+          emailRedirectTo: '$redirectBase/',
+        );
         if (response.user != null && response.session == null) {
           return const AuthActionResult(requiresEmailVerification: true);
         }
         return const AuthActionResult();
       }
     } on AuthException catch (e) {
+      debugPrint('AuthController: AuthException ${e.message}');
+      debugPrint('AuthController: AuthException raw=${e.toString()}');
       throw AppError(e.message, cause: e);
     } catch (e) {
+      debugPrint('AuthController: unexpected error $e');
       throw AppError('An unexpected error occurred', cause: e);
     }
   }
 
   Future<void> resetPassword(String email) async {
     try {
-      await _auth.resetPasswordForEmail(email);
+      await _auth.resetPasswordForEmail(email,
+          redirectTo: AppConfig.supabaseRedirectUrl);
     } on AuthException catch (e) {
       throw AppError(e.message, cause: e);
     } catch (e) {

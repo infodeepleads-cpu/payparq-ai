@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../utils/permit_pdf.dart';
 import '../../../logic/providers/locale_provider.dart';
+import '../../../logic/providers/auth_providers.dart';
 
 class PassDetailScreen extends ConsumerWidget {
   final Map<String, dynamic> permit;
@@ -19,7 +20,28 @@ class PassDetailScreen extends ConsumerWidget {
     // Calculate fields
     final String type = permit['type'] ?? 'pass';
     final String plate = permit['plate'] ?? 'UNKNOWN';
-    final String locationId = permit['location_id'] ?? 'N/A';
+    final String selectedDid = ref.watch(selectedLocationIdProvider) ?? 'N/A';
+    final String rawLocId = (permit['location_id'] ?? '').toString();
+    final String enrichedDid =
+        (permit['location_display_id'] ?? '').toString();
+    String locationId = enrichedDid.isNotEmpty ? enrichedDid : rawLocId;
+    final uuidRegExp = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        caseSensitive: false);
+    if (uuidRegExp.hasMatch(locationId.toLowerCase())) {
+      final locsAsync = ref.watch(availableLocationsProvider);
+      if (locsAsync.hasValue) {
+        final idToDisplay = <String, String>{};
+        for (final l in (locsAsync.value ?? [])) {
+          final id = (l['id'] ?? '').toString();
+          final did = (l['display_id'] ?? '').toString();
+          if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+        }
+        locationId = idToDisplay[rawLocId] ?? selectedDid;
+      } else {
+        locationId = selectedDid;
+      }
+    }
     final double price = (permit['price'] as num?)?.toDouble() ?? 0.00;
     final String contactName = (permit['contact_name'] ?? '').toString();
     final String contactPhone = (permit['contact_phone'] ?? '').toString();

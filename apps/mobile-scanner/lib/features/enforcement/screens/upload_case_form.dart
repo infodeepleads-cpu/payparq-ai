@@ -95,7 +95,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
             'No location selected. Please select a lot in the top bar.');
       }
 
-      final locationUuid = resolution.uuid ?? resolution.fallbackId;
+      final locationUuid =
+          await ref.read(selectedEffectiveLocationUuidProvider.future);
       if (locationUuid == null) {
         throw Exception('Invalid Location ID. Please reselect the lot.');
       }

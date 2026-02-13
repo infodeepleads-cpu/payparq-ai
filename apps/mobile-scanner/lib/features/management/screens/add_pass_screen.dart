@@ -62,8 +62,9 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
     setState(() => _isProcessing = true);
 
-    // Always resolve to UUID from selected location, not display_id
-    String? locationUuid = await ref.read(selectedLocationUuidProvider.future);
+    // Always resolve to UUID from selected location or fallback
+    String? locationUuid =
+        await ref.read(selectedEffectiveLocationUuidProvider.future);
     if (locationUuid == null || locationUuid.isEmpty) {
       // Fallback: if user manually typed a display_id, map it to UUID
       final locText = _locationController.text.trim();

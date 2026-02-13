@@ -8,7 +8,10 @@ Future<Uint8List> buildPermitPdf(Map<String, dynamic> permit) async {
   final endTime = DateTime.tryParse((permit['end_time'] ?? '').toString());
   final type = (permit['type'] ?? 'pass').toString();
   final plate = (permit['plate'] ?? 'UNKNOWN').toString().toUpperCase();
-  final locationId = (permit['location_id'] ?? 'N/A').toString();
+  final enrichedDid = (permit['location_display_id'] ?? '').toString();
+  final locationId = enrichedDid.isNotEmpty
+      ? enrichedDid
+      : (permit['location_id'] ?? 'N/A').toString();
   final price = ((permit['price'] as num?)?.toDouble() ?? 0.0);
   final contactName = (permit['contact_name'] ?? '').toString();
   final contactPhone = (permit['contact_phone'] ?? '').toString();

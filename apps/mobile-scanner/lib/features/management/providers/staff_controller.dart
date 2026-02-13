@@ -30,20 +30,24 @@ class StaffController {
     if (!allowedRoles.contains(role)) {
       throw const AppError('Invalid role');
     }
-    if (locationIds.isEmpty) {
+    final requiresAssignment = role == 'manager' || role == 'officer';
+    if (requiresAssignment && locationIds.isEmpty) {
       throw const AppError('No locations selected');
     }
+    final primaryLocationId = requiresAssignment
+        ? (locationIds.isNotEmpty ? locationIds.first : null)
+        : null;
     final response = await _repo.createOfficer(
       email: email,
       name: name,
       role: role,
-      locationId: locationIds.first,
+      locationId: primaryLocationId,
     );
     final newStaffId = response['user']?['id'];
     if (newStaffId == null) {
       throw const AppError('Staff creation failed');
     }
-    if (locationIds.length > 1) {
+    if (requiresAssignment && locationIds.length > 1) {
       final assignments = locationIds.skip(1).map((lid) {
         return {
           'officer_id': newStaffId,
@@ -59,8 +63,30 @@ class StaffController {
 
   Future<void> deleteStaff(String id) async {
     try {
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      try {
+        await Supabase.instance.client
+            .from('officer_assignments')
+            .delete()
+            .eq('officer_id', id);
+      } catch (_) {}
+      if (currentUserId != null) {
+        try {
+          await Supabase.instance.client
+              .from('locations')
+              .update({'owner_id': currentUserId}).eq('owner_id', id);
+        } catch (_) {}
+      } else {
+        try {
+          await Supabase.instance.client
+              .from('locations')
+              .update({'owner_id': null}).eq('owner_id', id);
+        } catch (_) {}
+      }
       await _repo.deleteStaff(id);
       _ref.invalidate(staffStreamProvider);
+      _ref.invalidate(availableLocationsProvider);
+      _ref.invalidate(locationsStreamProvider);
     } catch (e) {
       throw AppError('Delete failed: $e', cause: e);
     }

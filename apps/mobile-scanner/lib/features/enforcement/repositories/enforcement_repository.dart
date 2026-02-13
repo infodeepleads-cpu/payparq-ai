@@ -33,11 +33,11 @@ class EnforcementRepository {
   Future<double> getDailyBasePrice(String locationId) async {
     final rows = await _client
         .from('locations')
-        .select('base_price_daily')
+        .select('base_price_daily_floor')
         .eq('id', locationId)
         .limit(1);
     if (rows.isNotEmpty) {
-      final v = rows.first['base_price_daily'];
+      final v = rows.first['base_price_daily_floor'];
       if (v != null) {
         return (v is num)
             ? v.toDouble()

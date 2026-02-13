@@ -46,6 +46,8 @@ class _BootAppState extends State<BootApp> {
     debugPrint('Environment: $env');
     debugPrint('App version: $version');
     debugPrint('Supabase URL: ${AppConfig.supabaseUrl}');
+    debugPrint('Supabase anon length: ${AppConfig.supabaseAnonKey.length}');
+    AppConfig.logSupabaseAnonKey();
   }
 
   Future<void> _initSupabase() async {

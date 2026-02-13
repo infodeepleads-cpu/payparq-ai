@@ -729,7 +729,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
     if (_isProcessing) return;
     final profile = ref.read(userProfileProvider).value;
     if (profile == null) return;
-    final issuerRole = profile['role'] == 'super_admin' ? 'payparq' : 'admin';
+    final issuerRole = profile['role'];
 
     final resolution = await LocationResolver.resolve(ref);
     final locationDisplayId = resolution.effectiveDisplayId;
@@ -744,7 +744,8 @@ class _HudScreenState extends ConsumerState<HudScreen>
       return;
     }
 
-    final locationUuid = resolution.uuid ?? resolution.fallbackId;
+    final locationUuid =
+        await ref.read(selectedEffectiveLocationUuidProvider.future);
     if (locationUuid == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -760,12 +761,6 @@ class _HudScreenState extends ConsumerState<HudScreen>
     try {
       setState(() {
         _isProcessing = true;
-        _statusMessage = isWarning
-            ? Lang.sel(ref.read(localeIsCroatianProvider), "CAPTURING...",
-                "SNIMANJE...")
-            : Lang.sel(ref.read(localeIsCroatianProvider), "CAPTURING...",
-                "SNIMANJE...");
-        _statusColor = isWarning ? Colors.orange : Colors.red;
       });
 
       final image = await _controller!.takePicture();
@@ -876,14 +871,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
         return;
       }
 
-      setState(() {
-        _statusMessage = isWarning
-            ? Lang.sel(ref.read(localeIsCroatianProvider), "ISSUING WARNING...",
-                "IZDAVANJE UPOZORENJA...")
-            : Lang.sel(ref.read(localeIsCroatianProvider), "ISSUING TICKET...",
-                "IZDAVANJE KAZNE...");
-        _statusColor = isWarning ? Colors.orange : Colors.red;
-      });
+      setState(() {});
 
       final plate = confirmedPlate;
       final controller = ref.read(enforcementControllerProvider);
@@ -904,30 +892,11 @@ class _HudScreenState extends ConsumerState<HudScreen>
       if (mounted) {
         setState(() {
           _detectedPlate = plate;
-          _statusMessage = Lang.sel(
-              ref.read(localeIsCroatianProvider), "VALIDATED", "POTVRĐENO");
-          _statusColor = Colors.greenAccent;
-          _showValidationPulse = true;
+          _showValidationPulse = false;
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "SCANNING...", "SKENIRANJE...");
+          _statusColor = Colors.white;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isWarning
-                ? Lang.sel(ref.read(localeIsCroatianProvider),
-                    'Warning Issued!', 'Upozorenje izdano!')
-                : Lang.sel(ref.read(localeIsCroatianProvider), 'Ticket Issued!',
-                    'Kazna izdana!')),
-            backgroundColor: isWarning ? Colors.orange : Colors.red,
-          ),
-        );
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          setState(() {
-            _showValidationPulse = false;
-            _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-                "SCANNING...", "SKENIRANJE...");
-            _statusColor = Colors.white;
-          });
-        }
       }
     } catch (e) {
       if (mounted) {
