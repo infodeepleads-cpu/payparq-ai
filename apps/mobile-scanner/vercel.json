@@ -1,6 +1,6 @@
 {
-  "buildCommand": "bash apps/mobile-scanner/build.sh",
-  "outputDirectory": "apps/mobile-scanner/build/web",
+  "buildCommand": "bash build.sh",
+  "outputDirectory": "build/web",
   "installCommand": "echo 'Installing Flutter...'",
   "headers": [
     {
