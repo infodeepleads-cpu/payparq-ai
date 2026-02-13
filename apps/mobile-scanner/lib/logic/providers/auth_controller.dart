@@ -26,15 +26,18 @@ class AuthController {
   }) async {
     try {
       if (isSignIn) {
-        debugPrint('AuthController: signInWithPassword email=$email');
-        await _auth.signInWithPassword(email: email, password: password);
+        final e = email.trim();
+        final p = password.trim();
+        debugPrint(
+            'AuthController: signInWithPassword emailLen=${e.length} passLen=${p.length}');
+        await _auth.signInWithPassword(email: e, password: p);
         debugPrint('AuthController: signInWithPassword success');
         return const AuthActionResult();
       } else {
         final redirectBase = AppConfig.supabaseRedirectUrl;
         final response = await _auth.signUp(
-          email: email,
-          password: password,
+          email: email.trim(),
+          password: password.trim(),
           data: {'role': 'admin'},
           emailRedirectTo: '$redirectBase/',
         );

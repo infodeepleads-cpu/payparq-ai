@@ -36,7 +36,15 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
     yield _decodeList(cached);
   }
   yield* live.map((data) {
-    prefs.setString(key, jsonEncode(data));
+    try {
+      final encodable = data
+          .map((e) => e.map(
+              (k, v) => MapEntry(k, v is DateTime ? v.toIso8601String() : v)))
+          .toList();
+      prefs.setString(key, jsonEncode(encodable));
+    } catch (e) {
+      debugPrint('Cache encode failed for $key: $e');
+    }
     return data;
   });
 }
@@ -551,7 +559,16 @@ final violationsStreamProvider =
         }
         return true;
       }).toList();
-      return filtered.map((it) {
+      final Set<String> seen = {};
+      final deduped = filtered.where((it) {
+        final id = (it['id'] ?? '').toString();
+        final evidence = (it['evidence_r2_url'] ?? '').toString();
+        final key = id.isNotEmpty ? 'id:$id' : 'k:$evidence';
+        if (seen.contains(key)) return false;
+        seen.add(key);
+        return true;
+      }).toList();
+      return deduped.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
@@ -579,7 +596,16 @@ final violationsStreamProvider =
         r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
         caseSensitive: false);
     return _cachedStream(cacheKey, baseStream).map((items) {
-      return items.map((it) {
+      final Set<String> seen = {};
+      final deduped = items.where((it) {
+        final id = (it['id'] ?? '').toString();
+        final evidence = (it['evidence_r2_url'] ?? '').toString();
+        final key = id.isNotEmpty ? 'id:$id' : 'k:$evidence';
+        if (seen.contains(key)) return false;
+        seen.add(key);
+        return true;
+      }).toList();
+      return deduped.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
@@ -600,11 +626,20 @@ final violationsStreamProvider =
   return _cachedStream(
           cacheKey, repo.getViolationsStream(locationId: locationFilter))
       .map((items) {
-    return items.where((item) {
+    final filtered = items.where((item) {
       final locId = item['location_id']?.toString();
       return locId == locationUuid ||
           locId == displayId ||
           locId == fallbackLocId;
+    }).toList();
+    final Set<String> seen = {};
+    return filtered.where((it) {
+      final id = (it['id'] ?? '').toString();
+      final evidence = (it['evidence_r2_url'] ?? '').toString();
+      final key = id.isNotEmpty ? 'id:$id' : 'k:$evidence';
+      if (seen.contains(key)) return false;
+      seen.add(key);
+      return true;
     }).toList();
   });
 });

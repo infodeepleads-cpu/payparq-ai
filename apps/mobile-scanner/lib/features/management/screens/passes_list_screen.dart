@@ -74,8 +74,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
   Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
     final permitsAsync = ref.watch(permitsStreamProvider);
-    final selectedLocId =
-        ref.watch(selectedLocationIdProvider) ?? ref.watch(userLocationIdProvider);
+    final selectedLocId = ref.watch(selectedLocationIdProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,

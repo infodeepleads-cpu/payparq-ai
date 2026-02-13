@@ -1073,7 +1073,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 52, bottom: 40),
+                  padding: const EdgeInsets.only(left: 52, bottom: 16),
                   child: Text(
                     displayId,
                     style: GoogleFonts.inter(

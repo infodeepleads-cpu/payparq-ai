@@ -184,7 +184,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       AsyncValue<List<Map<String, dynamic>>> availableLocsAsync,
       String? selectedLocId,
       bool isOfficer) {
-    final displayLocId = selectedLocId ?? profile['location_id'];
+    final displayLocId = selectedLocId;
     final isHr = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
@@ -247,75 +247,89 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                       borderRadius:
                           BorderRadius.vertical(top: Radius.circular(20)),
                     ),
-                    builder: (context) => Container(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                              Lang.sel(isHr, 'Select Active Lot',
-                                  'Odaberite aktivno parkiralište'),
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold, fontSize: 18)),
-                          const SizedBox(height: 16),
-                          if (locs.isEmpty && (fallbackId == null))
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              child: Text(
-                                Lang.sel(isHr, 'No lots available yet.',
-                                    'Još nema dostupnih parkirališta.'),
-                                style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.white.withValues(alpha: 0.7)),
-                              ),
+                    builder: (context) => SafeArea(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.7,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                    Lang.sel(isHr, 'Select Active Lot',
+                                        'Odaberite aktivno parkiralište'),
+                                    style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18)),
+                                const SizedBox(height: 16),
+                                if (locs.isEmpty && (fallbackId == null))
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 24),
+                                    child: Text(
+                                      Lang.sel(isHr, 'No lots available yet.',
+                                          'Još nema dostupnih parkirališta.'),
+                                      style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7)),
+                                    ),
+                                  ),
+                                if (locs.isEmpty && (fallbackId != null))
+                                  ListTile(
+                                    leading: const Icon(Icons.location_on),
+                                    title: Text(Lang.sel(
+                                        isHr, 'Fallback Lot', 'Rezervno')),
+                                    subtitle: Text(fallbackId),
+                                    onTap: () {
+                                      ref
+                                          .read(selectedLocationIdProvider
+                                              .notifier)
+                                          .state = fallbackId;
+                                      () async {
+                                        final prefs = await SharedPreferences
+                                            .getInstance();
+                                        final isDid = RegExp(r'^\d{5}$')
+                                            .hasMatch(fallbackId);
+                                        if (isDid) {
+                                          await prefs.setString(
+                                              'selected_location_display_id',
+                                              fallbackId);
+                                        }
+                                      }();
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ...locs.map((l) => ListTile(
+                                      leading: const Icon(Icons.location_on),
+                                      title: Text(l['name']),
+                                      subtitle: Text(l['display_id']),
+                                      onTap: () {
+                                        final did =
+                                            (l['display_id'] ?? '').toString();
+                                        ref
+                                            .read(selectedLocationIdProvider
+                                                .notifier)
+                                            .state = did;
+                                        () async {
+                                          final prefs = await SharedPreferences
+                                              .getInstance();
+                                          if (did.isNotEmpty) {
+                                            await prefs.setString(
+                                                'selected_location_display_id',
+                                                did);
+                                          }
+                                        }();
+                                        Navigator.pop(context);
+                                      },
+                                    )),
+                              ],
                             ),
-                          if (locs.isEmpty && (fallbackId != null))
-                            ListTile(
-                              leading: const Icon(Icons.location_on),
-                              title: Text(
-                                  Lang.sel(isHr, 'Fallback Lot', 'Rezervno')),
-                              subtitle: Text(fallbackId),
-                              onTap: () {
-                                ref
-                                    .read(selectedLocationIdProvider.notifier)
-                                    .state = fallbackId;
-                                () async {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                    final isDid =
-                                        RegExp(r'^\d{5}$').hasMatch(fallbackId);
-                                    if (isDid) {
-                                      await prefs.setString(
-                                          'selected_location_display_id',
-                                          fallbackId);
-                                    }
-                                }();
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ...locs.map((l) => ListTile(
-                                leading: const Icon(Icons.location_on),
-                                title: Text(l['name']),
-                                subtitle: Text(l['display_id']),
-                                onTap: () {
-                                  final did =
-                                      (l['display_id'] ?? '').toString();
-                                  ref
-                                      .read(selectedLocationIdProvider.notifier)
-                                      .state = did;
-                                  () async {
-                                    final prefs =
-                                        await SharedPreferences.getInstance();
-                                    if (did.isNotEmpty) {
-                                      await prefs.setString(
-                                          'selected_location_display_id', did);
-                                    }
-                                  }();
-                                  Navigator.pop(context);
-                                },
-                              )),
-                        ],
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -690,17 +704,27 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                         size: 14, color: Colors.white),
                                   ),
                                   title: Text(
-                                    profile['full_name'] ??
-                                        profile['name'] ??
-                                        profile['email'] ??
-                                        (profile['role'] ?? 'User'),
+                                    (() {
+                                      final roleKey =
+                                          (profile['role'] ?? 'user')
+                                              .toString();
+                                      final roleLabel = {
+                                            'super_admin': 'Super Admin',
+                                            'admin': 'Admin',
+                                            'manager': 'Manager',
+                                            'officer': 'Officer',
+                                          }[roleKey] ??
+                                          'User';
+                                      return roleLabel;
+                                    })(),
                                     style: GoogleFonts.inter(
                                         color: Colors.white,
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold),
                                   ),
                                   subtitle: Text(
-                                    profile['email'] ?? 'admin@payparq.ai',
+                                    (profile['email'] ?? 'admin@payparq.ai')
+                                        .toString(),
                                     style: GoogleFonts.inter(
                                         color: Colors.white60,
                                         fontSize: 12,
@@ -813,13 +837,26 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
             final validLocs =
                 locs.where((l) => l['display_id'] != null).toList();
+            final Map<String, Map<String, dynamic>> byDid = {};
+            for (final l in validLocs) {
+              final did = (l['display_id'] ?? '').toString();
+              if (did.isNotEmpty) {
+                byDid[did] = l;
+              }
+            }
+            final uniqueLocs = byDid.values.toList();
+            final displayIds = byDid.keys.toSet();
+            final currentValue =
+                (selectedLocId != null && displayIds.contains(selectedLocId))
+                    ? selectedLocId
+                    : null;
 
             return Theme(
               data: Theme.of(context).copyWith(
                 canvasColor: AppTheme.headerBackground,
               ),
               child: DropdownButton<String>(
-                value: selectedLocId,
+                value: currentValue,
                 underline: const SizedBox(),
                 dropdownColor: AppTheme.headerBackground,
                 iconEnabledColor: Colors.white70,
@@ -828,11 +865,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                     ref.read(selectedLocationIdProvider.notifier).state = id;
                   }
                 },
-                items: validLocs
+                items: uniqueLocs
                     .map((l) => DropdownMenuItem(
-                          value: l['display_id'] as String,
+                          value: (l['display_id'] ?? '').toString(),
                           child: Text(
-                            '${l['name']} (${l['display_id']})',
+                            '${l['name']} (${(l['display_id'] ?? '').toString()})',
                             style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,

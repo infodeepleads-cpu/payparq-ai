@@ -76,7 +76,7 @@ class CasesHeader extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (selectedLocId != null)
+              if (selectedLocId != null && isDesktop)
                 Row(
                   children: [
                     _HeaderActionButton(

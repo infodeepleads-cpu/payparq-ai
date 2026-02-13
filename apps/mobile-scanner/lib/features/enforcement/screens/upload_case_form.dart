@@ -298,26 +298,30 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
               SizedBox(
                 width: 300,
                 height: 52,
-                child: ElevatedButton(
-                  onPressed: _isUploading ? null : _submitCase,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                  ),
-                  child: _isUploading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : Text(
-                          Lang.sel(isHr, 'Issue Citation', 'Izdaj kaznu'),
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                ),
+                child: Consumer(builder: (context, ref, _) {
+                  final isSubmitting = ref.watch(isSubmittingCaseProvider);
+                  return ElevatedButton(
+                    onPressed:
+                        (_isUploading || isSubmitting) ? null : _submitCase,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                    ),
+                    child: (_isUploading || isSubmitting)
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            Lang.sel(isHr, 'Issue Citation', 'Izdaj kaznu'),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  );
+                }),
               ),
             ],
           ),

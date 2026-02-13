@@ -351,30 +351,38 @@ final availableLocationsProvider =
       }
       final List<Map<String, dynamic>> locations =
           List<Map<String, dynamic>>.from(data);
+      final Map<String, Map<String, dynamic>> byDid = {};
+      for (final l in locations) {
+        final did = (l['display_id'] ?? '').toString();
+        if (did.isNotEmpty) {
+          byDid[did] = l;
+        }
+      }
+      final uniqueLocations = byDid.values.toList();
 
       // Restore persisted selection or auto-select first available for all roles
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final bool selectionInvalid = currentSelectedId != null &&
-          !locations.any((l) => l['display_id'] == currentSelectedId);
+          !uniqueLocations.any((l) => l['display_id'] == currentSelectedId);
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString('selected_location_display_id');
       final bool savedValid =
           (savedId != null) && RegExp(r'^\d{5}$').hasMatch(savedId);
       if (savedValid &&
-          locations.any((l) => l['display_id']?.toString() == savedId)) {
+          uniqueLocations.any((l) => l['display_id']?.toString() == savedId)) {
         if (currentSelectedId != savedId) {
           ref.read(selectedLocationIdProvider.notifier).state = savedId;
         }
-      } else if (locations.isNotEmpty &&
+      } else if (uniqueLocations.isNotEmpty &&
           (currentSelectedId == null || selectionInvalid)) {
-        final firstId = locations.first['display_id']?.toString();
+        final firstId = uniqueLocations.first['display_id']?.toString();
         if (firstId != null && firstId.isNotEmpty) {
           ref.read(selectedLocationIdProvider.notifier).state = firstId;
           await prefs.setString('selected_location_display_id', firstId);
         }
       }
 
-      if (!controller.isClosed) controller.add(locations);
+      if (!controller.isClosed) controller.add(uniqueLocations);
     } catch (e) {
       debugPrint('Locations Fetch Error: $e');
       if (!controller.isClosed) controller.add([]);

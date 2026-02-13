@@ -80,6 +80,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: primary,
+        actionTextColor: textOnDark,
         contentTextStyle: kIsWeb
             ? const TextStyle(
                 color: textOnDark, fontSize: 14, fontWeight: FontWeight.w500)

@@ -520,19 +520,27 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       data: (violations) {
         // Deduplicate: keep optimistic item unless the SAME record (by evidence + timestamp) arrived
         final optimisticItems = optimisticViolations.where((ov) {
-          final ovPlate = ov['plate'];
           final ovEvidence = ov['evidence_r2_url'];
-          final ovIssuedAt = ov['issued_at'];
-          return !violations.any((v) =>
-              v['plate'] == ovPlate &&
-              v['evidence_r2_url'] == ovEvidence &&
-              v['issued_at'] == ovIssuedAt);
+          if (ovEvidence == null || ovEvidence.toString().isEmpty) {
+            return true;
+          }
+          return !violations.any(
+              (v) => (v['evidence_r2_url'] ?? '').toString() == ovEvidence);
         }).toList();
 
         var allViolations = [
           ...optimisticItems,
           ...violations,
         ];
+        final Set<String> seen = {};
+        allViolations = allViolations.where((v) {
+          final id = (v['id'] ?? '').toString();
+          final evidence = (v['evidence_r2_url'] ?? '').toString();
+          final key = id.isNotEmpty ? 'id:$id' : 'k:$evidence';
+          if (seen.contains(key)) return false;
+          seen.add(key);
+          return true;
+        }).toList();
         allViolations = allViolations.where((v) {
           final vId = v['id']?.toString();
           if (vId == null) return true;

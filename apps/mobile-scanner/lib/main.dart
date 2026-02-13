@@ -57,6 +57,7 @@ class _BootAppState extends State<BootApp> {
     final stopwatch = Stopwatch()..start();
 
     try {
+      AppConfig.validate();
       if (kReleaseMode) {
         if (!(AppConfig.env == 'prod' && AppConfig.productionGuard == '1')) {
           throw Exception('Invalid production configuration');

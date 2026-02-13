@@ -92,6 +92,8 @@ class LocationsController {
       throw const AppError('Location created without display ID');
     }
     _ref.read(selectedLocationIdProvider.notifier).state = newDisplayId;
+    // tiny delay to let the dialog pop before streams rebuild
+    await Future.delayed(const Duration(milliseconds: 50));
     _ref.invalidate(locationsStreamProvider);
     _ref.invalidate(availableLocationsProvider);
     return newDisplayId.toString();

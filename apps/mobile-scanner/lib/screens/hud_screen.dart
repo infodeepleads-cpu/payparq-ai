@@ -763,7 +763,36 @@ class _HudScreenState extends ConsumerState<HudScreen>
         _isProcessing = true;
       });
 
-      final image = await _controller!.takePicture();
+      XFile? image;
+      try {
+        image = await _controller!.takePicture().timeout(
+              const Duration(seconds: 6),
+              onTimeout: () =>
+                  throw TimeoutException('Camera capture timed out'),
+            );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Camera error: $e')),
+          );
+        }
+      }
+
+      if (image == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Capture canceled or failed')),
+          );
+        }
+        setState(() {
+          _isProcessing = false;
+          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
+              "SCANNING...", "SKENIRANJE...");
+          _statusColor = Colors.white;
+        });
+        return;
+      }
+
       final imageBytes = await image.readAsBytes();
       final initialPlate = _detectedPlate ?? _currentTempId;
 

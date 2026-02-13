@@ -91,7 +91,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         ),
       ),
       data: (profile) {
-        final locationId = profile?['location_id'];
+        final locationId =
+            ref.watch(selectedLocationIdProvider) ?? profile?['location_id'];
         final role = profile?['role'];
         final isSuperAdmin = role == 'super_admin';
         final isAdmin = role == 'admin';

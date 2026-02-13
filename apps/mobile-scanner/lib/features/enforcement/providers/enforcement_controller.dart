@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../logic/providers/dashboard_providers.dart';
 import '../../../logic/providers/auth_providers.dart';
@@ -16,6 +17,8 @@ final enforcementControllerProvider = Provider<EnforcementController>((ref) {
   final repo = ref.watch(enforcementRepositoryProvider);
   return EnforcementController(ref, repo);
 });
+
+final isSubmittingCaseProvider = StateProvider<bool>((ref) => false);
 
 class EnforcementController {
   final Ref _ref;
@@ -117,6 +120,8 @@ class EnforcementController {
     required Uint8List bytes,
     required String issuerRole,
   }) async {
+    if (_ref.read(isSubmittingCaseProvider)) return;
+    _ref.read(isSubmittingCaseProvider.notifier).state = true;
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
     final issuedAt = DateTime.now().toIso8601String();
     final uuidRegex = RegExp(
@@ -162,10 +167,15 @@ class EnforcementController {
       'location_display_id': displayId,
     };
     try {
-      _ref.read(optimisticViolationsProvider.notifier).update((state) => [
-            uiRecord,
-            ...state,
-          ]);
+      // optimistic insert with dedupe by unique key (plate + filename)
+      _ref.read(optimisticViolationsProvider.notifier).update((state) {
+        final key = '${plate}_$fileName';
+        final filtered = state
+            .where((v) =>
+                '${v['plate'] ?? ''}_${v['evidence_r2_url'] ?? ''}' != key)
+            .toList();
+        return [uiRecord, ...filtered];
+      });
       await Future.wait([
         _repo.uploadEvidence(bytes, fileName),
         _repo.insertViolation(dbRecord),
@@ -178,6 +188,8 @@ class EnforcementController {
               (v['evidence_r2_url'] ?? '') != fileName)
           .toList());
       throw AppError('Case upload failed: $e', cause: e);
+    } finally {
+      _ref.read(isSubmittingCaseProvider.notifier).state = false;
     }
   }
 

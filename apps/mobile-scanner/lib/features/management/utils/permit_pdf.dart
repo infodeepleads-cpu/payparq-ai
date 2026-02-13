@@ -53,23 +53,25 @@ Future<Uint8List> buildPermitPdf(Map<String, dynamic> permit) async {
                       ),
                     ],
                   ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(10),
-                    decoration: pw.BoxDecoration(
-                      color: pdf.PdfColors.white,
-                      shape: pw.BoxShape.circle,
-                      border:
-                          pw.Border.all(color: pdf.PdfColors.black, width: 1),
-                    ),
-                    child: pw.Text(
-                      type == 'subscription' ? 'S' : 'P',
-                      style: pw.TextStyle(
-                        color: pdf.PdfColors.black,
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  contactEmail.isNotEmpty
+                      ? pw.Container(
+                          padding: const pw.EdgeInsets.all(10),
+                          decoration: pw.BoxDecoration(
+                            color: pdf.PdfColors.white,
+                            shape: pw.BoxShape.circle,
+                            border: pw.Border.all(
+                                color: pdf.PdfColors.black, width: 1),
+                          ),
+                          child: pw.Text(
+                            type == 'subscription' ? 'S' : 'P',
+                            style: pw.TextStyle(
+                              color: pdf.PdfColors.black,
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : pw.SizedBox(),
                 ],
               ),
               pw.SizedBox(height: 16),
