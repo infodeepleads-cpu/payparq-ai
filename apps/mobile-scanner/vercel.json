@@ -1,7 +1,7 @@
 {
-  "buildCommand": "flutter build web --release",
+  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable $HOME/.flutter && export PATH=\"$HOME/.flutter/bin:$PATH\" && flutter config --enable-web && flutter pub get && flutter build web --release",
   "outputDirectory": "build/web",
-  "installCommand": "echo 'Using Flutter from container'",
+  "installCommand": "echo 'Installing Flutter...'",
   "headers": [
     {
       "source": "/version.json",
