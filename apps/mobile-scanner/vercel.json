@@ -1,6 +1,6 @@
 {
-  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable $HOME/.flutter && export PATH=\"$HOME/.flutter/bin:$PATH\" && flutter config --enable-web && flutter pub get && flutter build web --release",
-  "outputDirectory": "build/web",
+  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable $HOME/.flutter && export PATH=\"$HOME/.flutter/bin:$PATH\" && cd apps/mobile-scanner && flutter config --enable-web && flutter pub get && flutter build web --release && echo \"{\\\"sha\\\": \\\"$VERCEL_GIT_COMMIT_SHA\\\"}\" > build/web/version.json",
+  "outputDirectory": "apps/mobile-scanner/build/web",
   "installCommand": "echo 'Installing Flutter...'",
   "headers": [
     {
