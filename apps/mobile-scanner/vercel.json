@@ -1,5 +1,5 @@
 {
-  "buildCommand": "git clone https://github.com/flutter/flutter.git -b stable $HOME/.flutter && export PATH=\"$HOME/.flutter/bin:$PATH\" && cd apps/mobile-scanner && flutter config --enable-web && flutter pub get && flutter build web --release && echo \"{\\\"sha\\\": \\\"$VERCEL_GIT_COMMIT_SHA\\\"}\" > build/web/version.json",
+  "buildCommand": "bash apps/mobile-scanner/build.sh",
   "outputDirectory": "apps/mobile-scanner/build/web",
   "installCommand": "echo 'Installing Flutter...'",
   "headers": [
