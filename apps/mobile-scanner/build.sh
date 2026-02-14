@@ -18,14 +18,16 @@ flutter --version
 echo "=== Flutter doctor (short) ==="
 flutter doctor -v || true
 
+echo "=== NUCLEAR: wipe every possible cache ==="
+rm -rf build/ .dart_tool/ .flutter-plugins/ .flutter-plugins-dependencies/
 echo "=== Enable web support ==="
 flutter config --enable-web
 echo "=== Cleaning previous build artifacts ==="
 flutter clean
 echo "=== Fetching pub dependencies ==="
 flutter pub get
-echo "=== Building Flutter web (release) ==="
-flutter build web --release
+echo "=== Building Flutter web (release) with verbose output ==="
+flutter build web --release --verbose
 
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-unknown}"
 mkdir -p build/web
