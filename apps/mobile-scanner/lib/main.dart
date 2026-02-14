@@ -37,7 +37,7 @@ class _BootAppState extends State<BootApp> {
   }
 
   Future<void> _logBuildInfo() async {
-    final env = kReleaseMode ? 'prod' : (kProfileMode ? 'profile' : 'debug');
+    const env = String.fromEnvironment('ENV', defaultValue: 'dev');
     final info = await PackageInfo.fromPlatform();
     final version = '${info.version}+${info.buildNumber}';
     final buildDate =
