@@ -23,5 +23,6 @@
     *   To choose a specific device, run `flutter devices` to list them, then `flutter run -d <device_id>`.
 
 ## Troubleshooting
+
 *   **"flutter not recognized"**: Ensure Flutter is added to your System PATH variables.
 *   **Supabase Connection**: Ensure `lib/main.dart` has the correct `url` and `anonKey` (already configured).
