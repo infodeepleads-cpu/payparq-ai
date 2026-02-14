@@ -20,6 +20,8 @@ flutter doctor -v || true
 
 echo "=== Enable web support ==="
 flutter config --enable-web
+echo "=== Cleaning previous build artifacts ==="
+flutter clean
 echo "=== Fetching pub dependencies ==="
 flutter pub get
 echo "=== Building Flutter web (release) ==="
