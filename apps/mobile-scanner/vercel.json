@@ -58,5 +58,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json).*)",
+      "destination": "/"
+    }
   ]
 }
