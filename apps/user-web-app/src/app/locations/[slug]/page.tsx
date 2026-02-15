@@ -58,7 +58,23 @@ async function fetchHub(slug: string) {
 }
 
 export default async function LocationPage(props: unknown) {
-  const { params } = props as { params: { slug: string } };
+  const { params } = props as { params?: { slug?: string } };
+  if (!params?.slug || typeof params.slug !== "string") {
+    return (
+      <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
+        <SiteHeader />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-white/70">Location not found</p>
+            <Link href="/locations" className="text-xs font-semibold underline">
+              Back to Locations
+            </Link>
+          </div>
+        </main>
+        <FooterBrand />
+      </div>
+    );
+  }
   const data = await fetchHub(params.slug);
   if (!data) {
     return (
