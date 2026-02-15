@@ -349,6 +349,7 @@ export default function Locations() {
                         <div>
                           <p className="font-semibold">{hub.name}</p>
                           <p className="text-white/60">{hub.label}</p>
+                          <p className="text-white/50 text-[11px]">ID: {hub.id}</p>
                         </div>
                         <Link
                           href={hub.href}

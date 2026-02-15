@@ -9,11 +9,12 @@ export async function GET() {
       .contains('verification_metadata', { hub_enabled: true })
       .limit(200);
     if (!locations || locations.length === 0) {
-      const fallback = await supabaseAdmin
+      const { data: alt } = await supabaseAdmin
         .from('locations')
         .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
+        .filter('verification_metadata->>hub_enabled', 'eq', 'true')
         .limit(200);
-      locations = fallback.data || [];
+      locations = alt || [];
     }
 
     type DbLocation = {
