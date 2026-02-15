@@ -1,0 +1,38 @@
+{
+  "name": "PayParq Tactical Theme",
+  "colors": {
+    "primary": "#6D28D9",
+    "primary_hover": "#5B21B6",
+    "background": "#1E1B4B",
+    "surface": "#312E81",
+    "surface_hover": "#3730A3",
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#E0E7FF",
+      "muted": "#818CF8"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    }
+  },
+  "typography": {
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "weights": {
+      "regular": 400,
+      "medium": 500,
+      "bold": 700
+    }
+  },
+  "borderRadius": {
+    "sm": "0.25rem",
+    "md": "0.375rem",
+    "lg": "0.5rem",
+    "full": "9999px"
+  },
+  "spacing": {
+    "unit": 4
+  }
+}
