@@ -14,6 +14,7 @@ type Hub = {
   lat: number;
   lng: number;
   location_id?: string;
+  priceLabel?: string;
 };
 
 const blackLogoPinIcon = new L.DivIcon({
@@ -64,9 +65,9 @@ export default function CroatiaMap({ hubs }: { hubs: ReadonlyArray<Hub> }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {hubs.map(hub => {
-          const isAirport =
-            hub.label.toLowerCase().includes('airport') || hub.name.toLowerCase().includes('airport');
-          const premiumPriceLabel = isAirport ? '$0.37' : '$0.39';
+          const hasCoords = typeof hub.lat === 'number' && typeof hub.lng === 'number' && hub.lat !== 0 && hub.lng !== 0;
+          if (!hasCoords) return null;
+          const premiumPriceLabel = hub.priceLabel || '€';
           return (
             <Marker
               key={hub.id}

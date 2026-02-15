@@ -37,12 +37,28 @@ async function fetchHub(slug: string) {
     hub = byId?.[0] || null;
   } else {
     const displayId = toDisplayId(slugPart);
-    const { data: byDisplay } = await supabaseAdmin
+    const { data: byDisplayExact } = await supabaseAdmin
       .from("locations")
       .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
       .eq("display_id", displayId)
       .limit(1);
-    hub = byDisplay?.[0] || null;
+    hub = byDisplayExact?.[0] || null;
+    if (!hub) {
+      const { data: byDisplayLike } = await supabaseAdmin
+        .from("locations")
+        .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+        .ilike("display_id", displayId)
+        .limit(1);
+      hub = byDisplayLike?.[0] || null;
+    }
+    if (!hub) {
+      const { data: byName } = await supabaseAdmin
+        .from("locations")
+        .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+        .ilike("name", `%${displayId}%`)
+        .limit(1);
+      hub = byName?.[0] || null;
+    }
   }
   if (!hub) return null;
   const { data: pricing } = await supabaseAdmin

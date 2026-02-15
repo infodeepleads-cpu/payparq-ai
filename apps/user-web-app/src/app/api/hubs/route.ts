@@ -3,11 +3,18 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET() {
   try {
-    const { data: locations } = await supabaseAdmin
+    let { data: locations } = await supabaseAdmin
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
       .contains('verification_metadata', { hub_enabled: true })
       .limit(200);
+    if (!locations || locations.length === 0) {
+      const fallback = await supabaseAdmin
+        .from('locations')
+        .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
+        .limit(200);
+      locations = fallback.data || [];
+    }
 
     type DbLocation = {
       id: string;
@@ -52,7 +59,7 @@ export async function GET() {
             if (match) priceLabel = `€${match[1]}/hr`;
           }
         } catch {}
-        return { id: displayId || loc.id, name, label, href, lat, lng, priceLabel };
+        return { id: loc.id, name, label, href, lat, lng, priceLabel };
       })
     );
 
