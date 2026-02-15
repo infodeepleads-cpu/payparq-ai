@@ -32,14 +32,17 @@ flutter build web --release --verbose \
   --dart-define=ENV="${ENV:-prod}" \
   --dart-define=PROD_GUARD="${PROD_GUARD:-1}" \
   --dart-define=BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
-  --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" \
+  --dart-define=SUPABASE_URL="https://iafjygownkhedereaoxw.supabase.co" \
+  --dart-define=SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhZmp5Z293bmtoZWRlcmVhb3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDA3ODgsImV4cCI6MjA4MzcxNjc4OH0.O4fylsFOmrxwZj9MeASIypOxJdQROLjTwUq8KZewFfg" \
   --dart-define=SUPABASE_FUNCTIONS_URL="${SUPABASE_FUNCTIONS_URL:-}" \
   --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL:-https://mobile-scanner.vercel.app}"
 
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
+BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+DEPLOY_ID="$(date +%s)-${COMMIT_SHA:0:7}"
 mkdir -p build/web
-echo "{\"sha\":\"$COMMIT_SHA\"}" > build/web/version.json
+echo "{\"sha\":\"$COMMIT_SHA\",\"timestamp\":\"$BUILD_TIMESTAMP\",\"deployId\":\"$DEPLOY_ID\",\"version\":\"1.0.5+6\"}" > build/web/version.json
+echo "=== Build metadata: SHA=$COMMIT_SHA, Timestamp=$BUILD_TIMESTAMP, DeployID=$DEPLOY_ID ==="
 cat > build/web/_headers <<'EOF'
 /
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0

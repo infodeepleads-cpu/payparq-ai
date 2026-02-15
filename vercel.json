@@ -2,6 +2,8 @@
   "buildCommand": "chmod +x build.sh && ./build.sh",
   "outputDirectory": "build/web",
   "installCommand": "echo 'Installing Flutter...'",
+  "framework": null,
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
   "headers": [
     {
       "source": "/",
