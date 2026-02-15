@@ -1,0 +1,55 @@
+name: Build Android APK and Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          channel: 'stable'
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Build Android APK (release, debug-signed)
+        working-directory: android
+        run: |
+          cd ..
+          flutter build apk --release
+
+      - name: Locate APK
+        id: locate_apk
+        run: |
+          APK_PATH=$(echo build/app/outputs/flutter-apk/app-release.apk)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: ${{ steps.locate_apk.outputs.apk_path }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.locate_apk.outputs.apk_path }}
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

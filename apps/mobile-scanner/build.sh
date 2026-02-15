@@ -22,6 +22,8 @@ echo "=== NUCLEAR: wipe every possible cache ==="
 rm -rf build/ .dart_tool/ .flutter-plugins/ .flutter-plugins-dependencies/
 echo "=== Enable web support ==="
 flutter config --enable-web
+echo "=== Configuring web platform ==="
+flutter create . --platforms web || true
 echo "=== Cleaning previous build artifacts ==="
 flutter clean
 echo "=== Fetching pub dependencies ==="
@@ -35,7 +37,7 @@ flutter build web --release --verbose \
   --dart-define=SUPABASE_URL="${SUPABASE_URL:-}" \
   --dart-define=SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" \
   --dart-define=SUPABASE_FUNCTIONS_URL="${SUPABASE_FUNCTIONS_URL:-}" \
-  --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL:-https://mobile-scanner.vercel.app}"
+  --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL:-https://mobile-scanner-flax-static.vercel.app}"
 
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
 mkdir -p build/web
