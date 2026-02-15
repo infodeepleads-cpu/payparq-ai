@@ -40,7 +40,7 @@ async function fetchHub(slug: string) {
     const { data: byDisplay } = await supabaseAdmin
       .from("locations")
       .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-      .ilike("display_id", displayId)
+      .eq("display_id", displayId)
       .limit(1);
     hub = byDisplay?.[0] || null;
   }
