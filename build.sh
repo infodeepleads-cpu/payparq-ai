@@ -52,10 +52,27 @@ cat > build/web/_headers <<'EOF'
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /version.json
   Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/favicon.png
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/icons/*
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /*.js
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 /*.map
   Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+/flutter_service_worker.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
 EOF
+
+# Add cache-busting query parameters to manifest and favicon in index.html
+if [ -f build/web/index.html ]; then
+  # Add version query parameter to manifest.json and favicon
+  sed -i.bak "s|href=\"manifest.json\"|href=\"manifest.json?v=${DEPLOY_ID}\"|g" build/web/index.html
+  sed -i.bak "s|href=\"favicon.png\"|href=\"favicon.png?v=${DEPLOY_ID}\"|g" build/web/index.html
+  sed -i.bak "s|href=\"icons/Icon-192.png\"|href=\"icons/Icon-192.png?v=${DEPLOY_ID}\"|g" build/web/index.html
+  rm -f build/web/index.html.bak
+fi
 
 echo "=== Built Flutter web at build/web (sha: $COMMIT_SHA) ==="
