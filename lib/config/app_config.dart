@@ -18,7 +18,7 @@ class AppConfig {
       String.fromEnvironment('PROD_GUARD', defaultValue: '0');
   static const supabaseRedirectUrl = String.fromEnvironment(
       'SUPABASE_REDIRECT_URL',
-      defaultValue: 'https://mobile-scanner.vercel.app');
+      defaultValue: 'https://mobile-scanner-flax-static.vercel.app');
 
   static void validate() {
     if (supabaseUrl.isEmpty) {

@@ -35,7 +35,7 @@ flutter build web --release --verbose \
   --dart-define=SUPABASE_URL="https://iafjygownkhedereaoxw.supabase.co" \
   --dart-define=SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhZmp5Z293bmtoZWRlcmVhb3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDA3ODgsImV4cCI6MjA4MzcxNjc4OH0.O4fylsFOmrxwZj9MeASIypOxJdQROLjTwUq8KZewFfg" \
   --dart-define=SUPABASE_FUNCTIONS_URL="${SUPABASE_FUNCTIONS_URL:-}" \
-  --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL:-https://mobile-scanner.vercel.app}"
+  --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL:-https://mobile-scanner-flax-static.vercel.app}"
 
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
 BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

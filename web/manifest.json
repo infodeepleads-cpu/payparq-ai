@@ -1,11 +1,11 @@
 {
-    "name": "payparq.ai",
-    "short_name": "payparq.ai",
+    "name": "payparq_scanner",
+    "short_name": "payparq_scanner",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#000000",
-    "theme_color": "#000000",
-    "description": "payparq.ai Professional Enforcement Systems",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
