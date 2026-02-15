@@ -89,9 +89,9 @@ export default async function LocationPage(props: unknown) {
                   </span>
                 </div>
                 <div className="text-xs text-white/70">
-                  <span>Lat {Number(hub.latitude).toFixed(5)}</span>
+                  <span>Lat {typeof hub.latitude === 'number' ? hub.latitude.toFixed(5) : '0.00000'}</span>
                   <span className="mx-2">•</span>
-                  <span>Lng {Number(hub.longitude).toFixed(5)}</span>
+                  <span>Lng {typeof hub.longitude === 'number' ? hub.longitude.toFixed(5) : '0.00000'}</span>
                 </div>
               </div>
               <div className="relative aspect-[5/3] rounded-3xl overflow-hidden border border-white/10 bg-white">
