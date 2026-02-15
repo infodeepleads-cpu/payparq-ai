@@ -22,6 +22,8 @@ echo "=== NUCLEAR: wipe every possible cache ==="
 rm -rf build/ .dart_tool/ .flutter-plugins/ .flutter-plugins-dependencies/
 echo "=== Enable web support ==="
 flutter config --enable-web
+echo "=== Configuring web platform ==="
+flutter create . --platforms web || true
 echo "=== Cleaning previous build artifacts ==="
 flutter clean
 echo "=== Fetching pub dependencies ==="
