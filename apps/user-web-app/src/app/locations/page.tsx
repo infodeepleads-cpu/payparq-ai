@@ -8,87 +8,14 @@ import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 
-const HUBS = [
-  {
-    id: "split",
-    name: "Split",
-    label: "City hub",
-    href: "/locations/split",
-    lat: 43.5081,
-    lng: 16.4402,
-    location_id: "split hub",
-  },
-  {
-    id: "split-airport",
-    name: "Split Airport",
-    label: "Airport hub",
-    href: "/locations/parkng-split-airport",
-    lat: 43.5389,
-    lng: 16.2976,
-    location_id: "parkng split airport",
-  },
-  {
-    id: "trogir",
-    name: "Trogir",
-    label: "Coastal hub",
-    href: "/locations/trogir",
-    lat: 43.5179,
-    lng: 16.2518,
-    location_id: "trogir hub",
-  },
-  {
-    id: "makarska",
-    name: "Makarska",
-    label: "Coastal hub",
-    href: "/locations/makarska",
-    lat: 43.2961,
-    lng: 17.0179,
-    location_id: "makarska hub",
-  },
-  {
-    id: "baska-voda",
-    name: "Baška Voda",
-    label: "Coastal hub",
-    href: "/locations/baska-voda",
-    lat: 43.3566,
-    lng: 16.9495,
-    location_id: "baska voda hub",
-  },
-  {
-    id: "brela",
-    name: "Brela",
-    label: "Coastal hub",
-    href: "/locations/brela",
-    lat: 43.3687,
-    lng: 16.9401,
-    location_id: "brela hub",
-  },
-  {
-    id: "dubrovnik",
-    name: "Dubrovnik",
-    label: "Southern hub",
-    href: "/locations/dubrovnik",
-    lat: 42.6507,
-    lng: 18.0944,
-    location_id: "dubrovnik hub",
-  },
-  {
-    id: "zagreb-airport",
-    name: "Zagreb Airport",
-    label: "Airport hub",
-    href: "/locations/zagreb-airport",
-    lat: 45.7383,
-    lng: 16.061,
-    location_id: "zagreb airport",
-  },
-] as const;
+const HUBS = [] as const;
 
 export default function Locations() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   // BOUNDS not needed with Leaflet-based map
-  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>(HUBS as unknown as Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>);
+  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>([]);
   useEffect(() => {
     let mounted = true;
     fetch('/api/hubs')
@@ -405,7 +332,17 @@ export default function Locations() {
                   </p>
                 </div>
                 <ul className="space-y-2 text-[12px] text-white/80">
-                  {hubs.map((hub) => {
+                  {hubs.length === 0 ? (
+                    <li className="flex items-center justify-between gap-3">
+                      <div className="animate-pulse">
+                        <p className="font-semibold bg-white/20 h-4 w-32 rounded" />
+                        <p className="text-white/60 bg-white/10 h-3 w-24 rounded mt-2" />
+                      </div>
+                      <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-semibold border border-white/30">
+                        Loading
+                      </div>
+                    </li>
+                  ) : hubs.map((hub) => {
                     const premiumPriceLabel = hub.priceLabel || "€";
                     return (
                       <li key={hub.id} className="flex items-center justify-between gap-3">
