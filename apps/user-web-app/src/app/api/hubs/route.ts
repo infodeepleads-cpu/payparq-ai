@@ -3,19 +3,13 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET() {
   try {
-    let { data: locations } = await supabaseAdmin
+    const { data: locations } = await supabaseAdmin
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
-      .contains('verification_metadata', { hub_enabled: true })
+      .eq('verification_metadata->>hub_enabled', 'true')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
       .limit(200);
-    if (!locations || locations.length === 0) {
-      const { data: alt } = await supabaseAdmin
-        .from('locations')
-        .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
-        .filter('verification_metadata->>hub_enabled', 'eq', 'true')
-        .limit(200);
-      locations = alt || [];
-    }
 
     type DbLocation = {
       id: string;
