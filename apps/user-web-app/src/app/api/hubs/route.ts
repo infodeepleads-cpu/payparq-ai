@@ -34,8 +34,8 @@ export async function GET() {
         const name = String(loc.name || '');
         const label = 'PayParq hub';
         const displayId = String(loc.display_id || '');
-        const slug = displayId.replace(/\s+/g, '-').toLowerCase();
-        const href = `/locations/${slug}`;
+        const base = displayId ? displayId.replace(/\s+/g, '-').toLowerCase() : loc.id;
+        const href = `/locations/${base}--${loc.id}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude! : 0;
         const lng = typeof loc.longitude === 'number' ? loc.longitude! : 0;
         let priceLabel = '€';

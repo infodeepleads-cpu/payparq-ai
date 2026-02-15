@@ -4,11 +4,15 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 
-function toDisplayId(slug: string) {
-  return slug.replace(/-/g, " ").toLowerCase();
+function toDisplayId(slugPart: string) {
+  return slugPart.replace(/-/g, " ").toLowerCase();
 }
 function toSlug(displayId: string) {
   return displayId.replace(/\s+/g, "-").toLowerCase();
+}
+function parseSlug(raw: string) {
+  const [slugPart, idPart] = raw.split("--");
+  return { slugPart, idPart: idPart && idPart.length > 0 ? idPart : undefined };
 }
 function isValidImageUrl(url: unknown) {
   if (typeof url !== "string" || url.length === 0) return false;
@@ -22,13 +26,24 @@ function isValidImageUrl(url: unknown) {
 }
 
 async function fetchHub(slug: string) {
-  const displayId = toDisplayId(slug);
-  const { data: locations } = await supabaseAdmin
-    .from("locations")
-    .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-    .ilike("display_id", displayId)
-    .limit(1);
-  const hub = locations?.[0] || null;
+  const { slugPart, idPart } = parseSlug(slug);
+  let hub: any = null;
+  if (idPart) {
+    const { data: byId } = await supabaseAdmin
+      .from("locations")
+      .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+      .eq("id", idPart)
+      .limit(1);
+    hub = byId?.[0] || null;
+  } else {
+    const displayId = toDisplayId(slugPart);
+    const { data: byDisplay } = await supabaseAdmin
+      .from("locations")
+      .select("id,name,label,address,display_id,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+      .ilike("display_id", displayId)
+      .limit(1);
+    hub = byDisplay?.[0] || null;
+  }
   if (!hub) return null;
   const { data: pricing } = await supabaseAdmin
     .from("pricing_settings")
@@ -57,7 +72,8 @@ async function fetchHub(slug: string) {
         return { q: String(obj.q || ""), a: String(obj.a || "") };
       })
     : [];
-  return { hub, priceLabel, hero, faqItems, displayId };
+  const displayIdOut = String(hub.display_id || toDisplayId(slugPart));
+  return { hub, priceLabel, hero, faqItems, displayId: displayIdOut };
 }
 
 export default async function LocationPage(props: unknown) {
@@ -196,16 +212,14 @@ export async function generateStaticParams() {
   try {
     const { data: locations } = await supabaseAdmin
       .from("locations")
-      .select("display_id,verification_metadata")
+      .select("id,display_id,verification_metadata")
       .contains("verification_metadata", { hub_enabled: true })
       .limit(500);
-    const slugs = (locations || [])
-      .map((loc: { display_id?: string }) => {
-        const displayId = String(loc.display_id || "").trim();
-        if (!displayId) return null;
-        return toSlug(displayId);
-      })
-      .filter((x): x is string => Boolean(x));
+    const slugs = (locations || []).map((loc: { id: string; display_id?: string }) => {
+      const displayId = String(loc.display_id || "").trim();
+      const base = displayId ? toSlug(displayId) : loc.id;
+      return `${base}--${loc.id}`;
+    });
     return slugs.map((slug) => ({ slug }));
   } catch {
     return [];
