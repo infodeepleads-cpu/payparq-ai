@@ -26,18 +26,35 @@ export async function GET() {
       href: string;
       lat: number;
       lng: number;
+      priceLabel: string;
     };
 
-    const hubs: Hub[] = (locations || []).map((loc: DbLocation) => {
-      const name = String(loc.name || '');
-      const label = 'PayParq hub';
-      const displayId = String(loc.display_id || '');
-      const slug = displayId.replace(/\s+/g, '-').toLowerCase();
-      const href = `/locations/${slug}`;
-      const lat = typeof loc.latitude === 'number' ? loc.latitude! : 0;
-      const lng = typeof loc.longitude === 'number' ? loc.longitude! : 0;
-      return { id: displayId || loc.id, name, label, href, lat, lng };
-    });
+    const hubs: Hub[] = await Promise.all(
+      (locations || []).map(async (loc: DbLocation) => {
+        const name = String(loc.name || '');
+        const label = 'PayParq hub';
+        const displayId = String(loc.display_id || '');
+        const slug = displayId.replace(/\s+/g, '-').toLowerCase();
+        const href = `/locations/${slug}`;
+        const lat = typeof loc.latitude === 'number' ? loc.latitude! : 0;
+        const lng = typeof loc.longitude === 'number' ? loc.longitude! : 0;
+        let priceLabel = '€';
+        try {
+          const { data: pricing } = await supabaseAdmin
+            .from('pricing_settings')
+            .select('rules_text')
+            .eq('location_id', loc.id)
+            .eq('active', true)
+            .limit(1);
+          const rulesText = pricing?.[0]?.rules_text as string | undefined;
+          if (rulesText) {
+            const match = rulesText.match(/€?\s?(\d+)\s*\/\s*hr/i) || rulesText.match(/\$?\s?(\d+)\s*\/\s*hr/i);
+            if (match) priceLabel = `€${match[1]}/hr`;
+          }
+        } catch {}
+        return { id: displayId || loc.id, name, label, href, lat, lng, priceLabel };
+      })
+    );
 
     return NextResponse.json({ hubs });
   } catch {

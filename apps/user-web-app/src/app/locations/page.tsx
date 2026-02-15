@@ -88,7 +88,7 @@ export default function Locations() {
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   // BOUNDS not needed with Leaflet-based map
-  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number}>>(HUBS as unknown as Array<{id:string; name:string; label:string; href:string; lat:number; lng:number}>);
+  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>(HUBS as unknown as Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>);
   useEffect(() => {
     let mounted = true;
     fetch('/api/hubs')
@@ -406,9 +406,7 @@ export default function Locations() {
                 </div>
                 <ul className="space-y-2 text-[12px] text-white/80">
                   {hubs.map((hub) => {
-                    const isAirport =
-                      hub.label.toLowerCase().includes("airport") || hub.name.toLowerCase().includes("airport");
-                    const premiumPriceLabel = isAirport ? "$0.37" : "$0.39";
+                    const premiumPriceLabel = hub.priceLabel || "€";
                     return (
                       <li key={hub.id} className="flex items-center justify-between gap-3">
                         <div>

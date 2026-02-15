@@ -93,7 +93,7 @@ export default async function LocationPage(props: unknown) {
     );
   }
   const { hub, priceLabel, hero, faqItems, displayId } = data;
-  const checkoutHref = `/api/stripe/checkout?loc=${encodeURIComponent(displayId)}&flow=park_now`;
+  const checkoutHref = `/api/stripe/checkout?loc=${encodeURIComponent(hub.id)}&flow=park_now`;
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -101,7 +101,7 @@ export default async function LocationPage(props: unknown) {
       <main className="flex-1">
         <section className="bg-[#05020A]">
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-10 md:py-16">
-            <div className="grid md:grid-cols-[3fr,2fr] gap-8 items-center">
+            <div className="grid md:grid-cols-[3fr,2fr] gap-8 items-start">
               <div className="space-y-4">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">PayParq hub</p>
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">{hub.name}</h1>
@@ -119,6 +119,29 @@ export default async function LocationPage(props: unknown) {
                   <span className="mx-2">•</span>
                   <span>Lng {typeof hub.longitude === 'number' ? hub.longitude.toFixed(5) : '0.00000'}</span>
                 </div>
+                {typeof hub.latitude === 'number' && typeof hub.longitude === 'number' ? (
+                  <div className="relative aspect-[5/3] rounded-3xl overflow-hidden border border-white/10 bg-white">
+                    <iframe
+                      title="Google Maps"
+                      src={`https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`}
+                      className="w-full h-full"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                ) : null}
+                {Array.isArray(hub.verification_photos) && hub.verification_photos.length > 1 ? (
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {hub.verification_photos.slice(0, 6).map((u: unknown, idx: number) => {
+                      const url = String(u || '');
+                      return isValidImageUrl(url) ? (
+                        <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-white/10 bg-white">
+                          <Image src={url} alt={`${hub.name} photo ${idx + 1}`} fill sizes="(max-width:768px) 50vw, 33vw" className="object-cover" />
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                ) : null}
               </div>
               <div className="relative aspect-[5/3] rounded-3xl overflow-hidden border border-white/10 bg-white">
                 {isValidImageUrl(hero) ? (
