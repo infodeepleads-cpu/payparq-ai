@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
@@ -45,8 +46,15 @@ export async function POST(req: Request) {
 
     console.log(`📦 Data extracted - Plate: ${plate_number}, Location: ${location_id}`);
 
+    // Ensure Supabase client
+    const client = supabaseAdmin ?? supabase;
+    if (!client) {
+      console.warn('Supabase client not configured; skipping DB writes.');
+      return NextResponse.json({ received: true });
+    }
+
     // 2. CHECK IDEMPOTENCY
-    const { data: existingSession, error: fetchError } = await supabaseAdmin
+    const { data: existingSession, error: fetchError } = await client
       .from('parking_sessions')
       .select('id')
       .eq('stripe_session_id', session.id)
@@ -75,7 +83,7 @@ export async function POST(req: Request) {
 
     console.log('🚀 Inserting into Supabase:', insertData);
 
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await client
       .from('parking_sessions')
       .insert(insertData);
 
@@ -90,9 +98,9 @@ export async function POST(req: Request) {
     // 4. UPDATE OCCUPANCY (Optional, best effort)
     try {
         // First check if location exists, if not create a dummy one to avoid error
-        const { data: loc } = await supabaseAdmin.from('locations').select('occupancy').eq('id', location_id).maybeSingle();
+        const { data: loc } = await client.from('locations').select('occupancy').eq('id', location_id).maybeSingle();
         if (loc) {
-             await supabaseAdmin.from('locations').update({ occupancy: (loc.occupancy || 0) + 1 }).eq('id', location_id);
+             await client.from('locations').update({ occupancy: (loc.occupancy || 0) + 1 }).eq('id', location_id);
              console.log('📈 Occupancy updated.');
         } else {
             console.log(`⚠️ Location ${location_id} not found, skipping occupancy update.`);
