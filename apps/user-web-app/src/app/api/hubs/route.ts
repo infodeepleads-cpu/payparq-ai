@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     // Get all hub locations (not just 5)
     const { data: allHubs } = await supabaseAdmin
       .from('locations')
-      .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
+      .select('id,name,address,display_id,latitude,longitude,verification_metadata')
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
