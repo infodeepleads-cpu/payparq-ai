@@ -14,7 +14,7 @@ function parseSlug(raw: string) {
   const [slugPart, idPart] = raw.split("--");
   return { slugPart, idPart: idPart && idPart.length > 0 ? idPart : undefined };
 }
-function isValidImageUrl(url: unknown) {
+function isValidImageUrl(url: unknown): url is string {
   if (typeof url !== "string" || url.length === 0) return false;
   try {
     const u = new URL(url);
@@ -25,9 +25,31 @@ function isValidImageUrl(url: unknown) {
   }
 }
 
-async function fetchHub(slug: string) {
+type HubRec = {
+  id: string;
+  name?: string;
+  label?: string;
+  address?: string;
+  display_id?: string;
+  latitude?: number;
+  longitude?: number;
+  verification_photos?: unknown[];
+  hero_image_url?: string;
+  city?: string;
+  faq_template_key?: string;
+};
+
+type HubData = {
+  hub: HubRec;
+  priceLabel: string;
+  hero: string;
+  faqItems: Array<{ q: string; a: string }>;
+  displayId: string;
+};
+
+async function fetchHub(slug: string): Promise<HubData | null> {
   const { slugPart, idPart } = parseSlug(slug);
-  let hub: any = null;
+  let hub: HubRec | null = null;
   if (idPart) {
     const { data: byId } = await supabaseAdmin
       .from("locations")
@@ -70,8 +92,11 @@ async function fetchHub(slug: string) {
   const rulesText = pricing?.[0]?.rules_text as string | undefined;
   let priceLabel = "€";
   if (rulesText) {
-    const match = rulesText.match(/€?\s?(\d+)\s*\/\s*hr/i) || rulesText.match(/\$?\s?(\d+)\s*\/\s*hr/i);
-    if (match) priceLabel = `€${match[1]}/hr`;
+    const match = rulesText.match(/(?:€|\$)?\s*(\d+(?:[.,]\d+)?)\s*\/\s*(?:hr|hour)/i);
+    if (match) {
+      const v = match[1].replace(',', '.');
+      priceLabel = `€${v}/hr`;
+    }
   }
   const hero = (hub.hero_image_url as string) || (Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "");
   const faqKey = (hub.faq_template_key as string) || "airport-standard";
@@ -127,7 +152,7 @@ export default async function LocationPage(props: unknown) {
       </div>
     );
   }
-  const { hub, priceLabel, hero, faqItems, displayId } = data;
+  const { hub, priceLabel, hero, faqItems } = data;
   const checkoutHref = `/api/stripe/checkout?loc=${encodeURIComponent(hub.id)}&flow=park_now`;
 
   return (
@@ -180,7 +205,7 @@ export default async function LocationPage(props: unknown) {
               </div>
               <div className="relative aspect-[5/3] rounded-3xl overflow-hidden border border-white/10 bg-white">
                 {isValidImageUrl(hero) ? (
-                  <Image src={hero} alt={hub.name} fill priority sizes="100vw" className="object-cover" />
+                  <Image src={hero} alt={hub.name || "Location"} fill priority sizes="100vw" className="object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                     <svg className="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

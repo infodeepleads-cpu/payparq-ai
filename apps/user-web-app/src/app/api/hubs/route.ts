@@ -60,8 +60,11 @@ export async function GET() {
 
           const rulesText = pricing?.[0]?.rules_text as string | undefined;
           if (rulesText) {
-            const match = rulesText.match(/€?\s?(\d+)\s*\/\s*hr/i) || rulesText.match(/\$?\s?(\d+)\s*\/\s*hr/i);
-            if (match) priceLabel = `€${match[1]}/hr`;
+            const match = rulesText.match(/(?:€|\$)?\s*(\d+(?:[.,]\d+)?)\s*\/\s*(?:hr|hour)/i);
+            if (match) {
+              const v = match[1].replace(',', '.');
+              priceLabel = `€${v}/hr`;
+            }
           }
         } catch {}
 

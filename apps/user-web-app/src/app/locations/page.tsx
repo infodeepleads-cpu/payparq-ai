@@ -8,14 +8,15 @@ import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 
-const HUBS = [] as const;
-
 export default function Locations() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   // BOUNDS not needed with Leaflet-based map
   const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const perPage = 8;
   useEffect(() => {
     let mounted = true;
     fetch('/api/hubs')
@@ -31,6 +32,18 @@ export default function Locations() {
       mounted = false;
     };
   }, []);
+  const filtered = hubs.filter((h) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return h.name.toLowerCase().includes(q) || (h.label || "").toLowerCase().includes(q);
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * perPage;
+  const visible = filtered.slice(startIndex, startIndex + perPage);
+  const maxShow = 5;
+  const rangeStart = Math.max(1, Math.min(currentPage - 2, totalPages - (maxShow - 1)));
+  const rangeEnd = Math.min(totalPages, rangeStart + (maxShow - 1));
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -331,6 +344,16 @@ export default function Locations() {
                     open a dedicated page for each partner location.
                   </p>
                 </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search hubs"
+                    className="w-full px-3 py-2 rounded-full bg-white text-black text-[12px] border border-black/20 placeholder:text-black/50"
+                    aria-label="Search hubs"
+                  />
+                </div>
                 <ul className="space-y-2 text-[12px] text-white/80">
                   {hubs.length === 0 ? (
                     <li className="flex items-center justify-between gap-3">
@@ -342,7 +365,7 @@ export default function Locations() {
                         Loading
                       </div>
                     </li>
-                  ) : hubs.map((hub) => {
+                  ) : visible.map((hub) => {
                     const premiumPriceLabel = hub.priceLabel || "€";
                     return (
                       <li key={hub.id} className="flex items-center justify-between gap-3">
@@ -361,6 +384,37 @@ export default function Locations() {
                     );
                   })}
                 </ul>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  {currentPage > 1 && (
+                    <button
+                      className="px-2 py-1 rounded-full bg-white text-black text-[11px] border border-black/20"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Prev
+                    </button>
+                  )}
+                  {Array.from({ length: rangeEnd - rangeStart + 1 }, (_, i) => rangeStart + i).map((n) => (
+                    <button
+                      key={n}
+                      className={`px-2.5 py-1 rounded-full text-[11px] border ${
+                        n === currentPage
+                          ? "bg-white text-black border-black/20"
+                          : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                      }`}
+                      onClick={() => setPage(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  {currentPage < totalPages && (
+                    <button
+                      className="px-2 py-1 rounded-full bg-white text-black text-[11px] border border-black/20"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
