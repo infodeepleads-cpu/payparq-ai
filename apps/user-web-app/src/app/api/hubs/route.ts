@@ -7,8 +7,6 @@ export async function GET() {
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
       .filter('verification_metadata->>hub_enabled', 'eq', 'true')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
       .limit(200);
 
     type DbLocation = {
