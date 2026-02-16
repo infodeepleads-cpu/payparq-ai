@@ -1,13 +1,30 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { data: locations } = await supabaseAdmin
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
       .or('verification_metadata->hub_enabled.eq.true,verification_metadata->>hub_enabled.eq.true')
       .limit(200);
+
+    const url = new URL(req.url);
+    const debug = url.searchParams.get('debug');
+    if (debug === '1') {
+      const hubsDebug = (locations || [])
+        .map((loc) => ({
+          id: loc.id,
+          name: String(loc.name || ''),
+          display_id: String(loc.display_id || ''),
+          hub_enabled:
+            (loc.verification_metadata as Record<string, unknown>)?.hub_enabled ??
+            null,
+          lat: typeof loc.latitude === 'number' ? loc.latitude : null,
+          lng: typeof loc.longitude === 'number' ? loc.longitude : null,
+        }));
+      return NextResponse.json({ hubs_debug: hubsDebug });
+    }
 
     type DbLocation = {
       id: string;
