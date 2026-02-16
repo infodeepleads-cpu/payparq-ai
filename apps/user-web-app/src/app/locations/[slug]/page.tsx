@@ -43,12 +43,32 @@ type HubData = {
 
 async function fetchHub(slug: string): Promise<HubData | null> {
   const hyphenDisplay = String(slug || "").trim().toLowerCase();
+  console.log('[locations/[slug]] fetching canonical_slug:', hyphenDisplay);
   const { data } = await supabaseAdmin
     .from("locations")
     .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
-  const hub: HubRec | null = data?.[0] || null;
+  let hub: HubRec | null = data?.[0] || null;
+  if (!hub) {
+    const parts = hyphenDisplay.split("-");
+    const lastToken = parts[parts.length - 1] || "";
+    console.log("[locations/[slug]] fallback display_id or id:", lastToken);
+    const { data: byDisplay } = await supabaseAdmin
+      .from("locations")
+      .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+      .eq("display_id", lastToken)
+      .limit(1);
+    hub = byDisplay?.[0] || null;
+    if (!hub) {
+      const { data: byId } = await supabaseAdmin
+        .from("locations")
+        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+        .eq("id", lastToken)
+        .limit(1);
+      hub = byId?.[0] || null;
+    }
+  }
   if (!hub) return null;
   const { data: pricing } = await supabaseAdmin
     .from("pricing_settings")
@@ -104,6 +124,7 @@ export default async function LocationPage(props: unknown) {
   }
   const data = await fetchHub(params.slug);
   if (!data) {
+    console.error('[locations/[slug]] not found for canonical_slug:', params.slug);
     return (
       <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
         <SiteHeader />
