@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FooterBrand } from "@/components/FooterBrand";
 import { ChevronDown } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
+import Image from "next/image";
 
 export default function Product() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -302,9 +303,11 @@ export default function Product() {
                     </div>
                   </div>
                   <div className="rounded-2xl overflow-hidden bg-black/80 border border-white/10">
-                    <img
+                    <Image
                       src="/Snimka%20zaslona%202026-01-31%20174200.png"
                       alt="Driver profile and recent parking sessions"
+                      width={800}
+                      height={600}
                       className="w-full h-auto"
                     />
                   </div>
@@ -391,9 +394,11 @@ export default function Product() {
             </div>
             <div className="grid gap-8 md:grid-cols-2">
               <div className="rounded-2xl border border-white/15 bg-white/5 p-6 max-w-sm mx-auto">
-                <img
+                <Image
                   src="/Snimka%20zaslona%202026-01-31%20173642.png"
                   alt="Permits dashboard showing active permits and actions"
+                  width={800}
+                  height={600}
                   className="w-full h-auto rounded-xl mb-4"
                 />
                 <p className="text-sm text-white/80">
@@ -402,9 +407,11 @@ export default function Product() {
                 </p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/5 p-6 max-w-sm mx-auto">
-                <img
+                <Image
                   src="/Snimka%20zaslona%202026-01-31%20174200.png"
                   alt="Home dashboard listing active sessions and driver details"
+                  width={800}
+                  height={600}
                   className="w-full h-auto rounded-xl mb-4"
                 />
                 <p className="text-sm text-white/80">

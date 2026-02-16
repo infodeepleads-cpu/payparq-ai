@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus } from "lucide-react";
@@ -19,24 +19,104 @@ type HubData = {
   verification_metadata?: Record<string, unknown>;
 };
 
-export default function LocationClient({ hub, priceLabel, hero, faqItems }: { 
+export default function LocationClient({ hub, priceLabel, hero, faqItems, travelTime }: { 
   hub: HubData; 
   priceLabel: string; 
   hero: string; 
   faqItems: Array<{ q: string; a: string }>;
+  travelTime: string;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
+  
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  // Set default check-in to now, check-out to 1 hour from now on mount
+  useEffect(() => {
+    const now = new Date();
+    // Adjust to local timezone for datetime-local input
+    const offset = now.getTimezoneOffset() * 60000;
+    const localNow = new Date(now.getTime() - offset);
+    const inStr = localNow.toISOString().slice(0, 16);
+    
+    const later = new Date(localNow);
+    later.setHours(later.getHours() + 1);
+    const outStr = later.toISOString().slice(0, 16);
+    
+    if (!checkIn) setCheckIn(inStr);
+    if (!checkOut) setCheckOut(outStr);
+  }, []);
   
   const locationName = hub.name || "Split Airport car park";
   const locationId = hub.id || "parkng split airport";
-  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}`;
+  
+  // Calculate total price and hours
+  let totalHours = 1;
+  let totalPrice = 0;
+  
+  if (checkIn && checkOut) {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diff = end.getTime() - start.getTime();
+    if (diff > 0) {
+      totalHours = Math.ceil(diff / (1000 * 60 * 60));
+    }
+  }
+
+  // Parse price from label (e.g. "€2.50/hr" -> 2.50)
+  const priceValue = parseFloat(priceLabel.replace(/[^0-9.]/g, '')) || 0;
+  totalPrice = totalHours * priceValue;
+  const totalPriceLabel = `€${totalPrice.toFixed(2)}`;
+
+  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}`;
+  
+  async function handleBook(e: React.MouseEvent) {
+    if (activeTab === 'reserve' && (!checkIn || !checkOut)) return;
+    
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          location_id: locationId,
+          display_id: hub.display_id,
+          check_in: activeTab === 'reserve' ? checkIn : undefined,
+          check_out: activeTab === 'reserve' ? checkOut : undefined,
+          flow_type: activeTab,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error("Checkout error response:", errData);
+        throw new Error(errData.error || "Checkout failed");
+      }
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+    }
+  }
+
   const canonicalSlug = (hub.canonical_slug || "").trim().toLowerCase();
   const vm = hub.verification_metadata as Record<string, unknown> | undefined;
   const hideHeaderMeta = typeof vm?.["hide_header"] === "boolean" ? (vm?.["hide_header"] as boolean) : false;
   const hideHeader = hideHeaderMeta || canonicalSlug === "1-81977";
+  const hideAnnouncementBar = canonicalSlug === "m-94585";
   
   const howItWorks = [
     {
@@ -119,7 +199,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      {hideHeader ? null : <SiteHeader />}
+      {hideHeader ? null : <SiteHeader hideAnnouncementBar={hideAnnouncementBar} />}
       <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
@@ -245,9 +325,10 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
                 </Link>
                 <Link
                   href={checkoutHref}
-                  className="px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
+                  onClick={checkIn && checkOut ? handleBook : undefined}
+                  className={`px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  Book Parking
+                  {loading ? "Processing..." : (checkIn && checkOut ? `Book (${totalPriceLabel})` : `Book (${priceLabel}/hr)`)}
                 </Link>
               </div>
             </div>
@@ -375,10 +456,10 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
                   </Link>
                   <Link
                     href={checkoutHref}
-                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text.white shadow-sm hover:bg-[#4330c4] transition-colors"
+                    className="mt-2 inline-flex w-full justify-center items-center bg-[#5F3DFC] py-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#4330c4] transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Book Parking
+                    Book Parking ({priceLabel}/hr)
                   </Link>
                 </div>
               </div>
@@ -398,7 +479,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
       <main className="flex-1 bg-white pt-16 md:pt-20">
         <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-5 md:pt-6 md:pb-5">
           <h1 className="text-3xl md:text-4xl font-normal tracking-tight mb-6 md:mb-8 text-black md:-ml-10">
-            {locationName} parking from {priceLabel} per hour - just 2 minutes away.
+            {locationName} parking from {priceLabel} per hour - just {travelTime} away.
           </h1>
 
           <section className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] items-start">
@@ -453,56 +534,108 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
                     className="absolute inset-0 w-full h-full"
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://www.google.com/maps?q=${locationName}&output=embed`}
+                    src={
+                      hub.latitude && hub.longitude
+                        ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
+                        : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
+                    }
                   />
                 </div>
               </section>
             </div>
 
             <div className="flex flex-col items-end md:sticky md:top-24">
-              <div className="rounded-3xl border border-black/5 bg-white shadow-lg p-3 pb-1 md:p-5 md:pb-2 text-black h-full min-h-[480px] max-w-md ml-auto flex flex-col">
-                <div className="mb-5 flex flex-col items-center text-center text-black/80">
-                  <div className="inline-flex items-center gap-2 text-[11px] md:text-sm">
-                    <div className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-1">
-                      <span className="w-4 h-4 rounded-full bg-[#4285F4] text-[9px] font-bold text-white flex items-center justify-center">
-                        G
-                      </span>
-                      <span className="text-[11px] md:text-sm font-semibold">Google</span>
-                    </div>
-                    <span className="font-semibold">4.9</span>
-                    <span className="text-[10px] md:text-xs text-black/60">• 24,098 reviews</span>
-                  </div>
-                  <h2 className="mt-3 text-base md:text-xl font-semibold text-black">
-                    Select Dates to Calculate Price
-                  </h2>
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="grid grid-cols-2 gap-3 relative -top-10">
-                    <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
-                      <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
-                        Check In
-                      </span>
-                      <span className="mt-2 flex items-center justify-center">
-                        <CalendarDays className="w-4 h-4 text-black/40" />
-                      </span>
-                    </button>
-                    <button className="flex flex-col justify-between rounded-2xl border border-black/20 bg-white px-4 py-4 md:py-5 text-left shadow-sm hover:bg-[#F3F4FF] hover:border-[#5F3DFC] transition-colors">
-                      <span className="text-[11px] md:text-xs uppercase tracking-[0.18em] text-black/50">
-                        Check Out
-                      </span>
-                      <span className="mt-2 flex items-center justify-center">
-                        <CalendarDays className="w-4 h-4 text-black/40" />
-                      </span>
-                    </button>
-                  </div>
-                </div>
-                <Link
-                  href={checkoutHref}
-                  className="mt-auto inline-flex w-full items-center justify-center rounded.full bg-[#5F3DFC] px-6 py-3.5 text-sm md:text-base font-semibold text.white shadow hover:bg-[#4330c4] transition-colors"
+            {/* Check Price Widget */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold mb-6">Check price & availability</h2>
+              
+              {/* Tab Switcher */}
+              <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+                <button
+                  onClick={() => setActiveTab('reserve')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                  }`}
                 >
-                  Check price
-                </Link>
+                  Reserve
+                </button>
+                <button
+                  onClick={() => setActiveTab('park_now')}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                    activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  Park Now
+                </button>
               </div>
+
+              {activeTab === 'reserve' ? (
+                <>
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        From
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={checkIn}
+                        onChange={(e) => setCheckIn(e.target.value)}
+                        className="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F3DFC]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        To
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={checkOut}
+                        onChange={(e) => setCheckOut(e.target.value)}
+                        className="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F3DFC]"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mb-8 py-4 border-t border-gray-100">
+                    <span className="text-gray-500 font-medium">Total</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold">{totalPriceLabel}</div>
+                      <div className="text-xs text-gray-400 font-medium">{totalHours} hours</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="mb-8">
+                  <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm mb-4">
+                    <strong>Park Immediately</strong>
+                    <p className="mt-1 text-xs opacity-90">
+                      Start your session now. You can adjust the duration (hours) directly in the checkout.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between py-4 border-t border-gray-100">
+                    <span className="text-gray-500 font-medium">Rate</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold">{priceLabel}/hr</div>
+                      <div className="text-xs text-gray-400 font-medium">Select hours in next step</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Link
+                href={checkoutHref}
+                onClick={(activeTab === 'reserve' && checkIn && checkOut) || activeTab === 'park_now' ? handleBook : undefined}
+                className={`w-full block text-center bg-[#5F3DFC] text-white font-bold py-4 rounded-xl hover:bg-[#4a2fe0] transition-colors shadow-lg shadow-indigo-200 ${
+                  loading || (activeTab === 'reserve' && (!checkIn || !checkOut)) ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {loading ? "Processing..." : (activeTab === 'reserve' ? "Book Now" : "Park Now")}
+              </Link>
+              
+              <p className="mt-4 text-xs text-center text-gray-400">
+                Secure payment via Stripe • Free cancellation
+              </p>
+            </div>
             </div>
           </section>
         </article>

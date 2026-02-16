@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
-export function SiteHeader() {
+export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBar?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -274,17 +274,19 @@ export function SiteHeader() {
               </div>
             </div>
           )}
-          <div className="bg-black text-white text-[11px] text-center py-2 px-4 whitespace-nowrap">
-            <span className="font-semibold">Payparq</span> secures parking portfolios across the Country{" "}
-            <a
-              href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
-              target="_blank"
-              rel="noreferrer"
-            >
-              – read more
-            </a>
-            .
-          </div>
+          {hideAnnouncementBar ? null : (
+            <div className="bg-black text-white text-[11px] text-center py-2 px-4 whitespace-nowrap">
+              <span className="font-semibold">Payparq</span> secures parking portfolios across the Country{" "}
+              <a
+                href="https://www.poslovni.hr/hrvatska/startup-iz-dalmacije-osvaja-hrvatsku-zauvijek-cemo-promijeniti-nacin-parkiranja-4492394"
+                target="_blank"
+                rel="noreferrer"
+              >
+                – read more
+              </a>
+              .
+            </div>
+          )}
         </div>
       </div>
     </header>

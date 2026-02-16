@@ -9,9 +9,11 @@ export async function POST(req: NextRequest) {
   }
   const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
+  console.log('[Stripe Checkout] Request body:', body);
   const url = new URL(req.url);
   const location_id =
     (typeof body.location_id === 'string' && body.location_id) || url.searchParams.get('loc') || '';
+  const display_id = (typeof body.display_id === 'string' && body.display_id) || '';
   const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
@@ -44,51 +46,162 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (location_id) {
-    const baseUrl = supabaseUrl || 'https://iafjygownkhedereaoxw.supabase.co';
-    let type = 'hourly';
-    if (flow_type === 'monthly') type = 'monthly';
-    else if (flow_type === 'reserve') type = 'reserve';
-    const params = new URLSearchParams();
-    params.set('location_id', location_id);
-    params.set('type', type);
-    params.set('t', Date.now().toString());
-    const redirectUrl = `${baseUrl.replace(/\/+$/, '')}/functions/v1/create-checkout?${params.toString()}`;
-    return NextResponse.json({ url: redirectUrl });
+  /* 
+   * Bypass Supabase Function redirect to handle reservation logic locally
+   * and include custom text/metadata as requested.
+   */
+  // if (location_id) {
+  //   const baseUrl = supabaseUrl || 'https://iafjygownkhedereaoxw.supabase.co';
+  //   let type = 'hourly';
+  //   if (flow_type === 'monthly') type = 'monthly';
+  //   else if (flow_type === 'reserve') type = 'reserve';
+  //   const params = new URLSearchParams();
+  //   params.set('location_id', location_id);
+  //   params.set('type', type);
+  //   params.set('t', Date.now().toString());
+  //   const redirectUrl = `${baseUrl.replace(/\/+$/, '')}/functions/v1/create-checkout?${params.toString()}`;
+  //   return NextResponse.json({ url: redirectUrl });
+  // }
+
+  // Parse check-in/out
+  const check_in = (body.check_in as string) || url.searchParams.get('in') || '';
+  const check_out = (body.check_out as string) || url.searchParams.get('out') || '';
+
+  // Calculate quantity (hours)
+  let quantity = 1;
+  let reservationDescription = '';
+  if (check_in && check_out) {
+    const start = new Date(check_in);
+    const end = new Date(check_out);
+    const diff = end.getTime() - start.getTime();
+    
+    // Always format the description if dates are provided
+    // Format helper that ignores timezone shifts by parsing the ISO string directly
+    const formatIso = (iso: string) => {
+      if (!iso) return '';
+      try {
+        const [datePart, timePart] = iso.split('T');
+        const [y, m, d] = datePart.split('-');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${d} ${months[parseInt(m) - 1]} ${y}, ${timePart}`;
+      } catch (e) {
+        return iso;
+      }
+    };
+
+    reservationDescription = `From: ${formatIso(check_in)} To: ${formatIso(check_out)}`;
+    if (display_id) {
+      reservationDescription += `\nLocation ID: ${display_id}`;
+    }
+
+    if (diff > 0) {
+      quantity = Math.ceil(diff / (1000 * 60 * 60));
+    }
+  } else if (flow_type === 'park_now') {
+    // For Park Now, we default to 1 hour but allow user to adjust
+    quantity = 1;
+    // We don't set reservationDescription with dates here because user selects quantity in Stripe
+    // But we still want to show Location ID if available
+    // Also show "Start Time" which is effectively "Now"
+    
+    // Helper to format Date
+    const formatNow = (d: Date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const timePart = d.toTimeString().slice(0, 5); // HH:MM
+      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${timePart}`;
+    };
+    
+    const nowFormatted = formatNow(new Date());
+    reservationDescription = `Start Time: ${nowFormatted}`;
+    
+    if (display_id) {
+      reservationDescription += `\nLocation ID: ${display_id}`;
+    }
+    
+    // We add a note about end time being dependent on quantity
+    reservationDescription += `\n(End time depends on selected hours)`;
   }
 
   let unitAmount = 500;
   if (location_id) {
     if (!supabase) {
-      return NextResponse.json({ error: 'Supabase client is not configured.' }, { status: 500 });
-    }
-    const { data } = await supabase
-      .from('pricing_settings')
-      .select('rules_text')
-      .eq('location_id', location_id)
-      .eq('active', true)
-      .limit(1);
-    const rules = data?.[0]?.rules_text as string | undefined;
-    if (rules) {
-      const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
-      if (match) unitAmount = parseInt(match[1], 10) * 100;
+      console.warn('Supabase client is not configured. Using default pricing.');
+    } else {
+      try {
+        const { data } = await supabase
+          .from('pricing_settings')
+          .select('rules_text')
+          .eq('location_id', location_id)
+          .eq('active', true)
+          .limit(1);
+        const rules = data?.[0]?.rules_text as string | undefined;
+        if (rules) {
+          const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
+          if (match) unitAmount = parseInt(match[1], 10) * 100;
+        }
+      } catch (err) {
+        console.error('Failed to fetch pricing from Supabase:', err);
+      }
     }
   }
   try {
-    const session = await stripe.checkout.sessions.create({
+    // Attempt to create session with SEPA and Card
+    const session = await createSession(['card', 'sepa_debit']);
+    return NextResponse.json({ url: session.url });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : '';
+    // If SEPA is not enabled, retry with just Card
+    if (message.includes('sepa_debit') || message.includes('payment method type')) {
+      console.warn('SEPA not enabled, falling back to Card only');
+      try {
+        const session = await createSession(['card']);
+        return NextResponse.json({ url: session.url });
+      } catch (retryErr: unknown) {
+        const retryMessage = retryErr instanceof Error ? retryErr.message : 'stripe_retry_failed';
+        return NextResponse.json({ error: retryMessage }, { status: 400 });
+      }
+    }
+    return NextResponse.json({ error: message || 'stripe_payment_failed' }, { status: 400 });
+  }
+
+  async function createSession(payment_method_types: Stripe.Checkout.SessionCreateParams.PaymentMethodType[]) {
+    return await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
       success_url: `${url.origin}/success`,
       cancel_url: `${url.origin}/`,
-      payment_method_types: ['card', 'sepa_debit'],
+      payment_method_types,
       line_items: [
         {
           price_data: {
             currency: 'eur',
-            product_data: { name: 'Parking Session' },
+            product_data: { 
+              name: flow_type === 'park_now' ? 'Parking Session (Adjust Hours)' : (quantity > 1 ? `Parking Session (${quantity} Hours)` : 'Parking Session (1 Hour)'),
+              description: reservationDescription || undefined,
+            },
             unit_amount: unitAmount,
           },
-          quantity: 1,
+          quantity: quantity,
+          adjustable_quantity: flow_type === 'park_now' ? { 
+            enabled: true,
+            minimum: 1,
+            maximum: 24,
+          } : {
+            enabled: false,
+          },
+        },
+      ],
+      custom_text: {
+        submit: {
+          message: 'By paying, you agree to our [Terms of Service](https://www.payparq.com/terms) and [Privacy Policy](https://www.payparq.com/privacy).',
+        },
+      },
+      custom_fields: [
+        {
+          key: 'plate_number',
+          label: { type: 'custom', custom: 'License Plate Number (e.g. MA679XX)' },
+          type: 'text',
+          optional: false,
         },
       ],
       customer_email,
@@ -97,13 +210,11 @@ export async function POST(req: NextRequest) {
           location_id,
           plate_number,
           flow_type,
+          check_in,
+          check_out,
         },
       },
     });
-    return NextResponse.json({ url: session.url });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'stripe_payment_failed';
-    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 
@@ -165,7 +276,7 @@ export async function GET(req: NextRequest) {
       phone_number_collection: { enabled: true },
       success_url: `${url.origin}/success`,
       cancel_url: `${url.origin}/`,
-      payment_method_types: ['card', 'sepa_debit'],
+      payment_method_types: ['card'],
       line_items: [
         {
           price_data: {

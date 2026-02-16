@@ -19,7 +19,7 @@ type HubData = {
   verification_metadata?: Record<string, unknown>;
 };
 
-async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }> } | null> {
+async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }>; travelTime: string } | null> {
   const hyphenDisplay = String(slug || "").trim().toLowerCase();
   console.log('[locations/[slug]] fetching canonical_slug:', hyphenDisplay);
   
@@ -67,7 +67,38 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
 
   const hero = Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "";
   const faqItems: Array<{ q: string; a: string }> = [];
-  return { hub, priceLabel, hero, faqItems };
+
+  // Calculate travel time
+  let travelTime = "2 minutes";
+  if (hub.latitude && hub.longitude) {
+    // Default to Split Airport (SPU)
+    let targetLat = 43.538;
+    let targetLng = 16.298;
+
+    // Allow overriding target coordinates via metadata (e.g. for other airports)
+    if (hub.verification_metadata && 
+        typeof hub.verification_metadata.target_lat === 'number' && 
+        typeof hub.verification_metadata.target_lng === 'number') {
+      targetLat = hub.verification_metadata.target_lat;
+      targetLng = hub.verification_metadata.target_lng;
+    }
+    
+    const R = 6371; // Radius of the earth in km
+    const dLat = (targetLat - hub.latitude) * (Math.PI / 180);
+    const dLon = (targetLng - hub.longitude) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(hub.latitude * (Math.PI / 180)) * Math.cos(targetLat * (Math.PI / 180)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    
+    // Estimate: 2 min per km (30km/h) + 1 min base
+    const minutes = Math.ceil(d * 2 + 1);
+    travelTime = `${minutes} minutes`;
+  }
+
+  return { hub, priceLabel, hero, faqItems, travelTime };
 }
 
 export default async function LocationPage(props: { params: Promise<{ slug: string }> }) {
@@ -112,7 +143,7 @@ export default async function LocationPage(props: { params: Promise<{ slug: stri
     );
   }
   
-  return <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} />;
+  return <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />;
 }
 
 export const revalidate = 300;

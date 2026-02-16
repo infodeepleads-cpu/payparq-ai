@@ -18,16 +18,26 @@ export default function PayPage() {
   const [reserveLocation, setReserveLocation] = useState("");
   const [processing, setProcessing] = useState<FlowType | null>(null);
   const [error, setError] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const loc = params.get("loc") || "";
+    const inVal = params.get("in") || "";
+    const outVal = params.get("out") || "";
+    
     if (loc) {
       Promise.resolve().then(() => {
         setLocationId(loc);
         setMonthlyLocationId(loc);
         setReserveLocation(loc);
+        setCheckIn(inVal);
+        setCheckOut(outVal);
+        if (inVal && outVal) {
+          setActiveTab("reserve");
+        }
       });
     }
   }, []);
@@ -52,6 +62,8 @@ export default function PayPage() {
           plate_number: "",
           customer_email: undefined,
           flow_type: flow,
+          check_in: checkIn,
+          check_out: checkOut,
         }),
       });
 

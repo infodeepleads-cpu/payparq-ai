@@ -24,8 +24,11 @@ export async function GET() {
       }, { status: 500 });
     }
 
-    console.log('Hubs API locations sample canonical_slugs:',
-      (locations || []).slice(0, 8).map((l: any) => l.canonical_slug));
+    {
+      const typed = (locations || []) as DbLocation[];
+      console.log('Hubs API locations sample canonical_slugs:',
+        typed.slice(0, 8).map((l) => l.canonical_slug));
+    }
 
     type DbLocation = {
       id: string;
@@ -52,7 +55,6 @@ export async function GET() {
       (locations || []).map(async (loc: DbLocation) => {
         const name = String(loc.name || '');
         const label = 'PayParq hub';
-        const displayId = String(loc.display_id || '');
         const href = `/locations/${String(loc.canonical_slug ?? '').trim()}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude : 0;
         const lng = typeof loc.longitude === 'number' ? loc.longitude : 0;
