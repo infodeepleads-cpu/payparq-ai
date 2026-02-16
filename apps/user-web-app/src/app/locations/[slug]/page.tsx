@@ -21,16 +21,13 @@ function isValidImageUrl(url: unknown): url is string {
 type HubRec = {
   id: string;
   name?: string;
-  label?: string;
   address?: string;
   display_id?: string;
   canonical_slug?: string;
   latitude?: number;
   longitude?: number;
   verification_photos?: unknown[];
-  hero_image_url?: string;
-  city?: string;
-  faq_template_key?: string;
+  verification_metadata?: Record<string, unknown>;
 };
 
 type HubData = {
@@ -46,7 +43,7 @@ async function fetchHub(slug: string): Promise<HubData | null> {
   console.log('[locations/[slug]] fetching canonical_slug:', hyphenDisplay);
   const { data } = await supabaseAdmin
     .from("locations")
-    .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata")
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
   let hub: HubRec | null = data?.[0] || null;
@@ -56,14 +53,14 @@ async function fetchHub(slug: string): Promise<HubData | null> {
     console.log("[locations/[slug]] fallback display_id or id:", lastToken);
     const { data: byDisplay } = await supabaseAdmin
       .from("locations")
-      .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+      .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata")
       .eq("display_id", lastToken)
       .limit(1);
     hub = byDisplay?.[0] || null;
     if (!hub) {
       const { data: byId } = await supabaseAdmin
         .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+        .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata")
         .eq("id", lastToken)
         .limit(1);
       hub = byId?.[0] || null;
@@ -85,21 +82,8 @@ async function fetchHub(slug: string): Promise<HubData | null> {
       priceLabel = `€${v}/hr`;
     }
   }
-  const hero = (hub.hero_image_url as string) || (Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "");
-  const faqKey = (hub.faq_template_key as string) || "airport-standard";
-  const { data: faqs } = await supabaseAdmin
-    .from("faq_templates")
-    .select("content")
-    .eq("key", faqKey)
-    .limit(1);
-  const faqContent = faqs?.[0]?.content as unknown;
-  const items = (faqContent && typeof faqContent === 'object' && (faqContent as Record<string, unknown>).items) as unknown;
-  const faqItems: Array<{ q: string; a: string }> = Array.isArray(items)
-    ? (items as Array<unknown>).map((x) => {
-        const obj = x as Record<string, unknown>;
-        return { q: String(obj.q || ""), a: String(obj.a || "") };
-      })
-    : [];
+  const hero = Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "";
+  const faqItems: Array<{ q: string; a: string }> = [];
   const displayIdOut = String(hub.display_id || "");
   return { hub, priceLabel, hero, faqItems, displayId: displayIdOut };
 }
@@ -153,7 +137,7 @@ export default async function LocationPage(props: unknown) {
               <div className="space-y-4">
                 <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">PayParq hub</p>
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">{hub.name}</h1>
-                <p className="text-sm md:text-base text-white/75">{hub.label || "Parking hub"}</p>
+                <p className="text-sm md:text-base text-white/75">Parking hub</p>
                 <div className="flex items-center gap-3">
                   <Link href={checkoutHref} className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow hover:bg-[#4330c4] transition-colors">
                     Book parking
@@ -211,8 +195,8 @@ export default async function LocationPage(props: unknown) {
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
             <div className="grid md:grid-cols-[2fr,3fr] gap-12">
               <div className="space-y-4">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the city</p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{hub.city || "City"}</h2>
+                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{hub.name || "Location"}</h2>
                 <p className="text-sm md:text-base text-black/75">{hub.address || ""}</p>
               </div>
               <div>
