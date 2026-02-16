@@ -6,7 +6,7 @@ export async function GET() {
     const { data: locations } = await supabaseAdmin
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
-      .filter('verification_metadata->>hub_enabled', 'eq', 'true')
+      .or('verification_metadata->hub_enabled.eq.true,verification_metadata->>hub_enabled.eq.true')
       .limit(200);
 
     type DbLocation = {
