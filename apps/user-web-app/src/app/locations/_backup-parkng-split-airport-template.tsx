@@ -465,15 +465,15 @@ export default function SplitAirportLocationPage() {
                           <Car className="w-3 h-3" />
                           <span>Uber/Taxi</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
                           <MessageCircle className="w-3 h-3" />
                           <span>WhatsApp 24/7</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
                           <CreditCard className="w-3 h-3" />
                           <span>Stripe</span>
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
+                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
                           <Camera className="w-3 h-3" />
                           <span>AI Cameras</span>
                         </span>
@@ -504,18 +504,18 @@ export default function SplitAirportLocationPage() {
                       Uber
                     </span>
                   </div>
-                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
-                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                  <div className="flex items-center justify.center text.center rounded-3xl border border.black/10 bg.white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text.black uppercase tracking-[0.14em]">
                       WhatsApp
                     </span>
                   </div>
-                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
-                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                  <div className="flex items-center justify.center text.center rounded-3xl border border.black/10 bg.white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text.black uppercase tracking-[0.14em]">
                       Stripe
                     </span>
                   </div>
-                  <div className="flex items-center justify-center text-center rounded-3xl border border-black/10 bg-white px-3 py-3 shadow-sm">
-                    <span className="text-[11px] md:text-sm font-semibold text-black uppercase tracking-[0.14em]">
+                  <div className="flex items-center justify.center text.center rounded-3xl border border.black/10 bg.white px-3 py-3 shadow-sm">
+                    <span className="text-[11px] md:text-sm font-semibold text.black uppercase tracking-[0.14em]">
                       AI LPR
                     </span>
                   </div>
@@ -575,7 +575,7 @@ export default function SplitAirportLocationPage() {
                       <div className="relative w-10 h-10 rounded-full overflow-hidden border border-black/10">
                         <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="Reviewer" fill className="object-cover" />
                       </div>
-                      <div className="flex items-center gap-1 text-black">
+                      <div className="flex items.center gap-1 text.black">
                         <Star className="w-4 h-4 text-black" />
                         <Star className="w-4 h-4 text-black" />
                         <Star className="w-4 h-4 text-black" />
@@ -663,7 +663,7 @@ export default function SplitAirportLocationPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow.hidden">
                     <div className="relative w-full pb-[100%]">
                       <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
                         <Image
@@ -684,7 +684,7 @@ export default function SplitAirportLocationPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                  <div className="rounded-3xl border border-black/10 bg.white shadow-sm overflow.hidden">
                     <div className="relative w-full pb-[100%]">
                       <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
                         <Image
@@ -705,7 +705,7 @@ export default function SplitAirportLocationPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                  <div className="rounded-3xl border border-black/10 bg.white shadow-sm overflow.hidden">
                     <div className="relative w-full pb-[100%]">
                       <div className="absolute inset-x-0 top-0" style={{ height: '50%' }}>
                         <Image
@@ -716,7 +716,7 @@ export default function SplitAirportLocationPage() {
                         />
                       </div>
                       <div className="absolute inset-x-0 bottom-0" style={{ height: '50%' }}>
-                        <div className="h-full p-4 md:p-5 text-black">
+                        <div className="h-full p-4 md:p-5 text.black">
                           <h3 className="text-base md:text-lg font-semibold mb-1">4. AI-Monitored Security</h3>
                           <p className="text-[13px] md:text-base font-medium">
                             Rest easy with 24/7 AI Computer Vision monitoring every vehicle. We ensure all cars are
@@ -752,7 +752,7 @@ export default function SplitAirportLocationPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="mt-4 rounded-3xl border border-black/10 bg-white overflow-hidden">
+                  <div className="mt-4 rounded-3xl border border-black/10 bg.white overflow.hidden">
                     <div className="relative w-full h-[260px] md:h-[360px]">
                       <Image
                         src={howItWorks[activeStep].image}
@@ -760,11 +760,11 @@ export default function SplitAirportLocationPage() {
                         fill
                         className="object-cover"
                       />
-                      <div className="absolute inset-x-4 bottom-4 bg-white/90 backdrop-blur-md border border-black/10 rounded-2xl p-4 md:p-5 max-w-[85%] text-black">
+                      <div className="absolute inset-x-4 bottom-4 bg.white/90 backdrop-blur-md border border.black/10 rounded-2xl p-4 md:p-5 max-w-[85%] text.black">
                         <p className="text-sm md:text-base font-semibold">
                           {howItWorks[activeStep].title}
                         </p>
-                        <p className="text-xs md:text-sm text-black/70 mt-1">
+                        <p className="text-xs md:text-sm text.black/70 mt-1">
                           {howItWorks[activeStep].description}
                         </p>
                       </div>
@@ -779,22 +779,22 @@ export default function SplitAirportLocationPage() {
                     Innovations &amp; Service
                   </h2>
                   <div className="grid gap-6 md:grid-cols-[1.2fr,1fr] items-start">
-                    <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
-                      <p className="text-sm md:text-base text-black/80">
+                    <div className="rounded-3xl border border-black/10 bg.white p-5 shadow-sm">
+                      <p className="text-sm md:text-base text.black/80">
                         Gateless, ticketless arrival powered by license plate recognition with seamless mobile checkout via Stripe.
                       </p>
-                      <p className="mt-3 text-sm md:text-base text-black/80">
+                      <p className="mt-3 text-sm md:text-base text.black/80">
                         A personal WhatsApp City Manager gives you direct, fast support whenever you need it.
                       </p>
-                      <p className="mt-3 text-sm md:text-base text-black/80">
+                      <p className="mt-3 text-sm md:text-base text.black/80">
                         Integrated Uber/Taxi booking, optional vehicle insurance, and a Return Back Guarantee keep your plans flexible.
                       </p>
-                      <p className="mt-3 text-sm md:text-base text-black/80">
+                      <p className="mt-3 text-sm md:text-base text.black/80">
                         AI Computer Vision monitors the car park and ensures every bay is authorized for peace of mind.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-6">
-                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                      <div className="rounded-3xl border border-black/10 bg.white shadow-sm overflow.hidden">
                         <div className="relative w-full pb-[60%]">
                           <Image
                             src="/Split_Airport_new_terminal_main_hall.jpg"
@@ -804,7 +804,7 @@ export default function SplitAirportLocationPage() {
                           />
                         </div>
                       </div>
-                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                      <div className="rounded-3xl border border-black/10 bg.white shadow-sm overflow.hidden">
                         <div className="relative w-full pb-[60%]">
                           <Image
                             src="/hero-bg.jpg"
@@ -826,27 +826,27 @@ export default function SplitAirportLocationPage() {
                   </h2>
                   <div className="grid gap-8 md:grid-cols-[0.7fr,1.3fr] items-start">
                     <div className="flex flex-col items-center md:items-start gap-6">
-                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow-hidden border border-black/10">
-                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="PayParq team" fill className="object-cover" />
+                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow.hidden border border.black/10">
+                        <Image src="/Split_Airport_new_terminal_main_hall.jpg" alt="PayParq team" fill className="object.cover" />
                       </div>
-                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow-hidden border border-black/10">
-                        <Image src="/hero-bg.jpg" alt="PayParq service" fill className="object-cover" />
+                      <div className="relative w-28 h-28 md:w-40 md:h-40 rounded-full overflow.hidden border border.black/10">
+                        <Image src="/hero-bg.jpg" alt="PayParq service" fill className="object.cover" />
                       </div>
                     </div>
                     <div className="space-y-5">
-                      <p className="text-sm md:text-base text-black/80">
+                      <p className="text-sm md:text-base text.black/80">
                         PayParq is a modern, customer-first parking platform led by Karlo Žamić. We build for friendliness, speed, and reliability at every touchpoint—from arrival to checkout.
                       </p>
-                      <p className="text-sm md:text-base text-black/80">
+                      <p className="text-sm md:text-base text.black/80">
                         Our goal is for you to try our low-cost, high-service airport parking and be so satisfied that you&apos;ll recommend us to friends and family.
                       </p>
-                      <p className="text-sm md:text-base text-black/80">
+                      <p className="text-sm md:text-base text.black/80">
                         Our team strives daily for your well-being: fast support through WhatsApp, clear signage, and a seamless digital experience without gates or tickets.
                       </p>
-                      <p className="text-sm md:text-base text-black/80">
+                      <p className="text-sm md:text-base text.black/80">
                         We focus on effortless arrivals with integrated Uber/Taxi connections and flexible options like optional vehicle insurance and a Return Back Guarantee when plans change.
                       </p>
-                      <p className="text-sm md:text-base text-black/80">
+                      <p className="text-sm md:text-base text.black/80">
                         As a community-minded company, we love seeing families start and end trips smoothly—small details and warm service matter to us.
                       </p>
                     </div>
@@ -860,32 +860,32 @@ export default function SplitAirportLocationPage() {
                     Explore Split & Dalmatia
                   </h2>
                   <div className="grid gap-6 md:grid-cols-[1.2fr,1fr] items-start">
-                    <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
-                      <p className="text-sm md:text-base text-black/80">
+                    <div className="rounded-3xl border border.black/10 bg.white p-5 shadow-sm">
+                      <p className="text-sm md:text-base text.black/80">
                         Park next to Split Airport (SPU) in Kaštela and be on your way to
                         Diocletian’s Palace, Trogir old town, and the Adriatic islands of Hvar, Brač, and Šolta.
                       </p>
-                      <p className="mt-3 text-sm md:text-base text-black/80">
+                      <p className="mt-3 text-sm md:text-base text.black/80">
                         Designed for visitors and locals, PayParq connects you to fast on‑demand rides, flexible stays,
                         and a seamless digital checkout—perfect for weekend getaways and summer holidays along the Dalmatian Coast.
                       </p>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] md:text-sm text-black/70">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-[11px] md:text-sm text.black/70">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border.black/10">
                           Airport parking near Split
                         </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border.black/10">
                           Kaštela & Trogir access
                         </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border.black/10">
                           Dalmatian Coast trips
                         </span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full border border-black/10">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full border border.black/10">
                           Hvar • Brač • Šolta ferries
                         </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 gap-6">
-                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                      <div className="rounded-3xl border border.black/10 bg.white shadow-sm overflow.hidden">
                         <div className="relative w-full pb-[60%]">
                           <Image
                             src="/Split_Airport_new_terminal_main_hall.jpg"
@@ -895,7 +895,7 @@ export default function SplitAirportLocationPage() {
                           />
                         </div>
                       </div>
-                      <div className="rounded-3xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                      <div className="rounded-3xl border border.black/10 bg.white shadow-sm overflow.hidden">
                         <div className="relative w-full pb-[60%]">
                           <Image
                             src="/hero-bg.jpg"
@@ -1024,13 +1024,13 @@ export default function SplitAirportLocationPage() {
                 <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                   Experience
                 </p>
-                <Link href="/product" className="block hover:text-white transition-colors">
+                <Link href="/product" className="block hover:text.white transition-colors">
                   Product
                 </Link>
-                <Link href="/parking" className="block hover:text-white transition-colors">
+                <Link href="/parking" className="block hover:text.white transition-colors">
                   Parking
                 </Link>
-                <Link href="/security" className="block hover:text-white transition-colors">
+                <Link href="/security" className="block hover:text.white transition-colors">
                   Security
                 </Link>
               </div>
@@ -1038,27 +1038,27 @@ export default function SplitAirportLocationPage() {
                 <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                   Policies
                 </p>
-                <Link href="/legal" className="block hover:text-white transition-colors">
+                <Link href="/legal" className="block hover:text.white transition-colors">
                   Legal
                 </Link>
-                <Link href="/privacy" className="block hover:text-white transition-colors">
+                <Link href="/privacy" className="block hover:text.white transition-colors">
                   Privacy
                 </Link>
-                <Link href="/terms" className="block hover:text-white transition-colors">
+                <Link href="/terms" className="block hover:text.white transition-colors">
                   Terms
                 </Link>
               </div>
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                <p className="text-[11px] font-semibold text.white uppercase tracking-[0.16em]">
                   Platform
                 </p>
-                <Link href="/locations" className="block hover:text-white transition-colors">
+                <Link href="/locations" className="block hover:text.white transition-colors">
                   Locations
                 </Link>
-                <Link href="/members" className="block hover:text-white transition-colors">
+                <Link href="/members" className="block hover:text.white transition-colors">
                   Members
                 </Link>
-                <Link href="/support" className="block hover:text-white transition-colors">
+                <Link href="/support" className="block hover:text.white transition-colors">
                   Support
                 </Link>
               </div>
