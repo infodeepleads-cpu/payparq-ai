@@ -16,7 +16,7 @@ export default function Locations() {
   const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const perPage = 8;
+  const perPage = 5;
   useEffect(() => {
     let mounted = true;
     fetch('/api/hubs')

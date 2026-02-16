@@ -60,7 +60,7 @@ export async function GET() {
 
           const rulesText = pricing?.[0]?.rules_text as string | undefined;
           if (rulesText) {
-            const match = rulesText.match(/(?:€|\$)?\s*(\d+(?:[.,]\d+)?)\s*\/\s*(?:hr|hour)/i);
+            const match = rulesText.match(/(?:€|\$|eur)?\s*(\d+(?:[.,]\d+)?)\s*(?:per\s*)?(?:\/)?\s*(?:hr|hour|hours|hourly)\b/i);
             if (match) {
               const v = match[1].replace(',', '.');
               priceLabel = `€${v}/hr`;
