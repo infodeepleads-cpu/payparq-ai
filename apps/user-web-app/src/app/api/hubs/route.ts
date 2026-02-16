@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { data: locations } = await supabaseAdmin
+    const { data: locations, error } = await supabaseAdmin
       .from('locations')
       .select('id,name,address,display_id,latitude,longitude,verification_metadata,city')
       .eq('verification_metadata->hub_enabled', true)
       .limit(200);
- 
+    const debug = new URL(req.url).searchParams.get('debug');
+    if (debug === '1') {
+      return NextResponse.json({
+        error: error ? String(error.message || error) : null,
+        count: locations?.length || 0,
+        sample: (locations || []).slice(0, 10),
+      });
+    }
 
     type DbLocation = {
       id: string;
@@ -58,7 +65,12 @@ export async function GET() {
     );
 
     return NextResponse.json({ hubs });
-  } catch {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const debug = new URL(req.url).searchParams.get('debug');
+    if (debug === '1') {
+      return NextResponse.json({ error: msg, hubs: [] }, { status: 200 });
+    }
     return NextResponse.json({ hubs: [] }, { status: 200 });
   }
 }
