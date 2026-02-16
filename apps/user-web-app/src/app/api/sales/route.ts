@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +24,14 @@ export async function POST(req: NextRequest) {
     const exploreSummary =
       exploreSelections.length > 0 ? exploreSelections.join(", ") : null;
 
-    const { error: insertError } = await supabaseAdmin
+    const client = supabaseAdmin ?? supabase;
+    if (!client) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 500 }
+      );
+    }
+    const { error: insertError } = await client
       .from("sales_requests")
       .insert({
         first_name: firstName,

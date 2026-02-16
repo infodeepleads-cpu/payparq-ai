@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const { data: locations, error } = await supabaseAdmin
+    const client = supabaseAdmin ?? supabase;
+    if (!client) {
+      return NextResponse.json({ hubs: [], error: 'supabase_not_configured' }, { status: 500 });
+    }
+    const { data: locations, error } = await client
       .from('locations')
-      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata')
+      .select('id,name,address,display_id,latitude,longitude,verification_metadata')
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -55,7 +60,7 @@ export async function GET() {
 
         let priceLabel = '€';
         try {
-          const { data: pricing } = await supabaseAdmin
+          const { data: pricing } = await client
             .from('pricing_settings')
             .select('rules_text')
             .eq('location_id', loc.id)
