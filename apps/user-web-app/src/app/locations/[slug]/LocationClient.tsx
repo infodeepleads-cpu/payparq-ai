@@ -33,6 +33,10 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
   const locationName = hub.name || "Split Airport car park";
   const locationId = hub.id || "parkng split airport";
   const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}`;
+  const canonicalSlug = (hub.canonical_slug || "").trim().toLowerCase();
+  const vm = hub.verification_metadata as Record<string, unknown> | undefined;
+  const hideHeaderMeta = typeof vm?.["hide_header"] === "boolean" ? (vm?.["hide_header"] as boolean) : false;
+  const hideHeader = hideHeaderMeta || canonicalSlug === "1-81977";
   
   const howItWorks = [
     {
@@ -115,7 +119,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems }: {
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
-      <SiteHeader />
+      {hideHeader ? null : <SiteHeader />}
       <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
