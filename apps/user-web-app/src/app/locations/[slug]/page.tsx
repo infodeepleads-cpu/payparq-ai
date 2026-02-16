@@ -7,13 +7,6 @@ import { FooterBrand } from "@/components/FooterBrand";
 function toDisplayId(slugPart: string) {
   return slugPart.replace(/-/g, " ").toLowerCase();
 }
-function toSlug(displayId: string) {
-  return displayId.replace(/\s+/g, "-").toLowerCase();
-}
-function parseSlug(raw: string) {
-  const [slugPart, idPart] = raw.split("--");
-  return { slugPart, idPart: idPart && idPart.length > 0 ? idPart : undefined };
-}
 function isValidImageUrl(url: unknown): url is string {
   if (typeof url !== "string" || url.length === 0) return false;
   try {
@@ -49,79 +42,13 @@ type HubData = {
 };
 
 async function fetchHub(slug: string): Promise<HubData | null> {
-  const { slugPart, idPart } = parseSlug(slug);
-  let hub: HubRec | null = null;
-  if (idPart) {
-    const { data: byId } = await supabaseAdmin
-      .from("locations")
-      .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-      .eq("id", idPart)
-      .limit(1);
-    hub = byId?.[0] || null;
-  } else {
-    const hyphenDisplay = String(slugPart || "").trim().toLowerCase();
-    const spacedDisplay = toDisplayId(slugPart);
-    // 1) Try exact match on canonical_slug
-    const { data: byCanonical } = await supabaseAdmin
-      .from("locations")
-      .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-      .eq("canonical_slug", hyphenDisplay)
-      .limit(1);
-    hub = byCanonical?.[0] || null;
-    if (!hub) {
-      // 2) Try exact match on hyphenated display_id (legacy kebab-case)
-      const { data: byDisplayExactHyphen } = await supabaseAdmin
-        .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-        .eq("display_id", hyphenDisplay)
-        .limit(1);
-      hub = byDisplayExactHyphen?.[0] || null;
-    }
-    if (!hub) {
-      // 3) Try exact match on spaced display_id (legacy)
-      const { data: byDisplayExactSpaced } = await supabaseAdmin
-        .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-        .eq("display_id", spacedDisplay)
-        .limit(1);
-      hub = byDisplayExactSpaced?.[0] || null;
-    }
-    if (!hub) {
-      // 4) Try ilike on hyphenated form
-      const { data: byDisplayLikeHyphen } = await supabaseAdmin
-        .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-        .ilike("display_id", `%${hyphenDisplay}%`)
-        .limit(1);
-      hub = byDisplayLikeHyphen?.[0] || null;
-    }
-    if (!hub) {
-      // 5) Try ilike on spaced form
-      const { data: byDisplayLikeSpaced } = await supabaseAdmin
-        .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-        .ilike("display_id", `%${spacedDisplay}%`)
-        .limit(1);
-      hub = byDisplayLikeSpaced?.[0] || null;
-    }
-    if (!hub) {
-      // 6) Fallback: search by name using both forms
-      const { data: byNameHyphen } = await supabaseAdmin
-        .from("locations")
-        .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-        .ilike("name", `%${hyphenDisplay}%`)
-        .limit(1);
-      hub = byNameHyphen?.[0] || null;
-      if (!hub) {
-        const { data: byNameSpaced } = await supabaseAdmin
-          .from("locations")
-          .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
-          .ilike("name", `%${spacedDisplay}%`)
-          .limit(1);
-        hub = byNameSpaced?.[0] || null;
-      }
-    }
-  }
+  const hyphenDisplay = String(slug || "").trim().toLowerCase();
+  const { data } = await supabaseAdmin
+    .from("locations")
+    .select("id,name,label,address,display_id,canonical_slug,latitude,longitude,verification_photos,hero_image_url,city,faq_template_key")
+    .eq("canonical_slug", hyphenDisplay)
+    .limit(1);
+  const hub: HubRec | null = data?.[0] || null;
   if (!hub) return null;
   const { data: pricing } = await supabaseAdmin
     .from("pricing_settings")
@@ -153,7 +80,7 @@ async function fetchHub(slug: string): Promise<HubData | null> {
         return { q: String(obj.q || ""), a: String(obj.a || "") };
       })
     : [];
-  const displayIdOut = String(hub.display_id || toDisplayId(slugPart));
+  const displayIdOut = String(hub.display_id || "");
   return { hub, priceLabel, hero, faqItems, displayId: displayIdOut };
 }
 
@@ -294,15 +221,10 @@ export async function generateStaticParams() {
   try {
     const { data: locations } = await supabaseAdmin
       .from("locations")
-      .select("id,display_id,canonical_slug,verification_metadata")
+      .select("canonical_slug")
       .contains("verification_metadata", { hub_enabled: true })
       .limit(500);
-    const slugs = (locations || []).map((loc: { id: string; display_id?: string; canonical_slug?: string }) => {
-      const canonical = typeof loc.canonical_slug === 'string' && loc.canonical_slug.trim().length > 0
-        ? loc.canonical_slug.trim().toLowerCase()
-        : (String(loc.display_id || "").trim() ? toSlug(String(loc.display_id || "").trim()) : String(loc.id));
-      return canonical;
-    });
+    const slugs = (locations || []).map((loc: { canonical_slug: string }) => loc.canonical_slug.trim().toLowerCase());
     return slugs.map((slug) => ({ slug }));
   } catch {
     return [];

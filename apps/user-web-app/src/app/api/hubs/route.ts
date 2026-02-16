@@ -10,7 +10,7 @@ export async function GET() {
     }
     const { data: locations, error } = await client
       .from('locations')
-      .select('id,name,address,display_id,latitude,longitude,verification_metadata')
+      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata')
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -50,10 +50,7 @@ export async function GET() {
         const name = String(loc.name || '');
         const label = 'PayParq hub';
         const displayId = String(loc.display_id || '');
-        const rawCanonical = typeof loc.canonical_slug === 'string' ? loc.canonical_slug : '';
-        const canonical = rawCanonical && rawCanonical.trim().length > 0
-          ? rawCanonical.trim().toLowerCase()
-          : (displayId ? displayId.replace(/\s+/g, '-').toLowerCase() : String(loc.id));
+        const canonical = String(loc.canonical_slug || '').trim().toLowerCase();
         const href = `/locations/${canonical}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude : 0;
         const lng = typeof loc.longitude === 'number' ? loc.longitude : 0;
