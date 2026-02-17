@@ -255,7 +255,7 @@ function useSlides(): Slide[] {
         bullets: [
           "Serial Entrepreneur & Operator",
           "Founded and scaled 7 successful companies",
-          "Built a 12-room hotel annex in 2.5 months",
+          "Built multiple construction projects in record time",
           "Led high-performance operations across parking, hospitality, retail, and construction",
           "Focused on frictionless systems, operational excellence, and digital platforms",
           "Vision: To transform access, parking, and urban mobility into smart, seamless, and profitable infrastructure",

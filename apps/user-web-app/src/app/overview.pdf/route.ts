@@ -240,7 +240,7 @@ function slidesData(): Array<{ title: string; bullets: string[] }> {
       bullets: [
         "Serial Entrepreneur & Operator",
         "Founded and scaled 7 successful companies",
-        "Built a 12-room hotel annex in 2.5 months",
+        "Built multiple construction projects in record time",
         "Led operations across parking, hospitality, retail, and construction",
         "Focused on frictionless systems, operational excellence, and digital platforms",
         "Vision: Transform access and urban mobility into smart, seamless infrastructure",
