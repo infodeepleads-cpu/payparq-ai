@@ -636,13 +636,13 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
                       >
                         Reserve
                       </button>
                       <button
                         onClick={() => setActiveTab('park_now')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
                       >
                         Park Now
                       </button>
@@ -664,13 +664,13 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
                       >
                         Reserve
                       </button>
                       <button
                         onClick={() => setActiveTab('park_now')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
                       >
                         Park Now
                       </button>
