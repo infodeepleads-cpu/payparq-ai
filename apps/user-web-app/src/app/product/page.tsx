@@ -31,7 +31,7 @@ export default function Product() {
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
                 <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                  <Link href="/vision" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
                   <div className="relative">
@@ -145,7 +145,7 @@ export default function Product() {
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
                 <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
-                    href="/experience"
+                    href="/vision"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
@@ -203,11 +203,11 @@ export default function Product() {
                     Technology
                   </Link>
                   <Link
-                    href="/product"
+                    href="/vision"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Product
+                    Experience
                   </Link>
                   <button
                     className="w-full flex items-center justify-center gap-1 py-3 hover:bg-gray-100 transition-colors"
@@ -433,7 +433,7 @@ export default function Product() {
                 Flexible models that match how your assets earn.
               </h2>
               <p className="text-sm md:text-base text-black/70">
-                From pure revenue share to SaaS models for LPR and digital displays, Payparq pricing is structured in €
+                From pure revenue share to models for LPR and digital displays, Payparq pricing is structured in €
                 per spot per month. LPR and screens are delivered as software only, with no hardware bundles, so fees
                 align with authorization, monetisation, or media needs.
               </p>
@@ -447,8 +447,7 @@ export default function Product() {
                   </p>
                 </div>
                 <p className="text-sm md:text-base text-black/75">
-                  Zero upfront cost. Revenue share on a mobile LPR experience delivered through our connected app, while
-                  you keep existing access and enforcement workflows.
+                  Zero upfront cost. Revenue share on a mobile LPR experience delivered through our connected app.
                 </p>
                 <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
                   <li>Monetisation-led model on incremental collections.</li>
@@ -468,7 +467,7 @@ export default function Product() {
                 </div>
                 <p className="text-sm md:text-base text-black/75">
                   For portfolios that want Payparq&apos;s mobile LPR and connected app as the primary authorization and
-                  enforcement layer with predictable SaaS economics.
+                  enforcement layer.
                 </p>
                 <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
                   <li>Plates, sessions, and enforcement unified in one platform.</li>
@@ -483,7 +482,7 @@ export default function Product() {
                 <div>
                   <p className="text-3xl md:text-4xl font-semibold tracking-tight">15</p>
                   <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
-                    LPR SaaS
+                    LPR
                   </p>
                 </div>
                 <p className="text-sm md:text-base text-black/75">
@@ -493,7 +492,7 @@ export default function Product() {
                 <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
                   <li>No hardware bundles; works with compatible cameras you already operate.</li>
                   <li>Ideal for portfolios standardising enforcement across sites.</li>
-                  <li>€ per spot per month SaaS pricing.</li>
+                  <li>€ per spot per month pricing.</li>
                 </ul>
                 <button className="mt-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border border-black/10 bg-black text-white text-[11px] md:text-xs font-semibold hover:bg-black/90 transition-colors">
                   <span>Get in touch</span>
@@ -503,7 +502,7 @@ export default function Product() {
                 <div>
                   <p className="text-3xl md:text-4xl font-semibold tracking-tight">20</p>
                   <p className="text-[11px] uppercase tracking-[0.22em] text-black/60 mt-1">
-                    Digital displays & DOOH SaaS
+                    Digital displays & DOOH
                   </p>
                 </div>
                 <p className="text-sm md:text-base text-black/75">
@@ -511,7 +510,7 @@ export default function Product() {
                   sessions.
                 </p>
                 <ul className="space-y-1.5 text-[11px] md:text-[12px] text-black/70">
-                  <li>Display and content management as SaaS, using your existing screens.</li>
+                  <li>Display and content management using your existing screens.</li>
                   <li>Promotions and information scheduled alongside parking content.</li>
                   <li>€ per spot per month with optional media revenue opportunities.</li>
                 </ul>

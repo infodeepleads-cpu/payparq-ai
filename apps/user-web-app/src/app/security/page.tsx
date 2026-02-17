@@ -196,9 +196,12 @@ export default function Security() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors">
+              <Link
+                href="/discover-how"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-black text-xs font-semibold shadow-md hover:bg-gray-100 transition-colors"
+              >
                 Let&apos;s Talk
-              </button>
+              </Link>
               <Link
                 href="/pay"
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-white/40 text-xs font-semibold hover:bg-white/5 transition-colors"

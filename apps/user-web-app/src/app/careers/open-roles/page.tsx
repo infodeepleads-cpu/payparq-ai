@@ -35,7 +35,7 @@ export default function OpenRoles() {
                   href="mailto:payparq@outlook.com?subject=Application%20%E2%80%94%20City%20Manager%20Dubrovnik"
                   className="inline-flex items-center px-4 py-2 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
                 >
-                  Apply via email
+                  Apply
                 </a>
               </div>
             </div>
@@ -53,7 +53,7 @@ export default function OpenRoles() {
                   href="mailto:payparq@outlook.com?subject=Application%20%E2%80%94%20City%20Manager%20Makarska"
                   className="inline-flex items-center px-4 py-2 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
                 >
-                  Apply via email
+                  Apply
                 </a>
               </div>
             </div>

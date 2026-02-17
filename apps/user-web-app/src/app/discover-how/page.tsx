@@ -10,6 +10,32 @@ export default function DiscoverHowPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("submitting");
+
+    const formData = new FormData(event.currentTarget);
+    try {
+      const res = await fetch("/api/sales", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        // Log detailed error from server if available
+        const data = await res.json().catch(() => ({}));
+        console.error("Submission error:", data);
+        throw new Error(data.error || "Submission failed");
+      }
+
+      setStatus("success");
+    } catch (error) {
+      console.error(error);
+      setStatus("error");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
@@ -30,7 +56,7 @@ export default function DiscoverHowPage() {
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
                 <div className="hidden md:flex items-center justify-center gap-7 text-[11px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                  <Link href="/vision" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
                   <div className="relative">
@@ -144,7 +170,7 @@ export default function DiscoverHowPage() {
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
                 <div className="flex flex-col gap-2 pt-2 text-[11px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
-                    href="/experience"
+                    href="/vision"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
@@ -290,8 +316,7 @@ export default function DiscoverHowPage() {
               </p>
               <form
                 className="space-y-4"
-                method="post"
-                action="/api/sales"
+                onSubmit={handleSubmit}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -422,12 +447,22 @@ export default function DiscoverHowPage() {
                     You can choose more than one.
                   </p>
                 </div>
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors"
-                >
-                  Submit
-                </button>
+                {status === "success" ? (
+                  <div className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#5F3DFC]/10 text-[#5F3DFC] text-xs font-semibold border border-[#5F3DFC]/20">
+                    <span className="mr-2">✓</span> Request sent successfully
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={status === "submitting"}
+                    className="w-full inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {status === "submitting" ? "Sending..." : "Submit"}
+                  </button>
+                )}
+                {status === "error" && (
+                  <p className="mt-2 text-xs text-red-600">Something went wrong. Please try again.</p>
+                )}
               </form>
             </div>
           </div>
@@ -452,12 +487,12 @@ export default function DiscoverHowPage() {
               </Link>
             </div>
             <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Experience
-              </p>
-              <Link href="/product" className="block hover:text-white transition-colors">
-                Product
-              </Link>
+                  <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
+                    Vision
+                  </p>
+                  <Link href="/product" className="block hover:text-white transition-colors">
+                    Product
+                  </Link>
               <Link href="/parking" className="block hover:text-white transition-colors">
                 Parking
               </Link>

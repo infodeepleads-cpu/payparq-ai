@@ -164,7 +164,7 @@ export default function SplitAirportLocationPage() {
                 </button>
                 <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
                   <Link
-                    href="/experience"
+                    href="/vision"
                     className="hover:text-gray-700 transition-colors hover:underline underline-offset-[6px] decoration-black/50"
                   >
                     EXPERIENCE
@@ -302,7 +302,7 @@ export default function SplitAirportLocationPage() {
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
                 <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
-                    href="/experience"
+                    href="/vision"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >

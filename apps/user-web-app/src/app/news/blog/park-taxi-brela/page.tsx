@@ -45,7 +45,7 @@ export default function BrelaBlogPost() {
             <div className="h-14 md:h-16 grid grid-cols-3 items-center px-4 md:px-8 text-[11px] font-medium text-black">
               <div className="flex items-center justify-start md:justify-center gap-4">
                 <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                  <Link href="/vision" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
                   <Link href="/parking" className="hover:text-gray-700 transition-colors">

@@ -282,7 +282,7 @@ export default function Careers() {
             </div>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Experience
+                Vision
               </p>
               <button className="block hover:text-white transition-colors">Product</button>
               <Link href="/parking" className="block hover:text-white transition-colors">

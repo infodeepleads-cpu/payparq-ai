@@ -30,7 +30,7 @@ export default function Experience() {
                   <span className="h-[1.5px] w-4 bg-black" />
                 </button>
                 <div className="hidden md:flex items-center justify-center gap-7 text-[10px] uppercase tracking-[0.24em]">
-                  <Link href="/experience" className="hover:text-gray-700 transition-colors">
+                  <Link href="/vision" className="hover:text-gray-700 transition-colors">
                     Experience
                   </Link>
                   <div className="relative">
@@ -151,7 +151,7 @@ export default function Experience() {
               <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
                 <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
-                    href="/experience"
+                    href="/vision"
                     className="w-full py-3 text-center hover:bg-gray-100 transition-colors"
                     onClick={() => setMobileOpen(false)}
                   >
@@ -404,7 +404,7 @@ export default function Experience() {
             </div>
             <div className="space-y-3">
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Experience
+                Vision
               </p>
               <button className="block hover:text-white transition-colors">Product</button>
               <Link href="/parking" className="block hover:text-white transition-colors">
