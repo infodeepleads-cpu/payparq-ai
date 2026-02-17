@@ -346,7 +346,7 @@ export default function Contact() {
                 Q: I need help with my account, technical issues, or payments.
               </p>
               <p>
-                A: Visit the{" "}
+                Visit the{" "}
                 <a
                   href="https://payparq.ai/help"
                   target="_blank"

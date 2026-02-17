@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import Link from 'next/link';
 
 type Hub = {
   id: string;
@@ -91,11 +90,6 @@ export default function CroatiaMap({ hubs }: { hubs: ReadonlyArray<Hub> }) {
                         {premiumPriceLabel}
                       </span>
                     </div>
-                    <div className="mt-2">
-                      <Link href={hub.href} className="text-[11px] font-semibold text-white underline-offset-2 hover:underline">
-                        View hub
-                      </Link>
-                    </div>
                   </div>
                 </Popup>
               ) : (
@@ -109,11 +103,6 @@ export default function CroatiaMap({ hubs }: { hubs: ReadonlyArray<Hub> }) {
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-black text-[11px] font-semibold border border-black/20">
                         {premiumPriceLabel}
                       </span>
-                    </div>
-                    <div className="mt-2">
-                      <Link href={hub.href} className="text-[11px] font-semibold text-white underline-offset-2 hover:underline">
-                        View hub
-                      </Link>
                     </div>
                   </div>
                 </Tooltip>

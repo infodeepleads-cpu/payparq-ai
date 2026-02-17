@@ -9,20 +9,20 @@
    const location_id = (url.searchParams.get("location_id") || "").trim();
  
    if (!plate || !/^\d{5}$/.test(location_id)) {
-     return NextResponse.json({
-       found: false,
-       error: "invalid_params",
-       supportEmail: "payparq@outlook.com",
-     });
-   }
- 
-   if (!client) {
-     return NextResponse.json({
-       found: false,
-       error: "supabase_not_configured",
-       supportEmail: "payparq@outlook.com",
-     });
-   }
+    return NextResponse.json({
+      found: false,
+      error: "invalid_params",
+      supportEmail: "payparq@outlook.com",
+    });
+  }
+
+  if (!client) {
+    return NextResponse.json({
+      found: false,
+      error: "supabase_not_configured",
+      supportEmail: "payparq@outlook.com",
+    });
+  }
  
    // 1. Resolve Location (using 5-digit ID)
   // The mobile scanner uses "display_id" or a UUID.

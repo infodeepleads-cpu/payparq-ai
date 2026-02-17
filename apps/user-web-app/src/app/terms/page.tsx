@@ -609,11 +609,11 @@ export default function Terms() {
             <p className="text-sm text-black/80 mb-1">Contact Information:</p>
             <p className="text-sm text-black/70">
               Email: payparq@outlook.com
-              <br />
-              Headquarters: 1309 Coffeen Avenue, Suite 1200, Sheridan, WY 82801, USA
-              <br />
-              EU Operations: Croatia
-            </p>
+      <br />
+      Headquarters: 1309 Coffeen Avenue, Suite 1200, Sheridan, WY 82801, USA
+      <br />
+      EU Operations: Croatia
+    </p>
           </section>
         </section>
 

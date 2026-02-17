@@ -251,6 +251,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
     { q: `What happens if my flight is delayed?`, a: `Adjust your end time in the app or contact support — we’ll help update your reservation.` },
     { q: `Is pricing transparent?`, a: `Yes. Clear hourly rates with no hidden fees. Total is shown before you confirm.` },
+    { q: `Can I order transport or buy insurance from your site?`, a: `Yes. After your booking is confirmed, you'll be redirected to a success page where you can arrange Uber transport, purchase insurance, and download your booking receipt. <a href="/success" class="underline text-blue-600" target="_blank">View Success Page Demo</a>` },
   ];
   const finalFaq = faqItems && faqItems.length > 0 ? faqItems : defaultFaq;
   const faqSchema = {
@@ -680,89 +681,86 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
               </div>
 
               <div className="mt-4 grid grid-cols-4 gap-2 w-full">
-                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <Car className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <Car className="w-3.5 h-3.5 flex-shrink-0 text-black" />
                   <span className="truncate">Uber</span>
                 </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <PhoneCall className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <PhoneCall className="w-3.5 h-3.5 flex-shrink-0 text-black" />
                   <span className="truncate">Support 24/7</span>
                 </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <CreditCard className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <CreditCard className="w-3.5 h-3.5 flex-shrink-0 text-black" />
                   <span className="truncate">Stripe</span>
                 </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <Camera className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <Camera className="w-3.5 h-3.5 flex-shrink-0 text-black" />
                   <span className="truncate">AI Vision</span>
                 </span>
               </div>
 
-              <section className="mt-4 rounded-3xl border border-black/10 bg-white overflow-hidden">
-                <div className="relative w-full h-[260px] md:h-[360px]">
-                  <iframe
-                    className="absolute inset-0 w-full h-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={
-                      hub.latitude && hub.longitude
-                        ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
-                        : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
-                    }
-                  />
-                </div>
-              </section>
+              
 
-              <section className="bg-white text-black border-t border-black/10 rounded-3xl overflow-hidden">
-                <div className="px-6 md:px-12 py-16 md:py-20">
+              <section className="bg-[#05020A] text-white rounded-none overflow-hidden">
+                <div className="px-6 md:px-12 pt-16 md:pt-20 pb-8">
                   <div className="space-y-12">
                     <div className="space-y-2">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">How it works</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">How it works</p>
                       <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Your parking experience, simplified</h2>
                     </div>
                     <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-                      {howItWorks.map((step, idx) => {
-                        const Icon = step.icon as React.ComponentType<{ className?: string }>;
-                        return (
-                          <div key={idx} className="space-y-4">
-                            <div className="relative h-32 rounded-2xl overflow-hidden border border-black/5 bg-gradient-to-br from-[#F3F4F6] to-[#E5E7EB] flex items-center justify-center">
-                              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-black/10 flex items-center justify-center">
-                                <Icon className="w-8 h-8 text-black/70" />
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <h3 className="text-sm font-semibold">{step.label}</h3>
-                              <p className="text-xs text-black/70">{step.description}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {howItWorks.map((step, idx) => (
+                        <div key={idx} className="space-y-2 rounded-2xl border border-black/10 bg-white p-4 text-black">
+                          <h3 className="text-sm font-semibold">{step.label}</h3>
+                          <p className="text-xs text-black/70">{step.description}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </section>
-
-              <section className="bg-white text-black border-t border-black/10 rounded-3xl overflow-hidden">
-                <div className="px-6 md:px-12 py-16 md:py-20 space-y-10">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                      <p className="text-sm font-semibold">City Centre</p>
-                      <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
-                    </div>
-                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                      <p className="text-sm font-semibold">Airport</p>
-                      <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
-                    </div>
-                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                      <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
-                      <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
+              <section className="-mt-8 bg-[#05020A] text-white rounded-none overflow-hidden">
+                <div className="px-6 md:px-12 pt-0 pb-16 md:pb-20 space-y-10">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">Map</p>
+                    <div className="relative w-full h-[260px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={
+                          hub.latitude && hub.longitude
+                            ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
+                            : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
+                        }
+                      />
                     </div>
                   </div>
+
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">Distance</p>
+                    <div className="rounded-3xl border border-black/10 bg-white text-black p-6 md:p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="px-4 py-4">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                        <p className="text-sm font-semibold">City Centre</p>
+                        <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-4">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                        <p className="text-sm font-semibold">Airport</p>
+                        <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-4">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                        <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
+                        <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
+                      </div>
+                    </div>
+                  </div>
+                  </div>
                   <div className="space-y-4">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">About the location</p>
                     <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
                     <div className="grid md:grid-cols-2 gap-3">
                       {[
@@ -779,23 +777,23 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         { q: "Access", a: "License plate recognition" },
                         { q: "Support", a: "WhatsApp 24/7 City Manager" },
                       ].map((item) => (
-                        <div key={item.q} className="rounded-xl border border-black/10 bg-[#F8F8F9] px-4 py-3">
+                        <div key={item.q} className="px-4 py-3">
                           <p className="text-xs font-semibold">{item.q}</p>
-                          <p className="text-xs text-black/70">{item.a}</p>
+                          <p className="text-xs text-white/70">{item.a}</p>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div>
+                  <div className="rounded-3xl border border-black/10 bg-white text-black p-6 md:p-8">
                     <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {finalFaq.map((i, idx) => {
                         const open = openFaq.includes(idx);
                         return (
-                          <div key={i.q} className="rounded-xl border border-black/10 bg-[#F8F8F9]">
+                          <div key={i.q}>
                             <button
                               type="button"
-                              className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-left"
+                              className="w-full flex items-center justify-between py-3 text-sm font-semibold text-left"
                               aria-expanded={open}
                               onClick={() =>
                                 setOpenFaq((prev) =>
@@ -803,14 +801,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                                 )
                               }
                             >
-                              <span>{i.q}</span>
+                              <span className="text-left">{i.q}</span>
                               {open ? (
                                 <Minus className="w-4 h-4 text-black/60" />
                               ) : (
                                 <Plus className="w-4 h-4 text-black/60" />
                               )}
                             </button>
-                            {open ? <div className="px-4 pb-4 text-sm text-black/75">{i.a}</div> : null}
+                            {open ? <div className="pb-3 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: i.a }} /> : null}
                           </div>
                         );
                       })}
@@ -985,7 +983,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                                   <Plus className="w-4 h-4 text-black/60" />
                                 )}
                               </button>
-                              {open ? <div className="px-4 pb-4 text-sm text-black/75">{i.a}</div> : null}
+                              {open ? <div className="px-4 pb-4 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: i.a }} /> : null}
                             </div>
                           );
                         })}

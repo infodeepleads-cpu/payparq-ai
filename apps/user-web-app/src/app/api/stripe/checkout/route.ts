@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success`,
+        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${url.origin}/`,
         customer_email,
         payment_method_types: ['card'],
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     return await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: `${url.origin}/success`,
+      success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${url.origin}/`,
       payment_method_types,
       line_items: [
@@ -242,7 +242,7 @@ export async function GET(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success`,
+        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${url.origin}/`,
         customer_email,
         payment_method_types: ['card'],
@@ -282,7 +282,7 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: `${url.origin}/success`,
+      success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${url.origin}/`,
       payment_method_types: ['card'],
       line_items: [

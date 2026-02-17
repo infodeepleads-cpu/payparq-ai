@@ -518,7 +518,9 @@ export default function DiscoverHowPage() {
               <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                 Platform
               </p>
-              <button className="block hover:text-white transition-colors">Partners</button>
+              <Link href="/locations" className="block hover:text-white transition-colors">
+                Locations
+              </Link>
               <Link href="/support" className="block hover:text-white transition-colors">
                 Support
               </Link>
