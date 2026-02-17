@@ -13,7 +13,7 @@ export default function Locations() {
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   // BOUNDS not needed with Leaflet-based map
-  const [hubs, setHubs] = useState<Array<{id:string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>([]);
+  const [hubs, setHubs] = useState<Array<{id:string; displayId?: string; name:string; label:string; href:string; lat:number; lng:number; priceLabel?: string}>>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const perPage = 5;
@@ -334,57 +334,58 @@ export default function Locations() {
               <div className="w-full h-[520px] md:h-[520px]">
                 <CroatiaMap hubs={hubs} />
               </div>
-              <div className="w-full space-y-4 h-[520px] md:h-[520px]">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
-                    PayParq partner hubs
-                  </p>
-                  <p className="text-sm md:text-base text-white/80">
-                    Explore PayParq hubs along the Croatian coast. Tap a pin to
-                    open a dedicated page for each partner location.
-                  </p>
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search hubs"
-                    className="w-full px-3 py-2 rounded-full bg-white text-black text-[12px] border border-black/20 placeholder:text-black/50"
-                    aria-label="Search hubs"
-                  />
-                </div>
-                <ul className="space-y-2 text-[12px] text-white/80">
-                  {hubs.length === 0 ? (
-                    <li className="flex items-center justify-between gap-3">
-                      <div className="animate-pulse">
-                        <p className="font-semibold bg-white/20 h-4 w-32 rounded" />
-                        <p className="text-white/60 bg-white/10 h-3 w-24 rounded mt-2" />
-                      </div>
-                      <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-semibold border border-white/30">
-                        Loading
-                      </div>
-                    </li>
-                  ) : visible.map((hub) => {
-                    const premiumPriceLabel = hub.priceLabel || "€";
-                    return (
-                      <li key={hub.id} className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{hub.name}</p>
-                          <p className="text-white/60">{hub.label}</p>
-                          <p className="text-white/50 text-[11px]">ID: {hub.id}</p>
+              <div className="w-full h-[520px] md:h-[520px] flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-2">
+                      PayParq partner hubs
+                    </p>
+                    <p className="text-sm md:text-base text-white/80">
+                      Explore PayParq hubs along the Croatian coast. Tap a pin to
+                      open a dedicated page for each partner location.
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search hubs"
+                      className="w-full px-3 py-2 rounded-full bg-white text-black text-[12px] border border-black/20 placeholder:text-black/50"
+                      aria-label="Search hubs"
+                    />
+                  </div>
+                  <ul className="space-y-3 text-[12px] text-white/80">
+                    {hubs.length === 0 ? (
+                      <li className="flex items-center justify-between gap-3">
+                        <div className="animate-pulse">
+                          <p className="font-semibold bg-white/20 h-4 w-32 rounded" />
+                          <p className="text-white/60 bg-white/10 h-3 w-24 rounded mt-2" />
                         </div>
-                        <Link
-                          href={hub.href}
-                          className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-black text-[11px] font-semibold border border-black/20 hover:bg-gray-100"
-                        >
-                          {premiumPriceLabel}
-                        </Link>
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-semibold border border-white/30">
+                          Loading
+                        </div>
                       </li>
-                    );
-                  })}
-                </ul>
-                <div className="flex items-center justify-center gap-2 pt-1">
+                    ) : visible.map((hub) => {
+                      const premiumPriceLabel = hub.priceLabel || "€";
+                      return (
+                        <li key={hub.id} className="flex items-center justify-between gap-3 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                          <div>
+                            <p className="font-semibold">{hub.name}</p>
+                            <p className="text-white/50 text-[11px]">ID: {hub.displayId || hub.id}</p>
+                          </div>
+                          <Link
+                            href={hub.href}
+                            className="inline-flex items-center px-2.5 py-1 rounded-full bg-white text-black text-[11px] font-semibold border border-black/20 hover:bg-gray-100"
+                          >
+                            {premiumPriceLabel}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-4">
                   {currentPage > 1 && (
                     <button
                       className="px-2 py-1 rounded-full bg-white text-black text-[11px] border border-black/20"

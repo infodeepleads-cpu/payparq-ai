@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus } from "lucide-react";
+import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, PhoneCall } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -19,7 +19,7 @@ type HubData = {
   verification_metadata?: Record<string, unknown>;
 };
 
-export default function LocationClient({ hub, priceLabel, hero, faqItems, travelTime }: { 
+export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: { 
   hub: HubData; 
   priceLabel: string; 
   hero: string; 
@@ -50,7 +50,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
     
     if (!checkIn) setCheckIn(inStr);
     if (!checkOut) setCheckOut(outStr);
-  }, []);
+  }, [checkIn, checkOut]);
   
   const locationName = hub.name || "Split Airport car park";
   const locationId = hub.id || "parkng split airport";
@@ -112,40 +112,74 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
     }
   }
 
-  const canonicalSlug = (hub.canonical_slug || "").trim().toLowerCase();
   const vm = hub.verification_metadata as Record<string, unknown> | undefined;
   const hideHeaderMeta = typeof vm?.["hide_header"] === "boolean" ? (vm?.["hide_header"] as boolean) : false;
-  const hideHeader = hideHeaderMeta || canonicalSlug === "1-81977";
-  const hideAnnouncementBar = canonicalSlug === "m-94585";
+  const hideHeader = hideHeaderMeta;
+  const hideAnnouncementBar = true; // Always hide announcement bar for location pages
   
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const photoList = Array.isArray(hub.verification_photos) ? hub.verification_photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [];
+  const candidateHero = typeof _hero === "string" && _hero.trim().length > 0 ? _hero : undefined;
+  let photos = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
+  // Ensure at least 4 photos for slider
+  if (photos.length < 4) {
+    const original = [...photos];
+    while (photos.length < 4) {
+      photos = [...photos, ...original];
+    }
+    photos = photos.slice(0, 4);
+  }
+  const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
+
+  const handlePrevPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+  };
+
+  const handleNextPhoto = () => {
+    setCurrentPhotoIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+  };
+
+  const reserveRef = useRef<HTMLDivElement>(null);
+  const [reserveHeight, setReserveHeight] = useState<number>(480);
+  useEffect(() => {
+    const updateHeight = () => {
+      if (reserveRef.current) {
+        setReserveHeight(reserveRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, [activeTab, checkIn, checkOut, loading]);
+ 
   const howItWorks = [
     {
       label: "Book & Pay Instantly",
       title: "1. Book & Pay Instantly",
       description:
-        "Choose your parking time and pay securely via Stripe or simply scan the QR code upon arrival. No tickets, no gates—just a seamless digital checkout.",
-      image: hero || "/Split_Airport_new_terminal_main_hall.jpg",
+        "Choose your parking time and pay securely via Stripe — digital, fast, no paper.",
+      icon: CreditCard,
     },
     {
       label: "Connect with Your City Manager",
       title: "2. Connect with Your City Manager",
       description:
-        "Immediately after payment, you can send a personal WhatsApp message to our City Manager. This is your direct line for 24/7 support or any assistance you need during your stay.",
-      image: hero || "/Split_Airport_new_terminal_main_hall.jpg",
+        "Message the City Manager via WhatsApp for 24/7 support, questions, or changes.",
+      icon: MessageCircle,
     },
     {
       label: "Arrange Your Ride & Protection",
       title: "3. Arrange Your Ride & Protection",
       description:
-        "Once booked, you can easily reserve a 1-way or 2-way Uber/Taxi through our application or our dedicated support line. You also have the flexibility to: Add vehicle insurance for extra peace of mind. Rearrange or cancel your ride up to 60 minutes before arrival. Rely on our Return Back Guarantee if your plans change.",
-      image: hero || "/Split_Airport_new_terminal_main_hall.jpg",
+        "Request Uber to the terminal in minutes. Flexible options, simple flow.",
+      icon: Car,
     },
     {
       label: "Park & Go",
       title: "4. Park & Go",
       description:
-        "Upon arrival, simply pull into any empty, unmarked space or your assigned dedicated spot. Your plate is your permit—our AI takes care of the rest.",
-      image: hero || "/Split_Airport_new_terminal_main_hall.jpg",
+        "Arrive, park, and go. Your license plate is your permit — monitored by AI.",
+      icon: Camera,
     },
   ];
 
@@ -163,25 +197,51 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
     url: `https://payparq.ai/locations/${hub.canonical_slug}`,
     slogan: "Effortless airport parking",
     amenityFeature: [
-      { "@type": "LocationFeatureSpecification", name: "On‑demand Uber/Taxi", value: true },
+      { "@type": "LocationFeatureSpecification", name: "On‑demand Uber", value: true },
       { "@type": "LocationFeatureSpecification", name: "AI Camera Monitoring", value: true },
       { "@type": "LocationFeatureSpecification", name: "Stripe Secure Checkout", value: true },
     ],
   };
 
+  const cityName = (() => {
+    const lat = hub.latitude;
+    const lng = hub.longitude;
+    if (typeof lat === "number" && typeof lng === "number") {
+      if (lat > 45.2 && lat < 46.2 && lng > 15.4 && lng < 16.6) return "Zagreb";
+      if (lat > 43.2 && lat < 44.0 && lng > 16.0 && lng < 17.0) return "Split";
+    }
+    return "Your City";
+  })();
+  const cityConfig = cityName === "Split"
+    ? { center: { lat: 43.5081, lng: 16.4402 }, airport: { lat: 43.5380, lng: 16.2980 }, beach: { lat: 43.5149, lng: 16.4436, name: "Bačvice Beach" } }
+    : { center: { lat: 45.8150, lng: 15.9819 }, airport: { lat: 45.7380, lng: 16.0610 }, beach: { lat: 45.7804, lng: 15.9420, name: "Jarun Lake" } };
+  const distanceKm = (lat1?: number, lon1?: number, lat2?: number, lon2?: number) => {
+    if (typeof lat1 !== "number" || typeof lon1 !== "number" || typeof lat2 !== "number" || typeof lon2 !== "number") return null;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round((R * c) * 10) / 10;
+  };
+  const distCenter = distanceKm(hub.latitude, hub.longitude, cityConfig.center.lat, cityConfig.center.lng);
+  const distAirport = distanceKm(hub.latitude, hub.longitude, cityConfig.airport.lat, cityConfig.airport.lng);
+  const distBeach = distanceKm(hub.latitude, hub.longitude, cityConfig.beach.lat, cityConfig.beach.lng);
   const defaultFaq = [
-    {
-      q: "How long does transfer to Split Airport take?",
-      a: "On‑demand rides via Uber/Taxi typically take 2–3 minutes from the PayParq car park to Split Airport (SPU) in Kaštela.",
-    },
-    {
-      q: "When and how often is there a transfer?",
-      a: "Transfers are on‑demand 24/7 via Uber/Taxi. Arrive, request a ride, and go directly to your chosen terminal.",
-    },
-    {
-      q: "Can I book a parking space without a transfer?",
-      a: "Yes. Choose parking‑only at checkout if you prefer to arrange your own transport.",
-    },
+    { q: `How close is PayParq to ${cityName} Airport?`, a: `Typical transfer is 2–5 minutes by Uber depending on traffic. Our location is optimised for quick access to terminal routes.` },
+    { q: `Is the car park secure?`, a: `Yes. We use AI‑powered cameras to monitor every entry and exit 24/7. The lot is remote but digitally supervised at all times.` },
+    { q: `Do I need to display a ticket?`, a: `No. Your license plate is your digital permit. Our system recognises your car automatically.` },
+    { q: `Can I cancel or change my booking?`, a: `Yes. You can cancel for a full refund up to 1 hour before your arrival time.` },
+    { q: `Do you offer on‑demand transfers?`, a: `Yes. Request Uber directly from the app for instant terminal drop‑off, typically arriving in minutes.` },
+    { q: `Is the car park monitored?`, a: `AI camera monitoring, well‑lit bays, and activity logs provide a secure environment for short‑ and long‑stay parking.` },
+    { q: `Do you support EVs?`, a: `Selected locations include EV charging. If not available at this site, nearby public chargers are suggested in the app.` },
+    { q: `Are there height or size limits?`, a: `Most standard vehicles fit. Oversized vehicles should contact support for dedicated guidance before booking.` },
+    { q: `Can I book long‑stay parking?`, a: `Yes. Choose your duration and extend if needed. Long‑stay customers often prefer covered bays for extra protection.` },
+    { q: `Is customer support available?`, a: `24/7 WhatsApp and in‑app support. Contact the City Manager directly from your confirmation.` },
+    { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
+    { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
+    { q: `What happens if my flight is delayed?`, a: `Adjust your end time in the app or contact support — we’ll help update your reservation.` },
+    { q: `Is pricing transparent?`, a: `Yes. Clear hourly rates with no hidden fees. Total is shown before you confirm.` },
   ];
   const finalFaq = faqItems && faqItems.length > 0 ? faqItems : defaultFaq;
   const faqSchema = {
@@ -307,7 +367,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
               </div>
               <div className="flex items-center justify-center">
                 <Link href="/" className="relative flex items-center justify-center">
-                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg.white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                  <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
                     <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
                       <span className="text-sm md:text-base font-semibold tracking-tight leading-none text-white">
                         P
@@ -333,7 +393,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
               </div>
             </div>
             {mobileOpen && (
-              <div className="md:hidden border-t border-black/5 bg.white px-0 pb-3">
+              <div className="md:hidden border-t border-black/5 bg-white px-0 pb-3">
                 <div className="flex flex-col gap-2 pt-2 text-[12px] font-medium text-black w-full max-w-xs mx-auto">
                   <Link
                     href="/experience"
@@ -478,54 +538,78 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
       
       <main className="flex-1 bg-white pt-16 md:pt-20">
         <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-5 md:pt-6 md:pb-5">
-          <h1 className="text-3xl md:text-4xl font-normal tracking-tight mb-6 md:mb-8 text-black md:-ml-10">
-            {locationName} parking from {priceLabel} per hour - just {travelTime} away.
-          </h1>
+          <div className="flex items-start gap-4 mb-6 md:mb-8 md:-ml-10">
+            <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-black">
+              {locationName} parking from {priceLabel} per hour - just {travelTime} away.
+            </h1>
+          </div>
 
           <section className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] items-start">
             <div className="space-y-8 md:-ml-10">
-              <div className="h-full min-h-[480px] rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg">
+              <div className="rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg" style={{ height: reserveHeight }}>
                 <div className="relative w-full h-full">
                   <Image
-                    src={hero || "/Split_Airport_new_terminal_main_hall.jpg"}
+                    src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
                     alt={`${locationName} parking`}
                     fill
                     priority
                     className="object-cover"
                   />
-                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)]" />
-                  <div className="absolute inset-x-6 bottom-6 flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-white/60">
-                        PayParq car park
-                      </p>
-                      <p className="text-sm md:text-base text-white font-semibold">
-                        Rows of covered and open-air parking bays, ready for take-off.
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 border border-white/25 px-2 py-1 text-[10px] text-white">
-                          <Car className="w-3 h-3" />
-                          <span>Uber/Taxi</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
-                          <MessageCircle className="w-3 h-3" />
-                          <span>WhatsApp 24/7</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
-                          <CreditCard className="w-3 h-3" />
-                          <span>Stripe</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg.white/15 border border.white/25 px-2 py-1 text-[10px] text.white">
-                          <Camera className="w-3 h-3" />
-                          <span>AI Cameras</span>
-                        </span>
+                  {/* Photo Navigation */}
+                  {photos.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrevPhoto}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 backdrop-blur-sm transition-all"
+                        aria-label="Previous photo"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={handleNextPhoto}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 backdrop-blur-sm transition-all"
+                        aria-label="Next photo"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                      <div className="absolute top-4 right-6 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+                        {currentPhotoIndex + 1} / {photos.length}
                       </div>
+                    </>
+                  )}
+                  
+                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)] pointer-events-none" />
+                  
+                  <div className="absolute bottom-4 left-4 z-10">
+                    <div className="w-10 h-10 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
+                      <svg viewBox="0 0 64 64" className="w-6 h-6">
+                        <circle cx="20" cy="32" r="7" fill="#ffffff" />
+                        <circle cx="44" cy="32" r="7" fill="#ffffff" />
+                        <circle cx="32" cy="32" r="5" fill="#ffffff" />
+                        <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
+                      </svg>
                     </div>
-                    <span className="hidden md:inline-flex px-3 py-1 rounded-full bg-white/10 text-[10px] text-white/80 border border-white/20">
-                      Photo of {locationName} parking
-                    </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-4 gap-2 w-full">
+                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <Car className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">Uber</span>
+                </span>
+                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <PhoneCall className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">Support 24/7</span>
+                </span>
+                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <CreditCard className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">Stripe</span>
+                </span>
+                <span className="flex items-center justify-center gap-1 rounded-full bg-black/5 border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
+                  <Camera className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">AI Vision</span>
+                </span>
               </div>
 
               <section className="mt-4 rounded-3xl border border-black/10 bg-white overflow-hidden">
@@ -542,18 +626,124 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
                   />
                 </div>
               </section>
+
+              <section className="bg-white text-black border-t border-black/10 rounded-3xl overflow-hidden">
+                <div className="px-6 md:px-12 py-16 md:py-20">
+                  <div className="space-y-12">
+                    <div className="space-y-2">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">How it works</p>
+                      <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Your parking experience, simplified</h2>
+                    </div>
+                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+                      {howItWorks.map((step, idx) => {
+                        const Icon = step.icon as React.ComponentType<{ className?: string }>;
+                        return (
+                          <div key={idx} className="space-y-4">
+                            <div className="relative h-32 rounded-2xl overflow-hidden border border-black/5 bg-gradient-to-br from-[#F3F4F6] to-[#E5E7EB] flex items-center justify-center">
+                              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-black/10 flex items-center justify-center">
+                                <Icon className="w-8 h-8 text-black/70" />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold">{step.label}</h3>
+                              <p className="text-xs text-black/70">{step.description}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="bg-white text-black border-t border-black/10 rounded-3xl overflow-hidden">
+                <div className="px-6 md:px-12 py-16 md:py-20 space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                      <p className="text-sm font-semibold">City Centre</p>
+                      <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
+                    </div>
+                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                      <p className="text-sm font-semibold">Airport</p>
+                      <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
+                    </div>
+                    <div className="rounded-2xl border border-black/10 bg-[#F8F8F9] px-4 py-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                      <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
+                      <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
+                    <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {[
+                        { q: "City", a: cityName },
+                        { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
+                        { q: "Distance to Airport", a: typeof distAirport === "number" ? `${distAirport} km` : "N/A" },
+                        { q: "Distance to City Centre", a: typeof distCenter === "number" ? `${distCenter} km` : "N/A" },
+                        { q: `${cityConfig.beach.name} Distance`, a: typeof distBeach === "number" ? `${distBeach} km` : "N/A" },
+                        { q: "Typical transfer time", a: travelTime },
+                        { q: "Parking types", a: "Open‑air and covered bays" },
+                        { q: "Hours", a: "24/7 operations" },
+                        { q: "Payment", a: "Stripe secure checkout" },
+                        { q: "Security", a: "AI cameras and recorded entry/exit" },
+                        { q: "Access", a: "License plate recognition" },
+                        { q: "Support", a: "WhatsApp 24/7 City Manager" },
+                      ].map((item) => (
+                        <div key={item.q} className="rounded-xl border border-black/10 bg-[#F8F8F9] px-4 py-3">
+                          <p className="text-xs font-semibold">{item.q}</p>
+                          <p className="text-xs text-black/70">{item.a}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
+                    <div className="space-y-3">
+                      {finalFaq.map((i, idx) => {
+                        const open = openFaq.includes(idx);
+                        return (
+                          <div key={i.q} className="rounded-xl border border-black/10 bg-[#F8F8F9]">
+                            <button
+                              type="button"
+                              className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-left"
+                              aria-expanded={open}
+                              onClick={() =>
+                                setOpenFaq((prev) =>
+                                  prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+                                )
+                              }
+                            >
+                              <span>{i.q}</span>
+                              {open ? (
+                                <Minus className="w-4 h-4 text-black/60" />
+                              ) : (
+                                <Plus className="w-4 h-4 text-black/60" />
+                              )}
+                            </button>
+                            {open ? <div className="px-4 pb-4 text-sm text-black/75">{i.a}</div> : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
 
             <div className="flex flex-col items-end md:sticky md:top-24">
             {/* Check Price Widget */}
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <h2 className="text-xl font-bold mb-6">Check price & availability</h2>
+            <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 w-full" ref={reserveRef}>
+              <h2 className="text-lg font-bold mb-4">Check price & availability</h2>
               
               {/* Tab Switcher */}
-              <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+              <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
                 <button
                   onClick={() => setActiveTab('reserve')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
                   }`}
                 >
@@ -561,7 +751,7 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
                 </button>
                 <button
                   onClick={() => setActiveTab('park_now')}
-                  className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
                     activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
                   }`}
                 >
@@ -571,52 +761,52 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
 
               {activeTab === 'reserve' ? (
                 <>
-                  <div className="space-y-4 mb-6">
+                  <div className="space-y-3 mb-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         From
                       </label>
                       <input
                         type="datetime-local"
                         value={checkIn}
                         onChange={(e) => setCheckIn(e.target.value)}
-                        className="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F3DFC]"
+                        className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
                         To
                       </label>
                       <input
                         type="datetime-local"
                         value={checkOut}
                         onChange={(e) => setCheckOut(e.target.value)}
-                        className="w-full bg-gray-50 border-0 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-[#5F3DFC]"
+                        className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                       />
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between mb-8 py-4 border-t border-gray-100">
-                    <span className="text-gray-500 font-medium">Total</span>
+                  <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
+                    <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">{totalPriceLabel}</div>
-                      <div className="text-xs text-gray-400 font-medium">{totalHours} hours</div>
+                      <div className="text-xl font-bold">{totalPriceLabel}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">{totalHours} hours ({priceLabel}/hr)</div>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="mb-8">
-                  <div className="bg-blue-50 text-blue-800 p-4 rounded-xl text-sm mb-4">
+                <div className="mb-4">
+                  <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
                     <strong>Park Immediately</strong>
-                    <p className="mt-1 text-xs opacity-90">
-                      Start your session now. You can adjust the duration (hours) directly in the checkout.
+                    <p className="mt-1 opacity-90">
+                      Start your session now. Adjust duration in checkout.
                     </p>
                   </div>
-                  <div className="flex items-center justify-between py-4 border-t border-gray-100">
-                    <span className="text-gray-500 font-medium">Rate</span>
+                  <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
+                    <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">{priceLabel}/hr</div>
-                      <div className="text-xs text-gray-400 font-medium">Select hours in next step</div>
+                      <div className="text-xl font-bold">€{priceValue.toFixed(2)}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">1 hour ({priceLabel}/hr)</div>
                     </div>
                   </div>
                 </div>
@@ -625,86 +815,100 @@ export default function LocationClient({ hub, priceLabel, hero, faqItems, travel
               <Link
                 href={checkoutHref}
                 onClick={(activeTab === 'reserve' && checkIn && checkOut) || activeTab === 'park_now' ? handleBook : undefined}
-                className={`w-full block text-center bg-[#5F3DFC] text-white font-bold py-4 rounded-xl hover:bg-[#4a2fe0] transition-colors shadow-lg shadow-indigo-200 ${
+                className={`w-full block text-center font-bold py-3 rounded-xl hover:opacity-90 transition-colors shadow-lg bg-[#5F3DFC] text-white shadow-indigo-200 ${
                   loading || (activeTab === 'reserve' && (!checkIn || !checkOut)) ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
                 {loading ? "Processing..." : (activeTab === 'reserve' ? "Book Now" : "Park Now")}
               </Link>
               
-              <p className="mt-4 text-xs text-center text-gray-400">
+              <p className="mt-3 text-[10px] text-center text-gray-400">
                 Secure payment via Stripe • Free cancellation
               </p>
             </div>
             </div>
           </section>
         </article>
-        <section className="bg-white text-black border-t border-black/10">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="space-y-12">
-              <div className="text-center space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">How it works</p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Your parking experience, simplified</h2>
-              </div>
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-                {howItWorks.map((step, idx) => (
-                  <div key={idx} className="space-y-4">
-                    <div className="relative h-48 rounded-2xl overflow-hidden border border-black/5">
-                      <Image
-                        src={step.image}
-                        alt={step.label}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
+        <section className="hidden">
+          <div className="max-w-6xl mx-auto px-4 md:px-10">
+            <div className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
+              <div className="md:-ml-10">
+                <div className="py-16 md:py-20">
+                  <div className="space-y-12">
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold">{step.label}</h3>
-                      <p className="text-xs text-black/70">{step.description}</p>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">How it works</p>
+                      <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Your parking experience, simplified</h2>
+                    </div>
+                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+                      {howItWorks.map((step, idx) => {
+                        const Icon = step.icon as React.ComponentType<{ className?: string }>;
+                        return (
+                          <div key={idx} className="space-y-4">
+                            <div className="relative h-32 rounded-2xl overflow-hidden border border-black/5 bg-gradient-to-br from-[#F3F4F6] to-[#E5E7EB] flex items-center justify-center">
+                              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-black/10 flex items-center justify-center">
+                                <Icon className="w-8 h-8 text-black/70" />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold">{step.label}</h3>
+                              <p className="text-xs text-black/70">{step.description}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
+              <div></div>
             </div>
           </div>
         </section>
-        <section className="bg-white text-black border-t border-black/10">
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
-            <div className="grid md:grid-cols-[2fr,3fr] gap-12">
-              <div className="space-y-4">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
-                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
-                <p className="text-sm md:text-base text-black/75">{hub.address || ""}</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
-                <div className="space-y-3">
-                  {finalFaq.map((i, idx) => {
-                    const open = openFaq.includes(idx);
-                    return (
-                      <div key={i.q} className="rounded-xl border border-black/10 bg-[#F8F8F9]">
-                        <button
-                          type="button"
-                          className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-left"
-                          aria-expanded={open}
-                          onClick={() =>
-                            setOpenFaq((prev) =>
-                              prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
-                            )
-                          }
-                        >
-                          <span>{i.q}</span>
-                          {open ? (
-                            <Minus className="w-4 h-4 text-black/60" />
-                          ) : (
-                            <Plus className="w-4 h-4 text-black/60" />
-                          )}
-                        </button>
-                        {open ? <div className="px-4 pb-4 text-sm text-black/75">{i.a}</div> : null}
+        <section className="hidden">
+          <div className="max-w-6xl mx-auto px-4 md:px-10">
+            <div className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)]">
+              <div className="md:-ml-10">
+                <div className="py-16 md:py-20">
+                  <div className="grid md:grid-cols-[2fr,3fr] gap-12">
+                    <div className="space-y-4">
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-black/60">About the location</p>
+                      <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
+                      <p className="text-sm md:text-base text-black/75">{hub.address || ""}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
+                      <div className="space-y-3">
+                        {finalFaq.map((i, idx) => {
+                          const open = openFaq.includes(idx);
+                          return (
+                            <div key={i.q} className="rounded-xl border border-black/10 bg-[#F8F8F9]">
+                              <button
+                                type="button"
+                                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-left"
+                                aria-expanded={open}
+                                onClick={() =>
+                                  setOpenFaq((prev) =>
+                                    prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+                                  )
+                                }
+                              >
+                                <span>{i.q}</span>
+                                {open ? (
+                                  <Minus className="w-4 h-4 text-black/60" />
+                                ) : (
+                                  <Plus className="w-4 h-4 text-black/60" />
+                                )}
+                              </button>
+                              {open ? <div className="px-4 pb-4 text-sm text-black/75">{i.a}</div> : null}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
               </div>
+              <div></div>
             </div>
           </div>
         </section>

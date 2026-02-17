@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, supabaseUrl } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         const [y, m, d] = datePart.split('-');
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return `${d} ${months[parseInt(m) - 1]} ${y}, ${timePart}`;
-      } catch (e) {
+      } catch {
         return iso;
       }
     };
@@ -129,15 +129,23 @@ export async function POST(req: NextRequest) {
     } else {
       try {
         const { data } = await supabase
-          .from('pricing_settings')
-          .select('rules_text')
-          .eq('location_id', location_id)
-          .eq('active', true)
-          .limit(1);
-        const rules = data?.[0]?.rules_text as string | undefined;
-        if (rules) {
-          const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
-          if (match) unitAmount = parseInt(match[1], 10) * 100;
+          .from('locations')
+          .select('base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier')
+          .eq('id', location_id)
+          .single();
+        
+        if (data) {
+          // base_price_hourly is in EUR, convert to cents
+          let price = (data.base_price_hourly || 5) * 100;
+          
+          if (data.dynamic_pricing_enabled && data.dynamic_pricing_ratio) {
+            price *= data.dynamic_pricing_ratio;
+          }
+          if (data.surcharge_enabled && data.surcharge_multiplier) {
+            price *= data.surcharge_multiplier;
+          }
+          
+          unitAmount = Math.round(price);
         }
       } catch (err) {
         console.error('Failed to fetch pricing from Supabase:', err);

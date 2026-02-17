@@ -30,40 +30,35 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
   
-  const { data, error } = await client
+  const { data: locationData, error } = await client
     .from("locations")
-    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata")
+    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier")
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
 
-  console.log('3. Query executed');
-  console.log('4. Result:', data?.[0]);
-  console.log('5. Error:', error);
+  if (error) {
+    console.error('[locations/[slug]] Error:', error);
+  }
 
-  if (error || !data || data.length === 0) {
-    console.error('[locations/[slug]] Supabase query failed:', error);
+  const hub = locationData?.[0];
+
+  if (!hub) {
     return null;
   }
 
-  const hub = data[0] as HubData;
-  if (!hub) return null;
+  // Calculate dynamic price
+  const basePrice = hub.base_price_hourly || 5;
+  let finalPrice = basePrice;
 
-  const { data: pricing } = await client
-    .from("pricing_settings")
-    .select("rules_text")
-    .eq("location_id", hub.id)
-    .eq("active", true)
-    .limit(1);
-
-  const rulesText = pricing?.[0]?.rules_text as string | undefined;
-  let priceLabel = "€";
-  if (rulesText) {
-    const match = rulesText.match(/(?:€|\$|eur)?\s*(\d+(?:[.,]\d+)?)\s*(?:per\s*)?(?:\/)?\s*(?:hr|hour|hours|hourly)\b/i);
-    if (match) {
-      const v = match[1].replace(',', '.');
-      priceLabel = `€${v}/hr`;
-    }
+  if (hub.dynamic_pricing_enabled && hub.dynamic_pricing_ratio) {
+    finalPrice *= hub.dynamic_pricing_ratio;
   }
+  if (hub.surcharge_enabled && hub.surcharge_multiplier) {
+    finalPrice *= hub.surcharge_multiplier;
+  }
+
+  // Format price label
+  const priceLabel = `€${finalPrice.toFixed(2)}`;
 
   const hero = Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "";
   const faqItems: Array<{ q: string; a: string }> = [];
@@ -93,9 +88,9 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
     const d = R * c; // Distance in km
     
-    // Estimate: 2 min per km (30km/h) + 1 min base
     const minutes = Math.ceil(d * 2 + 1);
-    travelTime = `${minutes} minutes`;
+    const capped = Math.min(minutes, 5);
+    travelTime = `${capped} minutes`;
   }
 
   return { hub, priceLabel, hero, faqItems, travelTime };

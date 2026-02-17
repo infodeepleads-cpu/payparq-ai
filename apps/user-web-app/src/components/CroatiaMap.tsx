@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Tooltip, Popup } from 'react-leaflet';
+import { useMemo, useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Link from 'next/link';
@@ -16,6 +16,30 @@ type Hub = {
   location_id?: string;
   priceLabel?: string;
 };
+
+// Component to handle auto-fitting bounds
+function MapController({ hubs }: { hubs: ReadonlyArray<Hub> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (hubs.length === 0) return;
+
+    const validHubs = hubs.filter(
+      h => typeof h.lat === 'number' && typeof h.lng === 'number' && h.lat !== 0 && h.lng !== 0
+    );
+
+    if (validHubs.length > 0) {
+      const bounds = L.latLngBounds(validHubs.map(h => [h.lat, h.lng]));
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 12,
+        animate: true
+      });
+    }
+  }, [hubs, map]);
+
+  return null;
+}
 
 const blackLogoPinIcon = new L.DivIcon({
   className: '',
@@ -64,6 +88,7 @@ export default function CroatiaMap({ hubs }: { hubs: ReadonlyArray<Hub> }) {
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <MapController hubs={hubs} />
         {hubs.map(hub => {
           const hasCoords = typeof hub.lat === 'number' && typeof hub.lng === 'number' && hub.lat !== 0 && hub.lng !== 0;
           if (!hasCoords) return null;

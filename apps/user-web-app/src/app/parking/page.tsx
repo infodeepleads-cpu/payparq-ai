@@ -199,13 +199,12 @@ export default function Parking() {
           <div className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20 grid gap-10 md:grid-cols-[1.2fr,1fr] items-center">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
-                  <svg viewBox="0 0 64 64" className="w-7 h-7">
-                    <circle cx="20" cy="32" r="7" fill="#ffffff" />
-                    <circle cx="44" cy="32" r="7" fill="#ffffff" />
-                    <circle cx="32" cy="32" r="5" fill="#ffffff" />
-                    <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
-                  </svg>
+                <div className="w-12 h-12 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
+                    <span className="text-base font-semibold tracking-tight leading-none text-white">
+                      P
+                    </span>
+                  </div>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
                   PayParq HUBs
@@ -233,10 +232,10 @@ export default function Parking() {
                 </div>
                 <div className="rounded-2xl border border-white/15 bg-white/5 p-5">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-white/50 mb-2">
-                    Integrated Uber &amp; Taxi Hub
+                    Integrated Uber Hub
                   </p>
                   <p>
-                    While our lot is remote, you’re never stranded. We feature dedicated Uber/Taxi
+                    While our lot is remote, you’re never stranded. We feature dedicated Uber
                     integration and 24/7 WhatsApp support to ensure a fast, reliable bridge to your final
                     destination.
                   </p>

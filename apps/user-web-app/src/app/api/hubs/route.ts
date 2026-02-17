@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const client = supabaseAdmin ?? supabase;
@@ -10,7 +12,7 @@ export async function GET() {
     }
     const { data: locations, error } = await client
       .from('locations')
-      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata')
+      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata,base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier')
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -39,10 +41,16 @@ export async function GET() {
       latitude?: number;
       longitude?: number;
       verification_metadata?: Record<string, unknown>;
+      base_price_hourly?: number;
+      dynamic_pricing_enabled?: boolean;
+      dynamic_pricing_ratio?: number;
+      surcharge_enabled?: boolean;
+      surcharge_multiplier?: number;
     };
 
     type Hub = {
       id: string;
+      displayId: string;
       name: string;
       label: string;
       href: string;
@@ -58,27 +66,22 @@ export async function GET() {
         const href = `/locations/${String(loc.canonical_slug ?? '').trim()}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude : 0;
         const lng = typeof loc.longitude === 'number' ? loc.longitude : 0;
+        const displayId = String(loc.display_id || loc.id);
 
-        let priceLabel = '€';
-        try {
-          const { data: pricing } = await client
-            .from('pricing_settings')
-            .select('rules_text')
-            .eq('location_id', loc.id)
-            .eq('active', true)
-            .limit(1);
+        // Calculate dynamic price (same logic as [slug]/page.tsx and checkout/route.ts)
+        const basePrice = loc.base_price_hourly || 5;
+        let finalPrice = basePrice;
 
-          const rulesText = pricing?.[0]?.rules_text as string | undefined;
-          if (rulesText) {
-            const match = rulesText.match(/(?:€|\$|eur)?\s*(\d+(?:[.,]\d+)?)\s*(?:per\s*)?(?:\/)?\s*(?:hr|hour|hours|hourly)\b/i);
-            if (match) {
-              const v = match[1].replace(',', '.');
-              priceLabel = `€${v}/hr`;
-            }
-          }
-        } catch {}
+        if (loc.dynamic_pricing_enabled && loc.dynamic_pricing_ratio) {
+          finalPrice *= loc.dynamic_pricing_ratio;
+        }
+        if (loc.surcharge_enabled && loc.surcharge_multiplier) {
+          finalPrice *= loc.surcharge_multiplier;
+        }
 
-        return { id: loc.id, name, label, href, lat, lng, priceLabel };
+        const priceLabel = `€${finalPrice.toFixed(2)}`;
+
+        return { id: loc.id, displayId, name, label, href, lat, lng, priceLabel };
       })
     );
 
