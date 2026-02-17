@@ -70,7 +70,7 @@ function SuccessContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-black">Order Uber</h3>
-                    <p className="text-xs text-black/50 truncate">Get a ride to your terminal</p>
+                    <p className="text-xs text-black/50 truncate">Get a ride</p>
                   </div>
                   <ExternalLink size={16} className="text-black/30 group-hover:text-black transition-colors" />
                 </a>
