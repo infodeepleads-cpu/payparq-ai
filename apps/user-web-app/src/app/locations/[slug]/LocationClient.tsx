@@ -31,6 +31,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [companyOpen, setCompanyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
+  const [isDesktop, setIsDesktop] = useState(false);
   
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
@@ -151,6 +152,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     window.addEventListener('resize', updateHeight);
     return () => window.removeEventListener('resize', updateHeight);
   }, [activeTab, checkIn, checkOut, loading]);
+  useEffect(() => {
+    const updateDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    updateDesktop();
+    window.addEventListener('resize', updateDesktop);
+    return () => window.removeEventListener('resize', updateDesktop);
+  }, []);
  
   const howItWorks = [
     {
@@ -546,7 +555,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
 
           <section className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] items-start">
             <div className="space-y-8 md:-ml-10">
-              <div className="rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg" style={{ height: reserveHeight }}>
+              <div className="rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg h-[240px] md:h-auto" style={isDesktop ? { height: reserveHeight } : undefined}>
                 <div className="relative w-full h-full">
                   <Image
                     src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
@@ -591,6 +600,83 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              <div className="md:hidden bg-white rounded-3xl p-4 shadow-sm border border-gray-100 w-full -mt-2">
+                <h2 className="text-base font-bold mb-3">Check price & availability</h2>
+                <Link
+                  href={checkoutHref}
+                  onClick={activeTab === 'reserve' ? (checkIn && checkOut ? handleBook : undefined) : handleBook}
+                  className={`w-full inline-flex justify-center items-center px-4 py-2 rounded-xl bg-[#5F3DFC] text-white text-sm font-semibold shadow-sm hover:bg-[#4330c4] transition-colors mb-3 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                >
+                  {loading ? "Processing..." : `Book (${priceLabel})`}
+                </Link>
+                {activeTab === 'reserve' ? (
+                  <>
+                    <div className="space-y-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">From</label>
+                        <input
+                          type="datetime-local"
+                          value={checkIn}
+                          onChange={(e) => setCheckIn(e.target.value)}
+                          className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">To</label>
+                        <input
+                          type="datetime-local"
+                          value={checkOut}
+                          onChange={(e) => setCheckOut(e.target.value)}
+                          className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                      <button
+                        onClick={() => setActiveTab('reserve')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                      >
+                        Reserve
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('park_now')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                      >
+                        Park Now
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                      <span className="text-gray-500 font-medium text-xs">Total</span>
+                      <div className="text-right">
+                        <div className="text-lg font-bold">{totalPriceLabel}</div>
+                        <div className="text-[10px] text-gray-400 font-medium">{totalHours} hours ({priceLabel}/hr)</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
+                      <strong>Park Immediately</strong>
+                      <p className="mt-1 opacity-90">Start your session now. Adjust duration in checkout.</p>
+                    </div>
+                    <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                      <button
+                        onClick={() => setActiveTab('reserve')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                      >
+                        Reserve
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('park_now')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-lg transition-all ${activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
+                      >
+                        Park Now
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 grid grid-cols-4 gap-2 w-full">
@@ -734,7 +820,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
               </section>
             </div>
 
-            <div className="flex flex-col items-end md:sticky md:top-24">
+            <div className="hidden md:flex flex-col items-end md:sticky md:top-24">
             {/* Check Price Widget */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 w-full" ref={reserveRef}>
               <h2 className="text-lg font-bold mb-4">Check price & availability</h2>
