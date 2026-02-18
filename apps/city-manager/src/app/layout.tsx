@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PwaProvider />
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto bg-white relative">
+          <main className="flex-1 overflow-hidden bg-white relative">
             {children}
           </main>
         </div>

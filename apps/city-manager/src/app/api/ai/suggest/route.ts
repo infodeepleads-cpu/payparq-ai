@@ -25,6 +25,39 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const note = body?.note ?? "";
 
+  if (env.GEMINI_API_KEY) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const prompt =
+        `Manager note:\n${note}\n\n` +
+        `Return JSON with keys: nextStep, whatsappDraft, emailDraft, urgent (boolean). ` +
+        `Style: concise, actionable, manager-oriented. WhatsApp short. Email clear.`;
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${env.GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }]}],
+          generationConfig: { response_mime_type: "application/json" }
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!r.ok) return json(fallbackSuggest(note));
+      const data = await r.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+      const parsed = JSON.parse(text);
+      return json({
+        nextStep: parsed.nextStep || "",
+        whatsappDraft: parsed.whatsappDraft || "",
+        emailDraft: parsed.emailDraft || "",
+        urgent: !!parsed.urgent
+      });
+    } catch {
+      return json(fallbackSuggest(note));
+    }
+  }
+  
   if (!env.OPENAI_API_KEY) {
     return json(fallbackSuggest(note));
   }

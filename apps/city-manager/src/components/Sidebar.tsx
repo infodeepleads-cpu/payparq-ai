@@ -1,6 +1,7 @@
- "use client";
-import Link from "next/link";
+"use client";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { getSupabase } from "../lib/supabase";
 
 type Thread = {
   id: string;
@@ -52,8 +53,10 @@ function createThread(): Thread {
 }
 
 export default function Sidebar() {
+  const pathname = usePathname();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     setThreads(readThreads());
@@ -64,19 +67,49 @@ export default function Sidebar() {
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("pp-current-thread", onStorage as any);
+    try {
+      const supabase = getSupabase();
+      supabase.auth.getUser().then(({ data }) => {
+        const u = data?.user;
+        const name =
+          (u?.user_metadata as any)?.name ||
+          (u?.user_metadata as any)?.full_name ||
+          u?.email ||
+          null;
+        setUserName(name);
+      });
+    } catch {
+      // Supabase is not configured; skip user fetch
+      setUserName(null);
+    }
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("pp-current-thread", onStorage as any);
     };
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabase();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore if supabase not configured
+    } finally {
+      window.location.href = "/auth";
+    }
+  };
+
+  if (pathname?.startsWith("/auth")) {
+    return null;
+  }
+
   return (
     <aside className="hidden md:flex flex-col w-[280px] h-full bg-sidebar border-r border-gray-100 text-sidebarText text-sm pt-4 pb-4">
-      <div className="px-3 pb-3">
+      <div className="px-3 pb-3 sticky top-0 bg-sidebar border-b border-gray-100 z-10">
         <span className="text-sm font-semibold tracking-tight text-black">machine.io</span>
       </div>
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide">
-        <div className="pb-2 px-3">
+        <div className="pb-2 px-0">
           <h3 className="text-xs font-semibold text-gray-500">Your chats</h3>
         </div>
         
@@ -87,12 +120,12 @@ export default function Sidebar() {
           {threads.map((t) => (
             <div
               key={t.id}
-              className={`group flex items-center justify-between px-3 py-2 rounded-xl transition-colors ${
-                currentId === t.id ? "bg-gray-200 text-black" : "hover:bg-gray-100 text-gray-700"
+              className={`group flex items-center justify-between px-0 py-1 ${
+                currentId === t.id ? "text-black font-medium" : "text-gray-700 hover:text-black"
               }`}
             >
               <button
-                className="flex-1 text-left truncate"
+                className="flex-1 text-left truncate bg-transparent border-0 p-0"
                 onClick={() => setCurrent(t.id)}
                 title={t.title}
               >
@@ -101,7 +134,7 @@ export default function Sidebar() {
               <button
                 aria-label="Delete chat"
                 onClick={() => removeThread(t.id)}
-                className="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-gray-200 transition-opacity"
+                className="bg-transparent border-0 p-0"
                 title="Delete"
               >
                 <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -112,16 +145,25 @@ export default function Sidebar() {
           ))}
         </div>
       </nav>
-      
-      <div className="px-3 mt-auto pt-4 border-t border-gray-100 mb-10">
-        <div className="flex items-center gap-3 px-3 py-3 w-full">
-          <div className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-700">
-            KŽ
+      <div className="px-3 mt-auto pt-4 border-t border-gray-100 mb-6">
+        <div className="flex items-center justify-between pl-3 pr-[1cm] py-3 w-full">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-white border-2 border-gray-300 ring-1 ring-black/5 shadow-sm flex items-center justify-center text-xs font-bold text-gray-700">
+              {(userName || "User")
+                .split("@")[0]
+                .split(" ")
+                .map(s => s[0]?.toUpperCase())
+                .slice(0, 2)
+                .join("")}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-black">{userName || "Signed in"}</span>
+              <span className="text-xs text-gray-500">Basic</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-             <span className="text-sm font-medium text-black">Karlo Žamić</span>
-             <span className="text-xs text-gray-500">Basic</span>
-          </div>
+          <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-black bg-transparent border-0 p-0">
+            Log out
+          </button>
         </div>
       </div>
     </aside>

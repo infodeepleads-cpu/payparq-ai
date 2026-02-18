@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
+import { getSupabase } from "../lib/supabase";
 
 type SuggestResponse = {
   nextStep: string;
@@ -17,7 +18,9 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const THREADS_KEY = "pp_chat_threads";
   const CURRENT_KEY = "pp_current_thread";
@@ -89,22 +92,62 @@ export default function Home() {
       loadMessages(id);
     };
     window.addEventListener("pp-current-thread", handler);
+    const pasteHandler = (e: any) => {
+      const text = e?.detail?.text ?? "";
+      setInput(text);
+      inputRef.current?.focus();
+    };
+    window.addEventListener("pp-set-input", pasteHandler);
+
+    try {
+      const supabase = getSupabase();
+      supabase.auth.getUser().then(({ data }) => {
+        const u = data?.user;
+        const name =
+          (u?.user_metadata as any)?.name ||
+          (u?.user_metadata as any)?.full_name ||
+          u?.email ||
+          null;
+        setUserName(name);
+      });
+    } catch {
+      // ignore if supabase not configured
+    }
     return () => window.removeEventListener("pp-current-thread", handler);
   }, []);
 
   const sendMessage = async () => {
+  const handleLogout = async () => {
+    try {
+      const supabase = getSupabase();
+      await supabase.auth.signOut();
+    } catch {
+      // ignore if supabase not configured
+    } finally {
+      window.location.href = "/auth";
+    }
+  };
+
     if (!input.trim() || loading) return;
     
     const userText = input.trim();
     setInput("");
+    setError(null);
     setError(null);
     setLoading(true);
 
     const id = ensureThread(userText);
     const userMsg: Message = { role: "user", content: userText };
     const nextUserMsgs: Message[] = [...messages, userMsg];
-    setMessages(nextUserMsgs);
-    saveMessages(id, nextUserMsgs);
+    const placeholder: Message = {
+      role: "assistant",
+      content:
+        "😋 Got it.\n\nWhenever you're ready, just type what you need — even if it’s only one letter at a time."
+    };
+    const placeholderIndex = nextUserMsgs.length;
+    const withPlaceholder = [...nextUserMsgs, placeholder];
+    setMessages(withPlaceholder);
+    saveMessages(id!, withPlaceholder);
 
     try {
       const r = await fetch("/api/ai/suggest", {
@@ -117,12 +160,11 @@ export default function Home() {
       
       const data: SuggestResponse = await r.json();
       const assistantText = `Here is a suggestion:\n\n${data.nextStep}\n\n**Draft for WhatsApp:**\n${data.whatsappDraft}\n\n**Draft for Email:**\n${data.emailDraft}`;
-      
-      const assistantMsg: Message = { role: "assistant", content: assistantText };
-      const nextMsgs: Message[] = [...nextUserMsgs, assistantMsg];
-      setMessages(nextMsgs);
+      const finalMsgs = withPlaceholder.slice();
+      finalMsgs[placeholderIndex] = { role: "assistant", content: assistantText };
+      setMessages(finalMsgs);
       if (id) {
-        saveMessages(id, nextMsgs);
+        saveMessages(id, finalMsgs);
         const threads = readThreads();
         const idx = threads.findIndex((t: any) => t.id === id);
         if (idx >= 0) {
@@ -150,7 +192,18 @@ export default function Home() {
       }
     } catch (e: any) {
       setError(e.message ?? "Error processing request");
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
+      setMessages((prev) => {
+        const next = prev.slice();
+        const idx = prev.length - 1;
+        if (idx >= 0 && next[idx]?.role === "assistant") {
+          next[idx] = { role: "assistant", content: "Sorry, I encountered an error. Please try again." };
+          if (id) saveMessages(id, next);
+          return next;
+        }
+        const appended: Message[] = [...prev, { role: "assistant" as const, content: "Sorry, I encountered an error. Please try again." }];
+        if (id) saveMessages(id, appended);
+        return appended;
+      });
     } finally {
       setLoading(false);
     }
@@ -174,6 +227,7 @@ export default function Home() {
             placeholder="Ask anything..."
             className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center"
             autoFocus
+            ref={inputRef}
           />
          <div className="flex items-center gap-4">
             <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -200,8 +254,16 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full bg-white relative">
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100 md:hidden">
-        <div className="max-w-3xl mx-auto px-4 md:px-0 py-3">
+        <div className="max-w-3xl mx-auto px-4 md:px-0 py-3 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-tight text-black">machine.io</span>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => { window.location.href = "/auth"; }}
+              className="text-xs font-medium text-black bg-transparent border-0 p-0"
+            >
+              Log out
+            </button>
+          </div>
         </div>
       </div>
       {!threadId || messages.length === 0 ? (
@@ -216,16 +278,14 @@ export default function Home() {
                 <ChatMessage key={i} role={m.role} content={m.content} />
               ))}
               {loading && (
-                 <div className="w-full py-8">
-                   <div className="max-w-3xl mx-auto flex gap-6 px-4 md:px-0">
-                      <div className="w-8 h-8 rounded-sm bg-black flex items-center justify-center animate-pulse">
-                        <span className="text-white text-xs font-bold">P</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-gray-400 text-sm">Thinking...</span>
-                      </div>
-                   </div>
-                 </div>
+                <div className="w-full py-8">
+                  <div className="max-w-3xl mx-auto flex items-center gap-6 px-4 md:px-0">
+                    <div className="rounded-full bg-gray-300 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
+                    <div className="flex items-center">
+                      <span className="text-gray-400 text-sm">Buffering…</span>
+                    </div>
+                  </div>
+                </div>
               )}
               {error && (
                 <div className="w-full py-4 text-center">
@@ -239,7 +299,7 @@ export default function Home() {
           <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent pt-10 pb-8 z-10">
              <InputArea />
              <p className="text-center text-xs text-gray-400 mt-3">
-                payparq.ai can make mistakes. Consider checking important information.
+                machine.io invites you to challenge it so we can go deeper.
              </p>
           </div>
         </>

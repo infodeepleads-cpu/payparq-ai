@@ -2,32 +2,33 @@ import { useState } from 'react';
 
 export default function ChatMessage({ role, content }: { role: "user" | "assistant"; content: string }) {
   const isUser = role === "user";
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {}
+  };
   
   return (
-    <div className={`w-full group bg-transparent`}>
-      <div className="max-w-3xl mx-auto flex gap-6 px-6 md:px-0">
-        <div className="flex-shrink-0 flex flex-col relative items-end">
-          {isUser ? (
-            <div className="w-8 h-8 rounded-sm bg-[#ececf1] flex items-center justify-center">
-              <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-sm bg-black flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="relative flex-1 overflow-hidden">
-          <div className="prose prose-sm max-w-none text-gray-800 leading-7">
-            {isUser ? (
-              <p className="whitespace-pre-wrap text-black">{content}</p>
-            ) : (
-              <div className="whitespace-pre-wrap text-gray-800">{content}</div>
-            )}
+    <div className="w-full bg-transparent">
+      <div className="max-w-3xl mx-auto px-6 md:px-0">
+        <div className="inline-block max-w-full">
+          <div className={`rounded-2xl px-4 py-3 ${isUser ? "bg-[#ececf1] text-black" : "bg-white text-gray-800 border border-gray-200"}`}>
+            <div className="whitespace-pre-wrap leading-7">{content}</div>
           </div>
+          <button
+            onClick={copy}
+            className={`${copied ? "text-green-600" : "text-gray-500 hover:text-black"} mt-2 bg-transparent border-0 p-0 focus:outline-none focus:ring-0`}
+            aria-label="Copy"
+            title="Copy"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <rect x="3" y="3" width="13" height="13" rx="2" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

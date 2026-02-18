@@ -18,6 +18,18 @@ export function PwaProvider() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
+      if ("caches" in window) {
+        caches.keys().then((keys) => {
+          keys.forEach((k) => caches.delete(k));
+        });
+      }
+      return;
+    }
 
     const register = async () => {
       try {
