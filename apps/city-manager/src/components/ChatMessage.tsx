@@ -37,8 +37,7 @@ export default function ChatMessage({
 
   return (
     <div className="w-full bg-transparent">
-      <div className="max-w-3xl mx-auto px-6 md:px-0">
-        <div className="inline-block max-w-full">
+      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
           {attachment && (
             <div className="mb-2">
               <img 
@@ -48,10 +47,10 @@ export default function ChatMessage({
               />
             </div>
           )}
-          <div className={`rounded-2xl px-4 py-3 ${isUser ? "bg-[#ececf1] text-black" : "bg-white text-gray-800 border border-gray-200"}`}>
+          <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-3 ${isUser ? "bg-[#ececf1] text-black" : "bg-white text-gray-800 border border-gray-200"}`}>
             <div className="whitespace-pre-wrap leading-7">
               {isUser ? (
-                content
+                displayedContent
               ) : (
                 <ReactMarkdown
                   components={{
@@ -71,7 +70,6 @@ export default function ChatMessage({
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

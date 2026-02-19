@@ -4,8 +4,7 @@ import TasksPanel from "../../components/TasksPanel";
  
  export default function Page() {
    return (
-     <div className="h-screen bg-white">
-       <Taskbar />
+    <div className="h-screen bg-white">
       <div className="hidden md:flex h-[calc(100vh-20px)]">
          <div className="w-[70%] overflow-y-auto p-6">
           <TasksPanel />

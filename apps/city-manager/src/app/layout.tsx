@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { PwaProvider } from "../components/PwaProvider";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import MachineIo from "../components/MachineIo";
+import ResizableLayout from "../components/ResizableLayout";
 
 export const metadata: Metadata = {
   title: "machine.io",
@@ -15,14 +17,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className="min-h-screen antialiased font-sans bg-background text-text-primary">
         <PwaProvider />
-        <div className="flex flex-col h-screen bg-background">
+        <div className="flex flex-col h-screen bg-background overflow-hidden">
           <Header />
           <div className="flex flex-1 overflow-hidden relative">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto w-full">{children}</main>
+            <ResizableLayout rightPanel={<MachineIo />}>
+              {children}
+            </ResizableLayout>
           </div>
         </div>
       </body>

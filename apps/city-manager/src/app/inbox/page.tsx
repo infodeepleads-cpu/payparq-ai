@@ -42,7 +42,7 @@ export default function Inbox() {
       <div className="w-1/3 border-r bg-white overflow-y-auto">
         <div className="p-4 border-b flex justify-between items-center">
           <h1 className="text-xl font-semibold">Inbox</h1>
-          <button onClick={fetchEmails} className="text-sm text-blue-600 hover:underline">Refresh</button>
+          <button onClick={fetchEmails} className="text-sm text-black hover:text-gray-600 transition-colors">Refresh</button>
         </div>
         {loading ? (
           <div className="p-4 text-gray-500">Loading...</div>

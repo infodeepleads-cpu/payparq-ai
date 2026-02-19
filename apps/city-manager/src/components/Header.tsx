@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 
+import Link from "next/link";
+
 export default function Header() {
   const [userName, setUserName] = useState<string | null>(null);
 
@@ -33,7 +35,8 @@ export default function Header() {
       
       <div className="flex items-center gap-2">
         {/* Settings Wrench */}
-        <button 
+        <Link 
+          href={{ pathname: "/settings" }}
           className="group relative flex items-center justify-center p-2 rounded-md transition-colors text-gray-600 hover:bg-gray-50 focus:outline-none"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -41,10 +44,13 @@ export default function Header() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Settings</span>
-        </button>
+        </Link>
 
         {/* Credentials */}
-        <div className="group relative flex items-center justify-center p-2 rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer">
+        <Link 
+          href={{ pathname: "/profile" }}
+          className="group relative flex items-center justify-center p-2 rounded-md transition-colors text-gray-600 hover:bg-gray-50 cursor-pointer"
+        >
           <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-700 border border-gray-200">
             {userName ? userName[0].toUpperCase() : 'U'}
           </div>
@@ -52,17 +58,16 @@ export default function Header() {
             <div className="font-medium">{userName || 'User'}</div>
             <div className="text-gray-400 text-[10px] uppercase tracking-wider mt-0.5">Credentials</div>
           </div>
-        </div>
+        </Link>
 
         {/* Logout */}
         <button 
           onClick={handleLogout}
-          className="group relative flex items-center justify-center p-2 rounded-md transition-colors text-gray-600 hover:bg-gray-50 hover:text-red-600 focus:outline-none"
+          className="group relative flex items-center justify-center p-2 rounded-md transition-colors text-gray-600 hover:bg-gray-50 hover:text-black focus:outline-none bg-transparent border-none ring-0 shadow-none"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Log out</span>
         </button>
       </div>
     </header>

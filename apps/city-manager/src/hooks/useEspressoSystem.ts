@@ -148,27 +148,41 @@ function saveEspressoTasks(tasks: EspressoTask[]) {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
 }
 
-// Add espresso task to main task system
-function addToMainTaskSystem(title: string) {
+// Add or update espresso task in main task system
+function syncToMainTaskSystem(task: EspressoTask) {
   try {
     const existingTasks = JSON.parse(localStorage.getItem(MAIN_TASKS_KEY) || "[]");
-    const newTask: MainTask = {
-      id: `espresso-${Date.now()}`,
-      title: title,
-      completed: false,
-      confirmed: false,
-      createdAt: Date.now()
-    };
-    existingTasks.push(newTask);
-    localStorage.setItem(MAIN_TASKS_KEY, JSON.stringify(existingTasks));
+    const mainTaskId = `espresso-${task.id}`;
+    const taskIndex = existingTasks.findIndex((t: MainTask) => t.id === mainTaskId);
     
-    // Dispatch storage event for sync
-    window.dispatchEvent(new StorageEvent("storage", {
-      key: MAIN_TASKS_KEY,
-      newValue: JSON.stringify(existingTasks)
-    }));
+    let updated = false;
+
+    if (taskIndex >= 0) {
+      if (existingTasks[taskIndex].completed !== task.completed) {
+        existingTasks[taskIndex].completed = task.completed;
+        updated = true;
+      }
+    } else {
+      const newTask: MainTask = {
+        id: mainTaskId,
+        title: task.title,
+        completed: task.completed,
+        confirmed: false,
+        createdAt: Date.now()
+      };
+      existingTasks.push(newTask);
+      updated = true;
+    }
+
+    if (updated) {
+      localStorage.setItem(MAIN_TASKS_KEY, JSON.stringify(existingTasks));
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: MAIN_TASKS_KEY,
+        newValue: JSON.stringify(existingTasks)
+      }));
+    }
   } catch (error) {
-    console.error("Failed to add to main task system:", error);
+    console.error("Failed to sync to main task system:", error);
   }
 }
 
@@ -176,6 +190,14 @@ export function useEspressoSystem() {
   const [progress, setProgress] = useState<UserProgress>(loadProgress);
   const [espressoTasks, setEspressoTasks] = useState<EspressoTask[]>(loadEspressoTasks);
   const [showDailySelection, setShowDailySelection] = useState(false);
+
+  // Sync current tier tasks to main system on load/change
+  useEffect(() => {
+    const currentTasks = espressoTasks.filter(task => task.tier === progress.currentTier);
+    currentTasks.forEach(task => {
+      syncToMainTaskSystem(task);
+    });
+  }, [progress.currentTier, espressoTasks]);
 
   useEffect(() => {
     // Check if it's a new day for daily task selection
@@ -209,10 +231,10 @@ export function useEspressoSystem() {
     setEspressoTasks(updatedTasks);
     saveEspressoTasks(updatedTasks);
 
-    // Add to main task system
-    const completedTask = espressoTasks.find(t => t.id === taskId);
-    if (completedTask && !completedTask.completed) {
-      addToMainTaskSystem(completedTask.title);
+    // Sync to main task system
+    const updatedTask = updatedTasks.find(t => t.id === taskId);
+    if (updatedTask) {
+      syncToMainTaskSystem(updatedTask);
     }
 
     // Update progress based on task completion
@@ -256,11 +278,11 @@ export function useEspressoSystem() {
     saveProgress(updatedProgress);
     setShowDailySelection(false);
 
-    // Add selected tasks to main task system
+    // Sync selected tasks to main task system
     taskIds.forEach(taskId => {
       const task = espressoTasks.find(t => t.id === taskId);
       if (task) {
-        addToMainTaskSystem(task.title);
+        syncToMainTaskSystem(task);
       }
     });
   };
