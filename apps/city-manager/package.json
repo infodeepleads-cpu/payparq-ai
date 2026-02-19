@@ -7,24 +7,35 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "latest",
     "next": "latest",
+    "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "@supabase/supabase-js": "latest",
+    "react-markdown": "^10.1.0",
+    "resend": "^6.9.2",
     "web-push": "latest",
-    "openai": "latest",
     "zod": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
-    "tailwindcss": "3.4.13",
-    "postcss": "latest",
-    "autoprefixer": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@types/web-push": "latest"
+    "@types/web-push": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
+    "@typescript-eslint/parser": "^8.56.0",
+    "autoprefixer": "latest",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.6",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.3.0",
+    "postcss": "latest",
+    "postcss-import": "^16.1.1",
+    "tailwindcss": "3.4.13",
+    "typescript": "latest"
   }
 }

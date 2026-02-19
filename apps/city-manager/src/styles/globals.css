@@ -1,13 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 html, body, #__next {
   height: 100%;
 }
 
 body {
-  @apply bg-[#F9FAFB] text-black;
+  background-color: #F9FAFB;
+  color: #000000;
 }
 
 * {
@@ -15,4 +16,12 @@ body {
 }
 button, input, textarea {
   outline: none;
+}
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: #000000;
+  caret-color: #000000;
 }

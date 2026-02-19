@@ -39,7 +39,7 @@ export default function Auth() {
       setError(null);
       setMessage(null);
       const supabase = getSupabase();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { 
@@ -50,8 +50,12 @@ export default function Auth() {
 
       if (error) {
         setError(error.message);
+      } else if (data.session) {
+        // Email confirmation is disabled, user is signed in immediately
+        window.location.href = "/";
+        return;
       } else {
-        setMessage("Check your email to confirm your account.");
+        setMessage(`Confirmation email sent to ${email}. Please check your spam folder.`);
         setEmail("");
         setPassword("");
       }
