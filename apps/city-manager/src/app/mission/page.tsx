@@ -54,13 +54,13 @@ export default function Page() {
   return (
     <div className="h-screen bg-white">
       <div className="hidden md:flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
-        <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6">
-          <div className="flex items-center justify-between mb-8 border-b border-black pb-2">
-            <h1 className="text-xl font-bold tracking-tight text-black">MISSION CONTROL</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-xs text-black font-bold uppercase tracking-wider">SYSTEM: ONLINE</span>
-            </div>
+        <div className="max-w-3xl w-full mx-auto px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
+          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">MISSION</span>
+          <div className="flex items-center gap-4 flex-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">SYSTEM: ONLINE</span>
           </div>
+        </div>
+        <div className="max-w-3xl w-full mx-auto mt-6 px-4 md:px-0">
 
           <div className="space-y-8">
             {/* Primary Metrics */}

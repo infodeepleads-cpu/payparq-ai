@@ -30,10 +30,15 @@ type RecapItem = {
 
 const CRM_KEY = "pp_crm_contacts";
 const TASKS_KEY = "pp_tasks";
+const DOCS_KEY = "pp_docs_review";
+
+type ReviewStatus = "NOT_FILLED" | "FILLED" | "SUBMITTED" | "APPROVED";
+type ReviewDoc = { id: string; label: string; status: ReviewStatus };
 
 export default function Page() {
   const [recaps, setRecaps] = useState<RecapItem[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [docs, setDocs] = useState<ReviewDoc[]>([]);
 
   useEffect(() => {
     // Update time every minute
@@ -46,9 +51,11 @@ export default function Page() {
     try {
       const rawContacts = localStorage.getItem(CRM_KEY);
       const rawTasks = localStorage.getItem(TASKS_KEY);
+      const rawDocs = localStorage.getItem(DOCS_KEY);
       
       const contacts: Contact[] = rawContacts ? JSON.parse(rawContacts) : [];
       // const tasks: Task[] = rawTasks ? JSON.parse(rawTasks) : []; // Tasks might not be enough, relying on CRM mainly for prompt request
+      const savedDocs: ReviewDoc[] = rawDocs ? JSON.parse(rawDocs) : [];
 
       // Group by date
       const groupedData = new Map<string, { mapped: number, activated: number, signed: number, revenue: number }>();
@@ -114,21 +121,103 @@ export default function Page() {
       
       setRecaps(items);
 
+      // Documents widget
+      const hasAirport = contacts.some(c => (c as any).tier === 1);
+      const hasHotels = contacts.some(c => (c as any).tier === 6);
+      const hasWhales = contacts.some(c => (c as any).tier === 7);
+      let extraDoc: ReviewDoc | null = null;
+      if (hasAirport) extraDoc = { id: "airport_analysis", label: "Airport Analysis", status: "NOT_FILLED" };
+      else if (hasHotels) extraDoc = { id: "hotel_analysis", label: "Hotel Analysis", status: "NOT_FILLED" };
+      else if (hasWhales) extraDoc = { id: "corporation_analysis", label: "Corporation Analysis", status: "NOT_FILLED" };
+
+      const baseDocs: ReviewDoc[] = [
+        { id: "permits_public", label: "Permits & Public", status: "NOT_FILLED" },
+        { id: "competition_analysis", label: "Competition Analysis", status: "NOT_FILLED" },
+        { id: "lot_activation_list", label: "Lot Activation List", status: "NOT_FILLED" },
+      ];
+      const initialDocs = [...baseDocs, ...(extraDoc ? [extraDoc] : [])];
+      const merged = initialDocs.map(d => {
+        const found = savedDocs.find(s => s.id === d.id);
+        return found ? found : d;
+      });
+      setDocs(merged);
+      localStorage.setItem(DOCS_KEY, JSON.stringify(merged));
+
     } catch (e) {
       console.error("Failed to load recap data", e);
     }
   }, []);
+
+  const fillDoc = (id: string) => {
+    const next: ReviewDoc[] = docs.map(d => d.id === id ? { ...d, status: "FILLED" as ReviewStatus } : d);
+    setDocs(next);
+    localStorage.setItem(DOCS_KEY, JSON.stringify(next));
+  };
+  const submitDoc = (id: string) => {
+    const next: ReviewDoc[] = docs.map(d => d.id === id ? { ...d, status: "SUBMITTED" as ReviewStatus } : d);
+    setDocs(next);
+    localStorage.setItem(DOCS_KEY, JSON.stringify(next));
+  };
+  const approveDoc = (id: string) => {
+    const next: ReviewDoc[] = docs.map(d => d.id === id ? { ...d, status: "APPROVED" as ReviewStatus } : d);
+    setDocs(next);
+    localStorage.setItem(DOCS_KEY, JSON.stringify(next));
+  };
+
+  const allApproved = docs.length > 0 && docs.every(d => d.status === "APPROVED");
 
   return (
     <div className="h-screen bg-white">
       <div className="hidden md:flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
         {/* Daily Recap Header */}
         <div className="max-w-3xl w-full mx-auto px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
-          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY RECAP</span>
+          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY TASKS</span>
           <div className="flex items-center gap-4 flex-1">
-             <span className="text-[10px] text-gray-400">
-               Current Time: {currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-             </span>
+            <span className="text-[10px] text-gray-400">
+              Current Time: {currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {allApproved && (
+              <span className="text-[10px] font-bold text-green-700 bg-green-100 px-3 py-1 rounded-full border border-green-200 mr-2">
+                ALL PASSED
+              </span>
+            )}
+            {docs.map(doc => (
+              <div key={doc.id} className="flex items-center gap-2 px-2 py-1 rounded-full border border-gray-200">
+                <span className="text-[10px] text-gray-600">{doc.label}</span>
+                {doc.status === "NOT_FILLED" && (
+                  <button
+                    onClick={() => fillDoc(doc.id)}
+                    className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-0.5 rounded-full transition-colors"
+                  >
+                    Fill
+                  </button>
+                )}
+                {doc.status === "FILLED" && (
+                  <button
+                    onClick={() => submitDoc(doc.id)}
+                    className="text-[10px] bg-black text-white px-2 py-0.5 rounded-full"
+                  >
+                    Send for review
+                  </button>
+                )}
+                {doc.status === "SUBMITTED" && (
+                  <>
+                    <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Pending</span>
+                    <button
+                      onClick={() => approveDoc(doc.id)}
+                      className="text-[10px] border border-gray-300 px-2 py-0.5 rounded-full hover:border-gray-400"
+                    >
+                      Approve
+                    </button>
+                  </>
+                )}
+                {doc.status === "APPROVED" && (
+                  <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Approved</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
