@@ -10,7 +10,7 @@ type SuggestResponse = {
   urgent: boolean;
 };
 
-type Message = { role: "user" | "assistant"; content: string; attachment?: string };
+type Message = { role: "user" | "assistant"; content: string; attachment?: string; animate?: boolean };
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -22,6 +22,15 @@ export default function Home() {
   const loadingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [loadingDots, setLoadingDots] = useState(".");
+
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setLoadingDots((prev) => (prev.length < 3 ? prev + "." : "."));
+    }, 500);
+    return () => clearInterval(interval);
+  }, [loading]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,12 +64,16 @@ export default function Home() {
     try {
       const raw = localStorage.getItem(MSG_PREFIX + id);
       const parsed: Message[] = raw ? JSON.parse(raw) : [];
-      setMessages(parsed);
+      // Ensure historical messages do not animate
+      setMessages(parsed.map(m => ({ ...m, animate: false })));
     } catch {
       setMessages([]);
     }
   };
   const saveMessages = (id: string, msgs: Message[]) => {
+    // We can save the animate state if we want, but loadMessages will strip it.
+    // Ideally, we shouldn't save transient UI state like 'animate' to storage, 
+    // but for simplicity we'll just save it and sanitize on load.
     localStorage.setItem(MSG_PREFIX + id, JSON.stringify(msgs));
   };
   const ensureThread = (titleSeed?: string) => {
@@ -130,6 +143,7 @@ export default function Home() {
     setSelectedImage(null);
     setError(null);
     setLoading(true);
+    setLoadingDots(".");
     loadingRef.current = true;
 
     const id = ensureThread(userText || "Image Upload");
@@ -145,7 +159,16 @@ export default function Home() {
         body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model: selectedModel })
       });
       
-      if (!r.ok) throw new Error("Failed to get suggestion");
+      if (!r.ok) {
+        let errorMsg = "Failed to get suggestion";
+        try {
+          const errorData = await r.json();
+          errorMsg = errorData.error || errorData.message || "Failed to get suggestion";
+        } catch (e) {
+          // ignore json parse error
+        }
+        throw new Error(errorMsg);
+      }
       
       const data: SuggestResponse = await r.json();
       let assistantText = data.nextStep;
@@ -158,7 +181,7 @@ export default function Home() {
         assistantText += `\n\n**Draft for Email:**\n${data.emailDraft}`;
       }
       
-      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText }];
+      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
       setMessages(finalMsgs);
       if (id) {
         saveMessages(id, finalMsgs);
@@ -232,10 +255,25 @@ export default function Home() {
             onChange={(e) => setSelectedModel(e.target.value)}
             className="appearance-none bg-white border border-gray-200 text-gray-600 text-xs rounded-full pl-3 pr-8 py-1.5 focus:outline-none focus:border-gray-400 hover:border-gray-300 transition-colors shadow-sm cursor-pointer"
           >
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Smartest)</option>
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            <option value="gemini-flash-latest">Gemini 1.5 Flash</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option disabled>──────────</option>
+            <option value="groq/compound-mini">Groq Compound Mini</option>
+            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq)</option>
+            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
+            <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B (Groq)</option>
+            <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B (Groq)</option>
+            <option value="meta-llama/llama-guard-4-12b">Llama Guard 4 12B (Groq)</option>
+            <option value="meta-llama/llama-prompt-guard-2-22m">Prompt Guard 2 22M (Groq)</option>
+            <option value="meta-llama/llama-prompt-guard-2-86m">Prompt Guard 2 86M (Groq)</option>
+            <option value="moonshotai/kimi-k2-instruct">Kimi K2 Instruct (Groq)</option>
+            <option value="moonshotai/kimi-k2-instruct-0905">Kimi K2 Instruct 0905 (Groq)</option>
+            <option value="openai/gpt-oss-120b">GPT OSS 120B (Groq)</option>
+            <option value="openai/gpt-oss-20b">GPT OSS 20B (Groq)</option>
+            <option value="openai/gpt-oss-safeguard-20b">GPT OSS Safeguard 20B (Groq)</option>
+            <option value="qwen/qwen3-32b">Qwen3 32B (Groq)</option>
+            <option value="whisper-large-v3">Whisper Large v3 (Groq)</option>
+            <option value="whisper-large-v3-turbo">Whisper Large v3 Turbo (Groq)</option>
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
             <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -358,14 +396,14 @@ export default function Home() {
             <div className="max-w-3xl mx-auto px-4 md:px-0">
               <div className="flex flex-col space-y-8">
               {messages.map((m, i) => (
-                  <ChatMessage key={i} role={m.role} content={m.content} />
+                  <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
               ))}
               {loading && (
                 <div className="w-full py-8">
                   <div className="max-w-3xl mx-auto flex items-center gap-6 px-4 md:px-0">
                     <div className="rounded-full bg-gray-300 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
                     <div className="flex items-center">
-                      <span className="text-gray-400 text-sm">Buffering…</span>
+                      <span className="text-gray-400 text-sm">{loadingDots}</span>
                     </div>
                   </div>
                 </div>

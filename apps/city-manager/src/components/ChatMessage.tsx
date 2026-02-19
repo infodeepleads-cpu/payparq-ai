@@ -5,16 +5,18 @@ export default function ChatMessage({
   role,
   content,
   attachment,
+  animate = false,
 }: {
   role: "user" | "assistant";
   content: string;
   attachment?: string;
+  animate?: boolean;
 }) {
   const isUser = role === "user";
-  const [displayedContent, setDisplayedContent] = useState(isUser ? content : "");
+  const [displayedContent, setDisplayedContent] = useState(isUser || !animate ? content : "");
 
   useEffect(() => {
-    if (isUser) {
+    if (isUser || !animate) {
       setDisplayedContent(content);
       return;
     }
@@ -31,7 +33,7 @@ export default function ChatMessage({
     }, 10); // Fast typing speed
 
     return () => clearInterval(timer);
-  }, [content, isUser]);
+  }, [content, isUser, animate]);
 
   return (
     <div className="w-full bg-transparent">
