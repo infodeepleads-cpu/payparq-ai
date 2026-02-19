@@ -25,16 +25,6 @@ async function testProvider(name, model) {
     if (data.nextStep) {
       // Success if we get a response
       console.log(`✅ ${name} Success! Response: "${data.nextStep.substring(0, 100).replace(/\n/g, ' ')}..."`);
-      if (data.whatsappDraft) {
-        console.log(`WhatsApp Draft: "${data.whatsappDraft}"`);
-      } else {
-        console.log('WhatsApp Draft: <empty>');
-      }
-      if (data.emailDraft) {
-        console.log(`Email Draft: "${data.emailDraft}"`);
-      } else {
-        console.log('Email Draft: <empty>');
-      }
       return true;
     } else {
       console.error(`❌ ${name} Invalid response structure:`, data);
@@ -71,8 +61,63 @@ async function runTests() {
   });
   const data = await response.json();
   console.log(`Artifact Test nextStep: "${(data.nextStep || '').substring(0, 80)}..."`);
-  console.log(`Artifact Test WhatsApp Draft: "${data.whatsappDraft || '<empty>'}"`);
-  console.log(`Artifact Test Email Draft: "${data.emailDraft || '<empty>'}"`);
+  
+  // Test 4: Task Addition
+  console.log('\nTesting task addition...');
+  const taskResponse = await fetch('http://localhost:3000/api/ai/suggest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: 'Please add a task to call my boss.' }],
+      model: 'llama-3.1-8b-instant',
+      note: 'Add task: Call my boss'
+    })
+  });
+  const taskData = await taskResponse.json();
+  console.log(`Task Test nextStep: "${(taskData.nextStep || '').substring(0, 80)}..."`);
+  if (taskData.action === 'add_task' && taskData.taskTitle === 'Call my boss') {
+    console.log('✅ Task Addition Action received correctly!');
+  } else {
+    console.log(`❌ Task Addition Failed. Action: ${taskData.action}, Title: ${taskData.taskTitle}`);
+  }
+
+  // Test 5: Task Completion
+  console.log('\nTesting task completion...');
+  const completeResponse = await fetch('http://localhost:3000/api/ai/suggest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: 'Mark "Call my boss" as completed.' }],
+      model: 'llama-3.1-8b-instant',
+      tasks: [{ id: '1', title: 'Call my boss', completed: false }],
+      note: 'Complete task: Call my boss'
+    })
+  });
+  const completeData = await completeResponse.json();
+  if (completeData.action === 'complete_task' && completeData.taskTitle === 'Call my boss') {
+    console.log('✅ Task Completion Action received correctly!');
+  } else {
+    console.log(`❌ Task Completion Failed. Action: ${completeData.action}, Title: ${completeData.taskTitle}`);
+  }
+
+  // Test 6: Task Deletion
+  console.log('\nTesting task deletion...');
+  const deleteResponse = await fetch('http://localhost:3000/api/ai/suggest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: 'Remove the "Call my boss" task.' }],
+      model: 'llama-3.1-8b-instant',
+      tasks: [{ id: '1', title: 'Call my boss', completed: true }],
+      note: 'Delete task: Call my boss'
+    })
+  });
+  const deleteData = await deleteResponse.json();
+  if (deleteData.action === 'delete_task' && deleteData.taskTitle === 'Call my boss') {
+    console.log('✅ Task Deletion Action received correctly!');
+  } else {
+    console.log(`❌ Task Deletion Failed. Action: ${deleteData.action}, Title: ${deleteData.taskTitle}`);
+  }
 
   console.log('\nTests Completed.');
 }

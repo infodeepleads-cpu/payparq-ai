@@ -2,12 +2,16 @@
 import { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { getSupabase } from "../lib/supabase";
+import Taskbar from "../components/Taskbar";
+import TasksPanel from "../components/TasksPanel";
+import TopControlsWidget from "../components/TopControlsWidget";
 
 type SuggestResponse = {
   nextStep: string;
-  whatsappDraft: string;
-  emailDraft: string;
   urgent: boolean;
+  action?: string;
+  taskTitle?: string;
+  crmContact?: any;
 };
 
 type Message = { role: "user" | "assistant"; content: string; attachment?: string; animate?: boolean };
@@ -23,6 +27,29 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [loadingDots, setLoadingDots] = useState(".");
+  const [showModelSelector, setShowModelSelector] = useState(false);
+
+  const AI_MODELS = [
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+    { id: "separator-1", name: "──────────", disabled: true },
+    { id: "groq/compound-mini", name: "Groq Compound Mini" },
+    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
+    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
+    { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick 17B (Groq)" },
+    { id: "meta-llama/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout 17B (Groq)" },
+    { id: "meta-llama/llama-guard-4-12b", name: "Llama Guard 4 12B (Groq)" },
+    { id: "meta-llama/llama-prompt-guard-2-22m", name: "Prompt Guard 2 22M (Groq)" },
+    { id: "meta-llama/llama-prompt-guard-2-86m", name: "Prompt Guard 2 86M (Groq)" },
+    { id: "moonshotai/kimi-k2-instruct", name: "Kimi K2 Instruct (Groq)" },
+    { id: "moonshotai/kimi-k2-instruct-0905", name: "Kimi K2 Instruct 0905 (Groq)" },
+    { id: "openai/gpt-oss-120b", name: "GPT OSS 120B (Groq)" },
+    { id: "openai/gpt-oss-20b", name: "GPT OSS 20B (Groq)" },
+    { id: "openai/gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B (Groq)" },
+    { id: "qwen/qwen3-32b", name: "Qwen3 32B (Groq)" },
+    { id: "whisper-large-v3", name: "Whisper Large v3 (Groq)" },
+    { id: "whisper-large-v3-turbo", name: "Whisper Large v3 Turbo (Groq)" },
+  ];
 
   useEffect(() => {
     if (!loading) return;
@@ -38,6 +65,112 @@ export default function Home() {
   const THREADS_KEY = "pp_chat_threads";
   const CURRENT_KEY = "pp_current_thread";
   const MSG_PREFIX = "pp_chat_messages_";
+  const CRM_KEY = "pp_crm_contacts";
+  const TASKS_KEY = "pp_tasks";
+  const readCRM = () => {
+    try {
+      const raw = localStorage.getItem(CRM_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+  const writeCRM = (contacts: any[]) => {
+    localStorage.setItem(CRM_KEY, JSON.stringify(contacts));
+    window.dispatchEvent(new Event("crm_storage"));
+  };
+  const addCRMContact = (contact: any) => {
+    const contacts = readCRM();
+    const newContact = { ...contact, id: String(Date.now()), createdAt: Date.now() };
+    contacts.unshift(newContact);
+    writeCRM(contacts);
+    return newContact;
+  };
+  const updateCRMContact = (contact: any) => {
+    const contacts = readCRM();
+    // Try to find by ID first, then by decisionMaker name as fallback
+    let idx = -1;
+    if (contact.id) {
+      idx = contacts.findIndex((c: any) => c.id === contact.id);
+    }
+    if (idx === -1 && contact.decisionMaker) {
+      idx = contacts.findIndex((c: any) => c.decisionMaker.toLowerCase() === contact.decisionMaker.toLowerCase());
+    }
+    
+    if (idx >= 0) {
+      contacts[idx] = { ...contacts[idx], ...contact };
+      writeCRM(contacts);
+      return contacts[idx];
+    }
+    return null;
+  };
+
+  const readTasks = () => {
+    try {
+      const raw = localStorage.getItem(TASKS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+  const writeTasks = (tasks: any[]) => {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    window.dispatchEvent(new Event("storage"));
+  };
+  const addTaskLocal = (title: string) => {
+    const t = { id: String(Date.now()), title, completed: false, confirmed: false, createdAt: Date.now() };
+    const tasks = readTasks();
+    tasks.unshift(t);
+    writeTasks(tasks);
+    return t;
+  };
+  const findTaskIndex = (title: string) => {
+    const tasks = readTasks();
+    const idx = tasks.findIndex((x: any) => String(x.title).toLowerCase() === title.toLowerCase());
+    return { tasks, idx };
+  };
+  const removeTaskLocal = (title: string) => {
+    const { tasks, idx } = findTaskIndex(title);
+    if (idx >= 0) {
+      const removed = tasks[idx];
+      tasks.splice(idx, 1);
+      writeTasks(tasks);
+      return removed;
+    }
+    return null;
+  };
+  const completeTaskLocal = (title: string) => {
+    const { tasks, idx } = findTaskIndex(title);
+    if (idx >= 0) {
+      tasks[idx] = { ...tasks[idx], completed: true };
+      writeTasks(tasks);
+      return tasks[idx];
+    }
+    return null;
+  };
+  const confirmTaskLocal = (title: string) => {
+    const { tasks, idx } = findTaskIndex(title);
+    if (idx >= 0 && tasks[idx].completed) {
+      tasks[idx] = { ...tasks[idx], confirmed: true };
+      writeTasks(tasks);
+      return tasks[idx];
+    }
+    return null;
+  };
+  const parseTaskCommand = (text: string) => {
+    const s = text.trim();
+    let m = s.match(/^(?:add|create)\s+(?:this\s+)?tas?k[-:]?\s*(.+)$/i);
+    if (!m) m = s.match(/^task[-:]?\s*(.+)$/i);
+    if (!m) m = s.match(/^add\s+tas?k\s+(.+)$/i);
+    if (m) return { type: "add", title: m[1].trim() };
+    m = s.match(/^(?:remove|delete)\s+tas?k[-:]?\s*(.+)$/i);
+    if (m) return { type: "remove", title: m[1].trim() };
+    m = s.match(/^(?:complete|finish|done)\s+tas?k[-:]?\s*(.+)$/i);
+    if (m) return { type: "complete", title: m[1].trim() };
+    m = s.match(/^confirm\s+tas?k[-:]?\s*(.+)$/i);
+    if (m) return { type: "confirm", title: m[1].trim() };
+    return null;
+  };
 
   const readThreads = () => {
     try {
@@ -138,6 +271,48 @@ export default function Home() {
     
     const userText = input.trim();
     const image = selectedImage;
+    const cmd = parseTaskCommand(userText);
+    if (cmd) {
+      setInput("");
+      setSelectedImage(null);
+      setError(null);
+      const id = ensureThread(userText || "Task");
+      const userMsg: Message = { role: "user", content: userText, attachment: image || undefined };
+      const nextUserMsgs: Message[] = [...messages, userMsg];
+      setMessages(nextUserMsgs);
+      saveMessages(id!, nextUserMsgs);
+      let resultText = "";
+      if (cmd.type === "add") {
+        const t = addTaskLocal(cmd.title);
+        resultText = `Task added: ${t.title}`;
+      } else if (cmd.type === "remove") {
+        const r = removeTaskLocal(cmd.title);
+        resultText = r ? `Task removed: ${r.title}` : `Task not found: ${cmd.title}`;
+      } else if (cmd.type === "complete") {
+        const c = completeTaskLocal(cmd.title);
+        resultText = c ? `Task completed: ${c.title}` : `Task not found: ${cmd.title}`;
+      } else if (cmd.type === "confirm") {
+        const c = confirmTaskLocal(cmd.title);
+        resultText = c ? `Task confirmed: ${c.title}` : `Complete the task before confirming: ${cmd.title}`;
+      }
+      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: resultText, animate: false }];
+      setMessages(finalMsgs);
+      if (id) {
+        saveMessages(id, finalMsgs);
+        const threads = readThreads();
+        const idx = threads.findIndex((t: any) => t.id === id);
+        if (idx >= 0) {
+          threads[idx] = {
+            ...threads[idx],
+            title: threads[idx].title === "Untitled" ? userText.slice(0, 48) : threads[idx].title,
+            updatedAt: Date.now(),
+          };
+          writeThreads(threads);
+          window.dispatchEvent(new Event("storage"));
+        }
+      }
+      return;
+    }
     
     setInput("");
     setSelectedImage(null);
@@ -153,10 +328,11 @@ export default function Home() {
     saveMessages(id!, nextUserMsgs);
 
     try {
+      const currentTasks = readTasks();
       const r = await fetch("/api/ai/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model: selectedModel })
+        body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model: selectedModel, tasks: currentTasks })
       });
       
       if (!r.ok) {
@@ -173,12 +349,18 @@ export default function Home() {
       const data: SuggestResponse = await r.json();
       let assistantText = data.nextStep;
       
-      if (data.whatsappDraft) {
-        assistantText += `\n\n**Draft for WhatsApp:**\n${data.whatsappDraft}`;
-      }
-      
-      if (data.emailDraft) {
-        assistantText += `\n\n**Draft for Email:**\n${data.emailDraft}`;
+      if (data.action === "add_task" && data.taskTitle) {
+        addTaskLocal(data.taskTitle);
+      } else if (data.action === "complete_task" && data.taskTitle) {
+        completeTaskLocal(data.taskTitle);
+      } else if (data.action === "delete_task" && data.taskTitle) {
+        removeTaskLocal(data.taskTitle);
+      } else if (data.action === "confirm_task" && data.taskTitle) {
+        confirmTaskLocal(data.taskTitle);
+      } else if (data.action === "add_crm_contact" && data.crmContact) {
+        addCRMContact(data.crmContact);
+      } else if (data.action === "update_crm_contact" && data.crmContact) {
+        updateCRMContact(data.crmContact);
       }
       
       const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
@@ -248,38 +430,6 @@ export default function Home() {
 
   const InputArea = ({ centered = false }: { centered?: boolean }) => (
     <div className={`w-full max-w-3xl mx-auto px-6 md:px-0 transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
-      <div className="flex justify-center mb-3">
-        <div className="relative">
-          <select 
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="appearance-none bg-white border border-gray-200 text-gray-600 text-xs rounded-full pl-3 pr-8 py-1.5 focus:outline-none focus:border-gray-400 hover:border-gray-300 transition-colors shadow-sm cursor-pointer"
-          >
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-            <option disabled>──────────</option>
-            <option value="groq/compound-mini">Groq Compound Mini</option>
-            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq)</option>
-            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
-            <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B (Groq)</option>
-            <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B (Groq)</option>
-            <option value="meta-llama/llama-guard-4-12b">Llama Guard 4 12B (Groq)</option>
-            <option value="meta-llama/llama-prompt-guard-2-22m">Prompt Guard 2 22M (Groq)</option>
-            <option value="meta-llama/llama-prompt-guard-2-86m">Prompt Guard 2 86M (Groq)</option>
-            <option value="moonshotai/kimi-k2-instruct">Kimi K2 Instruct (Groq)</option>
-            <option value="moonshotai/kimi-k2-instruct-0905">Kimi K2 Instruct 0905 (Groq)</option>
-            <option value="openai/gpt-oss-120b">GPT OSS 120B (Groq)</option>
-            <option value="openai/gpt-oss-20b">GPT OSS 20B (Groq)</option>
-            <option value="openai/gpt-oss-safeguard-20b">GPT OSS Safeguard 20B (Groq)</option>
-            <option value="qwen/qwen3-32b">Qwen3 32B (Groq)</option>
-            <option value="whisper-large-v3">Whisper Large v3 (Groq)</option>
-            <option value="whisper-large-v3-turbo">Whisper Large v3 Turbo (Groq)</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-            <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-          </div>
-        </div>
-      </div>
       {selectedImage && (
         <div className="relative mb-2 w-fit">
           <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
@@ -328,7 +478,7 @@ export default function Home() {
             <button
                onClick={sendMessage}
                disabled={(!input.trim() && !selectedImage) || loading}
-               className={`order-1 md:order-2 transition-all duration-200 rounded-full border focus:outline-none ${
+               className={`transition-all duration-200 rounded-full border focus:outline-none ${
                  input.trim() || selectedImage
                    ? "border-gray-300 text-black hover:border-gray-400" 
                    : "border-gray-200 text-gray-400 cursor-not-allowed"
@@ -344,7 +494,7 @@ export default function Home() {
             <button
                type="button"
                disabled={loading}
-               className="order-2 md:order-1 transition-all duration-200 rounded-full border border-gray-300 text-black hover:border-gray-400 p-1.5 focus:outline-none"
+               className="transition-all duration-200 rounded-full border border-gray-300 text-black hover:border-gray-400 p-1.5 focus:outline-none"
                aria-label="Voice"
                title="Voice"
             >
@@ -352,6 +502,47 @@ export default function Home() {
                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm7 9a7 7 0 01-14 0m7 7v3" />
                </svg>
             </button>
+            <div className="relative">
+              <button
+                 type="button"
+                 onClick={() => setShowModelSelector(!showModelSelector)}
+                 className="flex items-center justify-center w-7 h-7 rounded-full border border-gray-300 text-black hover:border-gray-400 focus:outline-none bg-gray-50 hover:bg-gray-100 transition-colors"
+                 title="Select AI Model"
+              >
+                 <span className="text-[9px] font-bold">AI</span>
+              </button>
+              {showModelSelector && (
+                 <div className="absolute bottom-full right-0 mb-3 w-64 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
+                    <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                       {AI_MODELS.map((model, idx) => (
+                          <button
+                            key={idx}
+                            disabled={model.disabled}
+                            onClick={() => {
+                               if (model.disabled) return;
+                               if (model.id) setSelectedModel(model.id);
+                               setShowModelSelector(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
+                               model.disabled 
+                                 ? "text-gray-300 cursor-default" 
+                                 : model.id === selectedModel
+                                    ? "bg-gray-100 text-black font-medium"
+                                    : "text-gray-600 hover:bg-gray-50 hover:text-black"
+                            }`}
+                          >
+                            <span>{model.name}</span>
+                            {model.id === selectedModel && (
+                              <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+              )}
+            </div>
          </div>
       </div>
     </div>
@@ -360,39 +551,31 @@ export default function Home() {
   return (
     <div className="flex flex-col h-[100dvh] bg-white relative overflow-hidden">
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100 md:hidden">
-        <div className="max-w-3xl mx-auto px-4 md:px-0 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold tracking-tight text-black">machine.io</span>
+        <div className="max-w-3xl mx-auto px-4 md:px-0 py-0.5 flex items-center justify-between">
+          <span className="text-xs font-semibold tracking-tight text-black">machine.io</span>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => { window.location.href = "/auth"; }}
-              className="text-xs font-medium text-black bg-transparent border-0 p-0"
+              className="text-[10px] font-medium text-black bg-transparent border-0 p-0"
             >
               Log out
             </button>
           </div>
         </div>
       </div>
-      <div className="hidden md:block sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100">
-        <div className="max-w-3xl mx-auto px-4 md:px-0 py-3 flex items-center justify-between">
-          <span className="text-sm font-semibold tracking-tight text-black">machine.io</span>
-          <div className="flex items-center gap-3">
-            {userName && <span className="text-xs text-gray-700">{userName}</span>}
-            <button 
-              onClick={() => { window.location.href = "/auth"; }}
-              className="text-xs font-medium text-black bg-transparent border-0 p-0"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </div>
+      <Taskbar />
       {!threadId || messages.length === 0 ? (
         <div className="flex items-center justify-center h-full px-4">
-           <InputArea centered={true} />
+           <div className="w-full">
+             <div className="w-full mb-1">
+               <TopControlsWidget />
+             </div>
+             <InputArea centered={true} />
+           </div>
         </div>
       ) : (
         <>
-          <div className="flex-1 overflow-y-auto pb-40 pt-8 scroll-smooth">
+          <div className="flex-1 overflow-y-auto pb-96 pt-8 scroll-smooth">
             <div className="max-w-3xl mx-auto px-4 md:px-0">
               <div className="flex flex-col space-y-8">
               {messages.map((m, i) => (
@@ -419,6 +602,9 @@ export default function Home() {
           </div>
 
           <div className="fixed bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent pt-6 pb-[calc(env(safe-area-inset-bottom)+24px)] md:pb-8 z-30 px-4 md:px-0">
+             <div className="w-full mb-1">
+               <TopControlsWidget />
+             </div>
              <InputArea />
              <p className="text-center text-xs text-gray-400 mt-3 pb-safe">
                 machine.io invites you to challenge it so we can go deeper.

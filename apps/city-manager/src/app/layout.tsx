@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import type { Metadata } from "next";
 import { PwaProvider } from "../components/PwaProvider";
 import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
 
 export const metadata: Metadata = {
   title: "machine.io",
@@ -17,13 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased font-sans bg-background text-text-primary">
         <PwaProvider />
-        <div className="flex h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col">
-            <header className="px-4 py-3 border-b border-border bg-surface">
-              <div className="text-sm font-semibold text-primary">machine.io</div>
-            </header>
-            <main className="flex-1 overflow-y-auto">{children}</main>
+        <div className="flex flex-col h-screen bg-background">
+          <Header />
+          <div className="flex flex-1 overflow-hidden relative">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto w-full">{children}</main>
           </div>
         </div>
       </body>

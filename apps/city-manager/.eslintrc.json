@@ -1,6 +1,12 @@
 {
   "extends": ["next/core-web-vitals"],
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "ignorePatterns": ["scripts/**"],
   "rules": {
-    "no-console": "warn"
+    "no-useless-catch": "off",
+    "no-useless-escape": "off"
   }
 }

@@ -1,9 +1,7 @@
 import { env } from "../../../../lib/env";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Resend } from "resend";
 import Groq from "groq-sdk";
 
-const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const groq = env.GROQ_API_KEY ? new Groq({ apiKey: env.GROQ_API_KEY }) : null;
 
 function json(data: unknown, init?: number | ResponseInit) {
@@ -21,13 +19,26 @@ export async function POST(req: Request) {
   const image = body?.image; // base64 string
   const requestedModel = body?.model;
   const messages = body?.messages || [];
+  const tasks = body?.tasks || [];
+
+  // Construct context string
+  const taskList = Array.isArray(tasks) && tasks.length > 0 
+    ? tasks.map((t: any) => `- ${t.title} (${t.completed ? 'Completed' : 'Pending'})`).join('\n')
+    : "No active tasks.";
+
+  const appStructure = `
+Application Structure & Pages:
+- /mission: "Define objectives, priorities, and weekly goals." Use this for high-level planning.
+- /espresso: "Quick actions and one-minute updates." Use this for rapid checks and news.
+- /daily-recap: "Summaries of today’s activity and next steps." Use this for end-of-day reviews.
+- /crm: "Contacts, interactions, and follow-ups." Use this for managing client relationships.
+- /resources: Shared documents, files, and assets.
+`;
 
   // Check for specific Gemini API key query
   if (/gemini\s+api\s+key/i.test(note)) {
     return json({
       nextStep: "this is google studio project gen-lang-klijent-0881693673 opened today",
-      whatsappDraft: "",
-      emailDraft: "",
       urgent: false
     });
   }
@@ -50,30 +61,49 @@ export async function POST(req: Request) {
         if (modelName.startsWith("whisper")) {
           const payload = JSON.stringify({
             nextStep: "Transcription models are not supported in chat. Please switch to a chat model.",
-            whatsappDraft: "",
-            emailDraft: "",
             urgent: false
           });
-          return json({ nextStep: "Transcription models are not supported in chat. Please switch to a chat model.", whatsappDraft: "", emailDraft: "", urgent: false });
+          return json({ nextStep: "Transcription models are not supported in chat. Please switch to a chat model.", urgent: false });
         }
         
         const systemPrompt = `Manager note: ${note}\n\n` +
-          `Return JSON with keys: nextStep, whatsappDraft, emailDraft, urgent (boolean), action (optional string), emailPayload (optional object). ` +
+          `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
+          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object). ` +
           `Instructions:\n` +
-          `1. Analyze the conversation history and the new note.\n` +
-          `2. If the user wants to SEND an email that was previously drafted:\n` +
-          `   - Extract the recipient email, subject, and HTML body from the draft in the history.\n` +
-          `   - Set "action" to "send_email".\n` +
-          `   - Set "emailPayload" to { "to": "...", "subject": "...", "html": "..." }.\n` +
-          `   - If recipient is missing, ask for it in "nextStep" and do NOT set action to "send_email".\n` +
-          `3. If the user wants to DRAFT an email:\n` +
-          `   - Create the draft in "emailDraft".\n` +
-          `   - Set "nextStep" to "Draft prepared. Review it and say 'send' to send it.".\n` +
-          `4. If an image is provided: Analyze it and answer the user's request in 'nextStep'.\n` +
-          `5. If the note is a task: 'nextStep' is the action plan. Provide 'whatsappDraft' (short) and 'emailDraft' (clear).\n` +
+          `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
+          `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
+          `3. If the user wants to ADD a task:\n` +
+          `   - Set "action" to "add_task".\n` +
+          `   - Set "taskTitle" to the task description (e.g., "Call my boss").\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've added 'Call my boss' to your tasks.").\n` +
+          `4. If the user wants to COMPLETE a task:\n` +
+          `   - Set "action" to "complete_task".\n` +
+          `   - Set "taskTitle" to the task description.\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've marked 'Call my boss' as completed.").\n` +
+          `5. If the user wants to DELETE/REMOVE a task:\n` +
+          `   - Set "action" to "delete_task".\n` +
+          `   - Set "taskTitle" to the task description.\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've removed 'Call my boss' from your tasks.").\n` +
+          `6. If the user wants to CONFIRM a task:\n` +
+          `   - Set "action" to "confirm_task".\n` +
+          `   - Set "taskTitle" to the task description.\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've confirmed 'Call my boss' task.").\n` +
+          `7. If the user wants to ADD a CRM contact:\n` +
+          `   - Set "action" to "add_crm_contact".\n` +
+          `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name of the person/entity", "city": "City Name", "estimatedCapacity": number, "decisionStatus": "ENTRY/DEMO/TRIAL/CONTRACT/NO/FOLLOW UP", "notes": "Any notes" }.\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
+          `8. If the user wants to UPDATE a CRM contact:
+` +
+          `   - Set "action" to "update_crm_contact".
+` +
+          `   - Set "crmContact" to the updated fields (must include "decisionMaker": "Name" to identify the contact).
+` +
+          `   - In "nextStep", confirm the action.
+` +
+          `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
+` +
           `Style: concise, actionable, manager-oriented. Return ONLY JSON.\n` +
-          `Do not greet or introduce yourself. Do not write self-referential phrases (e.g., "I'm an assistant", "I'm Gemini"). If you cannot produce meaningful, context-specific drafts, set whatsappDraft and emailDraft to empty strings.\n` +
-          `Do not produce generic meeting reminders or subject-only templates (e.g., "Reminder: Meeting today at 12:00", "Subject: Meeting Today at 12:00"). If the user did not explicitly request those exact strings with context, leave drafts empty.`;
+          `Do not greet or introduce yourself. Do not write self-referential phrases (e.g., "I'm an assistant", "I'm Gemini").`;
 
         const limitedMsgs = Array.isArray(messages)
           ? messages.slice(-8).map((m: any) => ({ role: m.role, content: String(m.content || "").slice(0, 1500) }))
@@ -141,6 +171,11 @@ export async function POST(req: Request) {
             targetModel = "gemini-1.5-flash"; // Keep it simple first
          }
          
+         // Use 2.0 Flash by default if not specified or if falling back
+         if (!targetModel || targetModel === "gemini-2.5-flash") {
+             targetModel = "gemini-2.0-flash";
+         }
+         
          const model = genAI.getGenerativeModel({ model: targetModel });
         
         const parts: any[] = [];
@@ -163,20 +198,42 @@ export async function POST(req: Request) {
 
          parts.push({
            text: `Manager note: ${note}\n\n` +
+           `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
            `Conversation History:\n${historyText}\n\n` +
-           `Return JSON with keys: nextStep, whatsappDraft, emailDraft, urgent (boolean), action (optional string), emailPayload (optional object). ` +
+           `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object). ` +
            `Instructions:\n` +
-           `1. Analyze the conversation history and the new note.\n` +
-           `2. If the user wants to SEND an email that was previously drafted:\n` +
-           `   - Extract the recipient email, subject, and HTML body from the draft in the history.\n` +
-           `   - Set "action" to "send_email".\n` +
-           `   - Set "emailPayload" to { "to": "...", "subject": "...", "html": "..." }.\n` +
-           `   - If recipient is missing, ask for it in "nextStep" and do NOT set action to "send_email".\n` +
-           `3. If the user wants to DRAFT an email:\n` +
-           `   - Create the draft in "emailDraft".\n` +
-           `   - Set "nextStep" to "Draft prepared. Review it and say 'send' to send it.".\n` +
-           `4. If an image is provided: Analyze it and answer the user's request in 'nextStep'.\n` +
-           `5. If the note is a task: 'nextStep' is the action plan. Provide 'whatsappDraft' (short) and 'emailDraft' (clear).\n` +
+           `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
+           `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
+           `3. If the user wants to ADD a task:\n` +
+           `   - Set "action" to "add_task".\n` +
+           `   - Set "taskTitle" to the task description (e.g., "Call my boss").\n` +
+           `   - In "nextStep", confirm the action (e.g., "I've added 'Call my boss' to your tasks.").\n` +
+           `4. If the user wants to COMPLETE a task:\n` +
+           `   - Set "action" to "complete_task".\n` +
+           `   - Set "taskTitle" to the task description.\n` +
+           `   - In "nextStep", confirm the action (e.g., "I've marked 'Call my boss' as completed.").\n` +
+           `5. If the user wants to DELETE/REMOVE a task:\n` +
+           `   - Set "action" to "delete_task".\n` +
+           `   - Set "taskTitle" to the task description.\n` +
+           `   - In "nextStep", confirm the action (e.g., "I've removed 'Call my boss' from your tasks.").\n` +
+           `6. If the user wants to CONFIRM a task:\n` +
+           `   - Set "action" to "confirm_task".\n` +
+           `   - Set "taskTitle" to the task description.\n` +
+           `   - In "nextStep", confirm the action (e.g., "I've confirmed 'Call my boss' task.").\n` +
+           `7. If the user wants to ADD a CRM contact:\n` +
+           `   - Set "action" to "add_crm_contact".\n` +
+           `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name of the person/entity", "city": "City Name", "estimatedCapacity": number, "decisionStatus": "ENTRY/DEMO/TRIAL/CONTRACT/NO/FOLLOW UP", "notes": "Any notes" }.\n` +
+           `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
+           `8. If the user wants to UPDATE a CRM contact:
+` +
+           `   - Set "action" to "update_crm_contact".
+` +
+           `   - Set "crmContact" to the updated fields (must include "decisionMaker": "Name" to identify the contact).
+` +
+           `   - In "nextStep", confirm the action.
+` +
+           `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
+` +
            `Style: concise, actionable, manager-oriented. Return ONLY JSON. Do not include markdown code blocks.`
          });
 
@@ -194,22 +251,17 @@ export async function POST(req: Request) {
               await new Promise(resolve => setTimeout(resolve, 3000));
               retries--;
             } else if ((error.message.includes("404") || error.message.includes("not found")) && retries > 1) {
-                console.log(`Model ${targetModel} not found, trying gemini-1.5-pro`);
-                // Try pro if flash fails
-                const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+                console.log(`Model ${targetModel} not found, trying gemini-1.5-flash`);
+                // Try flash as fallback
+                const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 try {
                   result = await fallbackModel.generateContent(parts);
                   break;
                 } catch (e) {
-                   // One last try with gemini-pro (legacy)
-                   console.log("gemini-1.5-pro failed, trying gemini-pro");
-                   const lastResort = genAI.getGenerativeModel({ model: "gemini-pro" });
-                   try {
-                     result = await lastResort.generateContent(parts);
-                     break;
-                   } catch (e2) {
-                     throw e2;
-                   }
+                  console.log("gemini-1.5-flash failed, trying gemini-2.0-flash-exp");
+                  const lastResort = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+                  result = await lastResort.generateContent(parts);
+                  break;
                 }
              } else {
                throw error;
@@ -227,86 +279,24 @@ export async function POST(req: Request) {
         parsed = JSON.parse(cleanText);
       } catch (e) {
         // If JSON parsing fails, use the raw text as nextStep
-        parsed = { nextStep: cleanText, whatsappDraft: "", emailDraft: "", urgent: false };
+        parsed = { nextStep: cleanText, urgent: false };
       }
       
-      const normalizeDraft = (d: unknown) => {
-        const s = typeof d === "string" ? d.trim() : "";
-        if (!s) return "";
-        const lower = s.toLowerCase();
-        if (s.includes("[object Object]")) return "";
-        const badExact = ["i'm an assistant", "i am an assistant", "assistant", "undefined", "null", "n/a"];
-        if (badExact.includes(lower)) return "";
-        const patterns = [
-          /\bhi[,!.\s]/i,
-          /\bhello[,!.\s]/i,
-          /\bhey[,!.\s]/i,
-          /how can i help/i,
-          /here to assist/i,
-          /what'?s on your mind/i,
-          /i'?m (an )?assistant/i,
-          /google'?s ai/i,
-        ];
-        if (patterns.some((re) => re.test(s))) {
-          // If the text is mostly greeting/intro without task content, drop it
-          const wordCount = s.split(/\s+/).filter(Boolean).length;
-          if (wordCount <= 20) return "";
-        }
-        // Remove generic meeting reminder/subject artifacts
-        const hasMeeting = /\bmeeting\b/i.test(s);
-        const hasTime = /\b\d{1,2}:\d{2}\b/.test(s) || /\bnoon\b/i.test(s) || /\btoday\b/i.test(s);
-        const isSubjectLine = /^subject:\s*/i.test(s);
-        const isReminderLine = /^reminder:\s*/i.test(s);
-        const tooShort = s.split(/\s+/).filter(Boolean).length <= 20;
-        if ((isSubjectLine || isReminderLine) && hasMeeting && (hasTime || /\btoday\b/i.test(s)) && tooShort) {
-          return "";
-        }
-        if (hasMeeting && hasTime && tooShort) {
-          return "";
-        }
-        if (s.toLowerCase().includes("subject: meeting today at 12:00")) return "";
-        if (s.toLowerCase().includes("reminder: meeting today at 12:00")) return "";
-        return s;
-      };
-      parsed.whatsappDraft = normalizeDraft(parsed.whatsappDraft);
-      parsed.emailDraft = normalizeDraft(parsed.emailDraft);
       if (!parsed.nextStep || typeof parsed.nextStep !== "string" || !parsed.nextStep.trim()) {
         parsed.nextStep = "Provide the conversation history and the new note for analysis.";
       }
       
-      // Handle email sending
-      if (parsed.action === 'send_email' && parsed.emailPayload && resend) {
-        try {
-          const { data, error } = await resend.emails.send({
-            from: 'PayParq Team <team@mail.payparq.com>',
-            to: parsed.emailPayload.to,
-            subject: parsed.emailPayload.subject,
-            html: parsed.emailPayload.html || parsed.emailPayload.body
-          });
-          
-          if (error) {
-            parsed.nextStep = `Failed to send email: ${error.message}`;
-          } else {
-            parsed.nextStep = `Email sent successfully! (ID: ${data?.id})`;
-            // Clear drafts from response since it's sent
-            parsed.emailDraft = "";
-            parsed.whatsappDraft = "";
-          }
-        } catch (e: any) {
-          parsed.nextStep = `Failed to send email: ${e.message}`;
-        }
-      } else if (parsed.action === 'send_email' && !resend) {
-        parsed.nextStep = "I can't send the email because the Resend API key is missing.";
-      }
+
       
       // Artificial delay to simulate "thinking" (0.5s)
       await new Promise(resolve => setTimeout(resolve, 500));
       
       return json({
         nextStep: parsed.nextStep || "",
-        whatsappDraft: parsed.whatsappDraft || "",
-        emailDraft: parsed.emailDraft || "",
-        urgent: !!parsed.urgent
+        urgent: !!parsed.urgent,
+        action: parsed.action,
+        taskTitle: parsed.taskTitle,
+        crmContact: parsed.crmContact
       });
 
     } catch (error: any) {
@@ -314,8 +304,6 @@ export async function POST(req: Request) {
       return json({
         error: error.message || "Internal server error",
         nextStep: "I'm having trouble connecting to the AI service right now. Please try again.",
-        whatsappDraft: "",
-        emailDraft: "",
         urgent: false
       }, 500);
     }
@@ -325,8 +313,6 @@ export async function POST(req: Request) {
   return json({
     error: "API Keys are missing. Please check your environment variables.",
     nextStep: "I'm having trouble connecting to the AI service right now. Please try again.",
-    whatsappDraft: "",
-    emailDraft: "",
     urgent: false
   }, 500);
 }
