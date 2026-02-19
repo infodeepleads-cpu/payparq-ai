@@ -81,8 +81,7 @@ export async function POST(req: Request) {
           break;
         } catch (error: any) {
           if (error.message.includes("429") && retries > 1) {
-            console.log(`Rate limited (429), retrying... attempts left: ${retries - 1}`);
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+            await new Promise(resolve => setTimeout(resolve, 3000));
             retries--;
           } else {
             throw error;
@@ -138,7 +137,6 @@ export async function POST(req: Request) {
       });
 
     } catch (error: any) {
-      console.error("Gemini API Error:", error);
       return json({
         nextStep: "I'm having trouble connecting to the AI service right now. Please try again.",
         whatsappDraft: "",

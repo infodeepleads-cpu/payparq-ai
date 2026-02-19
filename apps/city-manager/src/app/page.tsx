@@ -184,7 +184,7 @@ export default function Home() {
             data: { url: "/" }
           });
         } catch (e) {
-          console.error("Push notification failed", e);
+          // silently ignore push notification failures
         }
       }
     } catch (e: any) {

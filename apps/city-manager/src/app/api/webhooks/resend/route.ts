@@ -48,13 +48,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      console.error("Error saving email:", error);
       return NextResponse.json({ error: "Error saving email" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
-    console.error("Webhook error:", error);
     return new NextResponse("Invalid webhook", { status: 400 });
   }
 }
