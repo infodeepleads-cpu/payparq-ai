@@ -73,7 +73,8 @@ Application Structure & Pages:
           `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string). ` +
           `Instructions:\n` +
           `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
-          `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
+          `2. **REMINDER LOGIC IS CRITICAL**: If the user asks for a reminder, you MUST set "action": "schedule_reminder" and "reminderTime" (ISO 8601). Do NOT just say you did it in "nextStep" without setting these fields.\n` +
+          `3. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
           `3. If the user wants to ADD a task:\n` +
           `   - Set "action" to "add_task".\n` +
           `   - Set "taskTitle" to the task description (e.g., "Call my boss").\n` +
@@ -117,6 +118,9 @@ Application Structure & Pages:
           `   - Set "taskTitle" to the reminder description.\n` +
           `   - Set "reminderTime" to the ISO 8601 date string (e.g. "2024-01-01T12:00:00.000Z") when the reminder should fire. Use the provided Current Server Time to calculate relative times (e.g. "tomorrow at 1pm").\n` +
           `   - In "nextStep", confirm the action and explicitly state the time you set.\n` +
+          `   - EXAMPLE:\n` +
+          `     Input: "Remind me to call John at 2pm tomorrow"\n` +
+          `     Response: { "action": "schedule_reminder", "taskTitle": "Call John", "reminderTime": "2024-01-02T14:00:00.000Z", "nextStep": "I've set a reminder to call John tomorrow at 2pm.", "urgent": false }\n` +
           `   - IMPORTANT: The frontend will handle the actual scheduling based on your response. You just need to identify the intent.\n` +
           `10. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
 ` +
