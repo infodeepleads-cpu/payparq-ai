@@ -56,6 +56,7 @@ export default function MachineIo() {
         if (changed) {
           localStorage.setItem("pp_reminders", JSON.stringify(pending));
           setReminders(pending);
+          window.dispatchEvent(new Event("pp_reminders_update"));
         }
       } catch {}
     }, 10000);
@@ -446,6 +447,7 @@ export default function MachineIo() {
           current.push(newReminder);
           localStorage.setItem("pp_reminders", JSON.stringify(current));
           setReminders(current);
+          window.dispatchEvent(new Event("pp_reminders_update"));
         }
       }
       

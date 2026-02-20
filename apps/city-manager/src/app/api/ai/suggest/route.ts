@@ -68,6 +68,7 @@ Application Structure & Pages:
         
         const systemPrompt = `Manager note: ${note}\n\n` +
           `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
+          `Current Date: ${new Date().toLocaleString()}\n\n` +
           `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object). ` +
           `Instructions:\n` +
           `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
