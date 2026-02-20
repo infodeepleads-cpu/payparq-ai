@@ -9,5 +9,6 @@ export const env = {
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-2.5-flash",
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET || "",
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+  CRON_SECRET: process.env.CRON_SECRET || ""
 };

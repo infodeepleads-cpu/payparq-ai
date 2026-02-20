@@ -11,7 +11,12 @@ function json(data: unknown, init?: number | ResponseInit) {
   });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = req.headers.get("Authorization") || "";
+  const secret = env.CRON_SECRET || "";
+  if (secret && auth !== `Bearer ${secret}`) {
+    return json({ error: "unauthorized" }, 401);
+  }
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
     return json({ error: "vapid" }, 200);
   }
