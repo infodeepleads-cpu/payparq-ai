@@ -90,7 +90,8 @@ Application Structure & Pages:
           `   - In "nextStep", confirm the action (e.g., "I've confirmed 'Call my boss' task.").\n` +
           `7. If the user wants to ADD a CRM contact:\n` +
           `   - Set "action" to "add_crm_contact".\n` +
-          `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name of the person/entity", "city": "City Name", "estimatedCapacity": number, "decisionStatus": "ENTRY/DEMO/TRIAL/CONTRACT/NO/FOLLOW UP", "notes": "Any notes" }.\n` +
+          `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name", "city": "City", "estimatedCapacity": number, "status": "Entry Prewarm/Live DEMO/Contract Status/Restart Time", "contractType": "Non Contractual/Contractual Obligation", "contractAction": "Yes/Yes (Expiration)/Follow Up/No", "notes": "Any notes" }.\n` +
+          `   - Note: If status is 'Contract Status', 'contractType' is required. If 'Contractual Obligation', 'contractAction' is required.\n` +
           `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
           `8. If the user wants to UPDATE a CRM contact:
 ` +

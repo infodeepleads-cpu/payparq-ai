@@ -29,13 +29,35 @@ function loadContacts(): Contact[] {
 
 export default function Page() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [smartProgram, setSmartProgram] = useState(false);
+  const [airportHub, setAirportHub] = useState(false);
+  const [cityHub, setCityHub] = useState(false);
 
   useEffect(() => {
     setContacts(loadContacts());
     const handler = () => setContacts(loadContacts());
     window.addEventListener("crm_storage", handler);
+    
+    // Load hub state
+    const savedHubs = localStorage.getItem("pp_mission_hubs");
+    if (savedHubs) {
+      const { city, airport, smart } = JSON.parse(savedHubs);
+      setCityHub(city);
+      setAirportHub(airport);
+      setSmartProgram(smart);
+    }
+
     return () => window.removeEventListener("crm_storage", handler);
   }, []);
+
+  // Save hub state
+  useEffect(() => {
+    localStorage.setItem("pp_mission_hubs", JSON.stringify({
+      city: cityHub,
+      airport: airportHub,
+      smart: smartProgram
+    }));
+  }, [cityHub, airportHub, smartProgram]);
 
   // KPIs
   const lotsMapped = contacts.length;
@@ -44,58 +66,54 @@ export default function Page() {
     .filter((c) => c.decisionStatus === "CONTRACT")
     .reduce((acc, c) => acc + (c.estimatedCapacity || 0) * 100, 0);
 
-  const MissionItem = ({ label, value }: { label: string; value: string | number }) => (
-    <div className="flex items-center justify-between py-3 border-b border-gray-100 hover:bg-gray-50 px-2 transition-colors">
-      <span className="text-xs font-bold text-black uppercase tracking-wider">{label}</span>
-      <span className="text-sm font-bold text-black font-mono">{value}</span>
+  const MissionItem = ({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) => (
+    <div 
+      onClick={onClick}
+      className={`flex items-center justify-between py-2 px-2 border-b border-gray-100 ${onClick ? "cursor-pointer hover:bg-gray-50" : ""} transition-colors`}
+    >
+      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-bold text-black">{value}</span>
     </div>
   );
 
   return (
-    <div className="h-screen bg-white">
-      <div className="hidden md:flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
-        <div className="max-w-3xl w-full mx-auto px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
-          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">MISSION</span>
-          <div className="flex items-center gap-4 flex-1">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider">SYSTEM: ONLINE</span>
-          </div>
-        </div>
-        <div className="max-w-3xl w-full mx-auto mt-6 px-4 md:px-0">
-
-          <div className="space-y-8">
-            {/* Primary Metrics */}
-            <div>
-              <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-100 pb-1">Performance</h2>
-              <div className="flex flex-col">
-                <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
-                <MissionItem label="Lots Mapped" value={lotsMapped} />
-                <MissionItem label="Lots Activated" value={lotsActivated} />
-              </div>
-            </div>
-
-            {/* Strategic Initiatives */}
-            <div>
-              <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-100 pb-1">Strategic Initiatives</h2>
-              <div className="flex flex-col">
-                <MissionItem label="Smart City Integration" value="+" />
-                <MissionItem label="Airport HUB Expansion" value="-" />
-                <MissionItem label="City HUB Network" value="NO" />
-              </div>
-            </div>
-            
-            {/* System Status - Simplified */}
-            <div>
-              <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-100 pb-1">System</h2>
-              <div className="flex flex-col">
-                 <MissionItem label="Data Sync" value="YES" />
-                 <MissionItem label="Server Status" value="NOMINAL" />
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6">
+      <div className="flex items-center justify-between mb-6 border-b border-black pb-2">
+        <h1 className="text-xl font-bold tracking-tight text-black">MISSION</h1>
+        <div className="flex items-center gap-4"></div>
       </div>
-      <div className="md:hidden p-6">
-        <div className="text-sm text-gray-600">Desktop only.</div>
+
+      <div className="grid grid-cols-1 gap-8">
+        {/* Primary Metrics */}
+        <div>
+          <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Performance</h2>
+          <div className="flex flex-col">
+            <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
+            <MissionItem label="Lots Mapped" value={lotsMapped} />
+            <MissionItem label="Lots Activated" value={lotsActivated} />
+          </div>
+        </div>
+
+        {/* Strategic Initiatives */}
+        <div>
+          <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Strategic Initiatives</h2>
+          <div className="flex flex-col">
+            <MissionItem 
+              label="SMART CITY PROGRAM" 
+              value={smartProgram ? "YES" : "NO"} 
+            />
+            <MissionItem 
+              label="AIRPORT HUB(CONTRACT)" 
+              value={airportHub ? "YES" : "NO"} 
+            />
+            <MissionItem 
+              label="CITY HUB(CONTRACT)" 
+              value={cityHub ? "YES" : "NO"} 
+            />
+          </div>
+        </div>
+        
+        
       </div>
     </div>
   );

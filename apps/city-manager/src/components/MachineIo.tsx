@@ -563,7 +563,7 @@ export default function MachineIo() {
          </div>
 
       {!threadId || messages.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-center pl-0 pr-4 md:px-4 overflow-y-auto">
            <div className="w-full max-w-3xl mx-auto">
              <div className="w-full mb-1">
                <TopControlsWidget />
@@ -574,7 +574,7 @@ export default function MachineIo() {
       ) : (
         <>
           <div className="flex-1 overflow-y-auto scroll-smooth">
-            <div className="max-w-3xl mx-auto px-4 md:px-0 py-8 pb-4">
+            <div className="max-w-3xl mx-auto pl-0 pr-4 md:px-0 py-8 pb-4">
               <div className="flex flex-col space-y-8">
               {messages.map((m, i) => (
                   <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
@@ -599,7 +599,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 px-4 md:px-0 overflow-x-hidden">
+          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0 overflow-x-hidden">
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-2">
                  <TopControlsWidget />
