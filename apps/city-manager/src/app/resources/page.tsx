@@ -32,7 +32,7 @@ const DEFAULT_RESOURCES: ResourceItem[] = [
   { id: "m-product", name: "Product", category: "Mentorship", link: "https://payparq.com/product", linkLabel: "payparq.com/product" },
   { id: "m-sales", name: "Sales", category: "Mentorship", link: "/resources/sales-rules", linkLabel: "Sales & Contact Rules" },
   { id: "m-ops", name: "Ops Mastery", category: "Mentorship", link: "/resources/ops-mastery", linkLabel: "Ops Mastery — Non-Negotiables" },
-  { id: "m-review", name: "Review Management", category: "Mentorship" },
+  { id: "m-review", name: "Review Management", category: "Mentorship", link: "/resources/review-management", linkLabel: "Experience Excellence — Ops Guidelines" },
   { id: "m-objection", name: "Objection Handling", category: "Mentorship", link: "/resources/objection-handling", linkLabel: "Common Objections & Legal Basis" },
 
   // Scripts

@@ -72,6 +72,17 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
+            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">HUB Launch</h2>
+            <div className="text-gray-700 leading-relaxed text-sm">
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Reviews</li>
+                <li>Testing / On Site Marketing / Allow Taxis to use the Lot</li>
+                <li>Feedback</li>
+              </ul>
+            </div>
+          </section>
+
+          <section>
             <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Core Principle</h2>
             <p className="text-gray-700 leading-relaxed text-sm italic border-l-4 border-black pl-4 py-2">
               There is nothing worse than a stranded guest. 
