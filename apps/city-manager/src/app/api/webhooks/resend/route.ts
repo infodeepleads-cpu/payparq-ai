@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
     const from = data.from || "";
     const to = data.to || "";
     const subject = data.subject || "(No Subject)";
+    const html = data.html || null;
+    const text = data.text || null;
 
     if (!from || !to) {
       return NextResponse.json({ error: "Missing from or to" }, { status: 400 });
@@ -49,8 +51,8 @@ export async function POST(req: NextRequest) {
       from_address: from,
       to_address: to,
       subject,
-      html_body: null,
-      text_body: null,
+      html_body: html,
+      text_body: text,
       raw_json: event,
     });
 
