@@ -458,11 +458,9 @@ export default function MachineIo() {
             console.error("Failed to schedule reminder:", e);
             systemNote = `\n\n⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
           }
-        } else if (/remind me/i.test(assistantText) && !data.action) {
-           // Fallback warning if AI says it did it but didn't send action
-           if (assistantText.includes("reminder") && (assistantText.includes("set") || assistantText.includes("scheduled"))) {
-             systemNote = `\n\n⚠ System: AI confirmed a reminder verbally but failed to schedule it. Please try again.`;
-           }
+        } else if ((assistantText.includes("reminder") && (assistantText.includes("set") || assistantText.includes("scheduled"))) && data.action !== "schedule_reminder") {
+           // Fallback warning if AI says it did it but used wrong action (or no action)
+           systemNote = `\n\n⚠ System: AI confirmed a reminder verbally but failed to schedule it (Action was: ${data.action || "None"}). Please try again.`;
         }
       }
       

@@ -77,6 +77,7 @@ Application Structure & Pages:
           `3. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
           `3. If the user wants to ADD a task:\n` +
           `   - Set "action" to "add_task".\n` +
+          `   - IMPORTANT: If the request is a REMINDER (e.g. "Remind me..."), DO NOT use "add_task". Use "schedule_reminder" instead.\n` +
           `   - Set "taskTitle" to the task description (e.g., "Call my boss").\n` +
           `   - In "nextStep", confirm the action (e.g., "I've added 'Call my boss' to your tasks.").\n` +
           `4. If the user wants to COMPLETE a task:\n` +
