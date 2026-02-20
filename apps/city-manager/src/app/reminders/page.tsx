@@ -69,25 +69,6 @@ export default function RemindersPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reminders</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Managed via AI chat ("Remind me to call John at 5pm")
-          </p>
-        </div>
-        <div className="flex gap-2">
-           {permission !== "granted" && (
-            <button
-              onClick={requestPermission}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              Enable Notifications
-            </button>
-          )}
-          <button
-            onClick={clearCompleted}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none"
-          >
-            Clear Fired
-          </button>
         </div>
       </div>
 
