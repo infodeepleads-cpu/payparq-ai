@@ -68,8 +68,9 @@ Application Structure & Pages:
         
         const systemPrompt = `Manager note: ${note}\n\n` +
           `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
-          `Current Date: ${new Date().toLocaleString()}\n\n` +
-          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object). ` +
+          `Current Server Time (ISO): ${new Date().toISOString()}\n` +
+          `Current Server Time (Local): ${new Date().toLocaleString()}\n\n` +
+          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string). ` +
           `Instructions:\n` +
           `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
           `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
@@ -111,11 +112,11 @@ Application Structure & Pages:
           `     - Include these in the "crmContact" object.\n` +
           `   - In "nextStep", confirm the action.
 ` +
-          `9. If the user wants to SCHEDULE A REMINDER:\n` +
+          `11. If the user wants to SCHEDULE A REMINDER:\n` +
           `   - Set "action" to "schedule_reminder".\n` +
           `   - Set "taskTitle" to the reminder description.\n` +
-          `   - Set "reminderTime" to the ISO 8601 date string (e.g. "2024-01-01T12:00:00.000Z") when the reminder should fire. Infer the year/date from "Today's date" in context if only time is given.\n` +
-          `   - In "nextStep", confirm the action (e.g., "I've set a reminder for...").\n` +
+          `   - Set "reminderTime" to the ISO 8601 date string (e.g. "2024-01-01T12:00:00.000Z") when the reminder should fire. Use the provided Current Server Time to calculate relative times (e.g. "tomorrow at 1pm").\n` +
+          `   - In "nextStep", confirm the action and explicitly state the time you set.\n` +
           `   - IMPORTANT: The frontend will handle the actual scheduling based on your response. You just need to identify the intent.\n` +
           `10. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
 ` +

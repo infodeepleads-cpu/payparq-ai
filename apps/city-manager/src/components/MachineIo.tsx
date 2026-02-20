@@ -427,8 +427,10 @@ export default function MachineIo() {
         data = await r.json();
       }
       let assistantText = data?.nextStep || "";
+      let systemNote = "";
       
       if (data) {
+        console.log("AI Response Data:", data);
         if (data.action === "add_task" && data.taskTitle) {
           addTaskLocal(data.taskTitle);
         } else if (data.action === "complete_task" && data.taskTitle) {
@@ -442,16 +444,24 @@ export default function MachineIo() {
         } else if (data.action === "update_crm_contact" && data.crmContact) {
           updateCRMContact(data.crmContact);
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
-          const newReminder = { id: Date.now(), title: data.taskTitle, time: data.reminderTime, fired: false };
-          const current = JSON.parse(localStorage.getItem("pp_reminders") || "[]");
-          current.push(newReminder);
-          localStorage.setItem("pp_reminders", JSON.stringify(current));
-          setReminders(current);
-          window.dispatchEvent(new Event("pp_reminders_update"));
+          try {
+            const time = new Date(data.reminderTime);
+            if (isNaN(time.getTime())) throw new Error("Invalid time");
+            const newReminder = { id: Date.now(), title: data.taskTitle, time: data.reminderTime, fired: false };
+            const current = JSON.parse(localStorage.getItem("pp_reminders") || "[]");
+            current.push(newReminder);
+            localStorage.setItem("pp_reminders", JSON.stringify(current));
+            setReminders(current);
+            window.dispatchEvent(new Event("pp_reminders_update"));
+            systemNote = `\n\n✓ System: Reminder set for ${time.toLocaleString()}`;
+          } catch (e) {
+            console.error("Failed to schedule reminder:", e);
+            systemNote = `\n\n⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
+          }
         }
       }
       
-      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
+      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText + systemNote, animate: true }];
       setMessages(finalMsgs);
       if (id) {
         saveMessages(id, finalMsgs);
