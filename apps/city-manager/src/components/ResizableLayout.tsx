@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 interface ResizableLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,8 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
   const [isDragging, setIsDragging] = useState(false);
   const [middleWidth, setMiddleWidth] = useState(400); // Default width in px
   const containerRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+  const isRoot = pathname === "/" || pathname === "";
 
   const startResizing = useCallback(() => {
     setIsDragging(true);
@@ -48,24 +51,30 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
 
   return (
     <div className="flex flex-1 overflow-hidden relative w-full" ref={containerRef}>
-      {/* Middle Pane */}
+      {/* Middle Pane - Hidden on mobile if on root (chat view), otherwise full width */}
       <div 
-        className="hidden md:block flex-shrink-0 h-full overflow-hidden bg-gray-50/50"
-        style={{ width: middleWidth }}
+        className={`${isRoot ? 'hidden md:block' : 'block w-full md:w-auto'} flex-shrink-0 h-full overflow-hidden bg-gray-50/50`}
+        style={{ width: undefined }} // Let CSS control width on mobile (w-full), on desktop use JS width
       >
-        <div className="h-full w-full overflow-y-auto scrollbar-hide">
-          {children}
+        <div 
+          className="h-full w-full overflow-y-auto scrollbar-hide"
+          style={{ width: isRoot ? undefined : '100%' }} // Ensure full width on mobile
+        >
+          {/* Apply width only on desktop to allow resizing */}
+          <div className="!w-full md:w-auto h-full" style={{ width: middleWidth }}>
+             {children}
+          </div>
         </div>
       </div>
 
-      {/* Resize Handle */}
+      {/* Resize Handle - Only visible on desktop */}
       <div
         className={`hidden md:block w-1 cursor-col-resize hover:bg-blue-400 transition-colors z-40 flex-shrink-0 ${isDragging ? 'bg-blue-500' : 'bg-gray-200'}`}
         onMouseDown={startResizing}
       />
 
-      {/* Right Pane (MachineIo) */}
-      <div className="flex-1 h-full w-full md:min-w-[300px] overflow-hidden bg-white">
+      {/* Right Pane (MachineIo) - Visible on mobile only if on root, always visible on desktop */}
+      <div className={`${!isRoot ? 'hidden md:block' : 'block'} flex-1 h-full w-full md:min-w-[300px] overflow-hidden bg-white`}>
         {rightPanel}
       </div>
     </div>

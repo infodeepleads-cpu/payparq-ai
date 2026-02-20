@@ -164,8 +164,8 @@ export default function Page() {
           const tierContacts = contactsByTier[tier.id];
 
           return (
-            <div key={tier.id} className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+            <div key={tier.id} className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 min-w-full">
                 <h3 className="text-lg font-medium leading-6 text-gray-900">
                   Tier {tier.id}: {tier.label}
                 </h3>
