@@ -27,7 +27,7 @@ export default function SalesRulesPage() {
           <section>
             <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Closing on the Phone</h2>
             <p className="text-gray-700 leading-relaxed text-sm">
-              Never close one the phone on the first contact. Phone is for setting appointment today/tommorow/term. 
+              Never close on the phone on the first contact. Phone is for setting appointment today/tommorow/term. 
               Follow-Ups closes, and Upsells can be done by the phone but first contact never.
             </p>
           </section>

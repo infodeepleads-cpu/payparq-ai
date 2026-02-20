@@ -90,8 +90,8 @@ Application Structure & Pages:
           `   - In "nextStep", confirm the action (e.g., "I've confirmed 'Call my boss' task.").\n` +
           `7. If the user wants to ADD a CRM contact:\n` +
           `   - Set "action" to "add_crm_contact".\n` +
-          `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name", "city": "City", "estimatedCapacity": number, "status": "Entry Prewarm/Live DEMO/Contract Status/Restart Time", "contractType": "Non Contractual/Contractual Obligation", "contractAction": "Yes/Yes (Expiration)/Follow Up/No", "notes": "Any notes" }.\n` +
-          `   - Note: If status is 'Contract Status', 'contractType' is required. If 'Contractual Obligation', 'contractAction' is required.\n` +
+          `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name", "location": "Location", "estimatedCapacity": number, "status": "Number. Date (e.g. '1. 2024-01-01')", "nextStep": "Next step", "notes": "Any notes" }.\n` +
+          `   - Status format MUST be one of: '1. Date' (Entry), '2. Date' (Live DEMO), '3. Date' (Yes/Expiration), '4. Reason' (No), '5. Date' (Follow Up).\n` +
           `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
           `8. If the user wants to UPDATE a CRM contact:
 ` +
@@ -99,9 +99,24 @@ Application Structure & Pages:
 ` +
           `   - Set "crmContact" to the updated fields (must include "decisionMaker": "Name" to identify the contact).
 ` +
+          `   - If the user uses the shorthand format "N. a [Name] b [Location] c [Cap] d [Status] e [Next Step] f [Notes]":\n` +
+          `     - Parse "N" as "index" (number).\n` +
+          `     - Parse "a" value as "decisionMaker".\n` +
+          `     - Parse "b" value as "location".\n` +
+          `     - Parse "c" value as "estimatedCapacity" (number).\n` +
+          `     - Parse "d" value as "status".\n` +
+          `     - Parse "e" value as "nextStep".\n` +
+          `     - Parse "f" value as "notes".\n` +
+          `     - Include these in the "crmContact" object.\n` +
           `   - In "nextStep", confirm the action.
 ` +
-          `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
+          `9. If the user wants to SCHEDULE A REMINDER:\n` +
+          `   - Set "action" to "schedule_reminder".\n` +
+          `   - Set "taskTitle" to the reminder description.\n` +
+          `   - Set "reminderTime" to the ISO 8601 date string (e.g. "2024-01-01T12:00:00.000Z") when the reminder should fire. Infer the year/date from "Today's date" in context if only time is given.\n` +
+          `   - In "nextStep", confirm the action (e.g., "I've set a reminder for...").\n` +
+          `   - IMPORTANT: The frontend will handle the actual scheduling based on your response. You just need to identify the intent.\n` +
+          `10. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
 ` +
           `Style: concise, actionable, manager-oriented. Return ONLY JSON.\n` +
           `Do not greet or introduce yourself. Do not write self-referential phrases (e.g., "I'm an assistant", "I'm Gemini").`;
@@ -223,15 +238,34 @@ Application Structure & Pages:
            `   - In "nextStep", confirm the action (e.g., "I've confirmed 'Call my boss' task.").\n` +
            `7. If the user wants to ADD a CRM contact:\n` +
            `   - Set "action" to "add_crm_contact".\n` +
-           `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name of the person/entity", "city": "City Name", "estimatedCapacity": number, "decisionStatus": "ENTRY/DEMO/TRIAL/CONTRACT/NO/FOLLOW UP", "notes": "Any notes" }.\n` +
+           `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name of the person/entity", "city": "City Name", "estimatedCapacity": number, "status": "Number. Date (e.g. '1. 2024-01-01')", "nextStep": "Next step details", "notes": "Any notes" }.\n` +
+          `   - Status format MUST be one of: '1. Date' (Entry), '2. Date' (Live DEMO), '3. Date' (Yes/Expiration), '4. Reason' (No), '5. Date' (Follow Up).\n` +
            `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
            `8. If the user wants to UPDATE a CRM contact:
 ` +
            `   - Set "action" to "update_crm_contact".
 ` +
-           `   - Set "crmContact" to the updated fields (must include "decisionMaker": "Name" to identify the contact).
+           `   - Set "crmContact" to the updated fields.
 ` +
-           `   - In "nextStep", confirm the action.
+           `   - If the user uses the shorthand format "N. a [Name] b [Location] c [Cap] d [Status] e [Next Step] f [Notes]":
+` +
+          `     - Parse "N" as the "tier" (number). This is the contact's Tier/Group, NOT an index.
+` +
+          `     - Parse "a" value as "decisionMaker".
+` +
+          `     - Parse "b" value as "location".
+` +
+          `     - Parse "c" value as "estimatedCapacity" (number).
+` +
+          `     - Parse "d" value as "status".
+` +
+          `     - Parse "e" value as "nextStep".
+` +
+          `     - Parse "f" value as "notes".
+` +
+          `     - Include these in the "crmContact" object.
+` +
+          `   - In "nextStep", confirm the action.
 ` +
            `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
 ` +

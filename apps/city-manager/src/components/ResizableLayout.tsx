@@ -60,7 +60,7 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
 
       {/* Resize Handle */}
       <div
-        className={`hidden md:block w-1 cursor-col-resize hover:bg-blue-400 transition-colors z-[60] flex-shrink-0 ${isDragging ? 'bg-blue-500' : 'bg-gray-200'}`}
+        className={`hidden md:block w-1 cursor-col-resize hover:bg-blue-400 transition-colors z-40 flex-shrink-0 ${isDragging ? 'bg-blue-500' : 'bg-gray-200'}`}
         onMouseDown={startResizing}
       />
 

@@ -26,10 +26,11 @@ type Contact = {
   id: string;
   tier: Tier;
   decisionMaker: string;
-  city: string;
+  location: string;
   estimatedCapacity: number;
   
-  status: CrmStatus;
+  status: string;
+  nextStep?: string;
   
   // Complex status fields
   contractType?: ContractSubStatus;
@@ -44,6 +45,7 @@ type Contact = {
   createdAt: number;
   
   // Legacy support
+  city?: string;
   decisionStatus?: string;
 };
 
@@ -65,6 +67,11 @@ function loadContacts(): Contact[] {
     if (!raw) return [];
     const data = JSON.parse(raw);
     return data.map((c: any) => {
+      // Migrate city -> location
+      if (c.city && !c.location) {
+        c.location = c.city;
+      }
+      
       // Ensure migration of legacy status
       if (!c.status && c.decisionStatus) {
         if (c.decisionStatus === "ENTRY") c.status = "Entry Prewarm (Mail)";
@@ -136,24 +143,19 @@ export default function Page() {
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">CRM</h1>
           <p className="mt-2 text-sm text-gray-700">
-            A list of all contacts including their name, city, capacity, and current status.
+            A list of all contacts including their name, location, capacity, and current status.
           </p>
-        </div>
-        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <span className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none sm:w-auto">
-            {contacts.length} Records
-          </span>
         </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
         <h4 className="text-sm font-bold uppercase text-black mb-4 tracking-wide border-b border-gray-100 pb-2">Status Requirements</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
-          <div><span className="font-bold text-gray-900">1. LIVE DEMO:</span> DATE</div>
-          <div><span className="font-bold text-gray-900">2. YES:</span> DATE</div>
-          <div><span className="font-bold text-gray-900">3. YES (EXPIRATION):</span> DATE (EXPIRATION DATE)</div>
-          <div><span className="font-bold text-gray-900">4. NO:</span> DATE <span className="italic">P.S. (WHAT FEATURE WOULD MAKE THEM BUY) 60-90 DAY COOLING PERIOD</span></div>
-          <div><span className="font-bold text-gray-900">5. NEXT STEP:</span> DATE (CALL/MEETING)</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 text-sm text-gray-600">
+          <div><span className="font-bold text-gray-900">1. Entry:</span> Date</div>
+          <div><span className="font-bold text-gray-900">2. Live DEMO:</span> Date</div>
+          <div><span className="font-bold text-gray-900">3. Yes Date:</span> Expiration date if contract</div>
+          <div><span className="font-bold text-gray-900">4. No Date:</span> Reason/Improvement</div>
+          <div><span className="font-bold text-gray-900">5. Follow Up Date:</span> Date</div>
         </div>
       </div>
 
@@ -171,20 +173,26 @@ export default function Page() {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 sm:pl-6 w-12">
+                      #
+                    </th>
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 sm:pl-6">
-                      Decision Maker
+                      a) Decision Maker
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      City
+                      b) Location
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Cap
+                      c) Cap
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Status
+                      d) Status
                     </th>
                     <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      Notes
+                      e) Next Step
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      f) Notes
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                       <span className="sr-only">Actions</span>
@@ -194,200 +202,119 @@ export default function Page() {
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {tierContacts.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-4 text-sm text-gray-500" colSpan={6}>
+                      <td className="px-3 py-4 text-sm text-gray-500" colSpan={7}>
                         No records
                       </td>
                     </tr>
-                  ) : tierContacts.map((contact) => (
-                    <tr key={contact.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {editingId === contact.id ? (
-                          <input
-                            type="text"
-                            value={contact.decisionMaker}
-                            onChange={(e) => updateContact(contact.id, { decisionMaker: e.target.value })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                        ) : (
-                          contact.decisionMaker
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {editingId === contact.id ? (
-                          <input
-                            type="text"
-                            value={contact.city}
-                            onChange={(e) => updateContact(contact.id, { city: e.target.value })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                        ) : (
-                          contact.city
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {editingId === contact.id ? (
-                          <input
-                            type="number"
-                            value={contact.estimatedCapacity}
-                            onChange={(e) => updateContact(contact.id, { estimatedCapacity: Number(e.target.value) })}
-                            className="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          />
-                        ) : (
-                          contact.estimatedCapacity
-                        )}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-500 min-w-[300px]">
-                        {editingId === contact.id ? (
-                          <div className="space-y-2">
-                            <select
-                              value={contact.status}
-                              onChange={(e) => {
-                                const ns = e.target.value as CrmStatus;
-                                const updates: Partial<Contact> = { status: ns };
-                                if (ns === "Contract Status (Non Contractual)") {
-                                  updates.contractType = "Non Contractual";
-                                  updates.contractAction = undefined;
-                                  updates.expirationDate = undefined;
-                                  updates.followUpDate = undefined;
-                                  updates.noReason = undefined;
-                                } else if (ns === "Contract Status (Contractual Obligation)") {
-                                  updates.contractType = "Contractual Obligation";
-                                  if (!contact.contractAction) updates.contractAction = "Yes";
-                                } else {
-                                  updates.contractType = undefined;
-                                  updates.contractAction = undefined;
-                                  updates.expirationDate = undefined;
-                                  updates.followUpDate = undefined;
-                                  updates.noReason = undefined;
-                                }
-                                updateContact(contact.id, updates);
-                              }}
+                  ) : tierContacts.map((contact) => {
+                    // Find global index for display
+                    const globalIndex = contacts.findIndex(c => c.id === contact.id) + 1;
+                    
+                    return (
+                      <tr key={contact.id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900 sm:pl-6">
+                          {globalIndex}.
+                        </td>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                          {editingId === contact.id ? (
+                            <input
+                              type="text"
+                              value={contact.decisionMaker}
+                              onChange={(e) => updateContact(contact.id, { decisionMaker: e.target.value })}
                               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            >
-                              <option value="Entry Prewarm (Mail)">Entry Prewarm (Mail)</option>
-                              <option value="Entry Prewarm (Call/Walk In)">Entry Prewarm (Call/Walk In)</option>
-                              <option value="Live DEMO">Live DEMO</option>
-                              <option value="Contract Status (Non Contractual)">Contract Status (Non Contractual)</option>
-                              <option value="Contract Status (Contractual Obligation)">Contract Status (Contractual Obligation)</option>
-                              <option value="Restart Time">Restart Time</option>
-                            </select>
-
-                            {contact.status === "Contract Status (Contractual Obligation)" && (
-                              <div className="pl-2 space-y-2 border-l-2 border-gray-200">
-                                <select
-                                  value={contact.contractAction || "Yes"}
-                                  onChange={(e) => updateContact(contact.id, { contractAction: e.target.value as ContractAction })}
-                                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                >
-                                  <option value="Yes">Yes</option>
-                                  <option value="Yes (Expiration)">Yes (Expiration)</option>
-                                  <option value="Follow Up">Follow Up</option>
-                                  <option value="No">No</option>
-                                </select>
-                                
-                                {contact.contractAction === "Yes (Expiration)" && (
-                                  <input
-                                    type="date"
-                                    value={contact.expirationDate || ""}
-                                    onChange={(e) => updateContact(contact.id, { expirationDate: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                  />
-                                )}
-                                {contact.contractAction === "Follow Up" && (
-                                  <input
-                                    type="date"
-                                    value={contact.followUpDate || ""}
-                                    onChange={(e) => updateContact(contact.id, { followUpDate: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                  />
-                                )}
-                                {contact.contractAction === "No" && (
-                                  <textarea
-                                    placeholder="WHAT WOULD PRODUCT HAVE TO HAVE SO YOU SAY YES?"
-                                    value={contact.noReason || ""}
-                                    onChange={(e) => updateContact(contact.id, { noReason: e.target.value })}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                    rows={2}
-                                  />
-                                )}
-                              </div>
-                            )}
-
-                            {contact.status === "Restart Time" && (
-                               <input
-                                 type="text"
-                                 placeholder="Restart Time (e.g. 7 days)"
-                                 value={contact.restartTime || ""}
-                                 onChange={(e) => updateContact(contact.id, { restartTime: e.target.value })}
-                                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                               />
-                            )}
-                          </div>
-                        ) : (
-                          <div>
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              contact.status === "Contract Status (Non Contractual)" || contact.status === "Contract Status (Contractual Obligation)" ? "bg-green-100 text-green-800" :
-                              contact.status === "Live DEMO" ? "bg-blue-100 text-blue-800" :
-                              contact.status === "Restart Time" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-gray-100 text-gray-800"
-                            }`}>
+                            />
+                          ) : (
+                            contact.decisionMaker
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {editingId === contact.id ? (
+                            <input
+                              type="text"
+                              value={contact.location || contact.city || ""}
+                              onChange={(e) => updateContact(contact.id, { location: e.target.value })}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          ) : (
+                            contact.location || contact.city
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {editingId === contact.id ? (
+                            <input
+                              type="number"
+                              value={contact.estimatedCapacity}
+                              onChange={(e) => updateContact(contact.id, { estimatedCapacity: Number(e.target.value) })}
+                              className="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          ) : (
+                            contact.estimatedCapacity
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-gray-500 min-w-[200px]">
+                          {editingId === contact.id ? (
+                            <input
+                              type="text"
+                              value={contact.status || ""}
+                              onChange={(e) => updateContact(contact.id, { status: e.target.value })}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          ) : (
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800`}>
                               {contact.status}
                             </span>
-                            {contact.status === "Contract Status (Contractual Obligation)" && (
-                              <div className="mt-1 text-xs text-gray-500 space-y-1">
-                                <div className="font-medium text-gray-700">
-                                  Action: {contact.contractAction}
-                                  {contact.contractAction === "Yes (Expiration)" && ` (${contact.expirationDate})`}
-                                  {contact.contractAction === "Follow Up" && ` (${contact.followUpDate})`}
-                                  {contact.contractAction === "No" && ` (Reason: ${contact.noReason})`}
-                                </div>
-                              </div>
-                            )}
-                            {contact.status === "Restart Time" && contact.restartTime && (
-                              <div className="mt-1 text-xs text-gray-500">
-                                Time: {contact.restartTime}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-500">
-                        {editingId === contact.id ? (
-                          <textarea
-                            value={contact.notes || ""}
-                            onChange={(e) => updateContact(contact.id, { notes: e.target.value })}
-                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            rows={3}
-                          />
-                        ) : (
-                          <p className="whitespace-pre-wrap truncate max-w-xs">{contact.notes}</p>
-                        )}
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        {editingId === contact.id ? (
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-gray-500 min-w-[200px]">
+                          {editingId === contact.id ? (
+                            <input
+                              type="text"
+                              value={contact.nextStep || ""}
+                              onChange={(e) => updateContact(contact.id, { nextStep: e.target.value })}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          ) : (
+                            <span className="whitespace-pre-wrap truncate max-w-xs">{contact.nextStep}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-gray-500">
+                          {editingId === contact.id ? (
+                            <textarea
+                              value={contact.notes || ""}
+                              onChange={(e) => updateContact(contact.id, { notes: e.target.value })}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                              rows={3}
+                            />
+                          ) : (
+                            <p className="whitespace-pre-wrap truncate max-w-xs">{contact.notes}</p>
+                          )}
+                        </td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                          {editingId === contact.id ? (
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                            >
+                              Save
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setEditingId(contact.id)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                            >
+                              Edit
+                            </button>
+                          )}
                           <button
-                            onClick={() => setEditingId(null)}
-                            className="text-indigo-600 hover:text-indigo-900 mr-4"
+                            onClick={() => deleteContact(contact.id)}
+                            className="text-indigo-600 hover:text-indigo-900"
                           >
-                            Save
+                            Delete
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => setEditingId(contact.id)}
-                            className="text-indigo-600 hover:text-indigo-900 mr-4"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteContact(contact.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

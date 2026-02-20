@@ -9,6 +9,7 @@ type SuggestResponse = {
   urgent: boolean;
   action?: string;
   taskTitle?: string;
+  reminderTime?: string;
   crmContact?: any;
 };
 
@@ -18,7 +19,7 @@ export default function MachineIo() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
+  const [selectedModel, setSelectedModel] = useState("auto");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const loadingRef = useRef(false);
@@ -26,14 +27,49 @@ export default function MachineIo() {
   const [userName, setUserName] = useState<string | null>(null);
   const [loadingDots, setLoadingDots] = useState(".");
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [reminders, setReminders] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("pp_reminders");
+      if (stored) setReminders(JSON.parse(stored));
+    } catch {}
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    const interval = setInterval(() => {
+      try {
+        const now = Date.now();
+        const raw = localStorage.getItem("pp_reminders");
+        if (!raw) return;
+        const pending = JSON.parse(raw);
+        let changed = false;
+        pending.forEach((r: any) => {
+          if (new Date(r.time).getTime() <= now && !r.fired) {
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification("Reminder", { body: r.title, icon: "/icons/icon-192.png" });
+            }
+            r.fired = true;
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem("pp_reminders", JSON.stringify(pending));
+          setReminders(pending);
+        }
+      } catch {}
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const AI_MODELS = [
+    { id: "auto", name: "Auto (Smart Switch)" },
+    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
+    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
+    { id: "separator-1", name: "──────────", disabled: true },
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
     { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-    { id: "separator-1", name: "──────────", disabled: true },
     { id: "groq/compound-mini", name: "Groq Compound Mini" },
-    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
-    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
     { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick 17B (Groq)" },
     { id: "meta-llama/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout 17B (Groq)" },
     { id: "meta-llama/llama-guard-4-12b", name: "Llama Guard 4 12B (Groq)" },
@@ -86,17 +122,28 @@ export default function MachineIo() {
   };
   const updateCRMContact = (contact: any) => {
     const contacts = readCRM();
-    // Try to find by ID first, then by decisionMaker name as fallback
+    // Try to find by ID first, then by index, then by decisionMaker name
     let idx = -1;
     if (contact.id) {
       idx = contacts.findIndex((c: any) => c.id === contact.id);
     }
+    
+    // Check for numeric index (1-based from AI)
+    if (idx === -1 && typeof contact.index === 'number') {
+      const i = contact.index - 1; // Convert to 0-based
+      if (i >= 0 && i < contacts.length) {
+        idx = i;
+      }
+    }
+
     if (idx === -1 && contact.decisionMaker) {
       idx = contacts.findIndex((c: any) => c.decisionMaker.toLowerCase() === contact.decisionMaker.toLowerCase());
     }
     
     if (idx >= 0) {
-      contacts[idx] = { ...contacts[idx], ...contact };
+      // Exclude 'index' from the actual stored data
+      const { index, ...updates } = contact;
+      contacts[idx] = { ...contacts[idx], ...updates };
       writeCRM(contacts);
       return contacts[idx];
     }
@@ -324,38 +371,82 @@ export default function MachineIo() {
 
     try {
       const currentTasks = readTasks();
-      const r = await fetch("/api/ai/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model: selectedModel, tasks: currentTasks })
-      });
-      
-      if (!r.ok) {
-        let errorMsg = "Failed to get suggestion";
-        try {
-          const errorData = await r.json();
-          errorMsg = errorData.error || errorData.message || "Failed to get suggestion";
-        } catch (e) {
-          // ignore json parse error
+      let data: SuggestResponse | null = null;
+
+      if (selectedModel === "auto") {
+        // Auto mode: Try models in sequence with timeout
+        // Priority: Groq Llama 70B (High Quality) -> Gemini Flash (Fast/Reliable) -> Groq Llama 8B (Fastest)
+        const autoModels = ["llama-3.3-70b-versatile", "gemini-2.5-flash", "llama-3.1-8b-instant"];
+        let lastError = null;
+        let success = false;
+
+        for (const model of autoModels) {
+          try {
+            const controller = new AbortController();
+            // 10s timeout to detect "slow" chat
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const r = await fetch("/api/ai/suggest", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model, tasks: currentTasks }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            data = await r.json();
+            success = true;
+            break;
+          } catch (e) {
+            lastError = e;
+            console.warn(`Auto switch: ${model} failed`, e);
+            continue;
+          }
         }
-        throw new Error(errorMsg);
+        if (!success) throw lastError || new Error("All auto models failed");
+      } else {
+        const r = await fetch("/api/ai/suggest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: userText, image, messages: nextUserMsgs, model: selectedModel, tasks: currentTasks })
+        });
+        
+        if (!r.ok) {
+          let errorMsg = "Failed to get suggestion";
+          try {
+            const errorData = await r.json();
+            errorMsg = errorData.error || errorData.message || "Failed to get suggestion";
+          } catch (e) {
+            // ignore json parse error
+          }
+          throw new Error(errorMsg);
+        }
+        
+        data = await r.json();
       }
+      let assistantText = data?.nextStep || "";
       
-      const data: SuggestResponse = await r.json();
-      let assistantText = data.nextStep;
-      
-      if (data.action === "add_task" && data.taskTitle) {
-        addTaskLocal(data.taskTitle);
-      } else if (data.action === "complete_task" && data.taskTitle) {
-        completeTaskLocal(data.taskTitle);
-      } else if (data.action === "delete_task" && data.taskTitle) {
-        removeTaskLocal(data.taskTitle);
-      } else if (data.action === "confirm_task" && data.taskTitle) {
-        confirmTaskLocal(data.taskTitle);
-      } else if (data.action === "add_crm_contact" && data.crmContact) {
-        addCRMContact(data.crmContact);
-      } else if (data.action === "update_crm_contact" && data.crmContact) {
-        updateCRMContact(data.crmContact);
+      if (data) {
+        if (data.action === "add_task" && data.taskTitle) {
+          addTaskLocal(data.taskTitle);
+        } else if (data.action === "complete_task" && data.taskTitle) {
+          completeTaskLocal(data.taskTitle);
+        } else if (data.action === "delete_task" && data.taskTitle) {
+          removeTaskLocal(data.taskTitle);
+        } else if (data.action === "confirm_task" && data.taskTitle) {
+          confirmTaskLocal(data.taskTitle);
+        } else if (data.action === "add_crm_contact" && data.crmContact) {
+          addCRMContact(data.crmContact);
+        } else if (data.action === "update_crm_contact" && data.crmContact) {
+          updateCRMContact(data.crmContact);
+        } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
+          const newReminder = { id: Date.now(), title: data.taskTitle, time: data.reminderTime, fired: false };
+          const current = JSON.parse(localStorage.getItem("pp_reminders") || "[]");
+          current.push(newReminder);
+          localStorage.setItem("pp_reminders", JSON.stringify(current));
+          setReminders(current);
+        }
       }
       
       const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
@@ -375,11 +466,11 @@ export default function MachineIo() {
         }
       }
       
-      if (data.urgent) {
+      if (data?.urgent) {
         try {
           const reg = await navigator.serviceWorker.ready;
           await reg.showNotification("Immediate Action", {
-            body: data.nextStep,
+            body: data?.nextStep || "",
             icon: "/icons/icon-192.png",
             data: { url: "/" }
           });
@@ -507,8 +598,8 @@ export default function MachineIo() {
                  <span className="text-[9px] font-bold">AI</span>
               </button>
               {showModelSelector && (
-                 <div className="absolute bottom-full right-0 mb-3 w-64 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
-                    <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                 <div className="absolute bottom-full right-0 mb-3 w-80 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
+                    <div className="max-h-80 overflow-y-auto p-1">
                        {AI_MODELS.map((model, idx) => (
                           <button
                             key={idx}

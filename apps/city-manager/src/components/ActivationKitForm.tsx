@@ -206,7 +206,7 @@ export default function ActivationKitForm({ onClose, onSave, initialData }: Acti
               <h4 className="font-bold text-sm mb-2">1. Uvod i predstavljanje</h4>
               <div className="space-y-2">
                 <Checkbox field="meeting_intro_greeting" label="Pozdrav i predstavljanje tko smo" />
-                <Checkbox field="meeting_intro_target" label="Objašnjeno za koga je ponuda (vozači, turisti, gig ekonomija)" />
+                <Checkbox field="meeting_intro_target" label="Objašnjeno za koga je ponuda (stabilnost i sigurnost, nije za onoga tko želi lovu na brzinu, parking ugovori su dugoročne prirode, 5-10 godina industrijski standard)" />
               </div>
             </div>
             <div>

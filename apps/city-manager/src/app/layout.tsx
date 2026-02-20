@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased font-sans bg-background text-text-primary">
         <PwaProvider />
-        <div className="flex flex-col h-screen bg-background overflow-hidden">
+        <div className="flex flex-col h-screen bg-background overflow-hidden pt-[60px]">
           <Header />
           <div className="flex flex-1 overflow-hidden relative">
             <Sidebar />

@@ -2,11 +2,12 @@
  import { useState } from "react";
  
  const models = [
-   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-   { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-   { value: "groq/compound-mini", label: "Groq Compound Mini" },
-   { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)" },
-   { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
+  { value: "auto", label: "Auto (Smart Switch)" },
+  { value: "llama-3.3-70b-versatile", label: "Llama 3.3 70B (Groq)" },
+  { value: "llama-3.1-8b-instant", label: "Llama 3.1 8B (Groq)" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { value: "groq/compound-mini", label: "Groq Compound Mini" },
    { value: "meta-llama/llama-4-maverick-17b-128e-instruct", label: "Llama 4 Maverick 17B (Groq)" },
    { value: "meta-llama/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout 17B (Groq)" },
    { value: "meta-llama/llama-guard-4-12b", label: "Llama Guard 4 12B (Groq)" },

@@ -264,7 +264,7 @@ export default function EspressoDashboard() {
         {/* 3. Daily Tasks */}
         <section>
           <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Daily Tasks (2 Main Tasks)
+            Daily Tasks (Avg 3 Days per Task)
           </h2>
           
           <div className="space-y-3">
@@ -281,9 +281,9 @@ export default function EspressoDashboard() {
               </div>
               <div>
                 <h3 className={`font-bold text-sm uppercase tracking-wide ${task1Completed ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  1. Fill in documents for Selected Tier
+                  1. Generate Leads & Fill Documents
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Complete all necessary documentation for Tier {progress.currentTier}.</p>
+                <p className="text-xs text-gray-500 mt-1">Identify new leads, fill in documents, and prep for closing (Tier {progress.currentTier}).</p>
               </div>
             </div>
 
@@ -300,9 +300,9 @@ export default function EspressoDashboard() {
               </div>
               <div>
                 <h3 className={`font-bold text-sm uppercase tracking-wide ${task2Completed ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  2. Activate 1 Lot
+                  2. CLOSE LOT: Activate 1 Lot
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Activate at least one parking lot for Tier {progress.currentTier}.</p>
+                <p className="text-xs text-gray-500 mt-1">Finalize documents and activate new lot (Main Job).</p>
               </div>
             </div>
           </div>

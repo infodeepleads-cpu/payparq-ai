@@ -28,7 +28,7 @@ export default function BrowserPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Modern Browser Toolbar */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+      <div className="flex items-center gap-3 px-4 py-3 bg-sidebar border-b border-gray-200 shadow-sm sticky top-0 z-10">
         
         {/* Navigation Controls (Visual Only) */}
         <div className="flex items-center gap-1 text-gray-400 shrink-0">
@@ -44,7 +44,7 @@ export default function BrowserPage() {
         </div>
 
         {/* Address Bar */}
-        <form onSubmit={handleSubmit} className="flex-1 max-w-3xl mx-auto relative group min-w-0">
+        <form onSubmit={handleSubmit} className="flex-1 max-w-3xl mx-auto relative group min-w-0 mr-12">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="w-4 h-4 text-gray-400 group-focus-within:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           </div>
@@ -52,14 +52,9 @@ export default function BrowserPage() {
             name="url"
             value={inputUrl}
             onChange={(e) => setInputUrl(e.target.value)}
-            className="block w-full pl-10 pr-10 py-2.5 text-sm bg-gray-100 border-transparent rounded-full focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-gray-100 focus:outline-none transition-all font-medium text-gray-700 placeholder-gray-400 shadow-inner"
+            className="block w-full pl-10 pr-4 py-2.5 text-sm bg-gray-100 border-transparent rounded-full focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-gray-100 focus:outline-none transition-all font-medium text-gray-700 placeholder-gray-400 shadow-inner"
             placeholder="Search or enter website name"
           />
-          <div className="absolute inset-y-0 right-0 pr-1 flex items-center">
-             <button type="submit" className="p-2 text-gray-400 hover:text-black hover:bg-gray-200 rounded-full transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-             </button>
-          </div>
         </form>
 
         {/* Window Controls / Extras */}
