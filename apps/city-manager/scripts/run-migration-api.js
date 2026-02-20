@@ -67,6 +67,41 @@ on public.emails
 for update
 to authenticated
 using (true);
+
+-- Create push_subscriptions table
+create table if not exists public.push_subscriptions (
+  endpoint text primary key,
+  p256dh text,
+  auth text,
+  ua text,
+  created_at timestamp with time zone not null default now()
+);
+
+-- Create reminders table
+create table if not exists public.reminders (
+  id uuid not null default gen_random_uuid(),
+  title text not null,
+  scheduled_at timestamp with time zone not null,
+  fired boolean not null default false,
+  created_at timestamp with time zone not null default now(),
+  constraint reminders_pkey primary key (id)
+);
+
+-- Enable RLS for reminders
+alter table public.reminders enable row level security;
+
+-- Policies for reminders
+create policy "Allow authenticated users to read reminders"
+on public.reminders
+for select
+to authenticated
+using (true);
+
+create policy "Allow service role to insert reminders"
+on public.reminders
+for insert
+to service_role
+with check (true);
 `;
 
 async function runMigration() {

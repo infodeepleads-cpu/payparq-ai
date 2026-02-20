@@ -592,6 +592,13 @@ export default function MachineIo() {
             window.dispatchEvent(new Event("pp_reminders_update"));
             console.log("Reminder scheduled successfully!");
             systemNote = `\n\n✓ System: Reminder set for ${formatCET(time)} CET`;
+            try {
+              await fetch("/api/reminders/schedule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: data.taskTitle, scheduled_at: time.toISOString() })
+              });
+            } catch {}
           } catch (e) {
             console.error("Failed to schedule reminder:", e);
             systemNote = `\n\n⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
