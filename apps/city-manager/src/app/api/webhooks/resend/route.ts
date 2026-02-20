@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
     const timestamp = req.headers.get("svix-timestamp");
     const signature = req.headers.get("svix-signature");
     if (!id || !timestamp || !signature || !env.RESEND_WEBHOOK_SECRET) {
+      console.error("Missing webhook headers or secret", {
+        id: !!id,
+        timestamp: !!timestamp,
+        signature: !!signature,
+        secret: !!env.RESEND_WEBHOOK_SECRET,
+      });
       return new NextResponse("Missing webhook headers or secret", { status: 400 });
     }
 
