@@ -16,7 +16,7 @@ export default function ObjectionHandlingPage() {
               <div className="text-gray-700 leading-relaxed text-sm space-y-2">
                 <p><span className="font-semibold">Short answer:</span> Yes — fully legal.</p>
                 <p className="font-semibold mt-2">How to respond (verbatim-safe):</p>
-                <p>We operate as a private parking company. All operational risk, enforcement costs, and liability are entirely ours, not the guest’s.</p>
+                <p>We operate as a private parking company. All operational risk, enforcement costs, and liability are entirely ours, not the owner’s.</p>
                 <p>Under Croatian law, private parking operators are permitted to issue daily parking tickets. This is the same legal model used by:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Public city parking companies</li>
