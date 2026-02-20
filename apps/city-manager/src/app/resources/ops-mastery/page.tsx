@@ -33,7 +33,7 @@ export default function OpsMasteryPage() {
             <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Response Time SLAs</h2>
             <div className="text-gray-700 leading-relaxed text-sm">
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Guest assisted within 5 minutes</li>
+                <li>Max 5 minutes ride waiting</li>
                 <li>Reservation issues resolved within 15 minutes</li>
                 <li>Same-day technician arrival required</li>
               </ul>
