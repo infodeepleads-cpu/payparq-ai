@@ -61,7 +61,7 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
           style={{ width: isRoot ? undefined : '100%' }} // Ensure full width on mobile
         >
           {/* Apply width only on desktop to allow resizing */}
-          <div className="!w-full md:w-auto h-full" style={{ width: middleWidth }}>
+          <div className="md:block h-full" style={{ width: middleWidth }}>
              {children}
           </div>
         </div>

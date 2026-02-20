@@ -12,19 +12,20 @@ export default function EspressoDashboard() {
   const { progress } = useEspressoSystem();
 
   // Daily Tasks State
-  const [task1Completed, setTask1Completed] = useState(false);
-  const [task2Completed, setTask2Completed] = useState(false);
+  const [mapLotsCompleted, setMapLotsCompleted] = useState(false);
+  const [activateLotCompleted, setActivateLotCompleted] = useState(false);
 
   // Load state from local storage
   useEffect(() => {
-    // Reset daily tasks on new day logic could go here, but keeping it simple for now
-    const savedTasks = localStorage.getItem("pp_mission_daily_tasks");
-    if (savedTasks) {
-      const { t1, t2, date } = JSON.parse(savedTasks);
-      if (new Date(date).toDateString() === new Date().toDateString()) {
-        setTask1Completed(t1);
-        setTask2Completed(t2);
-      }
+    const key = `pp_espresso_daily_${progress.currentTier}_${new Date().toDateString()}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const obj = JSON.parse(saved);
+      setMapLotsCompleted(!!obj.mapLots);
+      setActivateLotCompleted(!!obj.activateLot);
+    } else {
+      setMapLotsCompleted(false);
+      setActivateLotCompleted(false);
     }
   }, []);
 
@@ -96,12 +97,13 @@ export default function EspressoDashboard() {
 
   // Save state
   useEffect(() => {
-    localStorage.setItem("pp_mission_daily_tasks", JSON.stringify({
-      t1: task1Completed,
-      t2: task2Completed,
-      date: new Date().getTime()
+    const key = `pp_espresso_daily_${progress.currentTier}_${new Date().toDateString()}`;
+    localStorage.setItem(key, JSON.stringify({
+      mapLots: mapLotsCompleted,
+      activateLot: activateLotCompleted,
+      date: Date.now()
     }));
-  }, [task1Completed, task2Completed]);
+  }, [mapLotsCompleted, activateLotCompleted, progress.currentTier]);
 
   return (
     <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6">
@@ -264,45 +266,121 @@ export default function EspressoDashboard() {
         {/* 3. Daily Tasks */}
         <section>
           <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Daily Tasks (Avg 3 Days per Task)
+            Daily Tasks (Per Tier)
           </h2>
           
           <div className="space-y-3">
-            <div 
-              onClick={() => setTask1Completed(!task1Completed)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
-                task1Completed ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+            <button 
+              onClick={() => setShowPermitsForm(true)}
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+                docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
               <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
-                task1Completed ? "bg-black border-black" : "border-gray-300"
+                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300"
               }`}>
-                {task1Completed && <span className="text-white font-bold text-sm">✓</span>}
+                {docsState[`t${progress.currentTier}-permits`] && <span className="text-white font-bold text-sm">✓</span>}
               </div>
               <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${task1Completed ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  1. Generate Leads & Fill Documents
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Fill Permits & Public Form (Tier {progress.currentTier})
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Identify new leads, fill in documents, and prep for closing (Tier {progress.currentTier}).</p>
+                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setShowCompetitionForm(true)}
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+                docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-competition`] && <span className="text-white font-bold text-sm">✓</span>}
+              </div>
+              <div>
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Fill Competition Analysis Form (Tier {progress.currentTier})
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setShowLotForm(true)}
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+                docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-activation`] && <span className="text-white font-bold text-sm">✓</span>}
+              </div>
+              <div>
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Fill Lot Activation List (Tier {progress.currentTier})
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setShowAirportForm(true)}
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+                docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-specific`] && <span className="text-white font-bold text-sm">✓</span>}
+              </div>
+              <div>
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Fill {progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis (Tier {progress.currentTier})
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+              </div>
+            </button>
+
+            <div 
+              onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
+              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
+                mapLotsCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                mapLotsCompleted ? "bg-black border-black" : "border-gray-300"
+              }`}>
+                {mapLotsCompleted && <span className="text-white font-bold text-sm">✓</span>}
+              </div>
+              <div>
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${mapLotsCompleted ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Map All Relevant Lots (Tier {progress.currentTier})
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">Create or update the lot list.</p>
               </div>
             </div>
 
             <div 
-              onClick={() => setTask2Completed(!task2Completed)}
+              onClick={() => setActivateLotCompleted(!activateLotCompleted)}
               className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
-                task2Completed ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
+                activateLotCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
               <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
-                task2Completed ? "bg-black border-black" : "border-gray-300"
+                activateLotCompleted ? "bg-black border-black" : "border-gray-300"
               }`}>
-                {task2Completed && <span className="text-white font-bold text-sm">✓</span>}
+                {activateLotCompleted && <span className="text-white font-bold text-sm">✓</span>}
               </div>
               <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${task2Completed ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  2. CLOSE LOT: Activate 1 Lot
+                <h3 className={`font-bold text-sm uppercase tracking-wide ${activateLotCompleted ? "text-gray-500 line-through" : "text-gray-900"}`}>
+                  Activate 1 Lot (Try to close best first)
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Finalize documents and activate new lot (Main Job).</p>
+                <p className="text-xs text-gray-500 mt-1">Finalize the highest leverage lot.</p>
               </div>
             </div>
           </div>

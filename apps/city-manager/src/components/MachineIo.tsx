@@ -28,6 +28,17 @@ export default function MachineIo() {
   const [loadingDots, setLoadingDots] = useState(".");
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [reminders, setReminders] = useState<any[]>([]);
+  const CET_TZ = "Europe/Zagreb";
+  const formatCET = (d: Date) =>
+    d.toLocaleString("en-GB", {
+      timeZone: CET_TZ,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
 
   useEffect(() => {
     try {
@@ -144,6 +155,10 @@ export default function MachineIo() {
     if (idx >= 0) {
       // Exclude 'index' from the actual stored data
       const { index, ...updates } = contact;
+      // If tier not provided, set it from index (N) to ensure CRM is filled with this number
+      if (typeof updates.tier === "undefined" && typeof index === "number") {
+        (updates as any).tier = index;
+      }
       contacts[idx] = { ...contacts[idx], ...updates };
       writeCRM(contacts);
       return contacts[idx];
@@ -216,6 +231,11 @@ export default function MachineIo() {
     m = s.match(/^confirm\s+tas?k[-:]?\s*(.+)$/i);
     if (m) return { type: "confirm", title: m[1].trim() };
     return null;
+  };
+  
+  const deleteAllTasksLocal = () => {
+    writeTasks([]);
+    return true;
   };
 
   const readThreads = () => {
@@ -430,9 +450,114 @@ export default function MachineIo() {
       let systemNote = "";
       
       if (data) {
-        console.log("AI Response Data:", data);
+        console.log("=== AI RESPONSE DEBUG ===");
+        console.log("Full AI response:", JSON.stringify(data, null, 2));
+        console.log("Action:", data.action);
+        console.log("TaskTitle:", data.taskTitle);
+        console.log("ReminderTime:", data.reminderTime);
+        console.log("Assistant text:", assistantText);
+        console.log("========================");
+        
+        // Fallback: If AI mentions reminder but didn't use schedule_reminder action, try to fix it
+        if ((assistantText.toLowerCase().includes("remind") || assistantText.toLowerCase().includes("reminder")) && 
+            data.action !== "schedule_reminder" && 
+            !data.action) {
+          console.log("=== FALLBACK REMINDER DETECTION ===");
+          console.log("AI mentioned reminder but no action set, attempting to parse...");
+          
+          // Try to extract reminder details from the text
+          const reminderMatch = assistantText.match(/remind.*?(?:to|about)\s+(.+?)(?:\s+at\s+(.+?))?(?:\.|$)/i);
+          if (reminderMatch) {
+            const taskTitle = reminderMatch[1]?.trim() || "Reminder";
+            let reminderTime = new Date().toISOString(); // Default to now
+            
+            // Try to parse relative time from text
+             if (reminderMatch[2]) {
+               const timeStr = reminderMatch[2].trim();
+              console.log("Attempting to parse time:", timeStr);
+               if (timeStr.toLowerCase().includes("hour")) {
+                const hours = parseInt(timeStr.match(/(\d+)/)?.[1] || "1");
+                 const future = new Date(Date.now() + hours * 60 * 60 * 1000);
+                 future.setSeconds(0, 0);
+                reminderTime = future.toISOString();
+               } else {
+                 const m = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)|(\btomorrow\b)/i);
+                 const now = new Date();
+                 let year = now.getFullYear();
+                 let month = now.getMonth() + 1;
+                 let day = now.getDate();
+                 let hr = now.getHours();
+                 let min = now.getMinutes();
+                 const hasTomorrow = /\btomorrow\b/i.test(timeStr);
+                 if (hasTomorrow) {
+                   const t = new Date(now);
+                   t.setDate(t.getDate() + 1);
+                   year = t.getFullYear();
+                   month = t.getMonth() + 1;
+                   day = t.getDate();
+                 }
+                 const hm = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+                 if (hm) {
+                   const h = parseInt(hm[1], 10);
+                   min = hm[2] ? parseInt(hm[2], 10) : 0;
+                   const ap = hm[3].toLowerCase();
+                   hr = h % 12;
+                   if (ap === "pm") hr += 12;
+                 }
+                 const utcEpoch = Date.UTC(year, month - 1, day, hr - 1, min, 0, 0);
+                 let base = new Date(utcEpoch);
+                 if (base.getTime() <= Date.now()) {
+                   const nextDayEpoch = Date.UTC(year, month - 1, day + 1, hr - 1, min, 0, 0);
+                   base = new Date(nextDayEpoch);
+                 }
+                 reminderTime = base.toISOString();
+              }
+            }
+            
+            console.log("Fallback reminder details:");
+            console.log("TaskTitle:", taskTitle);
+            console.log("ReminderTime:", reminderTime);
+            
+            // Override the AI's response with correct action
+            data.action = "schedule_reminder";
+            data.taskTitle = taskTitle;
+            data.reminderTime = reminderTime;
+            
+            console.log("=== APPLIED FALLBACK FIX ===");
+          }
+        }
+         
+         // Fallback V2: If AI mentions reminder but used the WRONG action (e.g., add_task), force schedule_reminder
+         if ((assistantText.toLowerCase().includes("remind") || assistantText.toLowerCase().includes("reminder")) && 
+             data.action && data.action !== "schedule_reminder" &&
+             data.action !== "update_crm_contact" &&
+             data.action !== "add_crm_contact") {
+           console.log("=== FALLBACK V2: WRONG ACTION FOR REMINDER ===");
+           console.log("Assistant text:", assistantText);
+           console.log("Received action:", data.action, " — overriding to schedule_reminder");
+           // Try to get title from assistant text or user text
+           let taskTitle = data.taskTitle || "";
+           if (!taskTitle) {
+             const m = assistantText.match(/remind.*?(?:to|about)\s+(.+?)(?:\s+at\s+(.+?))?(?:\.|$)/i);
+             taskTitle = m?.[1]?.trim() || "Reminder";
+           }
+           // Compute a safe near-future time if we can't parse
+           let reminderTime = data.reminderTime || "";
+           if (!reminderTime) {
+             const nowPlusTwo = new Date();
+             nowPlusTwo.setMinutes(nowPlusTwo.getMinutes() + 2);
+             reminderTime = nowPlusTwo.toISOString();
+           }
+           data.action = "schedule_reminder";
+           data.taskTitle = taskTitle;
+           data.reminderTime = reminderTime;
+           console.log("Applied override:", { taskTitle, reminderTime });
+         }
+        
         if (data.action === "add_task" && data.taskTitle) {
           addTaskLocal(data.taskTitle);
+        } else if (data.action === "delete_all_tasks") {
+          deleteAllTasksLocal();
         } else if (data.action === "complete_task" && data.taskTitle) {
           completeTaskLocal(data.taskTitle);
         } else if (data.action === "delete_task" && data.taskTitle) {
@@ -440,26 +565,45 @@ export default function MachineIo() {
         } else if (data.action === "confirm_task" && data.taskTitle) {
           confirmTaskLocal(data.taskTitle);
         } else if (data.action === "add_crm_contact" && data.crmContact) {
-          addCRMContact(data.crmContact);
+          const saved = addCRMContact(data.crmContact);
+          const name = saved?.decisionMaker || "Contact";
+          const tierText = typeof saved?.tier !== "undefined" ? ` (Tier ${saved.tier})` : "";
+          systemNote = `\n\n✓ System: CRM updated: ${name}${tierText}`;
         } else if (data.action === "update_crm_contact" && data.crmContact) {
-          updateCRMContact(data.crmContact);
+          const updated = updateCRMContact(data.crmContact);
+          const name = updated?.decisionMaker || data.crmContact?.decisionMaker || "Contact";
+          systemNote = `\n\n✓ System: CRM updated: ${name}`;
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
+          console.log("=== SCHEDULING REMINDER ===");
+          console.log("TaskTitle:", data.taskTitle);
+          console.log("ReminderTime:", data.reminderTime);
           try {
             const time = new Date(data.reminderTime);
+            console.log("Parsed time:", time);
+            console.log("Is valid time:", !isNaN(time.getTime()));
             if (isNaN(time.getTime())) throw new Error("Invalid time");
             const newReminder = { id: Date.now(), title: data.taskTitle, time: data.reminderTime, fired: false };
             const current = JSON.parse(localStorage.getItem("pp_reminders") || "[]");
+            console.log("Current reminders before:", current);
             current.push(newReminder);
             localStorage.setItem("pp_reminders", JSON.stringify(current));
+            console.log("Updated reminders:", current);
             setReminders(current);
             window.dispatchEvent(new Event("pp_reminders_update"));
-            systemNote = `\n\n✓ System: Reminder set for ${time.toLocaleString()}`;
+            console.log("Reminder scheduled successfully!");
+            systemNote = `\n\n✓ System: Reminder set for ${formatCET(time)} CET`;
           } catch (e) {
             console.error("Failed to schedule reminder:", e);
             systemNote = `\n\n⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
           }
+          console.log("=== END SCHEDULING ===");
         } else if ((assistantText.includes("reminder") && (assistantText.includes("set") || assistantText.includes("scheduled"))) && data.action !== "schedule_reminder") {
            // Fallback warning if AI says it did it but used wrong action (or no action)
+           console.log("=== REMINDER MISMATCH DETECTED ===");
+           console.log("Assistant text mentions reminder:", assistantText);
+           console.log("But action was:", data.action);
+           console.log("Expected action: schedule_reminder");
+           console.log("=================================");
            systemNote = `\n\n⚠ System: AI confirmed a reminder verbally but failed to schedule it (Action was: ${data.action || "None"}). Please try again.`;
         }
       }
@@ -614,7 +758,7 @@ export default function MachineIo() {
               </button>
               {showModelSelector && (
                  <div className="absolute bottom-full right-0 mb-3 w-80 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
-                    <div className="max-h-80 overflow-y-auto p-1">
+                    <div className="max-h-[60vh] overflow-y-auto p-1">
                        {AI_MODELS.map((model, idx) => (
                           <button
                             key={idx}
@@ -705,7 +849,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0 overflow-x-hidden">
+          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0">
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-2">
                  <TopControlsWidget />

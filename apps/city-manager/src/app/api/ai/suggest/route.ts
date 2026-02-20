@@ -104,7 +104,7 @@ Application Structure & Pages:
           `   - Set "crmContact" to the updated fields (must include "decisionMaker": "Name" to identify the contact).
 ` +
           `   - If the user uses the shorthand format "N. a [Name] b [Location] c [Cap] d [Status] e [Next Step] f [Notes]":\n` +
-          `     - Parse "N" as "index" (number).\n` +
+          `     - Parse "N" as "tier" (number). Also use "N" as "index" to identify which contact to update (1-based).\n` +
           `     - Parse "a" value as "decisionMaker".\n` +
           `     - Parse "b" value as "location".\n` +
           `     - Parse "c" value as "estimatedCapacity" (number).\n` +
@@ -222,9 +222,11 @@ Application Structure & Pages:
 
          parts.push({
            text: `Manager note: ${note}\n\n` +
-           `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
-           `Conversation History:\n${historyText}\n\n` +
-           `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object). ` +
+          `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
+          `Current Server Time (ISO): ${new Date().toISOString()}\n` +
+          `Current Server Time (Local): ${new Date().toLocaleString()}\n\n` +
+          `Conversation History:\n${historyText}\n\n` +
+          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string). ` +
            `Instructions:\n` +
            `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
            `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
@@ -273,10 +275,16 @@ Application Structure & Pages:
 ` +
           `     - Include these in the "crmContact" object.
 ` +
-          `   - In "nextStep", confirm the action.
-` +
-           `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
-` +
+          `   - In "nextStep", confirm the action.\n` +
+          `11. If the user wants to SCHEDULE A REMINDER:\n` +
+          `   - Set "action" to "schedule_reminder".\n` +
+          `   - Set "taskTitle" to the reminder description.\n` +
+          `   - Set "reminderTime" to the ISO 8601 date string (e.g. "2024-01-01T12:00:00.000Z") when the reminder should fire. Use the provided Current Server Time to calculate relative times (e.g. "tomorrow at 1pm").\n` +
+          `   - In "nextStep", confirm the action and explicitly state the time you set.\n` +
+          `   - EXAMPLE:\n` +
+          `     Input: "Remind me to call John at 2pm tomorrow"\n` +
+          `     Response: { "action": "schedule_reminder", "taskTitle": "Call John", "reminderTime": "2024-01-02T14:00:00.000Z", "nextStep": "I've set a reminder to call John tomorrow at 2pm.", "urgent": false }\n` +
+          `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.\n` +
            `Style: concise, actionable, manager-oriented. Return ONLY JSON. Do not include markdown code blocks.`
          });
 
@@ -339,7 +347,8 @@ Application Structure & Pages:
         urgent: !!parsed.urgent,
         action: parsed.action,
         taskTitle: parsed.taskTitle,
-        crmContact: parsed.crmContact
+        crmContact: parsed.crmContact,
+        reminderTime: parsed.reminderTime
       });
 
     } catch (error: any) {
