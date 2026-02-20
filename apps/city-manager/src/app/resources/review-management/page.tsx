@@ -5,7 +5,7 @@ export default function ReviewManagementPage() {
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 border-b border-gray-200 pb-4 uppercase tracking-wide">
-          Experience Excellence — Ops Guidelines
+          Outperform Expectations
         </h1>
         
         <div className="space-y-10">

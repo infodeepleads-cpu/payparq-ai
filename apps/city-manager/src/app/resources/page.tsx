@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-type ResourceCategory = "Legal & Finance" | "Follow Up Materials" | "Mentorship" | "Scripts";
+type ResourceCategory = "Legal & Finance" | "Follow Up Materials" | "Mentorship";
 
 interface ResourceItem {
   id: string;
@@ -15,32 +15,27 @@ interface ResourceItem {
 
 const DEFAULT_RESOURCES: ResourceItem[] = [
   // Legal & Finance
-  { id: "lf-contracts", name: "Contracts", category: "Legal & Finance", link: "https://payparq.com/terms", linkLabel: "payparq.com/terms" },
+  { id: "lf-contracts", name: "Contracts", category: "Legal & Finance", link: "https://www.payparq.com/terms", linkLabel: "www.payparq.com/terms" },
   { id: "lf-invoices", name: "Invoices", category: "Legal & Finance", link: "https://www.stripe.com", linkLabel: "www.stripe.com" },
-  { id: "lf-compliance", name: "Compliance", category: "Legal & Finance", link: "https://payparq.com/privacy-policy", linkLabel: "payparq.com/privacy-policy" },
+  { id: "lf-compliance", name: "Compliance", category: "Legal & Finance", link: "https://www.payparq.com/privacy", linkLabel: "www.payparq.com/privacy" },
 
   // Follow Up Materials
-  { id: "fu-legal-ref", name: "Legal Reference", category: "Follow Up Materials", link: "https://payparq.com/legal", linkLabel: "payparq.com/legal" },
-  { id: "fu-testimonials", name: "Testimonials", category: "Follow Up Materials", link: "https://payparq.com/parking", linkLabel: "payparq.com/parking" },
-  { id: "fu-demos", name: "Demos", category: "Follow Up Materials", link: "https://payparq.com/news", linkLabel: "payparq.com/news (Social Media)" },
-  { id: "fu-case-studies", name: "Case Studies", category: "Follow Up Materials", link: "https://payparq.com/news", linkLabel: "payparq.com/news" },
-  { id: "fu-audits", name: "Audits", category: "Follow Up Materials" },
-  { id: "fu-security", name: "Security", category: "Follow Up Materials", link: "https://payparq.com/security", linkLabel: "payparq.com/security" },
-  { id: "fu-pricing", name: "Pricing", category: "Follow Up Materials", link: "https://payparq.com/product", linkLabel: "payparq.com/product" },
+  { id: "fu-legal-ref", name: "Legal Reference", category: "Follow Up Materials", link: "https://www.payparq.com/legal", linkLabel: "www.payparq.com/legal" },
+  { id: "fu-testimonials", name: "Testimonials", category: "Follow Up Materials", link: "https://www.payparq.com/parking", linkLabel: "www.payparq.com/parking" },
+  { id: "fu-demos", name: "Demos", category: "Follow Up Materials", link: "https://www.payparq.com/news", linkLabel: "www.payparq.com/news (Social Media)" },
+  { id: "fu-case-studies", name: "Case Studies", category: "Follow Up Materials", link: "https://www.payparq.com/news", linkLabel: "www.payparq.com/news" },
+  { id: "fu-audits", name: "Audits", category: "Follow Up Materials", link: "mailto:payparq@outlook.com", linkLabel: "payparq@outlook.com" },
+  { id: "fu-presentation", name: "Presentation", category: "Follow Up Materials", link: "https://www.payparq.com/about", linkLabel: "(download overview)" },
+  { id: "fu-security", name: "Security", category: "Follow Up Materials", link: "https://www.payparq.com/security", linkLabel: "www.payparq.com/security" },
+  { id: "fu-pricing", name: "Pricing", category: "Follow Up Materials", link: "https://www.payparq.com/product", linkLabel: "www.payparq.com/product" },
 
   // Mentorship
-  { id: "m-product", name: "Product", category: "Mentorship", link: "https://payparq.com/product", linkLabel: "payparq.com/product" },
+  { id: "m-product", name: "Product", category: "Mentorship", link: "https://www.payparq.com/product", linkLabel: "www.payparq.com/product" },
   { id: "m-sales", name: "Sales", category: "Mentorship", link: "/resources/sales-rules", linkLabel: "Sales & Contact Rules" },
-  { id: "m-ops", name: "Ops Mastery", category: "Mentorship", link: "/resources/ops-mastery", linkLabel: "Ops Mastery — Non-Negotiables" },
-  { id: "m-review", name: "Review Management", category: "Mentorship", link: "/resources/review-management", linkLabel: "Experience Excellence — Ops Guidelines" },
+  { id: "m-ops", name: "Ops Mastery", category: "Mentorship", link: "/resources/ops-mastery", linkLabel: "Non-Negotiables" },
+  { id: "m-review", name: "Review Management", category: "Mentorship", link: "/resources/review-management", linkLabel: "Outperform Expectations" },
   { id: "m-objection", name: "Objection Handling", category: "Mentorship", link: "/resources/objection-handling", linkLabel: "Common Objections & Legal Basis" },
-
-  // Scripts
-  { id: "s-sms", name: "SMS", category: "Scripts" },
-  { id: "s-whatsapp", name: "WhatsApp", category: "Scripts" },
-  { id: "s-email", name: "Email", category: "Scripts" },
-  { id: "s-phone", name: "Phone", category: "Scripts" },
-  { id: "s-live", name: "Live Scripts", category: "Scripts" },
+  { id: "m-scripts", name: "Scripts", category: "Mentorship", link: "/resources/scripts", linkLabel: "Personalized Outreach Framework" },
 ];
 
 export default function Page() {
@@ -50,7 +45,6 @@ export default function Page() {
     "Legal & Finance", 
     "Follow Up Materials", 
     "Mentorship", 
-    "Scripts"
   ];
 
   return (

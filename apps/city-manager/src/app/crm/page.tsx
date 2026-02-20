@@ -132,29 +132,28 @@ export default function Page() {
 
   return (
     <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="sm:flex sm:items-center mb-8">
+      <div className="sm:flex sm:items-center mb-4">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold text-gray-900">CRM</h1>
           <p className="mt-2 text-sm text-gray-700">
             A list of all contacts including their name, city, capacity, and current status.
           </p>
-          
-          <div className="mt-4 bg-white p-4 rounded-md border border-gray-200 shadow-sm">
-            <h4 className="text-xs font-bold uppercase text-black mb-2 tracking-wide">Status Requirements</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-xs text-gray-600">
-              <div><span className="font-bold text-gray-900">1. ENTRY:</span> DATE</div>
-              <div><span className="font-bold text-gray-900">2. LIVE DEMO:</span> DATE</div>
-              <div><span className="font-bold text-gray-900">3. YES:</span> DATE</div>
-              <div><span className="font-bold text-gray-900">4. YES (EXPIRATION):</span> DATE (EXPIRATION DATE)</div>
-              <div className="md:col-span-2"><span className="font-bold text-gray-900">5. NO:</span> DATE <span className="italic">P.S. (WHAT FEATURE WOULD MAKE THEM BUY) 60-90 DAY COOLING PERIOD</span></div>
-              <div className="md:col-span-2"><span className="font-bold text-gray-900">6. NEXT STEP:</span> DATE (CALL/MEETING)</div>
-            </div>
-          </div>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <span className="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none sm:w-auto">
             {contacts.length} Records
           </span>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
+        <h4 className="text-sm font-bold uppercase text-black mb-4 tracking-wide border-b border-gray-100 pb-2">Status Requirements</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
+          <div><span className="font-bold text-gray-900">1. LIVE DEMO:</span> DATE</div>
+          <div><span className="font-bold text-gray-900">2. YES:</span> DATE</div>
+          <div><span className="font-bold text-gray-900">3. YES (EXPIRATION):</span> DATE (EXPIRATION DATE)</div>
+          <div><span className="font-bold text-gray-900">4. NO:</span> DATE <span className="italic">P.S. (WHAT FEATURE WOULD MAKE THEM BUY) 60-90 DAY COOLING PERIOD</span></div>
+          <div><span className="font-bold text-gray-900">5. NEXT STEP:</span> DATE (CALL/MEETING)</div>
         </div>
       </div>
 

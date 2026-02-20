@@ -5,7 +5,7 @@ export default function OpsMasteryPage() {
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 border-b border-gray-200 pb-4 uppercase tracking-wide">
-          Ops Mastery — Non-Negotiables
+          Non-Negotiables
         </h1>
         
         <div className="space-y-10">
@@ -35,6 +35,7 @@ export default function OpsMasteryPage() {
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Max 5 minutes ride waiting</li>
                 <li>Reservation issues resolved within 15 minutes</li>
+                <li>Return ride maximum 15 minutes</li>
                 <li>Same-day technician arrival required</li>
               </ul>
             </div>
