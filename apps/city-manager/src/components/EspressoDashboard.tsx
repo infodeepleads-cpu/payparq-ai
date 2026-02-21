@@ -107,14 +107,13 @@ export default function EspressoDashboard() {
 
   return (
     <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6">
-      <div className="flex items-center justify-between mb-8 border-b border-black pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-black uppercase">ESPRESSO</h1>
-        <div className="text-right">
-           <span className="text-sm font-bold text-gray-900">TIER {progress.currentTier}</span>
-        </div>
+      {/* Header matching Inbox style */}
+      <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
+        <span className="text-xs font-semibold tracking-tight text-black mr-4">ESPRESSO</span>
+        <span className="text-[10px] text-gray-400">Tier {progress.currentTier}</span>
       </div>
 
-      <div className="space-y-12">
+      <div className="space-y-8">
         {showPermitsForm && (
           <PermitsForm 
             onClose={() => setShowPermitsForm(false)} 
@@ -153,232 +152,244 @@ export default function EspressoDashboard() {
 
         {/* 0. Documents */}
         <section>
-          <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Documents
-          </h2>
-          <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
-            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-permits`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
-              <div>
-                <h3 className="font-semibold text-xs text-black">Permits & Public</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
-                  {docsState[`t${progress.currentTier}-permits`] ? "Filled" : "Required"}
-                </p>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Documents</h2>
+          <div className="space-y-1">
+            {/* Permits */}
+            <div 
+              onClick={() => setShowPermitsForm(true)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+                docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50/50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-permits`] ? "bg-green-500" : "bg-black"}`}></div>
+                <div>
+                  <h3 className="text-xs font-bold text-black">Permits & Public</h3>
+                  <p className="text-[10px] text-gray-500">
+                    {docsState[`t${progress.currentTier}-permits`] ? "Filled" : "Required"}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setShowPermitsForm(true)}
-                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
-                  docsState[`t${progress.currentTier}-permits`]
-                    ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                    : "border-black bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {docsState[`t${progress.currentTier}-permits`] ? "EDIT FORM" : "FILL FORM"}
-              </button>
+              <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+                docsState[`t${progress.currentTier}-permits`] 
+                  ? "border-green-200 text-green-700 bg-green-50" 
+                  : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-permits`] ? "EDIT" : "FILL"}
+              </span>
             </div>
-            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-competition`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
-              <div>
-                <h3 className="font-semibold text-xs text-black">Competition Analysis</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
-                  {docsState[`t${progress.currentTier}-competition`] ? "Filled" : "Required"}
-                </p>
+
+            {/* Competition */}
+            <div 
+              onClick={() => setShowCompetitionForm(true)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+                docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50/50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-competition`] ? "bg-green-500" : "bg-black"}`}></div>
+                <div>
+                  <h3 className="text-xs font-bold text-black">Competition Analysis</h3>
+                  <p className="text-[10px] text-gray-500">
+                    {docsState[`t${progress.currentTier}-competition`] ? "Filled" : "Required"}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setShowCompetitionForm(true)}
-                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
-                  docsState[`t${progress.currentTier}-competition`]
-                    ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                    : "border-black bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {docsState[`t${progress.currentTier}-competition`] ? "EDIT FORM" : "FILL FORM"}
-              </button>
+              <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+                docsState[`t${progress.currentTier}-competition`] 
+                  ? "border-green-200 text-green-700 bg-green-50" 
+                  : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-competition`] ? "EDIT" : "FILL"}
+              </span>
             </div>
-            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-activation`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
-              <div>
-                <h3 className="font-semibold text-xs text-black">Lot Activation List</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
-                  {docsState[`t${progress.currentTier}-activation`] ? "Filled" : "Required"}
-                </p>
+
+            {/* Lot Activation */}
+            <div 
+              onClick={() => setShowLotForm(true)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+                docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50/50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-activation`] ? "bg-green-500" : "bg-black"}`}></div>
+                <div>
+                  <h3 className="text-xs font-bold text-black">Lot Activation List</h3>
+                  <p className="text-[10px] text-gray-500">
+                    {docsState[`t${progress.currentTier}-activation`] ? "Filled" : "Required"}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setShowLotForm(true)}
-                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
-                  docsState[`t${progress.currentTier}-activation`]
-                    ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                    : "border-black bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {docsState[`t${progress.currentTier}-activation`] ? "EDIT FORM" : "FILL FORM"}
-              </button>
+              <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+                docsState[`t${progress.currentTier}-activation`] 
+                  ? "border-green-200 text-green-700 bg-green-50" 
+                  : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-activation`] ? "EDIT" : "FILL"}
+              </span>
             </div>
-            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-specific`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
-              <div>
-                <h3 className="font-semibold text-xs text-black">
-                  {progress.currentTier === 1 ? "Airport Analysis" : progress.currentTier === 6 ? "Hotel Analysis" : progress.currentTier === 7 ? "Whales Corporation Analysis" : "Area Analysis"}
-                </h3>
-                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
-                  {docsState[`t${progress.currentTier}-specific`] ? "Filled" : "Required"}
-                </p>
+
+            {/* Area Analysis */}
+            <div 
+              onClick={() => setShowAirportForm(true)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+                docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-specific`] ? "bg-green-500" : "bg-black"}`}></div>
+                <div>
+                  <h3 className="text-xs font-bold text-black">
+                    {progress.currentTier === 1 ? "Airport Analysis" : progress.currentTier === 6 ? "Hotel Analysis" : progress.currentTier === 7 ? "Whales Corporation Analysis" : "Area Analysis"}
+                  </h3>
+                  <p className="text-[10px] text-gray-500">
+                    {docsState[`t${progress.currentTier}-specific`] ? "Filled" : "Required"}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setShowAirportForm(true)}
-                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
-                  docsState[`t${progress.currentTier}-specific`]
-                    ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                    : "border-black bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {docsState[`t${progress.currentTier}-specific`] ? "EDIT FORM" : "FILL FORM"}
-              </button>
+              <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+                docsState[`t${progress.currentTier}-specific`] 
+                  ? "border-green-200 text-green-700 bg-green-50" 
+                  : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+              }`}>
+                {docsState[`t${progress.currentTier}-specific`] ? "EDIT" : "FILL"}
+              </span>
             </div>
           </div>
         </section>
 
         {/* 1. Activation Kit */}
         <section>
-          <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Activation Kit
-          </h2>
-          <div className={`p-4 border rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-            activationData ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"
-          }`}>
-            <div>
-              <h3 className="font-bold text-sm text-black uppercase tracking-wide">Activation Kit Form</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                {activationData ? "Form filled and saved locally." : "Required for every activation."}
-              </p>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Activation Kit</h2>
+          <div 
+            onClick={() => setShowActivationForm(true)}
+            className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+              activationData ? "bg-gray-50/50" : ""
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${activationData ? "bg-green-500" : "bg-black"}`}></div>
+              <div>
+                <h3 className="text-xs font-bold text-black">Activation Kit Form</h3>
+                <p className="text-[10px] text-gray-500">
+                  {activationData ? "Filled" : "Required for every activation"}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={() => setShowActivationForm(true)}
-              className={`px-4 py-2 rounded font-medium cursor-pointer transition-colors uppercase tracking-wide border text-xs md:text-sm whitespace-nowrap ${
-                activationData
-                  ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                  : "border-black bg-black text-white hover:bg-gray-800"
-              }`}
-            >
-              {activationData ? "EDIT FORM" : "FILL FORM"}
-            </button>
+            <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+              activationData 
+                ? "border-green-200 text-green-700 bg-green-50" 
+                : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+            }`}>
+              {activationData ? "EDIT" : "FILL"}
+            </span>
           </div>
         </section>
 
         {/* 3. Daily Tasks */}
         <section>
-          <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Daily Tasks (Per Tier)
-          </h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Daily Tasks</h2>
           
-          <div className="space-y-3">
-            <button 
+          <div className="space-y-1">
+            <div 
               onClick={() => setShowPermitsForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
-                docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300"
+               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {docsState[`t${progress.currentTier}-permits`] && <span className="text-white font-bold text-sm">✓</span>}
+                {docsState[`t${progress.currentTier}-permits`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  Fill Permits & Public Form (Tier {progress.currentTier})
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-400 line-through" : "text-black"}`}>
+                  Fill Permits & Public Form
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
-            </button>
+            </div>
 
-            <button 
+            <div 
               onClick={() => setShowCompetitionForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
-                docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300"
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {docsState[`t${progress.currentTier}-competition`] && <span className="text-white font-bold text-sm">✓</span>}
+                {docsState[`t${progress.currentTier}-competition`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  Fill Competition Analysis Form (Tier {progress.currentTier})
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-400 line-through" : "text-black"}`}>
+                  Fill Competition Analysis Form
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
-            </button>
+            </div>
 
-            <button 
+            <div 
               onClick={() => setShowLotForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
-                docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300"
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {docsState[`t${progress.currentTier}-activation`] && <span className="text-white font-bold text-sm">✓</span>}
+                {docsState[`t${progress.currentTier}-activation`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  Fill Lot Activation List (Tier {progress.currentTier})
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-400 line-through" : "text-black"}`}>
+                  Fill Lot Activation List
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
-            </button>
+            </div>
 
-            <button 
+            <div 
               onClick={() => setShowAirportForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
-                docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300"
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {docsState[`t${progress.currentTier}-specific`] && <span className="text-white font-bold text-sm">✓</span>}
+                {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  Fill {progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis (Tier {progress.currentTier})
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
+                  Fill {progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">1 form = 1 task</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
-            </button>
+            </div>
 
             <div 
               onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-start gap-4 ${
-                mapLotsCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                mapLotsCompleted ? "bg-black border-black" : "border-gray-300"
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {mapLotsCompleted && <span className="text-white font-bold text-sm">✓</span>}
+                {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${mapLotsCompleted ? "text-gray-500 line-through" : "text-gray-900"}`}>
-                  Map All Relevant Lots (Tier {progress.currentTier})
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>
+                  Map All Relevant Lots
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Create or update the lot list.</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
             </div>
 
             <div 
               onClick={() => setActivateLotCompleted(!activateLotCompleted)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-start gap-4 ${
-                activateLotCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
-              }`}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
-                activateLotCompleted ? "bg-black border-black" : "border-gray-300"
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {activateLotCompleted && <span className="text-white font-bold text-sm">✓</span>}
+                {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
-              <div>
-                <h3 className={`font-bold text-sm uppercase tracking-wide ${activateLotCompleted ? "text-gray-500 line-through" : "text-gray-900"}`}>
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>
                   Activate 1 Lot (Try to close best first)
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Finalize the highest leverage lot.</p>
+                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
             </div>
           </div>
