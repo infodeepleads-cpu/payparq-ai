@@ -123,11 +123,17 @@ export default function ActivationKitForm({ onClose, onSave, initialData }: Acti
     </h3>
   );
 
+  const handleSend = () => {
+    const subject = encodeURIComponent("Filled HUB Activation Form: " + (formData.city || "New Location"));
+    const body = encodeURIComponent(JSON.stringify(formData, null, 2));
+    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center z-20">
-          <h2 className="text-lg font-bold text-black">ACTIVATION KIT FORM</h2>
+          <h2 className="text-lg font-bold text-black">HUB ACTIVATION FORM</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
         </div>
         

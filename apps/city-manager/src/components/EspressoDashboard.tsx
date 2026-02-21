@@ -164,6 +164,39 @@ export default function EspressoDashboard() {
         <section>
           <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Documents</h2>
           <div className="space-y-1">
+            {/* HUB Activation Form (Priority) */}
+            <div 
+              onClick={() => setShowActivationForm(true)}
+              className={`group border-l-4 border-l-blue-600 border-y border-r border-gray-100 py-4 hover:bg-blue-50/30 cursor-pointer transition-colors px-3 rounded-r-lg flex items-center justify-between shadow-sm mb-4 ${
+                activationData ? "bg-blue-50/50" : "bg-white"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activationData ? "bg-green-500" : "bg-blue-600 animate-pulse"}`}></div>
+                <div>
+                  <h3 className="text-sm font-black text-blue-900 uppercase tracking-tight">HUB Activation Form</h3>
+                  <p className="text-[10px] font-medium text-blue-600/70">
+                    {activationData ? "Ready for review" : "CRITICAL • Required for every activation"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className={`text-[10px] font-bold px-2 py-1 rounded border ${
+                  activationData 
+                    ? "border-green-200 text-green-700 bg-green-50" 
+                    : "border-blue-200 text-blue-700 bg-blue-50"
+                }`}>
+                  {activationData ? "EDIT FORM" : "FILL NOW"}
+                </span>
+                <button
+                  onClick={(e) => sendEmail(e, "Filled HUB Activation Form", activationData)}
+                  className="text-[10px] font-bold text-blue-700 hover:text-blue-900 uppercase tracking-wider bg-blue-100/50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                >
+                  SEND FORM
+                </button>
+              </div>
+            </div>
+
             {/* Permits */}
             <div 
               onClick={() => setShowPermitsForm(true)}
@@ -296,42 +329,6 @@ export default function EspressoDashboard() {
                   SEND FORM
                 </button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 1. Activation Kit */}
-        <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Activation Kit</h2>
-          <div 
-            onClick={() => setShowActivationForm(true)}
-            className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
-              activationData ? "bg-gray-50/50" : ""
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${activationData ? "bg-green-500" : "bg-black"}`}></div>
-              <div>
-                <h3 className="text-xs font-bold text-black">Activation Kit Form</h3>
-                <p className="text-[10px] text-gray-500">
-                  {activationData ? "Filled" : "Required for every activation"}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                activationData 
-                  ? "border-green-200 text-green-700 bg-green-50" 
-                  : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-              }`}>
-                {activationData ? "EDIT FORM" : "FILL FORM"}
-              </span>
-              <button
-                onClick={(e) => sendEmail(e, "Filled Activation Kit", activationData)}
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider"
-              >
-                SEND FORM
-              </button>
             </div>
           </div>
         </section>
