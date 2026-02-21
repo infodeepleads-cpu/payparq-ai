@@ -42,7 +42,6 @@ export default function Inbox() {
         <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
           <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX</span>
           <div className="flex items-center gap-4 flex-1">
-            <button onClick={fetchEmails} className="text-[10px] text-gray-400 hover:text-black transition-colors">Refresh</button>
           </div>
         </div>
         <div className="max-w-3xl w-full mx-auto mt-6 px-4 md:px-0 overflow-y-auto">
@@ -62,13 +61,12 @@ export default function Inbox() {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-black"></div>
                         <span className={`text-xs font-bold ${email.read ? "text-black" : "text-black"}`}>
                           {email.subject}
                         </span>
                       </div>
                       <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                        {new Date(email.created_at).toLocaleDateString()}
+                        {new Date(email.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     <div className="pl-4">
