@@ -156,17 +156,17 @@ export default function EspressoDashboard() {
           <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
             Documents
           </h2>
-          <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
-            <div className={`p-3 border rounded flex items-center justify-between ${docsState[`t${progress.currentTier}-permits`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
+          <div className="grid gap-2 grid-cols-2">
+            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-permits`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">Permits & Public</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">
+                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
                   {docsState[`t${progress.currentTier}-permits`] ? "Filled" : "Required"}
                 </p>
               </div>
               <button
                 onClick={() => setShowPermitsForm(true)}
-                className={`text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border ${
+                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
                   docsState[`t${progress.currentTier}-permits`]
                     ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
                     : "border-black bg-black text-white hover:bg-gray-800"
@@ -175,16 +175,16 @@ export default function EspressoDashboard() {
                 {docsState[`t${progress.currentTier}-permits`] ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
-            <div className={`p-3 border rounded flex items-center justify-between ${docsState[`t${progress.currentTier}-competition`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
+            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-competition`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">Competition Analysis</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">
+                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
                   {docsState[`t${progress.currentTier}-competition`] ? "Filled" : "Required"}
                 </p>
               </div>
               <button
                 onClick={() => setShowCompetitionForm(true)}
-                className={`text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border ${
+                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
                   docsState[`t${progress.currentTier}-competition`]
                     ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
                     : "border-black bg-black text-white hover:bg-gray-800"
@@ -193,16 +193,16 @@ export default function EspressoDashboard() {
                 {docsState[`t${progress.currentTier}-competition`] ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
-            <div className={`p-3 border rounded flex items-center justify-between ${docsState[`t${progress.currentTier}-activation`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
+            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-activation`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">Lot Activation List</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">
+                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
                   {docsState[`t${progress.currentTier}-activation`] ? "Filled" : "Required"}
                 </p>
               </div>
               <button
                 onClick={() => setShowLotForm(true)}
-                className={`text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border ${
+                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
                   docsState[`t${progress.currentTier}-activation`]
                     ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
                     : "border-black bg-black text-white hover:bg-gray-800"
@@ -211,18 +211,18 @@ export default function EspressoDashboard() {
                 {docsState[`t${progress.currentTier}-activation`] ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
-            <div className={`p-3 border rounded flex items-center justify-between ${docsState[`t${progress.currentTier}-specific`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
+            <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-specific`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">
                   {progress.currentTier === 1 ? "Airport Analysis" : progress.currentTier === 6 ? "Hotel Analysis" : progress.currentTier === 7 ? "Whales Corporation Analysis" : "Area Analysis"}
                 </h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">
+                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
                   {docsState[`t${progress.currentTier}-specific`] ? "Filled" : "Required"}
                 </p>
               </div>
               <button
                 onClick={() => setShowAirportForm(true)}
-                className={`text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border ${
+                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
                   docsState[`t${progress.currentTier}-specific`]
                     ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
                     : "border-black bg-black text-white hover:bg-gray-800"
@@ -231,33 +231,24 @@ export default function EspressoDashboard() {
                 {docsState[`t${progress.currentTier}-specific`] ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
-          </div>
-        </section>
-
-        {/* 2. Activation Form */}
-        <section>
-          <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-            Activation Form
-          </h2>
-          <div className="grid gap-2 grid-cols-1">
-            <div className={`p-3 border rounded flex items-center justify-between ${
+            <div className={`p-3 border rounded flex flex-col justify-between h-full ${
               activationData ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"
             }`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">Activation Kit Form</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">
-                  {activationData ? "Filled for each Lot Managed by PayParq" : "Required"}
+                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
+                  {activationData ? "Filled" : "Required"}
                 </p>
               </div>
               <button
                 onClick={() => setShowActivationForm(true)}
-                className={`text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border ${
+                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
                   activationData
                     ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
                     : "border-black bg-black text-white hover:bg-gray-800"
                 }`}
               >
-                {activationData ? "EDIT" : "FILL"}
+                {activationData ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
           </div>
@@ -272,11 +263,11 @@ export default function EspressoDashboard() {
           <div className="space-y-3">
             <button 
               onClick={() => setShowPermitsForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
                 docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {docsState[`t${progress.currentTier}-permits`] && <span className="text-white font-bold text-sm">✓</span>}
@@ -291,11 +282,11 @@ export default function EspressoDashboard() {
 
             <button 
               onClick={() => setShowCompetitionForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
                 docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {docsState[`t${progress.currentTier}-competition`] && <span className="text-white font-bold text-sm">✓</span>}
@@ -310,11 +301,11 @@ export default function EspressoDashboard() {
 
             <button 
               onClick={() => setShowLotForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
                 docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {docsState[`t${progress.currentTier}-activation`] && <span className="text-white font-bold text-sm">✓</span>}
@@ -329,11 +320,11 @@ export default function EspressoDashboard() {
 
             <button 
               onClick={() => setShowAirportForm(true)}
-              className={`w-full text-left p-4 border rounded-lg transition-all flex items-center gap-4 ${
+              className={`w-full text-left p-4 border rounded-lg transition-all flex items-start gap-4 ${
                 docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {docsState[`t${progress.currentTier}-specific`] && <span className="text-white font-bold text-sm">✓</span>}
@@ -348,11 +339,11 @@ export default function EspressoDashboard() {
 
             <div 
               onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
+              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-start gap-4 ${
                 mapLotsCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 mapLotsCompleted ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {mapLotsCompleted && <span className="text-white font-bold text-sm">✓</span>}
@@ -367,11 +358,11 @@ export default function EspressoDashboard() {
 
             <div 
               onClick={() => setActivateLotCompleted(!activateLotCompleted)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-center gap-4 ${
+              className={`p-4 border rounded-lg cursor-pointer transition-all flex items-start gap-4 ${
                 activateLotCompleted ? "bg-gray-50 border-gray-300" : "bg-white border-gray-200 hover:border-gray-300"
               }`}
             >
-              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors shrink-0 mt-1 ${
                 activateLotCompleted ? "bg-black border-black" : "border-gray-300"
               }`}>
                 {activateLotCompleted && <span className="text-white font-bold text-sm">✓</span>}
