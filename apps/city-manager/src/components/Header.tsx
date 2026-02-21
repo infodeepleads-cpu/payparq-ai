@@ -28,13 +28,13 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-1 pr-9 md:pr-3 border-b border-gray-100 bg-sidebar shrink-0 z-50">
+    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1cm)] border-b border-gray-100 bg-sidebar shrink-0 z-50">
         {/* Logo */}
-        <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-[60px] md:px-0 md:mr-0">
-          <h1 className="text-xl font-bold text-black tracking-tight">P</h1>
+        <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-auto md:px-0 md:mr-0">
+          <h1 className="text-xl font-bold text-black tracking-tight">PayParq</h1>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-2">
+      <div className="flex items-center gap-1 md:gap-2 ml-[1cm]">
           {/* Mission */}
         <Link 
           href={{ pathname: "/mission" }}
@@ -73,11 +73,7 @@ export default function Header() {
           </svg>
           <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Settings</span>
         </Link>
-      </div>
 
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-0 md:gap-2">
         {/* Credentials */}
         <Link 
           href={{ pathname: "/profile" }}

@@ -862,7 +862,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white relative w-full overscroll-none md:overscroll-auto touch-none md:touch-auto">
+    <div className="flex flex-col h-full bg-white relative w-full overscroll-none md:overscroll-auto touch-pan-y md:touch-auto">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>
@@ -912,7 +912,7 @@ export default function MachineIo() {
       {!threadId || messages.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center pl-0 pr-4 md:px-4 overflow-y-auto">
            <div className="w-full max-w-3xl mx-auto">
-             <div className="w-full mb-1">
+             <div className="w-full mb-1 hidden md:block">
                <TopControlsWidget />
              </div>
              <InputArea centered={true} />
@@ -946,9 +946,9 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0 touch-auto">
+          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.8cm)] md:pb-6 pl-0 pr-4 md:px-0 touch-auto">
              <div className="max-w-3xl mx-auto w-full">
-               <div className="w-full mb-2">
+               <div className="w-full mb-2 hidden md:block">
                  <TopControlsWidget />
                </div>
                <InputArea />
