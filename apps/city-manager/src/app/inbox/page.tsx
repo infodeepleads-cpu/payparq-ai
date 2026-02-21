@@ -84,8 +84,14 @@ export default function Inbox() {
                       <span className={`text-xs truncate ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
                         {email.subject}
                       </span>
-                      <span className="text-xs text-gray-400 uppercase tracking-wider shrink-0">
-                        {new Date(email.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">
+                        {new Date(email.created_at).toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
                       </span>
                     </div>
                     <div className="">
@@ -100,9 +106,20 @@ export default function Inbox() {
                         </div>
                       )}
                       {isExpanded && (
-                        <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-2 rounded border border-gray-100">
+                        <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100">
+                          <div className="flex justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2">
+                            <span>From: {email.from_address}</span>
+                            <span>{new Date(email.created_at).toLocaleString(undefined, {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit'
+                            })}</span>
+                          </div>
                           <div
-                            className="prose prose-sm max-w-none text-[12px]"
+                            className="prose prose-sm max-w-none text-sm"
                             dangerouslySetInnerHTML={{ __html: email.html_body || email.text_body || "<span class='text-gray-400 italic'>No content</span>" }}
                           />
                         </div>
