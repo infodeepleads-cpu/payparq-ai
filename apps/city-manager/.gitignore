@@ -14,3 +14,5 @@ coverage/
 .env.test.local
 .env.production.local
 *.tsbuildinfo
+
+.vercel
