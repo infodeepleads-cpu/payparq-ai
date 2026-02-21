@@ -13,7 +13,7 @@ type SuggestResponse = {
   crmContact?: any;
 };
 
-type Message = { role: "user" | "assistant"; content: string; attachment?: string; animate?: boolean };
+type Message = { role: "user" | "assistant" | "system"; content: string; attachment?: string; animate?: boolean };
 
 export default function MachineIo() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -725,7 +725,7 @@ export default function MachineIo() {
   };
 
   const InputArea = ({ centered = false }: { centered?: boolean }) => (
-    <div className={`w-full max-w-3xl mx-auto transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
+    <div className={`relative w-full max-w-3xl mx-auto transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
       {selectedImage && (
         <div className="relative mb-2 w-fit">
           <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
@@ -739,13 +739,13 @@ export default function MachineIo() {
           </button>
         </div>
       )}
-      <div className="relative flex items-center w-full pl-3 pr-3 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none">
+      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none">
          <button
            onClick={() => fileInputRef.current?.click()}
-           className="bg-transparent border-0 p-0 focus:outline-none mr-2"
+           className="bg-transparent border-0 p-2 focus:outline-none text-gray-400 hover:text-gray-600 transition-colors"
            title="Upload image"
          >
-           <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
            </svg>
          </button>
@@ -766,79 +766,85 @@ export default function MachineIo() {
               }
             }}
             placeholder="Ask anything..."
-            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center"
+            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
             autoFocus
             ref={inputRef}
           />
-         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              {showModelSelector && (
+                <div className="hidden md:block absolute bottom-full right-0 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom-right">
+                    <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
+                      {AI_MODELS.map((model, idx) => (
+                        <button
+                          key={idx}
+                          disabled={model.disabled}
+                          onClick={() => {
+                            if (model.disabled) return;
+                            if (model.id) setSelectedModel(model.id);
+                            setShowModelSelector(false);
+                          }}
+                          className={`group flex items-center justify-between p-1.5 rounded transition-all w-full text-left border-none outline-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
+                            model.disabled 
+                              ? "text-gray-300 cursor-default" 
+                              : model.id === selectedModel
+                                 ? "text-black font-medium"
+                                 : "text-gray-500 hover:text-black"
+                          }`}
+                        >
+                          <span className="text-xs truncate flex-1">{model.name}</span>
+                          {model.id === selectedModel && (
+                            <svg className="w-3 h-3 text-black shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+              )}
+              {showModelSelector && (
+                <div 
+                  className="hidden md:block fixed inset-0 z-[9998] bg-transparent"
+                  onClick={() => setShowModelSelector(false)}
+                />
+              )}
+              <button
+                  type="button"
+                  onClick={() => setShowModelSelector(!showModelSelector)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors group"
+                  title="Select AI Model"
+               >
+                  <span className="text-sm font-normal leading-none">AI</span>
+               </button>
+             </div>
+             <button
+                type="button"
+                disabled={loading}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors"
+                aria-label="Voice"
+                title="Voice"
+             >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+             </button>
             <button
                onClick={sendMessage}
                disabled={(!input.trim() && !selectedImage) || loading}
-               className={`transition-all duration-200 rounded-full border focus:outline-none ${
+               className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 focus:outline-none shadow-sm ${
                  input.trim() || selectedImage
-                   ? "border-gray-300 text-black hover:border-gray-400" 
-                   : "border-gray-200 text-gray-400 cursor-not-allowed"
-               } p-1.5`}
+                   ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
+               }`}
                aria-label="Send"
                title="Send"
                data-role="cta"
             >
-               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                 <path d="M12 19V5m-7 7l7-7 7 7" strokeLinecap="round" strokeLinejoin="round"/>
+               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
                </svg>
             </button>
-            <button
-               type="button"
-               disabled={loading}
-               className="transition-all duration-200 rounded-full border border-gray-300 text-black hover:border-gray-400 p-1.5 focus:outline-none"
-               aria-label="Voice"
-               title="Voice"
-            >
-               <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3a3 3 0 013 3v6a3 3 0 11-6 0V6a3 3 0 013-3zm7 9a7 7 0 01-14 0m7 7v3" />
-               </svg>
-            </button>
-            <div className="relative">
-              <button
-                 type="button"
-                 onClick={() => setShowModelSelector(!showModelSelector)}
-                 className="flex items-center justify-center w-7 h-7 rounded-full border border-gray-300 text-black hover:border-gray-400 focus:outline-none bg-gray-50 hover:bg-gray-100 transition-colors"
-                 title="Select AI Model"
-              >
-                 <span className="text-[9px] font-bold">AI</span>
-              </button>
-              {showModelSelector && (
-                 <div className="absolute bottom-full right-0 mb-3 w-80 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 origin-bottom-right">
-                    <div className="max-h-[60vh] overflow-y-auto p-1">
-                       {AI_MODELS.map((model, idx) => (
-                          <button
-                            key={idx}
-                            disabled={model.disabled}
-                            onClick={() => {
-                               if (model.disabled) return;
-                               if (model.id) setSelectedModel(model.id);
-                               setShowModelSelector(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
-                               model.disabled 
-                                 ? "text-gray-300 cursor-default" 
-                                 : model.id === selectedModel
-                                    ? "bg-gray-100 text-black font-medium"
-                                    : "text-gray-600 hover:bg-gray-50 hover:text-black"
-                            }`}
-                          >
-                            <span>{model.name}</span>
-                            {model.id === selectedModel && (
-                              <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </button>
-                       ))}
-                    </div>
-                 </div>
-              )}
-            </div>
          </div>
       </div>
     </div>
@@ -857,6 +863,46 @@ export default function MachineIo() {
 
   return (
     <div className="flex flex-col h-full bg-white relative w-full">
+         {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
+         {showModelSelector && (
+            <>
+              <div 
+                className="fixed inset-0 z-[9998] bg-black/40 md:hidden backdrop-blur-sm"
+                onClick={() => setShowModelSelector(false)}
+              />
+              <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white rounded-t-3xl z-[9999] animate-in slide-in-from-bottom-full duration-300 h-[60vh] flex flex-col pt-6">
+                 <div className="flex-1 overflow-y-auto px-6 space-y-2 thin-scrollbar pb-safe">
+                   {AI_MODELS.map((model, idx) => (
+                     <button
+                       key={idx}
+                       disabled={model.disabled}
+                       onClick={() => {
+                         if (model.disabled) return;
+                         if (model.id) setSelectedModel(model.id);
+                         setShowModelSelector(false);
+                       }}
+                       className={`group flex items-center justify-between py-2 w-full text-left bg-transparent active:bg-transparent focus:bg-transparent hover:bg-transparent outline-none border-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
+                          model.disabled 
+                            ? "text-gray-300 cursor-default" 
+                            : model.id === selectedModel
+                              ? "text-black font-medium"
+                              : "text-gray-600"
+                        }`}
+                       style={{ WebkitTapHighlightColor: 'transparent' }}
+                     >
+                       <span className="text-sm leading-7 truncate flex-1">{model.name}</span>
+                       {model.id === selectedModel && (
+                          <svg className="w-4 h-4 text-black shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                       )}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+            </>
+         )}
+
          <div className="shrink-0 z-30 bg-white border-b border-gray-100 w-full">
            <div className="w-full px-4 py-2 flex items-center justify-between">
              <span className="text-xs font-semibold tracking-tight text-black">machine.io</span>

@@ -262,13 +262,12 @@ export default function Page() {
                       </td>
                     </tr>
                   ) : tierContacts.map((contact) => {
-                    // Find global index for display
-                    const globalIndex = contacts.findIndex(c => c.id === contact.id) + 1;
+                    const localIndex = tierContacts.findIndex(c => c.id === contact.id) + 1;
                     
                     return (
                       <tr key={contact.id}>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900 sm:pl-6">
-                          {globalIndex}.
+                          {localIndex}.
                         </td>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           {editingId === contact.id ? (
