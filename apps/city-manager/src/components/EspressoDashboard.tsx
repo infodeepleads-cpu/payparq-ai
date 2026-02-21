@@ -156,7 +156,7 @@ export default function EspressoDashboard() {
           <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
             Documents
           </h2>
-          <div className="grid gap-2 grid-cols-2">
+          <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
             <div className={`p-3 border rounded flex flex-col justify-between h-full ${docsState[`t${progress.currentTier}-permits`] ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}>
               <div>
                 <h3 className="font-semibold text-xs text-black">Permits & Public</h3>
@@ -231,26 +231,33 @@ export default function EspressoDashboard() {
                 {docsState[`t${progress.currentTier}-specific`] ? "EDIT FORM" : "FILL FORM"}
               </button>
             </div>
-            <div className={`p-3 border rounded flex flex-col justify-between h-full ${
-              activationData ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"
-            }`}>
-              <div>
-                <h3 className="font-semibold text-xs text-black">Activation Kit Form</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5 mb-2">
-                  {activationData ? "Filled" : "Required"}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowActivationForm(true)}
-                className={`w-full text-[10px] px-2 py-1 rounded font-medium cursor-pointer transition-colors inline-block uppercase tracking-wide border text-center ${
-                  activationData
-                    ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
-                    : "border-black bg-black text-white hover:bg-gray-800"
-                }`}
-              >
-                {activationData ? "EDIT FORM" : "FILL FORM"}
-              </button>
+          </div>
+        </section>
+
+        {/* 1. Activation Kit */}
+        <section>
+          <h2 className="text-sm font-bold text-black uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
+            Activation Kit
+          </h2>
+          <div className={`p-4 border rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+            activationData ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"
+          }`}>
+            <div>
+              <h3 className="font-bold text-sm text-black uppercase tracking-wide">Activation Kit Form</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {activationData ? "Form filled and saved locally." : "Required for every activation."}
+              </p>
             </div>
+            <button
+              onClick={() => setShowActivationForm(true)}
+              className={`px-4 py-2 rounded font-medium cursor-pointer transition-colors uppercase tracking-wide border text-xs md:text-sm whitespace-nowrap ${
+                activationData
+                  ? "border-green-300 bg-green-100 text-green-800 hover:bg-green-200"
+                  : "border-black bg-black text-white hover:bg-gray-800"
+              }`}
+            >
+              {activationData ? "EDIT FORM" : "FILL FORM"}
+            </button>
           </div>
         </section>
 

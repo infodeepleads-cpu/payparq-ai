@@ -22,6 +22,14 @@ export default function CompetitionForm({ onClose, onSave, initialData }: Compet
   const [competitors, setCompetitors] = useState<Competitor[]>(initialData?.competitors || [
     { id: crypto.randomUUID(), name: "", address: "", price: "", content: "", rating: "", note: "" }
   ]);
+  const [signature, setSignature] = useState(initialData?.signature || "");
+  const [date, setDate] = useState(initialData?.date || "");
+
+  const handleSend = () => {
+    const subject = encodeURIComponent("Filled Competition Analysis");
+    const body = encodeURIComponent(JSON.stringify({ competitors, signature, date }, null, 2));
+    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  };
 
   const addCompetitor = () => {
     setCompetitors([
@@ -155,7 +163,7 @@ export default function CompetitionForm({ onClose, onSave, initialData }: Compet
             Cancel
           </button>
           <button 
-            onClick={() => onSave({ competitors })}
+            onClick={() => onSave({ competitors, signature, date })}
             className="px-4 py-2 text-sm font-bold bg-black text-white rounded hover:bg-gray-800"
           >
             Save Analysis

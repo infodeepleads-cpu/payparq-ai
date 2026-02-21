@@ -355,11 +355,43 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
             />
           </div>
 
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 rounded text-black mb-4">
+              VIII. ZAVRŠNA NAPOMENA
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+              <div>
+                <label className="block text-xs font-bold uppercase mb-1">Potpis City Managera</label>
+                <input 
+                  type="text" 
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  value={formData.final_signature}
+                  onChange={(e) => handleChange("final_signature", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase mb-1">Datum</label>
+                <input 
+                  type="date" 
+                  className="w-full border border-gray-300 rounded p-2 text-sm"
+                  value={formData.final_date}
+                  onChange={(e) => handleChange("final_date", e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
-        <button 
-          onClick={onClose}
+          <button 
+            onClick={handleSend}
+            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Send to PayParq
+          </button>
+          <button 
+            onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-black"
           >
             Cancel

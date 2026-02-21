@@ -44,6 +44,14 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
       }
     }
   ]);
+  const [signature, setSignature] = useState(initialData?.signature || "");
+  const [date, setDate] = useState(initialData?.date || "");
+
+  const handleSend = () => {
+    const subject = encodeURIComponent("Filled Lot Activation List");
+    const body = encodeURIComponent(JSON.stringify({ locations, signature, date }, null, 2));
+    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  };
 
   const addLocation = () => {
     setLocations([
@@ -327,7 +335,7 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
                 alert("Please upload at least one photo for each location.");
                 return;
               }
-              onSave({ locations });
+              onSave({ locations, signature, date });
             }}
             className="px-4 py-2 text-sm font-bold bg-black text-white rounded hover:bg-gray-800"
           >
