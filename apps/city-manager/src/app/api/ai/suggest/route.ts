@@ -97,6 +97,15 @@ Application Structure & Pages:
           `   - Set "crmContact" to an object with: { "tier": number (1-7), "decisionMaker": "Name", "location": "Location", "estimatedCapacity": number, "status": "Number. Date (e.g. '1. 2024-01-01')", "nextStep": "Next step", "notes": "Any notes" }.\n` +
           `   - Status format MUST be one of: '1. Date' (Entry), '2. Date' (Live DEMO), '3. Date' (Yes/Expiration), '4. Reason' (No), '5. Date' (Follow Up).\n` +
           `   - In "nextStep", confirm the action (e.g., "I've added [Name] to the CRM.").\n` +
+          `   - If the user uses the shorthand format "N. a [Name] b [Location] c [Cap] d [Status] e [Next Step] f [Notes]":\n` +
+          `     - Parse "N" as "tier" (number).\n` +
+          `     - Parse "a" value as "decisionMaker".\n` +
+          `     - Parse "b" value as "location".\n` +
+          `     - Parse "c" value as "estimatedCapacity" (number).\n` +
+          `     - Parse "d" value as "status".\n` +
+          `     - Parse "e" value as "nextStep".\n` +
+          `     - Parse "f" value as "notes".\n` +
+          `     - Include these in the "crmContact" object.\n` +
           `8. If the user wants to UPDATE a CRM contact:
 ` +
           `   - Set "action" to "update_crm_contact".

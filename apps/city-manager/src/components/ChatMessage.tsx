@@ -7,16 +7,17 @@ export default function ChatMessage({
   attachment,
   animate = false,
 }: {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   attachment?: string;
   animate?: boolean;
 }) {
   const isUser = role === "user";
+  const isSystem = role === "system";
   const [displayedContent, setDisplayedContent] = useState(isUser || !animate ? content : "");
 
   useEffect(() => {
-    if (isUser || !animate) {
+    if (isUser || isSystem || !animate) {
       setDisplayedContent(content);
       return;
     }
@@ -37,7 +38,14 @@ export default function ChatMessage({
 
   return (
     <div className="w-full bg-transparent">
-      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {isSystem ? (
+        <div className="flex w-full justify-center">
+          <div className="inline-block max-w-[85%] rounded-lg px-3 py-2 bg-green-50 text-green-700 border border-green-200 text-sm">
+            {displayedContent}
+          </div>
+        </div>
+      ) : (
+        <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
           {attachment && (
             <div className="mb-2">
               <img 
@@ -70,6 +78,7 @@ export default function ChatMessage({
             </div>
           </div>
         </div>
+      )}
     </div>
   );
 }

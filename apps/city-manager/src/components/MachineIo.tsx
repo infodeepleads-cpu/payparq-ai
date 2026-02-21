@@ -135,10 +135,13 @@ export default function MachineIo() {
       next_step: contact.nextStep,
       notes: contact.notes
     };
+    console.log("Inserting contact to DB:", dbContact);
     const { data, error } = await supabase.from("crm_contacts").insert(dbContact).select().single();
+    console.log("DB result:", { data, error });
     if (!error && data) {
        // Fire event to update UI
        window.dispatchEvent(new Event("crm_storage"));
+       localStorage.setItem("crm_update_signal", Date.now().toString());
        // Return in camelCase for UI
        return {
          ...data,
@@ -599,14 +602,17 @@ export default function MachineIo() {
         } else if (data.action === "confirm_task" && data.taskTitle) {
           confirmTaskLocal(data.taskTitle);
         } else if (data.action === "add_crm_contact" && data.crmContact) {
+          console.log("=== ADDING CRM CONTACT ===");
+          console.log("Contact data:", data.crmContact);
           const saved = await addCRMContact(data.crmContact);
+          console.log("Saved result:", saved);
           const name = saved?.decisionMaker || "Contact";
           const tierText = typeof saved?.tier !== "undefined" ? ` (Tier ${saved.tier})` : "";
-          systemNote = `\n\n✓ System: CRM updated: ${name}${tierText}`;
+          systemNote = `✓ System: CRM updated: ${name}${tierText}`;
         } else if (data.action === "update_crm_contact" && data.crmContact) {
           const updated = await updateCRMContact(data.crmContact);
           const name = updated?.decisionMaker || data.crmContact?.decisionMaker || "Contact";
-          systemNote = `\n\n✓ System: CRM updated: ${name}`;
+          systemNote = `✓ System: CRM updated: ${name}`;
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
           console.log("=== SCHEDULING REMINDER ===");
           console.log("TaskTitle:", data.taskTitle);
@@ -625,7 +631,7 @@ export default function MachineIo() {
             setReminders(current);
             window.dispatchEvent(new Event("pp_reminders_update"));
             console.log("Reminder scheduled successfully!");
-            systemNote = `\n\n✓ System: Reminder set for ${formatCET(time)} CET`;
+            systemNote = `✓ System: Reminder set for ${formatCET(time)} CET`;
             try {
               await fetch("/api/reminders/schedule", {
                 method: "POST",
@@ -635,7 +641,7 @@ export default function MachineIo() {
             } catch {}
           } catch (e) {
             console.error("Failed to schedule reminder:", e);
-            systemNote = `\n\n⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
+            systemNote = `⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
           }
           console.log("=== END SCHEDULING ===");
         } else if ((assistantText.includes("reminder") && (assistantText.includes("set") || assistantText.includes("scheduled"))) && data.action !== "schedule_reminder") {
@@ -645,11 +651,15 @@ export default function MachineIo() {
            console.log("But action was:", data.action);
            console.log("Expected action: schedule_reminder");
            console.log("=================================");
-           systemNote = `\n\n⚠ System: AI confirmed a reminder verbally but failed to schedule it (Action was: ${data.action || "None"}). Please try again.`;
+           systemNote = `⚠ System: AI confirmed a reminder verbally but failed to schedule it (Action was: ${data.action || "None"}). Please try again.`;
         }
       }
       
-      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText + systemNote, animate: true }];
+      // Build final messages: assistant response + optional system confirmation as separate message
+      const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
+      if (systemNote) {
+        finalMsgs.push({ role: "system", content: systemNote.trim(), animate: true });
+      }
       setMessages(finalMsgs);
       if (id) {
         saveMessages(id, finalMsgs);

@@ -67,9 +67,11 @@ async function loadContacts(): Promise<Contact[]> {
     const supabase = getSupabase();
     const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
     
+    console.log("loadContacts: Raw DB data:", data);
+    
     if (!data) return [];
 
-    return data.map((c: any) => ({
+    const mapped = data.map((c: any) => ({
       id: c.id,
       tier: c.tier,
       decisionMaker: c.decision_maker,
@@ -90,7 +92,11 @@ async function loadContacts(): Promise<Contact[]> {
       city: c.location,
       decisionStatus: c.status
     }));
-  } catch {
+    
+    console.log("loadContacts: Mapped contacts:", mapped);
+    return mapped;
+  } catch (err) {
+    console.error("loadContacts: Error loading contacts:", err);
     return [];
   }
 }
@@ -100,14 +106,24 @@ export default function Page() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadContacts().then(setContacts);
-    const handler = () => loadContacts().then(setContacts);
+    const loadAndSetContacts = async () => {
+      const loaded = await loadContacts();
+      console.log("CRM: Loaded contacts:", loaded.length, loaded);
+      setContacts(loaded);
+    };
+    loadAndSetContacts();
+    
+    const handler = () => {
+      console.log("CRM: crm_storage event received");
+      loadAndSetContacts();
+    };
     window.addEventListener("crm_storage", handler);
     
     // Listen for cross-tab updates
     const storageHandler = (e: StorageEvent) => {
       if (e.key === "crm_update_signal") {
-        handler();
+        console.log("CRM: crm_update_signal received");
+        loadAndSetContacts();
       }
     };
     window.addEventListener("storage", storageHandler);
