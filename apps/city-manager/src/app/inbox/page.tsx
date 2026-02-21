@@ -56,15 +56,13 @@ export default function Inbox() {
                 return (
                   <div
                     key={email.id}
-                    className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg"
+                    className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors rounded-lg"
                     onClick={() => setExpandedId(isExpanded ? null : email.id)}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold ${email.read ? "text-black" : "text-black"}`}>
-                          {email.subject}
-                        </span>
-                      </div>
+                      <span className={`text-xs font-bold ${email.read ? "text-black" : "text-black"}`}>
+                        {email.subject}
+                      </span>
                       <span className="text-[10px] text-gray-400 uppercase tracking-wider">
                         {new Date(email.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
