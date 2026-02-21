@@ -1,23 +1,24 @@
 import "../styles/globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { PwaProvider } from "../components/PwaProvider";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import MachineIo from "../components/MachineIo";
 import ResizableLayout from "../components/ResizableLayout";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: "#ffffff",
+};
+
 export const metadata: Metadata = {
   title: "machine.io",
   description: "Chat-only AI manager. Write notes. Get actions and drafts.",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
-    interactiveWidget: "resizes-content"
-  },
-  themeColor: "#ffffff",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

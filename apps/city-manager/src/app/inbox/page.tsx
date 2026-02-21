@@ -38,8 +38,8 @@ export default function Inbox() {
 
   return (
     <div className="h-screen bg-white">
-      <div className="hidden md:flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
-        <div className="max-w-3xl w-full mx-auto px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
+      <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
+        <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4">
           <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX</span>
           <div className="flex items-center gap-4 flex-1">
             <button onClick={fetchEmails} className="text-[10px] text-gray-400 hover:text-black transition-colors">Refresh</button>
@@ -97,9 +97,6 @@ export default function Inbox() {
             </div>
           )}
         </div>
-      </div>
-      <div className="md:hidden p-6">
-        <div className="text-sm text-gray-600">Desktop only.</div>
       </div>
     </div>
   );

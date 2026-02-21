@@ -12,7 +12,11 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
   const [middleWidth, setMiddleWidth] = useState(400); // Default width in px
   const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const isRoot = pathname === "/" || pathname === "";
+  const isRoot = pathname === "/" || pathname === "" || pathname === null;
+
+  useEffect(() => {
+    console.log("ResizableLayout debug:", { pathname, isRoot });
+  }, [pathname, isRoot]);
 
   const startResizing = useCallback(() => {
     setIsDragging(true);
