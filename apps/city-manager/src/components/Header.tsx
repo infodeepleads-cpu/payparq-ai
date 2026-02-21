@@ -28,13 +28,13 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-1 pr-7 md:px-2 border-b border-gray-100 bg-sidebar shrink-0 z-50">
+    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-1 pr-8 md:px-2 border-b border-gray-100 bg-sidebar shrink-0 z-50">
         {/* Logo */}
         <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-[60px] md:px-0 md:mr-0">
           <h1 className="text-xl font-bold text-black tracking-tight">P</h1>
         </div>
 
-        <div className="flex items-center gap-0 md:gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Mission */}
         <Link 
           href={{ pathname: "/mission" }}
