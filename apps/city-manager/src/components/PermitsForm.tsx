@@ -48,6 +48,12 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
     });
   };
 
+  const handleSend = () => {
+    const subject = encodeURIComponent("Filled Permits Form: " + (formData.city || "New Location"));
+    const body = encodeURIComponent(JSON.stringify(formData, null, 2));
+    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">

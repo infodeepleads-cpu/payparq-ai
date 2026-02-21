@@ -156,8 +156,14 @@ export default function CompetitionForm({ onClose, onSave, initialData }: Compet
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
-        <button 
-          onClick={onClose}
+          <button 
+            onClick={handleSend}
+            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Send to PayParq
+          </button>
+          <button 
+            onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-black"
           >
             Cancel
