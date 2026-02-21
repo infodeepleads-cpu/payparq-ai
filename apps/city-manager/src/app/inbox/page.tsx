@@ -69,7 +69,7 @@ export default function Inbox() {
                         {new Date(email.created_at).toLocaleString([], { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <div className="pl-4">
+                    <div className="">
                       <div className="flex justify-between items-baseline mb-1">
                         <p className="text-[10px] text-gray-500 truncate">
                           From: <span className="text-gray-800">{email.from_address}</span>
