@@ -19,11 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#000000" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="min-h-screen antialiased font-sans bg-background text-text-primary">
+      <body className="h-[100dvh] fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary">
         <PwaProvider />
-        <div className="flex flex-col h-screen bg-background overflow-hidden pt-[60px]">
+        <div className="flex flex-col h-full w-full bg-background overflow-hidden pt-[60px]">
           <Header />
-          <div className="flex flex-1 overflow-hidden relative">
+          <div className="flex flex-1 overflow-hidden relative w-full">
             <Sidebar />
             <ResizableLayout rightPanel={<MachineIo />}>
               {children}

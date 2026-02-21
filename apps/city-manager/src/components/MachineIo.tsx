@@ -812,7 +812,7 @@ export default function MachineIo() {
               <button
                   type="button"
                   onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors group"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors group shadow-none ring-0"
                   title="Select AI Model"
                >
                   <span className="text-sm font-normal leading-none">AI</span>
@@ -821,7 +821,7 @@ export default function MachineIo() {
              <button
                 type="button"
                 disabled={loading}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors shadow-none ring-0"
                 aria-label="Voice"
                 title="Voice"
              >
@@ -862,7 +862,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white relative w-full">
+    <div className="flex flex-col h-full bg-white relative w-full overscroll-none md:overscroll-auto touch-none md:touch-auto">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>
@@ -920,7 +920,7 @@ export default function MachineIo() {
         </div>
       ) : (
         <>
-          <div className="flex-1 overflow-y-auto scroll-smooth">
+          <div className="flex-1 overflow-y-auto scroll-smooth touch-auto">
             <div className="max-w-3xl mx-auto pl-0 pr-4 md:px-0 py-8 pb-4">
               <div className="flex flex-col space-y-8">
               {messages.map((m, i) => (
@@ -946,7 +946,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0">
+          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)] md:pb-6 pl-0 pr-4 md:px-0 touch-auto">
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-2">
                  <TopControlsWidget />
