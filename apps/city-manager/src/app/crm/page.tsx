@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSupabase } from "../../lib/supabase";
 
 type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -61,49 +62,37 @@ const TIERS: { id: Tier; label: string }[] = [
 
 const KEY = "pp_crm_contacts";
 
-function loadContacts(): Contact[] {
+async function loadContacts(): Promise<Contact[]> {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw);
-    return data.map((c: any) => {
-      // Migrate city -> location
-      if (c.city && !c.location) {
-        c.location = c.city;
-      }
+    const supabase = getSupabase();
+    const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
+    
+    if (!data) return [];
+
+    return data.map((c: any) => ({
+      id: c.id,
+      tier: c.tier,
+      decisionMaker: c.decision_maker,
+      location: c.location,
+      estimatedCapacity: c.estimated_capacity,
+      status: c.status,
+      nextStep: c.next_step,
+      contractType: c.contract_type,
+      contractAction: c.contract_action,
+      expirationDate: c.expiration_date,
+      followUpDate: c.follow_up_date,
+      noReason: c.no_reason,
+      restartTime: c.restart_time,
+      notes: c.notes,
+      createdAt: new Date(c.created_at).getTime(),
       
-      // Ensure migration of legacy status
-      if (!c.status && c.decisionStatus) {
-        if (c.decisionStatus === "ENTRY") c.status = "Entry Prewarm (Mail)";
-        else if (c.decisionStatus === "DEMO") c.status = "Live DEMO";
-        else if (c.decisionStatus === "CONTRACT") {
-            c.status = "Contract Status (Contractual Obligation)";
-            c.contractType = "Contractual Obligation";
-            c.contractAction = "Yes";
-        }
-        else if (c.decisionStatus === "NO") {
-            c.status = "Contract Status (Contractual Obligation)";
-            c.contractType = "Contractual Obligation";
-            c.contractAction = "No";
-            c.noReason = c.noReason || "";
-        }
-        else if (c.decisionStatus === "FOLLOW UP") {
-            c.status = "Contract Status (Contractual Obligation)";
-            c.contractType = "Contractual Obligation";
-            c.contractAction = "Follow Up";
-        }
-        else c.status = "Entry Prewarm (Mail)";
-      }
-      return c;
-    });
+      // Legacy support mappings if needed
+      city: c.location,
+      decisionStatus: c.status
+    }));
   } catch {
     return [];
   }
-}
-
-function saveContacts(contacts: Contact[]) {
-  localStorage.setItem(KEY, JSON.stringify(contacts));
-  window.dispatchEvent(new Event("crm_storage"));
 }
 
 export default function Page() {
@@ -111,23 +100,73 @@ export default function Page() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    setContacts(loadContacts());
-    const handler = () => setContacts(loadContacts());
+    loadContacts().then(setContacts);
+    const handler = () => loadContacts().then(setContacts);
     window.addEventListener("crm_storage", handler);
-    return () => window.removeEventListener("crm_storage", handler);
+    
+    // Listen for cross-tab updates
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === "crm_update_signal") {
+        handler();
+      }
+    };
+    window.addEventListener("storage", storageHandler);
+
+    return () => {
+      window.removeEventListener("crm_storage", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
   }, []);
 
-  const updateContact = (id: string, updates: Partial<Contact>) => {
+  const updateContact = async (id: string, updates: Partial<Contact>) => {
+    // Optimistic update
     const next = contacts.map(c => c.id === id ? { ...c, ...updates } : c);
     setContacts(next);
-    saveContacts(next);
+
+    const supabase = getSupabase();
+    const dbUpdates: any = {};
+    
+    if (updates.tier) dbUpdates.tier = updates.tier;
+    if (updates.decisionMaker) dbUpdates.decision_maker = updates.decisionMaker;
+    if (updates.location) dbUpdates.location = updates.location;
+    if (updates.estimatedCapacity) dbUpdates.estimated_capacity = updates.estimatedCapacity;
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.nextStep) dbUpdates.next_step = updates.nextStep;
+    if (updates.contractType) dbUpdates.contract_type = updates.contractType;
+    if (updates.contractAction) dbUpdates.contract_action = updates.contractAction;
+    if (updates.expirationDate) dbUpdates.expiration_date = updates.expirationDate;
+    if (updates.followUpDate) dbUpdates.follow_up_date = updates.followUpDate;
+    if (updates.noReason) dbUpdates.no_reason = updates.noReason;
+    if (updates.restartTime) dbUpdates.restart_time = updates.restartTime;
+    if (updates.notes) dbUpdates.notes = updates.notes;
+
+    const { error } = await supabase.from("crm_contacts").update(dbUpdates).eq("id", id);
+    
+    if (!error) {
+      window.dispatchEvent(new Event("crm_storage"));
+    } else {
+      console.error("Failed to update contact:", error);
+      // Revert if needed, or just reload
+      loadContacts().then(setContacts);
+    }
   };
 
-  const deleteContact = (id: string) => {
+  const deleteContact = async (id: string) => {
     if (confirm("Are you sure you want to delete this contact?")) {
+      // Optimistic delete
       const next = contacts.filter(c => c.id !== id);
       setContacts(next);
-      saveContacts(next);
+      
+      const supabase = getSupabase();
+      const { error } = await supabase.from("crm_contacts").delete().eq("id", id);
+      
+      if (!error) {
+        window.dispatchEvent(new Event("crm_storage"));
+        localStorage.setItem("crm_update_signal", Date.now().toString());
+      } else {
+        console.error("Failed to delete contact:", error);
+        loadContacts().then(setContacts);
+      }
     }
   };
 

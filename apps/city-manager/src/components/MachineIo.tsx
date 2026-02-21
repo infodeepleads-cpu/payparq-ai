@@ -113,55 +113,89 @@ export default function MachineIo() {
   const MSG_PREFIX = "pp_chat_messages_";
   const CRM_KEY = "pp_crm_contacts";
   const TASKS_KEY = "pp_tasks";
-  const readCRM = () => {
+  const readCRM = async () => {
     try {
-      const raw = localStorage.getItem(CRM_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const supabase = getSupabase();
+      const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
+      return data || [];
     } catch {
       return [];
     }
   };
-  const writeCRM = (contacts: any[]) => {
-    localStorage.setItem(CRM_KEY, JSON.stringify(contacts));
-    window.dispatchEvent(new Event("crm_storage"));
+  
+  const addCRMContact = async (contact: any) => {
+    const supabase = getSupabase();
+    // Convert to snake_case for DB
+    const dbContact = {
+      tier: contact.tier,
+      decision_maker: contact.decisionMaker,
+      location: contact.location,
+      estimated_capacity: contact.estimatedCapacity,
+      status: contact.status,
+      next_step: contact.nextStep,
+      notes: contact.notes
+    };
+    const { data, error } = await supabase.from("crm_contacts").insert(dbContact).select().single();
+    if (!error && data) {
+       // Fire event to update UI
+       window.dispatchEvent(new Event("crm_storage"));
+       // Return in camelCase for UI
+       return {
+         ...data,
+         decisionMaker: data.decision_maker,
+         estimatedCapacity: data.estimated_capacity,
+         nextStep: data.next_step
+       };
+    }
+    return null;
   };
-  const addCRMContact = (contact: any) => {
-    const contacts = readCRM();
-    const newContact = { ...contact, id: String(Date.now()), createdAt: Date.now() };
-    contacts.unshift(newContact);
-    writeCRM(contacts);
-    return newContact;
-  };
-  const updateCRMContact = (contact: any) => {
-    const contacts = readCRM();
-    // Try to find by ID first, then by index, then by decisionMaker name
-    let idx = -1;
+
+  const updateCRMContact = async (contact: any) => {
+    const supabase = getSupabase();
+    const { data: contacts } = await supabase.from("crm_contacts").select("*");
+    if (!contacts) return null;
+    
+    // Try to find by ID first, then by decisionMaker
+    let match = null;
     if (contact.id) {
-      idx = contacts.findIndex((c: any) => c.id === contact.id);
+      match = contacts.find((c: any) => c.id === contact.id);
     }
     
     // Check for numeric index (1-based from AI)
-    if (idx === -1 && typeof contact.index === 'number') {
-      const i = contact.index - 1; // Convert to 0-based
-      if (i >= 0 && i < contacts.length) {
-        idx = i;
+    if (!match && typeof contact.index === 'number') {
+      // Sort by created_at desc to match UI list order
+      const sorted = [...contacts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const i = contact.index - 1; 
+      if (i >= 0 && i < sorted.length) {
+        match = sorted[i];
       }
     }
 
-    if (idx === -1 && contact.decisionMaker) {
-      idx = contacts.findIndex((c: any) => c.decisionMaker.toLowerCase() === contact.decisionMaker.toLowerCase());
+    if (!match && contact.decisionMaker) {
+      match = contacts.find((c: any) => c.decision_maker?.toLowerCase() === contact.decisionMaker.toLowerCase());
     }
     
-    if (idx >= 0) {
-      // Exclude 'index' from the actual stored data
-      const { index, ...updates } = contact;
-      // If tier not provided, set it from index (N) to ensure CRM is filled with this number
-      if (typeof updates.tier === "undefined" && typeof index === "number") {
-        (updates as any).tier = index;
+    if (match) {
+      const updates: any = {};
+      if (contact.tier) updates.tier = contact.tier;
+      if (contact.decisionMaker) updates.decision_maker = contact.decisionMaker;
+      if (contact.location) updates.location = contact.location;
+      if (contact.estimatedCapacity) updates.estimated_capacity = contact.estimatedCapacity;
+      if (contact.status) updates.status = contact.status;
+      if (contact.nextStep) updates.next_step = contact.nextStep;
+      if (contact.notes) updates.notes = contact.notes;
+      
+      const { data } = await supabase.from("crm_contacts").update(updates).eq("id", match.id).select().single();
+      if (data) {
+        window.dispatchEvent(new Event("crm_storage"));
+        localStorage.setItem("crm_update_signal", Date.now().toString());
+        return {
+           ...data,
+           decisionMaker: data.decision_maker,
+           estimatedCapacity: data.estimated_capacity,
+           nextStep: data.next_step
+        };
       }
-      contacts[idx] = { ...contacts[idx], ...updates };
-      writeCRM(contacts);
-      return contacts[idx];
     }
     return null;
   };
@@ -565,12 +599,12 @@ export default function MachineIo() {
         } else if (data.action === "confirm_task" && data.taskTitle) {
           confirmTaskLocal(data.taskTitle);
         } else if (data.action === "add_crm_contact" && data.crmContact) {
-          const saved = addCRMContact(data.crmContact);
+          const saved = await addCRMContact(data.crmContact);
           const name = saved?.decisionMaker || "Contact";
           const tierText = typeof saved?.tier !== "undefined" ? ` (Tier ${saved.tier})` : "";
           systemNote = `\n\n✓ System: CRM updated: ${name}${tierText}`;
         } else if (data.action === "update_crm_contact" && data.crmContact) {
-          const updated = updateCRMContact(data.crmContact);
+          const updated = await updateCRMContact(data.crmContact);
           const name = updated?.decisionMaker || data.crmContact?.decisionMaker || "Contact";
           systemNote = `\n\n✓ System: CRM updated: ${name}`;
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
