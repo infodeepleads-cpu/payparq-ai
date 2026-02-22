@@ -114,7 +114,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className="block w-[60px] shrink-0" />
+      {/* Removed spacer to prevent horizontal overflow; layout now uses padding on content container */}
       <aside className="flex flex-col h-full bg-sidebar border-r border-gray-100 text-black fixed left-0 top-[60px] bottom-0 z-40 w-[60px] pt-2">
         
         {/* Main Categories (Overflow visible for tooltips) */}

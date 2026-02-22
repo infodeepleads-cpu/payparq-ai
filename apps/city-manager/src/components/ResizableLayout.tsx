@@ -54,7 +54,7 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
   }, [resize, stopResizing]);
 
   return (
-    <div className="flex flex-1 overflow-hidden relative w-full" ref={containerRef}>
+    <div className="flex flex-1 overflow-hidden relative" ref={containerRef}>
       {/* Middle Pane - Hidden on mobile if on root (chat view), otherwise full width */}
       <div 
         className={`${isRoot ? 'hidden md:block' : 'block w-full md:w-auto'} flex-shrink-0 h-full overflow-hidden bg-gray-50/50`}
@@ -66,7 +66,9 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
         >
           {/* Apply width only on desktop to allow resizing */}
           <div className="md:block h-full" style={{ width: middleWidth }}>
-             {children}
+            <div className="max-w-3xl w-full mx-auto px-4 md:px-0 overflow-x-hidden">
+              {children}
+            </div>
           </div>
         </div>
       </div>
@@ -78,7 +80,7 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
       />
 
       {/* Right Pane (MachineIo) - Visible on mobile only if on root, always visible on desktop */}
-      <div className={`${!isRoot ? 'hidden md:block' : 'block'} flex-1 h-full w-full md:min-w-[300px] overflow-hidden bg-white`}>
+      <div className={`${!isRoot ? 'hidden md:block' : 'block'} flex-1 h-full md:min-w-[300px] overflow-hidden bg-white`}>
         {rightPanel}
       </div>
     </div>

@@ -17,7 +17,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex flex-col h-full w-full bg-background overflow-hidden pt-[60px]">
       <Header />
-      <div className="flex flex-1 overflow-hidden relative w-full">
+      <div className="flex flex-1 overflow-x-hidden overflow-y-hidden relative pl-[60px]">
         <Sidebar />
         <ResizableLayout rightPanel={<MachineIo />}>
           {children}

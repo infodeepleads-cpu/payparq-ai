@@ -28,13 +28,13 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] border-b border-gray-100 bg-sidebar shrink-0 z-50 overflow-x-hidden">
+    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] border-b border-gray-100 bg-sidebar shrink-0 z-50 overflow-visible">
         {/* Logo */}
         <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-auto md:px-0 md:mr-0">
           <h1 className="text-xl font-bold text-black tracking-tight">PayParq</h1>
         </div>
 
-      <div className="flex items-center gap-3 md:gap-4 mx-auto md:ml-auto">
+      <div className="flex items-center gap-3 md:gap-4 mx-auto md:ml-auto overflow-visible">
         {/* Reminders */}
         <Link 
           href={{ pathname: "/reminders" }}
@@ -82,6 +82,7 @@ export default function Header() {
           <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
+          <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Logout</span>
         </button>
       </div>
     </header>

@@ -49,13 +49,13 @@ export default function Page() {
   ];
 
   return (
-    <div className="h-screen bg-white overflow-y-auto">
+    <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
       <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-4 overflow-x-hidden">
         <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
           <span className="text-xs font-semibold tracking-tight text-black mr-4">RESOURCES</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 overflow-x-hidden">
           {categories.map((category) => (
             <div key={category}>
               <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">
@@ -69,7 +69,7 @@ export default function Page() {
                       key={item.id} 
                       className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1"
                     >
-                      <span className="text-xs font-bold text-black shrink-0">{item.name}</span>
+                      <span className="text-xs font-bold text-black shrink-0 break-words">{item.name}</span>
                       {item.link ? (
                         <a 
                           href={item.link} 

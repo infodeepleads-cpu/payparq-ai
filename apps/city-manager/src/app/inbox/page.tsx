@@ -71,7 +71,7 @@ export default function Inbox() {
               <div className="text-center text-gray-400 text-sm">No emails yet.</div>
             </div>
           ) : (
-            <div className="space-y-1 pb-10 pr-12 md:pr-0">
+            <div className="space-y-1 pb-10 overflow-x-hidden">
               {emails.map((email) => {
                 const isExpanded = expandedId === email.id;
                 return (
@@ -124,7 +124,7 @@ export default function Inbox() {
                             })}</span>
                           </div>
                           <div
-                            className="prose prose-sm max-w-none text-sm"
+                            className="prose prose-sm max-w-none text-sm break-words whitespace-normal overflow-x-hidden"
                             dangerouslySetInnerHTML={{ __html: email.html_body || email.text_body || "<span class='text-gray-400 italic'>No content</span>" }}
                           />
                         </div>

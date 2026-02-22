@@ -206,7 +206,7 @@ export default function Page() {
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-4xl w-full mx-auto px-2 md:px-8 md:pr-16 py-6 pb-32 overflow-x-hidden">
+    <div className="max-w-4xl w-full mx-auto px-2 md:px-8 py-6 pb-32 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
         <span className="text-[10px] text-gray-400">Contacts & Status</span>
@@ -253,28 +253,20 @@ export default function Page() {
                   <h3 className="text-xs font-bold text-black">Tier {tier.id}: {tier.label}</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
+                  <span className="flex items-center justify-center min-w-[20px] h-5 text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 rounded-full">
                     {tierContacts.length}
                   </span>
-                  <svg 
-                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </div>
               </div>
 
               {isExpanded && (
-                <div className="pl-4 pr-2 pb-4 space-y-3 mt-2">
+                <div className="pl-4 pr-2 pb-4 space-y-3 mt-2 overflow-x-hidden">
                   {tierContacts.length === 0 ? (
                     <p className="text-xs text-gray-400 italic py-2">No contacts in this tier.</p>
                   ) : (
                     tierContacts.map((contact, idx) => (
                       <div key={contact.id} className="p-0 rounded-lg">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Left Column (3 fields): a, b, c */}
                           <div className="flex flex-col gap-3">
                             {/* a) Decision Maker */}
