@@ -112,6 +112,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
               <label className="block text-xs font-bold uppercase mb-1">Grad i Lokacija</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.city}
                 onChange={(e) => handleChange("city", e.target.value)}
@@ -121,6 +125,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
               <label className="block text-xs font-bold uppercase mb-1">Adresa / Šira lokacija</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.address}
                 onChange={(e) => handleChange("address", e.target.value)}
@@ -131,6 +139,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <label className="block text-xs font-bold uppercase mb-1">Datum</label>
                 <input 
                   type="date" 
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm"
                   value={formData.date}
                   onChange={(e) => handleChange("date", e.target.value)}
@@ -140,6 +152,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <label className="block text-xs font-bold uppercase mb-1">City Manager</label>
                 <input 
                   type="text" 
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm"
                   value={formData.manager}
                   onChange={(e) => handleChange("manager", e.target.value)}
@@ -156,6 +172,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <label className="block text-xs font-bold mb-1">Naziv institucije / odjela</label>
                 <input 
                   type="text" 
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm"
                   value={formData.institution}
                   onChange={(e) => handleChange("institution", e.target.value)}
@@ -166,6 +186,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                   <label className="block text-xs font-bold mb-1">Kontakt osoba</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.contactPerson}
                     onChange={(e) => handleChange("contactPerson", e.target.value)}
@@ -175,6 +199,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                   <label className="block text-xs font-bold mb-1">Kontakt (tel/email)</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.contactInfo}
                     onChange={(e) => handleChange("contactInfo", e.target.value)}
@@ -204,6 +232,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
             {formData.permitStatus === "UVJETNO" && (
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 placeholder="Navesti uvjete..."
                 className="w-full border border-gray-300 rounded p-2 text-sm mt-2"
                 value={formData.permitConditions}
@@ -245,6 +277,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <input 
                   type="text" 
                   placeholder="Drugo..."
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm"
                   value={formData.otherPermit}
                   onChange={(e) => handleChange("otherPermit", e.target.value)}
@@ -279,6 +315,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
             {formData.specialZone && (
               <textarea 
                 placeholder="Navesti naziv zone, udaljenost i ograničenja..."
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm mt-2 h-20"
                 value={formData.specialZoneDetails}
                 onChange={(e) => handleChange("specialZoneDetails", e.target.value)}
@@ -310,6 +350,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <p className="text-xs text-gray-600 mb-1">Minimalna udaljenost od ceste (m):</p>
                 <input 
                   type="number" 
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-24 border border-gray-300 rounded p-2 text-sm"
                   value={formData.signDistance}
                   onChange={(e) => handleChange("signDistance", e.target.value)}
@@ -384,6 +428,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                   <input 
                     type="text" 
                     placeholder="Drugo..."
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm mt-2"
                     value={formData.camperOther}
                     onChange={(e) => handleChange("camperOther", e.target.value)}
@@ -401,6 +449,10 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
               placeholder="Unesite dodatne napomene..."
               value={formData.commentary}
               onChange={(e) => handleChange("commentary", e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck="false"
             />
           </div>
 
@@ -420,12 +472,20 @@ export default function PermitsForm({ onClose, onSave, initialData, tier }: Perm
                 <div className="flex gap-2">
                   <input 
                     type="date" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.final_date}
                     onChange={(e) => handleChange("final_date", e.target.value)}
                   />
                   <input 
                     type="time" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.final_time}
                     onChange={(e) => handleChange("final_time", e.target.value)}

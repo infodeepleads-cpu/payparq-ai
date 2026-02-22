@@ -120,6 +120,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Naziv</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={competitor.name}
                     onChange={(e) => handleChange(competitor.id, "name", e.target.value)}
@@ -132,6 +136,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Adresa / Lokacija</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={competitor.address}
                     onChange={(e) => handleChange(competitor.id, "address", e.target.value)}
@@ -144,6 +152,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Cijena</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={competitor.price}
                     onChange={(e) => handleChange(competitor.id, "price", e.target.value)}
@@ -156,6 +168,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Sadržaj</label>
                   <textarea 
                     className="w-full border border-gray-300 rounded p-2 text-sm h-20"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     value={competitor.content}
                     onChange={(e) => handleChange(competitor.id, "content", e.target.value)}
                     placeholder="Amenities, features, etc."
@@ -167,6 +183,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Ocjena / Recenzije</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={competitor.rating}
                     onChange={(e) => handleChange(competitor.id, "rating", e.target.value)}
@@ -179,6 +199,10 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                   <label className="block text-xs font-bold uppercase mb-1">Napomena</label>
                   <textarea 
                     className="w-full border border-gray-300 rounded p-2 text-sm h-24"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     value={competitor.note}
                     onChange={(e) => handleChange(competitor.id, "note", e.target.value)}
                     placeholder="Additional notes..."
@@ -211,12 +235,20 @@ export default function CompetitionForm({ onClose, onSave, initialData, tier }: 
                 <div className="flex gap-2">
                   <input 
                     type="date" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                   />
                   <input 
                     type="time" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}

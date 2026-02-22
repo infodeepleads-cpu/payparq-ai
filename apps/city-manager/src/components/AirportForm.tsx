@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import SignaturePad from "./SignaturePad";
 import { getSupabase, getCurrentUser } from "../lib/supabase";
 
@@ -26,9 +26,9 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
     final_time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" })
   });
 
-  const handleSignatureChange = (signature: string | null) => {
+  const handleSignatureChange = useCallback((signature: string | null) => {
     setFormData((prev: any) => ({ ...prev, final_signature: signature }));
-  };
+  }, []);
 
   const handleSend = async () => {
     try {
@@ -94,6 +94,10 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
               <label className="block text-xs font-bold uppercase mb-1">Naziv aerodroma</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.airportName}
                 onChange={(e) => handleChange("airportName", e.target.value)}
@@ -103,6 +107,10 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
               <label className="block text-xs font-bold uppercase mb-1">Kontaktirana osoba / odjel</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.contactPerson}
                 onChange={(e) => handleChange("contactPerson", e.target.value)}
@@ -147,6 +155,10 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
             </div>
             <textarea 
               placeholder="Detalji..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck="false"
               className="w-full border border-gray-300 rounded p-2 text-sm h-20"
               value={formData.restrictionDetails}
               onChange={(e) => handleChange("restrictionDetails", e.target.value)}
@@ -189,6 +201,10 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
                 <input 
                   type="text" 
                   placeholder="Drugo..."
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm mt-2"
                   value={formData.pressureOther}
                   onChange={(e) => handleChange("pressureOther", e.target.value)}
@@ -203,6 +219,10 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
             <textarea 
               className="w-full border border-gray-300 rounded p-2 text-sm h-32"
               placeholder="Unesite dodatne napomene..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck="false"
               value={formData.commentary}
               onChange={(e) => handleChange("commentary", e.target.value)}
             />
@@ -224,12 +244,20 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
                 <div className="flex gap-2">
                   <input 
                     type="date" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.final_date}
                     onChange={(e) => handleChange("final_date", e.target.value)}
                   />
                   <input 
                     type="time" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.final_time}
                     onChange={(e) => handleChange("final_time", e.target.value)}

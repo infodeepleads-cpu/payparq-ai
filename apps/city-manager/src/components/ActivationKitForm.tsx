@@ -185,6 +185,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Grad / Lokacija</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.city}
                 onChange={(e) => handleChange("city", e.target.value)}
@@ -194,6 +198,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Adresa lokacije</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.address}
                 onChange={(e) => handleChange("address", e.target.value)}
@@ -203,6 +211,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Datum</label>
               <input 
                 type="date" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.date}
                 onChange={(e) => handleChange("date", e.target.value)}
@@ -212,6 +224,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Ime i prezime City Managera</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.managerName}
                 onChange={(e) => handleChange("managerName", e.target.value)}
@@ -221,6 +237,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Kontakt vlasnika / predstavnika</label>
               <input 
                 type="text" 
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 className="w-full border border-gray-300 rounded p-2 text-sm"
                 value={formData.ownerContact}
                 onChange={(e) => handleChange("ownerContact", e.target.value)}
@@ -241,6 +261,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Napomena (priprema)</label>
               <textarea 
                 className="w-full border border-gray-300 rounded p-2 text-sm h-20"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 value={formData.prep_note}
                 onChange={(e) => handleChange("prep_note", e.target.value)}
               />
@@ -333,6 +357,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
                         <span className="text-sm">Ukupan broj mjesta:</span>
                         <input 
                           type="number"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck="false"
                           className="border border-gray-300 rounded p-1 text-sm w-24"
                           value={formData.act_total_spots}
                           onChange={(e) => handleChange("act_total_spots", e.target.value)}
@@ -365,6 +393,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
                       <label className="block text-xs font-bold uppercase mb-1">Datum i način slanja</label>
                       <input 
                         type="text" 
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck="false"
                         className="w-full border border-gray-300 rounded p-2 text-sm"
                         value={formData.act_send_date_method}
                         onChange={(e) => handleChange("act_send_date_method", e.target.value)}
@@ -387,6 +419,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
                   <label className="block text-xs font-bold uppercase mb-1">Sažetak razloga odbijanja</label>
                   <textarea 
                     className="w-full border border-gray-300 rounded p-2 text-sm h-24"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     value={formData.rej_summary}
                     onChange={(e) => handleChange("rej_summary", e.target.value)}
                   />
@@ -415,6 +451,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
                   <label className="block text-xs font-bold uppercase mb-1">Planirani datum</label>
                   <input 
                     type="date" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={formData.fup_2_date}
                     onChange={(e) => handleChange("fup_2_date", e.target.value)}
@@ -441,6 +481,10 @@ export default function ActivationKitForm({ onClose, onSave, initialData, tier }
               <label className="block text-xs font-bold uppercase mb-1">Napomena – tehnička analiza</label>
               <textarea 
                 className="w-full border border-gray-300 rounded p-2 text-sm h-20"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck="false"
                 value={formData.wk_tech_note}
                 onChange={(e) => handleChange("wk_tech_note", e.target.value)}
               />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getSupabase, getCurrentUser } from "../lib/supabase";
 import SignaturePad from "./SignaturePad";
 
@@ -51,9 +51,9 @@ export default function LotActivationForm({ onClose, onSave, initialData, tier }
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(initialData?.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" }));
 
-  const handleSignatureChange = (newSignature: string | null) => {
+  const handleSignatureChange = useCallback((newSignature: string | null) => {
     setSignature(newSignature || "");
-  };
+  }, []);
 
   const handleSend = async () => {
     try {
@@ -287,6 +287,10 @@ export default function LotActivationForm({ onClose, onSave, initialData, tier }
                 <label className="block text-xs font-bold uppercase mb-2">Naziv lokacije / Adresa</label>
                 <input 
                   type="text" 
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   className="w-full border border-gray-300 rounded p-2 text-sm"
                   value={loc.name}
                   onChange={(e) => handleNameChange(loc.id, e.target.value)}
@@ -376,12 +380,20 @@ export default function LotActivationForm({ onClose, onSave, initialData, tier }
                 <div className="flex gap-2">
                   <input 
                     type="date" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                   />
                   <input 
                     type="time" 
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     className="w-full border border-gray-300 rounded p-2 text-sm"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}

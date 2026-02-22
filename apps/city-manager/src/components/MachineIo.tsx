@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { getSupabase } from "../lib/supabase";
 import TopControlsWidget from "../components/TopControlsWidget";
@@ -15,6 +15,262 @@ type SuggestResponse = {
 
 type Message = { role: "user" | "assistant" | "system"; content: string; attachment?: string; animate?: boolean };
 
+const AI_MODELS = [
+  { id: "auto", name: "Auto (Smart Switch)" },
+  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
+  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
+  { id: "separator-1", name: "──────────", disabled: true },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+  { id: "groq/compound-mini", name: "Groq Compound Mini" },
+  { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick 17B (Groq)" },
+  { id: "meta-llama/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout 17B (Groq)" },
+  { id: "meta-llama/llama-guard-4-12b", name: "Llama Guard 4 12B (Groq)" },
+  { id: "meta-llama/llama-prompt-guard-2-22m", name: "Prompt Guard 2 22M (Groq)" },
+  { id: "meta-llama/llama-prompt-guard-2-86m", name: "Prompt Guard 2 86M (Groq)" },
+  { id: "moonshotai/kimi-k2-instruct", name: "Kimi K2 Instruct (Groq)" },
+  { id: "moonshotai/kimi-k2-instruct-0905", name: "Kimi K2 Instruct 0905 (Groq)" },
+  { id: "openai/gpt-oss-120b", name: "GPT OSS 120B (Groq)" },
+  { id: "openai/gpt-oss-20b", name: "GPT OSS 20B (Groq)" },
+  { id: "openai/gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B (Groq)" },
+  { id: "qwen/qwen3-32b", name: "Qwen3 32B (Groq)" },
+  { id: "whisper-large-v3", name: "Whisper Large v3 (Groq)" },
+  { id: "whisper-large-v3-turbo", name: "Whisper Large v3 Turbo (Groq)" },
+];
+
+const LoadingIndicator = React.memo(() => {
+  const [dots, setDots] = useState(".");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots((prev) => (prev.length < 3 ? prev + "." : "."));
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="w-full py-8">
+      <div className="max-w-3xl mx-auto flex items-center gap-6 px-4 md:px-0">
+        <div className="rounded-full bg-gray-300 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
+        <div className="flex items-center">
+          <span className="text-gray-400 text-sm">{dots}</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+interface InputAreaProps {
+  centered?: boolean;
+  input: string;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  selectedImage: string | null;
+  setSelectedImage: React.Dispatch<React.SetStateAction<string | null>>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  showModelSelector: boolean;
+  setShowModelSelector: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedModel: string;
+  setSelectedModel: React.Dispatch<React.SetStateAction<string>>;
+  loading: boolean;
+  sendMessage: () => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const InputArea = React.memo(({ 
+  centered = false,
+  input,
+  setInput,
+  selectedImage,
+  setSelectedImage,
+  fileInputRef,
+  inputRef,
+  showModelSelector,
+  setShowModelSelector,
+  selectedModel,
+  setSelectedModel,
+  loading,
+  sendMessage,
+  handleFileSelect
+}: InputAreaProps) => {
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Voice input is not supported in this browser.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput((prev) => prev + (prev ? " " : "") + transcript);
+    };
+
+    recognition.start();
+  };
+
+  return (
+    <div className={`relative w-full max-w-3xl mx-auto transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
+      {selectedImage && (
+        <div className="relative mb-2 w-fit">
+          <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full p-0.5 hover:bg-black transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none">
+         <button
+           onClick={() => fileInputRef.current?.click()}
+           className="bg-transparent border-0 p-2 focus:outline-none text-gray-400 hover:text-gray-600 transition-colors"
+           title="Upload image"
+         >
+           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+           </svg>
+         </button>
+         <input
+           type="file"
+           ref={fileInputRef}
+           className="hidden"
+           accept="image/*"
+           onChange={handleFileSelect}
+         />
+         <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder={isListening ? "Listening..." : "Ask anything..."}
+            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
+            autoFocus
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck="false"
+            ref={inputRef}
+          />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              {showModelSelector && (
+                <div className="hidden md:block absolute bottom-full right-0 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom-right shadow-xl border border-gray-100">
+                    <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
+                      {AI_MODELS.map((model, idx) => (
+                        <button
+                          key={idx}
+                          disabled={model.disabled}
+                          onClick={() => {
+                            if (model.disabled) return;
+                            if (model.id) setSelectedModel(model.id);
+                            setShowModelSelector(false);
+                          }}
+                          className={`group flex items-center justify-between p-1.5 rounded transition-all w-full text-left border-none outline-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
+                            model.disabled 
+                              ? "text-gray-300 cursor-default" 
+                              : model.id === selectedModel
+                                 ? "text-black font-medium bg-gray-50"
+                                 : "text-gray-500 hover:text-black hover:bg-gray-50"
+                          }`}
+                        >
+                          <span className="text-xs truncate flex-1">{model.name}</span>
+                          {model.id === selectedModel && (
+                            <svg className="w-3 h-3 text-black shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+              )}
+              {showModelSelector && (
+                <div 
+                  className="hidden md:block fixed inset-0 z-[9998] bg-transparent"
+                  onClick={() => setShowModelSelector(false)}
+                />
+              )}
+              <button
+                  type="button"
+                  onClick={() => setShowModelSelector(!showModelSelector)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors group shadow-none ring-0"
+                  title="Select AI Model"
+               >
+                  <span className="text-xs font-medium leading-none">AI</span>
+               </button>
+             </div>
+             <button
+                type="button"
+                onClick={toggleListening}
+                disabled={loading}
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-0 focus:outline-none transition-colors shadow-none ring-0 ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-gray-100 text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                aria-label="Voice"
+                title="Voice"
+             >
+                {isListening ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
+             </button>
+            <button
+               onClick={sendMessage}
+               disabled={(!input.trim() && !selectedImage) || loading}
+               className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 focus:outline-none shadow-sm ${
+                 input.trim() || selectedImage
+                   ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
+               }`}
+               aria-label="Send"
+               title="Send"
+               data-role="cta"
+            >
+               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
+               </svg>
+            </button>
+         </div>
+      </div>
+    </div>
+  );
+});
+
 export default function MachineIo() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -25,7 +281,7 @@ export default function MachineIo() {
   const loadingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [loadingDots, setLoadingDots] = useState(".");
+
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [reminders, setReminders] = useState<any[]>([]);
   const CET_TZ = "Europe/Zagreb";
@@ -74,36 +330,7 @@ export default function MachineIo() {
     return () => clearInterval(interval);
   }, []);
 
-  const AI_MODELS = [
-    { id: "auto", name: "Auto (Smart Switch)" },
-    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
-    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
-    { id: "separator-1", name: "──────────", disabled: true },
-    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-    { id: "groq/compound-mini", name: "Groq Compound Mini" },
-    { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick 17B (Groq)" },
-    { id: "meta-llama/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout 17B (Groq)" },
-    { id: "meta-llama/llama-guard-4-12b", name: "Llama Guard 4 12B (Groq)" },
-    { id: "meta-llama/llama-prompt-guard-2-22m", name: "Prompt Guard 2 22M (Groq)" },
-    { id: "meta-llama/llama-prompt-guard-2-86m", name: "Prompt Guard 2 86M (Groq)" },
-    { id: "moonshotai/kimi-k2-instruct", name: "Kimi K2 Instruct (Groq)" },
-    { id: "moonshotai/kimi-k2-instruct-0905", name: "Kimi K2 Instruct 0905 (Groq)" },
-    { id: "openai/gpt-oss-120b", name: "GPT OSS 120B (Groq)" },
-    { id: "openai/gpt-oss-20b", name: "GPT OSS 20B (Groq)" },
-    { id: "openai/gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B (Groq)" },
-    { id: "qwen/qwen3-32b", name: "Qwen3 32B (Groq)" },
-    { id: "whisper-large-v3", name: "Whisper Large v3 (Groq)" },
-    { id: "whisper-large-v3-turbo", name: "Whisper Large v3 Turbo (Groq)" },
-  ];
 
-  useEffect(() => {
-    if (!loading) return;
-    const interval = setInterval(() => {
-      setLoadingDots((prev) => (prev.length < 3 ? prev + "." : "."));
-    }, 500);
-    return () => clearInterval(interval);
-  }, [loading]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -418,7 +645,6 @@ export default function MachineIo() {
     setSelectedImage(null);
     setError(null);
     setLoading(true);
-    setLoadingDots(".");
     loadingRef.current = true;
 
     const id = ensureThread(userText || "Image Upload");
@@ -724,131 +950,7 @@ export default function MachineIo() {
     }
   };
 
-  const InputArea = ({ centered = false }: { centered?: boolean }) => (
-    <div className={`relative w-full max-w-3xl mx-auto transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
-      {selectedImage && (
-        <div className="relative mb-2 w-fit">
-          <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
-          <button
-            onClick={() => setSelectedImage(null)}
-            className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full p-0.5 hover:bg-black transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none">
-         <button
-           onClick={() => fileInputRef.current?.click()}
-           className="bg-transparent border-0 p-2 focus:outline-none text-gray-400 hover:text-gray-600 transition-colors"
-           title="Upload image"
-         >
-           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-           </svg>
-         </button>
-         <input
-           type="file"
-           ref={fileInputRef}
-           className="hidden"
-           accept="image/*"
-           onChange={handleFileSelect}
-         />
-         <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Ask anything..."
-            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
-            autoFocus
-            ref={inputRef}
-          />
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative">
-              {showModelSelector && (
-                <div className="hidden md:block absolute bottom-full right-0 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom-right">
-                    <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
-                      {AI_MODELS.map((model, idx) => (
-                        <button
-                          key={idx}
-                          disabled={model.disabled}
-                          onClick={() => {
-                            if (model.disabled) return;
-                            if (model.id) setSelectedModel(model.id);
-                            setShowModelSelector(false);
-                          }}
-                          className={`group flex items-center justify-between p-1.5 rounded transition-all w-full text-left border-none outline-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
-                            model.disabled 
-                              ? "text-gray-300 cursor-default" 
-                              : model.id === selectedModel
-                                 ? "text-black font-medium"
-                                 : "text-gray-500 hover:text-black"
-                          }`}
-                        >
-                          <span className="text-xs truncate flex-1">{model.name}</span>
-                          {model.id === selectedModel && (
-                            <svg className="w-3 h-3 text-black shrink-0 ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-              )}
-              {showModelSelector && (
-                <div 
-                  className="hidden md:block fixed inset-0 z-[9998] bg-transparent"
-                  onClick={() => setShowModelSelector(false)}
-                />
-              )}
-              <button
-                  type="button"
-                  onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors group shadow-none ring-0"
-                  title="Select AI Model"
-               >
-                  <span className="text-sm font-normal leading-none">AI</span>
-               </button>
-             </div>
-             <button
-                type="button"
-                disabled={loading}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors shadow-none ring-0"
-                aria-label="Voice"
-                title="Voice"
-             >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-             </button>
-            <button
-               onClick={sendMessage}
-               disabled={(!input.trim() && !selectedImage) || loading}
-               className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 focus:outline-none shadow-sm ${
-                 input.trim() || selectedImage
-                   ? "bg-zinc-900 text-white hover:bg-zinc-800" 
-                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
-               }`}
-               aria-label="Send"
-               title="Send"
-               data-role="cta"
-            >
-               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round"/>
-               </svg>
-            </button>
-         </div>
-      </div>
-    </div>
-  );
+
 
   useEffect(() => {
     try {
@@ -915,7 +1017,22 @@ export default function MachineIo() {
              <div className="w-full mb-1 block">
                <TopControlsWidget />
              </div>
-             <InputArea centered={true} />
+             <InputArea 
+               centered={true}
+               input={input}
+               setInput={setInput}
+               selectedImage={selectedImage}
+               setSelectedImage={setSelectedImage}
+               fileInputRef={fileInputRef}
+               inputRef={inputRef}
+               showModelSelector={showModelSelector}
+               setShowModelSelector={setShowModelSelector}
+               selectedModel={selectedModel}
+               setSelectedModel={setSelectedModel}
+               loading={loading}
+               sendMessage={sendMessage}
+               handleFileSelect={handleFileSelect}
+             />
            </div>
         </div>
       ) : (
@@ -926,16 +1043,7 @@ export default function MachineIo() {
               {messages.map((m, i) => (
                   <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
               ))}
-              {loading && (
-                <div className="w-full py-8">
-                  <div className="max-w-3xl mx-auto flex items-center gap-6 px-4 md:px-0">
-                    <div className="rounded-full bg-gray-300 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
-                    <div className="flex items-center">
-                      <span className="text-gray-400 text-sm">{loadingDots}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {loading && <LoadingIndicator />}
               {error && (
                 <div className="w-full py-4 text-center">
                    <span className="text-red-500 text-sm bg-red-50 px-4 py-2 rounded-full border border-red-100">{error}</span>
@@ -951,7 +1059,21 @@ export default function MachineIo() {
                <div className="w-full mb-2 block">
                  <TopControlsWidget />
                </div>
-               <InputArea />
+               <InputArea 
+                 input={input}
+                 setInput={setInput}
+                 selectedImage={selectedImage}
+                 setSelectedImage={setSelectedImage}
+                 fileInputRef={fileInputRef}
+                 inputRef={inputRef}
+                 showModelSelector={showModelSelector}
+                 setShowModelSelector={setShowModelSelector}
+                 selectedModel={selectedModel}
+                 setSelectedModel={setSelectedModel}
+                 loading={loading}
+                 sendMessage={sendMessage}
+                 handleFileSelect={handleFileSelect}
+               />
                <p className="text-center text-xs text-gray-400 mt-2 pb-safe">
                   machine.io invites you to challenge it so we can go deeper.
                </p>

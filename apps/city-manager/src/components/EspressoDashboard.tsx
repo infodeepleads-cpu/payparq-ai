@@ -17,19 +17,32 @@ type Contact = {
   decisionMaker: string;
   city: string;
   estimatedCapacity: number;
-  decisionStatus: "ENTRY" | "DEMO" | "TRIAL" | "CONTRACT" | "NO" | "FOLLOW UP";
+  decisionStatus: string;
   noReason?: string;
   cooldownUntil?: string;
   notes?: string;
   createdAt: number;
 };
 
-const CRM_KEY = "pp_crm_contacts";
-
-function loadContacts(): Contact[] {
+async function loadContacts(): Promise<Contact[]> {
   try {
-    const raw = localStorage.getItem(CRM_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const supabase = getSupabase();
+    const { data } = await supabase.from("crm_contacts").select("*");
+    
+    if (!data) return [];
+
+    return data.map((c: any) => ({
+      id: c.id,
+      tier: c.tier,
+      decisionMaker: c.decision_maker,
+      city: c.location,
+      estimatedCapacity: c.estimated_capacity,
+      decisionStatus: c.status,
+      noReason: c.no_reason,
+      cooldownUntil: c.follow_up_date,
+      notes: c.notes,
+      createdAt: new Date(c.created_at).getTime(),
+    }));
   } catch {
     return [];
   }
@@ -91,8 +104,8 @@ export default function EspressoDashboard() {
   const [cityHub, setCityHub] = useState(false);
 
   useEffect(() => {
-    setContacts(loadContacts());
-    const handler = () => setContacts(loadContacts());
+    loadContacts().then(setContacts);
+    const handler = () => loadContacts().then(setContacts);
     window.addEventListener("crm_storage", handler);
     
     // Load hub state
@@ -118,9 +131,10 @@ export default function EspressoDashboard() {
 
   // KPIs
   const lotsMapped = contacts.length;
-  const lotsActivated = contacts.filter((c) => c.decisionStatus === "CONTRACT").length;
+  // "Contract Status (Contractual Obligation)" is the activated status
+  const lotsActivated = contacts.filter((c) => c.decisionStatus === "Contract Status (Contractual Obligation)").length;
   const currentValue = contacts
-    .filter((c) => c.decisionStatus === "CONTRACT")
+    .filter((c) => c.decisionStatus === "Contract Status (Contractual Obligation)")
     .reduce((acc, c) => acc + (c.estimatedCapacity || 0) * 100, 0);
 
   const MissionItem = ({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) => (
@@ -162,7 +176,7 @@ export default function EspressoDashboard() {
   const [showLotForm, setShowLotForm] = useState(false);
   const [lotData, setLotData] = useState<any>(null);
   const [docsState, setDocsState] = useState<Record<string, boolean>>({});
-  const [submissionStatuses, setSubmissionStatuses] = useState<Record<string, string>>({});
+  const [submissionStatuses, setSubmissionStatuses] = useState<Record<string, { status: string, timestamp: string }>>({});
   const [showStakeholderModal, setShowStakeholderModal] = useState(false);
 
   useEffect(() => {
@@ -220,14 +234,14 @@ export default function EspressoDashboard() {
       const supabase = getSupabase();
       const { data } = await supabase
         .from("document_submissions")
-        .select("type, status")
+        .select("type, status, updated_at")
         .eq("user_id", user.id)
         .eq("tier", tier);
         
       if (data) {
-        const statuses: Record<string, string> = {};
+        const statuses: Record<string, { status: string, timestamp: string }> = {};
         data.forEach((s: any) => {
-          statuses[s.type] = s.status;
+          statuses[s.type] = { status: s.status, timestamp: s.updated_at };
         });
         setSubmissionStatuses(statuses);
       }
@@ -238,21 +252,51 @@ export default function EspressoDashboard() {
 
   // Helper to get status badge
   const getStatusBadge = (type: string, isFilled: boolean) => {
-    const status = submissionStatuses[type];
+    const info = submissionStatuses[type];
+    const status = info?.status;
+    const timestamp = info?.timestamp ? new Date(info.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "";
     
     if (status === "approved") {
-      return <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">PASSED</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">PASSED</span>
+          <span className="text-[10px] text-gray-400">{timestamp}</span>
+        </div>
+      );
     }
     if (status === "rejected") {
-      return <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded">REJECTED</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded">REJECTED</span>
+          <span className="text-[10px] text-gray-400">{timestamp}</span>
+        </div>
+      );
     }
     if (status === "pending") {
-      return <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded">PENDING REVIEW</span>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded">PENDING REVIEW</span>
+          <span className="text-[10px] text-gray-400">{timestamp}</span>
+        </div>
+      );
     }
     if (isFilled) {
        return <span className="text-[10px] text-blue-600 font-bold">FILLED</span>;
     }
     return <span className="text-[10px] text-gray-500 font-bold">FILL FORM</span>;
+  };
+
+  const canOpenForm = (type: string) => {
+    const status = submissionStatuses[type]?.status;
+    return status !== "pending" && status !== "approved";
+  };
+
+  const handleFormClick = (type: string, showFn: (show: boolean) => void) => {
+    if (canOpenForm(type)) {
+      showFn(true);
+    } else {
+      alert("This form is currently under review or approved and cannot be edited.");
+    }
   };
 
 
@@ -262,30 +306,7 @@ export default function EspressoDashboard() {
     fetchSubmissionStatuses(progress.currentTier);
   };
 
-  const handlePermitsSave = (data: any) => {
-    setPermitsData(data);
-    localStorage.setItem(`pp_espresso_permits_data_t${progress.currentTier}`, JSON.stringify(data));
-    setShowPermitsForm(false);
-    setDocsState(s => ({ ...s, [`t${progress.currentTier}-permits`]: true }));
-    fetchSubmissionStatuses(progress.currentTier);
-  };
-
-  const handleActivationSave = (data: any) => {
-    setActivationData(data);
-    localStorage.setItem(`pp_espresso_activation_data_t${progress.currentTier}`, JSON.stringify(data));
-    setShowActivationForm(false);
-    fetchSubmissionStatuses(progress.currentTier);
-  };
-
-  const handleCompetitionSave = (data: any) => {
-    setCompetitionData(data);
-    localStorage.setItem(`pp_espresso_competition_data_t${progress.currentTier}`, JSON.stringify(data));
-    setShowCompetitionForm(false);
-    setDocsState(s => ({ ...s, [`t${progress.currentTier}-competition`]: true }));
-    fetchSubmissionStatuses(progress.currentTier);
-  };
-  
-  const submitDocument = async (tier: number, type: "airport" | "stakeholder", content: any) => {
+  const submitDocument = async (tier: number, type: string, content: any) => {
     try {
       const supabase = getSupabase();
       const user = await getCurrentUser();
@@ -294,23 +315,46 @@ export default function EspressoDashboard() {
 
       let finalContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
       
-      // For Stakeholder analysis, we append signature and date automatically if it's just text
-      // But DocumentSubmissionModal handles that for stakeholder type.
-      // If we are calling this from AirportForm (type='airport'), content is JSON string.
-      
-      const { error } = await supabase.from("document_submissions").insert({
-        user_id: user.id,
-        tier,
-        type,
-        content: finalContent,
-        status: "pending"
-      });
+      // Check if a submission already exists for this tier and type
+      const { data: existing } = await supabase
+        .from("document_submissions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("tier", tier)
+        .eq("type", type)
+        .single();
+
+      let error;
+      if (existing) {
+        // Update existing submission
+        const result = await supabase
+          .from("document_submissions")
+          .update({
+            content: finalContent,
+            status: "pending",
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", existing.id);
+        error = result.error;
+      } else {
+        // Create new submission
+        const result = await supabase
+          .from("document_submissions")
+          .insert({
+            user_id: user.id,
+            tier,
+            type,
+            content: finalContent,
+            status: "pending"
+          });
+        error = result.error;
+      }
 
       if (error) throw error;
       
       // Update local state to reflect submission
       // Triggers re-render via useEspressoSystem sync usually, but we can alert user
-      alert("Document submitted successfully! It is now under review.");
+      // alert("Document submitted successfully! It is now under review.");
       
     } catch (e) {
       console.error("Submission failed", e);
@@ -318,17 +362,45 @@ export default function EspressoDashboard() {
     }
   };
 
-  const handleAirportSave = (data: any) => {
+  const handlePermitsSave = async (data: any) => {
+    setPermitsData(data);
+    localStorage.setItem(`pp_espresso_permits_data_t${progress.currentTier}`, JSON.stringify(data));
+    await submitDocument(progress.currentTier, "permits", data);
+    setShowPermitsForm(false);
+    setDocsState(s => ({ ...s, [`t${progress.currentTier}-permits`]: true }));
+    fetchSubmissionStatuses(progress.currentTier);
+  };
+
+  const handleActivationSave = async (data: any) => {
+    setActivationData(data);
+    localStorage.setItem(`pp_espresso_activation_data_t${progress.currentTier}`, JSON.stringify(data));
+    await submitDocument(progress.currentTier, "hub_activation", data);
+    setShowActivationForm(false);
+    fetchSubmissionStatuses(progress.currentTier);
+  };
+
+  const handleCompetitionSave = async (data: any) => {
+    setCompetitionData(data);
+    localStorage.setItem(`pp_espresso_competition_data_t${progress.currentTier}`, JSON.stringify(data));
+    await submitDocument(progress.currentTier, "competition", data);
+    setShowCompetitionForm(false);
+    setDocsState(s => ({ ...s, [`t${progress.currentTier}-competition`]: true }));
+    fetchSubmissionStatuses(progress.currentTier);
+  };
+
+  const handleAirportSave = async (data: any) => {
     setAirportData(data);
     localStorage.setItem(`pp_espresso_airport_data_t${progress.currentTier}`, JSON.stringify(data));
+    await submitDocument(progress.currentTier, "airport", data);
     setShowAirportForm(false);
     setDocsState(s => ({ ...s, [`t${progress.currentTier}-specific`]: true }));
     fetchSubmissionStatuses(progress.currentTier);
   };
   
-  const handleLotSave = (data: any) => {
+  const handleLotSave = async (data: any) => {
     setLotData(data);
     localStorage.setItem(`pp_espresso_lot_data_t${progress.currentTier}`, JSON.stringify(data));
+    await submitDocument(progress.currentTier, "lot_activation", data);
     setShowLotForm(false);
     setDocsState(s => ({ ...s, [`t${progress.currentTier}-activation`]: true }));
     fetchSubmissionStatuses(progress.currentTier);
@@ -549,10 +621,10 @@ export default function EspressoDashboard() {
 
             {/* Permits */}
             <div 
-              onClick={() => setShowPermitsForm(true)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+              onClick={() => handleFormClick("permits", setShowPermitsForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
                 docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50/50" : ""
-              }`}
+              } ${canOpenForm("permits") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex items-center gap-2">
                 <div>
@@ -567,10 +639,10 @@ export default function EspressoDashboard() {
 
             {/* Competition */}
             <div 
-              onClick={() => setShowCompetitionForm(true)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+              onClick={() => handleFormClick("competition", setShowCompetitionForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
                 docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50/50" : ""
-              }`}
+              } ${canOpenForm("competition") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex items-center gap-2">
                 <div>
@@ -585,10 +657,10 @@ export default function EspressoDashboard() {
 
             {/* Lot Activation */}
             <div 
-              onClick={() => setShowLotForm(true)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+              onClick={() => handleFormClick("lot_activation", setShowLotForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
                 docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50/50" : ""
-              }`}
+              } ${canOpenForm("lot_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex items-center gap-3">
                 <div>
@@ -604,34 +676,42 @@ export default function EspressoDashboard() {
             {/* Special Forms Logic */}
             {progress.currentTier === 1 && (
               <div 
-                onClick={() => setShowAirportForm(true)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1 cursor-pointer ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""}`}
+                onClick={() => handleFormClick("airport", setShowAirportForm)}
+                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""} ${canOpenForm("airport") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
               >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-black shrink-0">Airport Analysis</span>
-                  {getStatusBadge("airport", !!docsState[`t${progress.currentTier}-specific`])}
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold text-black">Airport Analysis</h3>
+                    <div className="mt-1">
+                      {getStatusBadge("airport", !!docsState[`t${progress.currentTier}-specific`])}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
             
             {(progress.currentTier === 6 || progress.currentTier === 7) && (
               <div 
-                onClick={() => setShowStakeholderModal(true)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1 cursor-pointer ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""}`}
+                onClick={() => handleFormClick("stakeholder", setShowStakeholderModal)}
+                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""} ${canOpenForm("stakeholder") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
               >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-black shrink-0">Stakeholder Analysis</span>
-                   {getStatusBadge("stakeholder", !!docsState[`t${progress.currentTier}-specific`])}
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="text-xs font-bold text-black">Stakeholder Analysis</h3>
+                    <div className="mt-1">
+                      {getStatusBadge("stakeholder", !!docsState[`t${progress.currentTier}-specific`])}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* HUB Activation Form (Moved to end) */}
             <div 
-              onClick={() => setShowActivationForm(true)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+              onClick={() => handleFormClick("hub_activation", setShowActivationForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
                 activationData ? "bg-gray-50/50" : ""
-              }`}
+              } ${canOpenForm("hub_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex items-center gap-2">
                 <div>
@@ -652,8 +732,8 @@ export default function EspressoDashboard() {
           
           <div className="space-y-1">
             <div 
-              onClick={() => setShowPermitsForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
+              onClick={() => handleFormClick("permits", setShowPermitsForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("permits") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-400 line-through" : "text-black"}`}>
@@ -669,8 +749,8 @@ export default function EspressoDashboard() {
             </div>
 
             <div 
-              onClick={() => setShowCompetitionForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
+              onClick={() => handleFormClick("competition", setShowCompetitionForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("competition") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-400 line-through" : "text-black"}`}>
@@ -686,8 +766,8 @@ export default function EspressoDashboard() {
             </div>
 
             <div 
-              onClick={() => setShowLotForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
+              onClick={() => handleFormClick("lot_activation", setShowLotForm)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("lot_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-400 line-through" : "text-black"}`}>
@@ -704,8 +784,8 @@ export default function EspressoDashboard() {
 
             {progress.currentTier === 1 && (
               <div 
-                onClick={() => setShowAirportForm(true)}
-                className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+                onClick={() => handleFormClick("airport", setShowAirportForm)}
+                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-3 ${canOpenForm("airport") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
               >
                 <div className="flex-1">
                   <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
@@ -723,8 +803,8 @@ export default function EspressoDashboard() {
 
             {(progress.currentTier === 6 || progress.currentTier === 7) && (
               <div 
-                onClick={() => setShowStakeholderModal(true)}
-                className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+                onClick={() => handleFormClick("stakeholder", setShowStakeholderModal)}
+                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-3 ${canOpenForm("stakeholder") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
               >
                 <div className="flex-1">
                   <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
