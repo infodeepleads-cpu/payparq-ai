@@ -28,13 +28,13 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1cm)] border-b border-gray-100 bg-sidebar shrink-0 z-50">
+    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] border-b border-gray-100 bg-sidebar shrink-0 z-50 overflow-x-hidden">
         {/* Logo */}
         <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-auto md:px-0 md:mr-0">
           <h1 className="text-xl font-bold text-black tracking-tight">PayParq</h1>
         </div>
 
-      <div className="flex items-center gap-1 md:gap-2 ml-[1cm]">
+      <div className="flex items-center gap-3 md:gap-4 mx-auto md:ml-auto">
         {/* Reminders */}
         <Link 
           href={{ pathname: "/reminders" }}
