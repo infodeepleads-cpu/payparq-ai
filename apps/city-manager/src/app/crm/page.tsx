@@ -206,7 +206,7 @@ export default function Page() {
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-4xl w-full mx-auto px-4 md:px-0 py-6 pb-32 overflow-x-hidden">
+    <div className="max-w-4xl w-full mx-auto px-2 md:px-0 py-6 pb-32 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
         <span className="text-[10px] text-gray-400">Contacts & Status</span>

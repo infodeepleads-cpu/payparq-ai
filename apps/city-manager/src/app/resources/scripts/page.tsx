@@ -3,7 +3,7 @@ import React from 'react';
 export default function ScriptsPage() {
   return (
     <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
-      <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-4 overflow-x-hidden">
+      <div className="max-w-3xl w-full mx-auto px-2 md:px-0 py-4 overflow-x-hidden">
         <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
           <span className="text-xs font-semibold tracking-tight text-black uppercase">Personalized Outreach Framework</span>
         </div>
