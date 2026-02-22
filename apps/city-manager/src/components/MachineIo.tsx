@@ -812,7 +812,7 @@ export default function MachineIo() {
               <button
                   type="button"
                   onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors group shadow-none ring-0"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors group shadow-none ring-0"
                   title="Select AI Model"
                >
                   <span className="text-sm font-normal leading-none">AI</span>
@@ -821,7 +821,7 @@ export default function MachineIo() {
              <button
                 type="button"
                 disabled={loading}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-300 text-gray-500 hover:text-black hover:bg-gray-50 focus:outline-none transition-colors shadow-none ring-0"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors shadow-none ring-0"
                 aria-label="Voice"
                 title="Voice"
              >
