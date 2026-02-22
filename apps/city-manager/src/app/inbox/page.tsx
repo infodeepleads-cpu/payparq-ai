@@ -54,8 +54,8 @@ export default function Inbox() {
 
   return (
     <div className="h-screen bg-white">
-      <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full overflow-x-hidden">
-        <div className="max-w-3xl w-full mx-auto mt-6 pl-4 pr-12 md:px-0 overflow-y-auto flex-1 flex flex-col">
+      <div className="flex h-[calc(100vh-20px)] flex-col items-stretch overflow-y-auto w-full overflow-x-hidden">
+        <div className="max-w-3xl w-full mx-auto mt-6 px-4 md:px-0 overflow-y-auto flex-1 flex flex-col">
           <div className="flex items-center border-b border-gray-100 pb-2 mb-6">
             <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX</span>
             <div className="flex items-center gap-4 flex-1">
@@ -63,15 +63,15 @@ export default function Inbox() {
           </div>
           
           {loading ? (
-            <div className="flex-1 flex justify-center items-center w-full min-h-[50vh]">
+            <div className="flex-1 flex justify-center items-center w-full min-h-[50vh] px-4">
               <div className="text-center text-gray-400 text-sm">Loading...</div>
             </div>
           ) : emails.length === 0 ? (
-            <div className="flex-1 flex justify-center items-center w-full min-h-[50vh]">
+            <div className="flex-1 flex justify-center items-center w-full min-h-[50vh] px-4">
               <div className="text-center text-gray-400 text-sm">No emails yet.</div>
             </div>
           ) : (
-            <div className="space-y-1 pb-10">
+            <div className="space-y-1 pb-10 pr-12 md:pr-0">
               {emails.map((email) => {
                 const isExpanded = expandedId === email.id;
                 return (
@@ -106,7 +106,7 @@ export default function Inbox() {
                         </span>
                       </div>
                       {!isExpanded && (
-                        <div className="text-[10px] text-gray-500 break-all whitespace-normal w-full pr-8">
+                        <div className="text-[10px] text-gray-500 break-all whitespace-normal w-full">
                           {email.text_body || "No preview available"}
                         </div>
                       )}

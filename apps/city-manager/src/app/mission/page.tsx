@@ -72,22 +72,21 @@ export default function Page() {
       className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1 ${onClick ? "cursor-pointer" : ""}`}
     >
       <span className="text-xs font-bold text-black shrink-0">{label}</span>
-      <span className="text-xs text-gray-500">{value}</span>
+      <span className="text-[10px] text-gray-500 font-bold">{value}</span>
     </div>
   );
 
   return (
-    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 overflow-x-hidden">
-      <div className="flex items-center justify-between mb-6 border-b border-black pb-2">
-        <h1 className="text-xl font-bold tracking-tight text-black">MISSION</h1>
-        <div className="flex items-center gap-4"></div>
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-4 overflow-x-hidden">
+      <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
+        <span className="text-xs font-semibold tracking-tight text-black mr-4">MISSION</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-4">
         {/* Primary Metrics */}
         <div>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">Performance</h2>
-          <div className="flex flex-col">
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Performance</h2>
+          <div className="flex flex-col space-y-1">
             <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
             <MissionItem label="Lots Mapped" value={lotsMapped} />
             <MissionItem label="Lots Activated" value={lotsActivated} />
@@ -96,8 +95,8 @@ export default function Page() {
 
         {/* Strategic Initiatives */}
         <div>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">Strategic Initiatives</h2>
-          <div className="flex flex-col">
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Strategic Initiatives</h2>
+          <div className="flex flex-col space-y-1">
             <MissionItem 
               label="SMART CITY PROGRAM" 
               value={smartProgram ? "YES" : "NO"} 

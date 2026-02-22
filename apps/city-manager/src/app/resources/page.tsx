@@ -50,18 +50,18 @@ export default function Page() {
 
   return (
     <div className="h-screen bg-white overflow-y-auto">
-      <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 overflow-x-hidden">
-        <div className="flex items-center justify-between mb-6 border-b border-black pb-2">
-          <h1 className="text-xl font-bold tracking-tight text-black">RESOURCES</h1>
+      <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-4 overflow-x-hidden">
+        <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
+          <span className="text-xs font-semibold tracking-tight text-black mr-4">RESOURCES</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-4">
           {categories.map((category) => (
             <div key={category}>
-              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">
                 {category}
               </h2>
-              <div className="flex flex-col">
+              <div className="flex flex-col space-y-1">
                 {resources
                   .filter(r => r.category === category)
                   .map((item) => (
@@ -75,12 +75,12 @@ export default function Page() {
                           href={item.link} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-xs text-gray-500 hover:text-gray-700 underline break-all"
+                          className="text-[10px] text-gray-500 hover:text-gray-700 underline break-all font-bold"
                         >
                           {item.linkLabel || "View Link"}
                         </a>
                       ) : (
-                        <span className="text-xs font-bold text-gray-400 italic">No Document</span>
+                        <span className="text-[10px] font-bold text-gray-400 italic">No Document</span>
                       )}
                     </div>
                   ))}
