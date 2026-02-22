@@ -212,7 +212,7 @@ export default function Page() {
         <span className="text-[10px] text-gray-400">Contacts & Status</span>
       </div>
 
-      <div className="px-2 mb-4">
+      <div className="pl-2 pr-[75px] mb-4">
         <div className="relative w-full">
           <input
             type="text"
