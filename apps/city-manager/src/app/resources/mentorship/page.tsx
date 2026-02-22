@@ -5,21 +5,13 @@ export default function Page() {
     <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
       <div className="max-w-3xl w-full mx-auto px-1 md:px-0 pt-4 pb-32 overflow-x-hidden">
         <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
-          <span className="text-xs font-semibold tracking-tight text-black uppercase">3 KEY SOLUTIONS TO 3 BIGGEST PROBLEMS</span>
+          <span className="text-xs font-semibold tracking-tight text-black uppercase">3 KEY SOLUTIONS</span>
         </div>
 
         <div className="space-y-10">
           <section>
             <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">1. Zaustavljamo neautorizirana vozila</h2>
             <div className="text-gray-800 leading-relaxed text-sm">
-              <ul className="list-disc pl-5 mt-2 space-y-2">
-                <li>
-                  A) Mali objekti (Plava Naljepnica) – maknemo neovlaštene, gosti parkiraju besplatno, mi radimo sve.
-                </li>
-                <li>
-                  B) Veći objekti (Safe Parking) – ulaz samo s autorizacijom (mobitel ili LPR), viša sigurnost i veća zarada.
-                </li>
-              </ul>
             </div>
           </section>
 

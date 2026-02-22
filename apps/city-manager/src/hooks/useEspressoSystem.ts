@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSupabase, getCurrentUser } from "../lib/supabase";
 
 export type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -22,6 +23,8 @@ export type UserProgress = {
     lotsMapped: number;
     lotsActivated: number;
     completed: boolean;
+    // New field for document submission tracking
+    documentStatus?: "pending" | "submitted" | "approved" | "rejected";
   }>;
   ultraMode: boolean;
   dailyTasksSelected: string[];
@@ -61,13 +64,13 @@ function loadProgress(): UserProgress {
   return {
     currentTier: 1,
     tiersCompleted: {
-      1: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      2: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      3: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      4: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      5: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      6: { lotsMapped: 0, lotsActivated: 0, completed: false },
-      7: { lotsMapped: 0, lotsActivated: 0, completed: false },
+      1: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      2: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      3: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      4: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      5: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      6: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
+      7: { lotsMapped: 0, lotsActivated: 0, completed: false, documentStatus: "pending" },
     },
     ultraMode: false,
     dailyTasksSelected: [],
@@ -134,6 +137,54 @@ export function useEspressoSystem() {
   const [progress, setProgress] = useState<UserProgress>(loadProgress);
   const [espressoTasks, setEspressoTasks] = useState<EspressoTask[]>(loadEspressoTasks);
   const [showDailySelection, setShowDailySelection] = useState(false);
+  
+  // Real-time progress updates for Admin approvals
+  useEffect(() => {
+    const supabase = getSupabase();
+    
+    // Subscribe to progress changes
+    const progressSub = supabase
+      .channel('public:user_progress')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_progress' }, async (payload) => {
+        const user = await getCurrentUser();
+        if (user && payload.new && (payload.new as any).user_id === user.id) {
+          const newData = payload.new as any;
+          setProgress(prev => ({
+             ...prev,
+             currentTier: newData.current_tier as Tier,
+             tiersCompleted: newData.tiers_completed,
+             ultraMode: newData.ultra_mode
+          }));
+        }
+      })
+      .subscribe();
+
+    // Subscribe to document submission changes (approvals)
+    const docSub = supabase
+      .channel('public:document_submissions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'document_submissions' }, async (payload) => {
+         const user = await getCurrentUser();
+         if (user && payload.new && (payload.new as any).user_id === user.id) {
+            const doc = payload.new as any;
+            setProgress(prev => {
+               const next = { ...prev };
+               if (next.tiersCompleted[doc.tier as Tier]) {
+                  next.tiersCompleted[doc.tier as Tier].documentStatus = doc.status;
+                  if (doc.status === "approved") {
+                    next.tiersCompleted[doc.tier as Tier].completed = true;
+                  }
+               }
+               return next;
+            });
+         }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(progressSub);
+      supabase.removeChannel(docSub);
+    };
+  }, []);
 
   // Sync current tier tasks to main system on load/change
   useEffect(() => {
@@ -152,6 +203,78 @@ export function useEspressoSystem() {
     if (isNewDay && progress.dailyTasksSelected.length === 0) {
       setShowDailySelection(true);
     }
+  }, [progress]);
+
+  // Sync with Supabase for progress (document status)
+  useEffect(() => {
+    const syncProgress = async () => {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const supabase = getSupabase();
+      
+      // Load progress from DB if exists
+      const { data: progressData } = await supabase
+        .from("user_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (progressData) {
+        // Merge DB progress with local state
+        // prioritizing DB for critical fields like tier and completion
+        setProgress(prev => ({
+          ...prev,
+          currentTier: progressData.current_tier as Tier,
+          tiersCompleted: progressData.tiers_completed,
+          ultraMode: progressData.ultra_mode
+        }));
+      }
+
+      // Check document submissions
+      const { data: submissions } = await supabase
+        .from("document_submissions")
+        .select("*")
+        .eq("user_id", user.id);
+        
+      if (submissions) {
+        setProgress(prev => {
+          const next = { ...prev };
+          submissions.forEach((sub: any) => {
+            if (next.tiersCompleted[sub.tier as Tier]) {
+               next.tiersCompleted[sub.tier as Tier].documentStatus = sub.status;
+               // If approved, ensure tier is completed
+               if (sub.status === "approved") {
+                 next.tiersCompleted[sub.tier as Tier].completed = true;
+               }
+            }
+          });
+          return next;
+        });
+      }
+    };
+    
+    syncProgress();
+  }, []);
+
+  // Save progress to Supabase whenever it changes
+  useEffect(() => {
+    const saveToSupabase = async () => {
+       const user = await getCurrentUser();
+       if (!user) return;
+       const supabase = getSupabase();
+       
+       await supabase.from("user_progress").upsert({
+         user_id: user.id,
+         current_tier: progress.currentTier,
+         tiers_completed: progress.tiersCompleted,
+         ultra_mode: progress.ultraMode,
+         updated_at: new Date().toISOString()
+       });
+    };
+    // Debounce or just save
+    const timeout = setTimeout(saveToSupabase, 1000);
+    return () => clearTimeout(timeout);
   }, [progress]);
 
   const getCurrentTierTasks = () => {
@@ -192,16 +315,22 @@ export function useEspressoSystem() {
         updatedProgress.tiersCompleted[task.tier].lotsActivated += 1;
       }
 
-      // Check if tier is completed
+      // Check if tier requirements are met (but not necessarily completed via document approval)
       const tierData = TIERS.find(t => t.id === task.tier);
       if (tierData) {
         const completed = updatedProgress.tiersCompleted[task.tier];
-        if (completed.lotsMapped >= tierData.requiredLots && completed.lotsActivated >= tierData.requiredActivations) {
-          updatedProgress.tiersCompleted[task.tier].completed = true;
-          
-          // Unlock next tier if available
-          if (task.tier < 7) {
-            updatedProgress.currentTier = (task.tier + 1) as Tier;
+        // Only mark requirements met, completion depends on document approval for Tiers 1, 6, 7
+        
+        const reqMet = completed.lotsMapped >= tierData.requiredLots && completed.lotsActivated >= tierData.requiredActivations;
+        
+        if (reqMet) {
+          // If no document required (Tiers 2-5), mark completed
+          if (![1, 6, 7].includes(task.tier)) {
+             updatedProgress.tiersCompleted[task.tier].completed = true;
+             // Auto-advance if simple tier
+             if (updatedProgress.currentTier === task.tier) {
+                updatedProgress.currentTier = (task.tier + 1) as Tier;
+             }
           }
         }
       }

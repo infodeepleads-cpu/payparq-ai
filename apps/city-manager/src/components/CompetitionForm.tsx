@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getSupabase, getCurrentUser } from "../lib/supabase";
 import SignaturePad from "./SignaturePad";
 
 interface Competitor {
   id: string;
-  name: "";
-  address: "";
-  price: "";
-  content: "";
-  rating: "";
-  note: "";
+  name: string;
+  address: string;
+  price: string;
+  content: string;
+  rating: string;
+  note: string;
 }
 
 interface CompetitionFormProps {
   onClose: () => void;
   onSave: (data: any) => void;
   initialData?: any;
+  tier: number;
 }
 
-export default function CompetitionForm({ onClose, onSave, initialData }: CompetitionFormProps) {
+export default function CompetitionForm({ onClose, onSave, initialData, tier }: CompetitionFormProps) {
+  const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<Competitor[]>(initialData?.competitors || [
     { id: crypto.randomUUID(), name: "", address: "", price: "", content: "", rating: "", note: "" }
   ]);
@@ -27,14 +30,46 @@ export default function CompetitionForm({ onClose, onSave, initialData }: Compet
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(initialData?.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" }));
 
-  const handleSignatureChange = (newSignature: string | null) => {
+  const handleSignatureChange = useCallback((newSignature: string | null) => {
     setSignature(newSignature || "");
-  };
+  }, []);
 
-  const handleSend = () => {
-    const subject = encodeURIComponent("Filled Competition Analysis");
-    const body = encodeURIComponent(JSON.stringify({ competitors, signature, date, time }, null, 2));
-    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  const handleSend = async () => {
+    try {
+      setLoading(true);
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("You must be logged in to submit this document.");
+        setLoading(false);
+        return;
+      }
+
+      const supabase = getSupabase();
+      
+      const { error } = await supabase.from("document_submissions").insert({
+        user_id: user.id,
+        tier: tier,
+        type: "competition",
+        content: JSON.stringify({ competitors, signature, date, time }, null, 2),
+        status: "pending"
+      });
+
+      if (error) {
+        console.error("Submission failed", error);
+        alert(`Failed to submit document: ${error.message || JSON.stringify(error)}`);
+        setLoading(false);
+        return;
+      }
+
+      alert("Competition analysis submitted successfully! It is now under review.");
+      onSave({ competitors, signature, date, time });
+      onClose();
+      
+    } catch (e: any) {
+      console.error("Error submitting document:", e);
+      alert(`An unexpected error occurred: ${e.message || e}`);
+      setLoading(false);
+    }
   };
 
   const addCompetitor = () => {
@@ -195,9 +230,10 @@ export default function CompetitionForm({ onClose, onSave, initialData }: Compet
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
+            disabled={loading}
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send to PayParq
+            {loading ? "Sending..." : "Send to PayParq"}
           </button>
           <button 
             onClick={onClose}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SignaturePad from "./SignaturePad";
+import { getSupabase, getCurrentUser } from "../lib/supabase";
 
 interface AirportFormProps {
   onClose: () => void;
@@ -29,10 +30,38 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
     setFormData((prev: any) => ({ ...prev, final_signature: signature }));
   };
 
-  const handleSend = () => {
-    const subject = encodeURIComponent("Filled Airport Analysis");
-    const body = encodeURIComponent(JSON.stringify(formData, null, 2));
-    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  const handleSend = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("You must be logged in to submit this document.");
+        return;
+      }
+
+      const supabase = getSupabase();
+      
+      const { error } = await supabase.from("document_submissions").insert({
+        user_id: user.id,
+        tier: 1, // Airport Analysis is Tier 1
+        type: "airport",
+        content: JSON.stringify(formData, null, 2),
+        status: "pending"
+      });
+
+      if (error) {
+        console.error("Submission failed", error);
+        alert(`Failed to submit document: ${error.message || JSON.stringify(error)}`);
+        return;
+      }
+
+      alert("Airport Analysis submitted successfully! It is now under review.");
+      onSave(formData); // Save locally as well
+      onClose(); // Close the modal
+      
+    } catch (e: any) {
+      console.error("Error submitting document:", e);
+      alert(`An unexpected error occurred: ${e.message || e}`);
+    }
   };
 
   const handleChange = (field: string, value: any) => {

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getSupabase, getCurrentUser } from "../lib/supabase";
 import SignaturePad from "./SignaturePad";
 
 interface PermitsFormProps {
   onClose: () => void;
   onSave: (data: any) => void;
   initialData?: any;
+  tier: number;
 }
 
-export default function PermitsForm({ onClose, onSave, initialData }: PermitsFormProps) {
+export default function PermitsForm({ onClose, onSave, initialData, tier }: PermitsFormProps) {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialData || {
     city: "",
     address: "",
@@ -37,9 +40,9 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
     final_time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" })
   });
 
-  const handleSignatureChange = (signature: string | null) => {
+  const handleSignatureChange = useCallback((signature: string | null) => {
     setFormData((prev: any) => ({ ...prev, final_signature: signature }));
-  };
+  }, []);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -56,10 +59,42 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
     });
   };
 
-  const handleSend = () => {
-    const subject = encodeURIComponent("Filled Permits Form: " + (formData.city || "New Location"));
-    const body = encodeURIComponent(JSON.stringify(formData, null, 2));
-    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  const handleSend = async () => {
+    try {
+      setLoading(true);
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("You must be logged in to submit this document.");
+        setLoading(false);
+        return;
+      }
+
+      const supabase = getSupabase();
+      
+      const { error } = await supabase.from("document_submissions").insert({
+        user_id: user.id,
+        tier: tier,
+        type: "permits",
+        content: JSON.stringify(formData, null, 2),
+        status: "pending"
+      });
+
+      if (error) {
+        console.error("Submission failed", error);
+        alert(`Failed to submit document: ${error.message || JSON.stringify(error)}`);
+        setLoading(false);
+        return;
+      }
+
+      alert("Permits form submitted successfully! It is now under review.");
+      onSave(formData);
+      onClose();
+      
+    } catch (e: any) {
+      console.error("Error submitting document:", e);
+      alert(`An unexpected error occurred: ${e.message || e}`);
+      setLoading(false);
+    }
   };
 
   return (
@@ -405,9 +440,10 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
+            disabled={loading}
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send to PayParq
+            {loading ? "Sending..." : "Send to PayParq"}
           </button>
           <button 
             onClick={onClose}

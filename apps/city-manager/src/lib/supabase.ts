@@ -1,7 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { env } from "./env";
 
+let supabaseInstance: SupabaseClient | null = null;
+
 export function getSupabase() {
+  if (supabaseInstance) return supabaseInstance;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -11,5 +15,18 @@ export function getSupabase() {
     );
   }
 
-  return createClient(supabaseUrl, supabaseKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  return supabaseInstance;
+}
+
+export async function getCurrentUser() {
+  const supabase = getSupabase();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session) return null;
+  return session.user;
+}
+
+export async function isSuperAdmin() {
+  const user = await getCurrentUser();
+  return user?.email === "payparq@outlook.com";
 }

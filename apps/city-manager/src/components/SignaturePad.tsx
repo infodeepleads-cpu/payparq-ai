@@ -6,7 +6,12 @@ interface SignaturePadProps {
   initialSignature?: string | null;
 }
 
-export default function SignaturePad({ onChange, initialSignature }: SignaturePadProps) {
+const CANVAS_PROPS = {
+  className: 'signature-canvas w-full h-40 cursor-crosshair block',
+  style: { width: '100%', height: '160px' } 
+};
+
+function SignaturePad({ onChange, initialSignature }: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
 
@@ -34,10 +39,7 @@ export default function SignaturePad({ onChange, initialSignature }: SignaturePa
         <SignatureCanvas 
           ref={sigCanvas}
           penColor="black"
-          canvasProps={{
-            className: 'signature-canvas w-full h-40 cursor-crosshair block',
-            style: { width: '100%', height: '160px' } 
-          }}
+          canvasProps={CANVAS_PROPS}
           onEnd={save}
         />
         {isEmpty && (
@@ -73,3 +75,5 @@ export default function SignaturePad({ onChange, initialSignature }: SignaturePa
     </div>
   );
 }
+
+export default React.memo(SignaturePad);

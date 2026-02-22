@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabase } from "../lib/supabase";
+import { getSupabase, getCurrentUser } from "../lib/supabase";
 import SignaturePad from "./SignaturePad";
 
 interface LocationEntry {
@@ -25,9 +25,11 @@ interface LotActivationFormProps {
   onClose: () => void;
   onSave: (data: any) => void;
   initialData?: any;
+  tier: number;
 }
 
-export default function LotActivationForm({ onClose, onSave, initialData }: LotActivationFormProps) {
+export default function LotActivationForm({ onClose, onSave, initialData, tier }: LotActivationFormProps) {
+  const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<LocationEntry[]>(initialData?.locations || [
     { 
       id: crypto.randomUUID(), 
@@ -53,10 +55,42 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
     setSignature(newSignature || "");
   };
 
-  const handleSend = () => {
-    const subject = encodeURIComponent("Filled Lot Activation List");
-    const body = encodeURIComponent(JSON.stringify({ locations, signature, date, time }, null, 2));
-    window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
+  const handleSend = async () => {
+    try {
+      setLoading(true);
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("You must be logged in to submit this document.");
+        setLoading(false);
+        return;
+      }
+
+      const supabase = getSupabase();
+      
+      const { error } = await supabase.from("document_submissions").insert({
+        user_id: user.id,
+        tier: tier,
+        type: "lot_activation",
+        content: JSON.stringify({ locations, signature, date, time }, null, 2),
+        status: "pending"
+      });
+
+      if (error) {
+        console.error("Submission failed", error);
+        alert(`Failed to submit document: ${error.message || JSON.stringify(error)}`);
+        setLoading(false);
+        return;
+      }
+
+      alert("Lot Activation List submitted successfully! It is now under review.");
+      onSave({ locations, signature, date, time });
+      onClose();
+      
+    } catch (e: any) {
+      console.error("Error submitting document:", e);
+      alert(`An unexpected error occurred: ${e.message || e}`);
+      setLoading(false);
+    }
   };
 
   const addLocation = () => {
@@ -361,9 +395,10 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
+            disabled={loading}
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send to PayParq
+            {loading ? "Sending..." : "Send to PayParq"}
           </button>
           <button 
             onClick={onClose}

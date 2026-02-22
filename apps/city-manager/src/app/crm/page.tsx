@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSupabase } from "../../lib/supabase";
+import { getSupabase, getCurrentUser } from "../../lib/supabase";
 
 type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -109,7 +109,6 @@ export default function Page() {
   useEffect(() => {
     const loadAndSetContacts = async () => {
       const loaded = await loadContacts();
-      console.log("CRM: Loaded contacts:", loaded.length, loaded);
       setContacts(loaded);
     };
     loadAndSetContacts();
@@ -157,6 +156,12 @@ export default function Page() {
     if (updates.restartTime) dbUpdates.restart_time = updates.restartTime;
     if (updates.notes) dbUpdates.notes = updates.notes;
 
+    const user = await getCurrentUser();
+    if (!user) return;
+    
+    // Ensure user_id is set for new records (though this is update, good practice)
+    // Actually for update we don't need to set user_id unless it's missing, but better to rely on RLS/default
+    
     const { error } = await supabase.from("crm_contacts").update(dbUpdates).eq("id", id);
     
     if (!error) {
