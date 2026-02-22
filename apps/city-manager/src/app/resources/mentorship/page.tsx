@@ -12,6 +12,7 @@ export default function Page() {
           <section>
             <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">1. Zaustavljamo neautorizirana vozila</h2>
             <div className="text-gray-800 leading-relaxed text-sm">
+              <p>Autorizacijski LPR sustav za potpunu kontrolu parkinga, veća sigurnost i prava i za vlasnika i goste.</p>
             </div>
           </section>
 

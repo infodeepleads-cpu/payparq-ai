@@ -87,7 +87,7 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-screen w-full font-sans items-center justify-center bg-white p-4">
-      <div className="w-[85%] max-w-[300px] space-y-5 mx-auto">
+      <div className="w-[85%] max-w-[300px] space-y-5 mx-auto -translate-x-5">
         <div className="text-center space-y-2">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">PayParq Manager</h2>
           <h1 className="text-lg font-semibold tracking-tight">{mode === "signin" ? "Welcome back" : "Create an account"}</h1>
