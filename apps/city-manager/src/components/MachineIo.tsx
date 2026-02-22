@@ -766,7 +766,7 @@ export default function MachineIo() {
               }
             }}
             placeholder="Ask anything..."
-            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
+            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
             autoFocus
             ref={inputRef}
           />

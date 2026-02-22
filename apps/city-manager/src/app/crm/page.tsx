@@ -241,7 +241,7 @@ export default function Page() {
       <div className="space-y-1">
         {TIERS.map((tier) => {
           const tierContacts = contactsByTier[tier.id];
-          const isExpanded = expandedTier === tier.id;
+          const isExpanded = expandedTier === tier.id || searchQuery.length > 0;
 
           return (
             <div key={tier.id} className="border-b border-gray-100 last:border-0">
