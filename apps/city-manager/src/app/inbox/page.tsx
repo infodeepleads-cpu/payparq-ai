@@ -55,7 +55,7 @@ export default function Inbox() {
   return (
     <div className="h-screen bg-white">
       <div className="flex h-[calc(100vh-20px)] flex-col items-stretch overflow-y-auto w-full overflow-x-hidden">
-        <div className="max-w-3xl w-full mx-auto mt-6 px-2 md:px-0 overflow-y-auto flex-1 flex flex-col">
+        <div className="max-w-3xl w-full mx-auto mt-6 px-1 md:px-0 overflow-y-auto flex-1 flex flex-col">
           <div className="flex items-center border-b border-gray-100 pb-2 mb-6">
             <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX</span>
             <div className="flex items-center gap-4 flex-1">

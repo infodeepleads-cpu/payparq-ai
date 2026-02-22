@@ -94,7 +94,7 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="max-w-3xl w-full mx-auto px-2 md:px-0 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-3xl w-full mx-auto px-1 md:px-0 overflow-y-auto overflow-x-hidden">
           <div className="space-y-1">
             {emails.map((email) => {
               const isExpanded = expandedId === email.id;

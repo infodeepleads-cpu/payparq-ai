@@ -77,7 +77,7 @@ export default function Page() {
   );
 
   return (
-    <div className="max-w-3xl w-full mx-auto px-2 md:px-0 py-4 overflow-x-hidden">
+    <div className="max-w-3xl w-full mx-auto px-1 md:px-0 py-4 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">MISSION</span>
       </div>
