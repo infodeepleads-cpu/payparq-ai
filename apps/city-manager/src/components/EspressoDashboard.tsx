@@ -611,9 +611,6 @@ export default function EspressoDashboard() {
                   <span className="text-xs font-bold text-black shrink-0">Airport Analysis</span>
                   {getStatusBadge("airport", !!docsState[`t${progress.currentTier}-specific`])}
                 </div>
-                <span className="text-[10px] text-gray-500 font-bold">
-                  {docsState[`t${progress.currentTier}-specific`] ? "Tap to edit" : "Tap to fill form"}
-                </span>
               </div>
             )}
             
@@ -626,9 +623,6 @@ export default function EspressoDashboard() {
                   <span className="text-xs font-bold text-black shrink-0">Stakeholder Analysis</span>
                    {getStatusBadge("stakeholder", !!docsState[`t${progress.currentTier}-specific`])}
                 </div>
-                <span className="text-[10px] text-gray-500 font-bold">
-                  {docsState[`t${progress.currentTier}-specific`] ? "Tap to edit" : "Tap to write essay"}
-                </span>
               </div>
             )}
 
