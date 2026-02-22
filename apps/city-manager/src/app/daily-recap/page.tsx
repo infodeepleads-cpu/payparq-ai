@@ -87,14 +87,14 @@ export default function Page() {
 
   return (
     <div className="h-screen bg-white">
-      <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
+      <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full overflow-x-hidden">
         <div className="max-w-3xl w-full mx-auto px-5 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4 mb-4">
           <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY RECAP</span>
           <div className="flex items-center gap-4 flex-1">
           </div>
         </div>
 
-        <div className="max-w-3xl w-full mx-auto px-5 md:px-0 overflow-y-auto">
+        <div className="max-w-3xl w-full mx-auto px-5 md:px-0 overflow-y-auto overflow-x-hidden">
           <div className="space-y-1">
             {emails.map((email) => {
               const isExpanded = expandedId === email.id;
@@ -121,17 +121,9 @@ export default function Page() {
                       </div>
                     )}
                     {isExpanded && (
-                      <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100 w-full">
+                      <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100 w-full max-w-full">
                         <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2 gap-1">
                           <span className="font-medium break-all">From: {email.from_address}</span>
-                          <span className="shrink-0">{new Date(email.created_at).toLocaleString(undefined, {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit'
-                          })}</span>
                         </div>
                         <div className="space-y-2 overflow-x-auto">
                           {email.tasks.length > 0 ? (
