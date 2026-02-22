@@ -206,7 +206,7 @@ export default function Page() {
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-4xl w-full mx-auto px-2 md:px-8 py-6 pb-32 overflow-x-hidden">
+    <div className="max-w-4xl w-full mx-auto px-5 md:px-8 py-6 pb-32 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
         <span className="text-[10px] text-gray-400">Contacts & Status</span>
@@ -393,28 +393,28 @@ export default function Page() {
                                 alert("Share not supported on this device");
                               }
                             }}
-                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
+                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase bg-transparent border-none outline-none focus:outline-none focus:ring-0"
                           >
                             SHARE
                           </button>
                           {editingId === contact.id ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
-                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
+                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase bg-transparent border-none outline-none focus:outline-none focus:ring-0"
                             >
                               SAVE
                             </button>
                           ) : (
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(contact.id); }}
-                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
+                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase bg-transparent border-none outline-none focus:outline-none focus:ring-0"
                             >
                               EDIT
                             </button>
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteContact(contact.id); }}
-                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
+                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase bg-transparent border-none outline-none focus:outline-none focus:ring-0"
                           >
                             DELETE
                           </button>

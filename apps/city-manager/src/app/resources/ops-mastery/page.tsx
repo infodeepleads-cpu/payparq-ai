@@ -2,16 +2,16 @@ import React from 'react';
 
 export default function OpsMasteryPage() {
   return (
-    <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 border-b border-gray-200 pb-4 uppercase tracking-wide">
-          Non-Negotiables
-        </h1>
+    <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
+      <div className="max-w-3xl w-full mx-auto px-5 md:px-0 py-4 overflow-x-hidden">
+        <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
+          <span className="text-xs font-semibold tracking-tight text-black uppercase">Non-Negotiables</span>
+        </div>
         
-        <div className="space-y-10">
+        <div className="space-y-8">
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Immediate Action</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Immediate Action</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Every push = immediate solution</li>
                 <li>No delays, no callbacks, no excuses</li>
@@ -20,8 +20,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Uptime & Reliability</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Uptime & Reliability</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>100% uptime is the standard</li>
                 <li>A stranded guest is unacceptable — this must never happen</li>
@@ -30,8 +30,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Response Time SLAs</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Response Time SLAs</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Max 5 minutes ride waiting</li>
                 <li>Reservation issues resolved within 15 minutes</li>
@@ -42,8 +42,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Guest First Doctrine</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Guest First Doctrine</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>The guest is always right</li>
                 <li>If a guest asks for a refund → refund immediately</li>
@@ -55,8 +55,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Partners & Accountability</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Partners & Accountability</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Only work with top-tier partners</li>
                 <li>Taxi Head is the most important partner</li>
@@ -73,8 +73,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">HUB Launch</h2>
-            <div className="text-gray-700 leading-relaxed text-sm">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">HUB Launch</h2>
+            <div className="text-sm text-gray-800 leading-relaxed">
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li>Reviews</li>
                 <li>Testing / On Site Marketing / Allow Taxis to use the Lot</li>
@@ -84,8 +84,8 @@ export default function OpsMasteryPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Core Principle</h2>
-            <p className="text-gray-700 leading-relaxed text-sm italic border-l-4 border-black pl-4 py-2">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Core Principle</h2>
+            <p className="text-sm text-gray-800 leading-relaxed italic border-l-4 border-black pl-4 py-2">
               There is nothing worse than a stranded guest. 
               <br />
               Ops exist to ensure this never happens.

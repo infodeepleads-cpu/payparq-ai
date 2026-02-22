@@ -88,13 +88,13 @@ export default function Page() {
   return (
     <div className="h-screen bg-white">
       <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
-        <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4 mb-4">
+        <div className="max-w-3xl w-full mx-auto px-5 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4 mb-4">
           <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY RECAP</span>
           <div className="flex items-center gap-4 flex-1">
           </div>
         </div>
 
-        <div className="max-w-3xl w-full mx-auto px-4 md:px-0 overflow-y-auto">
+        <div className="max-w-3xl w-full mx-auto px-5 md:px-0 overflow-y-auto">
           <div className="space-y-1">
             {emails.map((email) => {
               const isExpanded = expandedId === email.id;
@@ -107,15 +107,6 @@ export default function Page() {
                   <div className="flex items-center justify-between mb-1 gap-4">
                     <span className={`text-xs truncate ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
                       {email.subject}
-                    </span>
-                    <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap pr-2">
-                      {new Date(email.created_at).toLocaleString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      })}
                     </span>
                   </div>
                   <div className="">

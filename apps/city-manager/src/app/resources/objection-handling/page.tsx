@@ -2,18 +2,18 @@ import React from 'react';
 
 export default function ObjectionHandlingPage() {
   return (
-    <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 border-b border-gray-200 pb-4 uppercase tracking-wide">
-          Common Objections (and How We Answer Them)
-        </h1>
+    <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
+      <div className="max-w-3xl w-full mx-auto px-5 md:px-0 py-4 overflow-x-hidden">
+        <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
+          <span className="text-xs font-semibold tracking-tight text-black uppercase">Common Objections & Legal Basis</span>
+        </div>
         
         <div className="space-y-12">
           {/* Objections Section */}
           <div className="space-y-8">
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #1: “Is this legal?”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #1: “Is this legal?”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Short answer:</span> Yes — fully legal.</p>
                 <p className="font-semibold mt-2">How to respond (verbatim-safe):</p>
                 <p>We operate as a private parking company. All operational risk, enforcement costs, and liability are entirely ours, not the owner’s.</p>
@@ -30,8 +30,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #2: “This feels like a fine.”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #2: “This feels like a fine.”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>It is not a fine. Fines are issued by public authorities.</p>
                 <p>This is a daily parking ticket issued under private parking terms — the same mechanism used by shopping centers and private garages across Croatia.</p>
@@ -39,8 +39,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #3: “I didn’t see the signs.”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #3: “I didn’t see the signs.”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>Signage is placed according to regulation and visible at all entry points.</p>
                 <p>However, if a guest feels confused or disadvantaged, we prioritize resolution, not punishment.</p>
@@ -49,8 +49,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #4: “Why is the price so high?”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #4: “Why is the price so high?”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>The daily ticket price reflects:</p>
                 <ul className="list-disc pl-5 space-y-1">
@@ -64,8 +64,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #5: “I was only there for a short time.”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #5: “I was only there for a short time.”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>The system operates automatically based on entry and exit detection.</p>
                 <p>However, we understand mistakes happen.</p>
@@ -74,8 +74,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #6: “Other parking places don’t do this.”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #6: “Other parking places don’t do this.”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>Many do — especially private operators, shopping centers, airports, and hotels using LPR systems.</p>
                 <p>This is a widely accepted and legally established practice across Croatia and the EU.</p>
@@ -83,8 +83,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Objection #7: “I want to speak to someone in charge.”</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection #7: “I want to speak to someone in charge.”</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <p><span className="font-semibold">Response:</span></p>
                 <p>Of course. We can escalate immediately.</p>
                 <p>Our goal is resolution within minutes, not conflict.</p>
@@ -92,8 +92,8 @@ export default function ObjectionHandlingPage() {
             </section>
 
             <section className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-              <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-4">Golden Rule for All Objections</h2>
-              <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+              <h2 className="text-[10px] font-bold text-black uppercase tracking-wider mb-4">Golden Rule for All Objections</h2>
+              <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                 <ul className="list-disc pl-5 space-y-2">
                   <li>De-escalate first</li>
                   <li>Be calm, discreet, and respectful</li>
@@ -107,14 +107,14 @@ export default function ObjectionHandlingPage() {
 
           {/* Legal Basis Section */}
           <div className="mt-16 pt-8 border-t border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-8 uppercase tracking-wide">
+            <h1 className="text-xs font-bold text-black mb-8 uppercase tracking-wide">
               Legal Basis: Mobile LPR Photos, App Security & Court Validity
             </h1>
 
             <div className="space-y-10">
               <section>
-                <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Mobile LPR (License Plate Recognition) Photography</h2>
-                <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+                <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Mobile LPR (License Plate Recognition) Photography</h2>
+                <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                   <p>Mobile LPR photos are legal and permitted under Croatian law when used for legitimate interest, such as private parking enforcement.</p>
                   <p>The vehicle license plate is treated as operational data, not sensitive personal data.</p>
                   <p className="mt-2 font-semibold">This is the same legal basis used by:</p>
@@ -134,8 +134,8 @@ export default function ObjectionHandlingPage() {
               </section>
 
               <section>
-                <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Evidence Integrity & App Security</h2>
-                <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+                <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Evidence Integrity & App Security</h2>
+                <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                   <p>All enforcement data is collected through our secure internal app, which includes:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Automatic timestamping (date & time locked at capture)</li>
@@ -153,8 +153,8 @@ export default function ObjectionHandlingPage() {
               </section>
 
               <section>
-                <h2 className="text-lg font-bold text-black uppercase tracking-wider mb-2">Legal Validity in Court</h2>
-                <div className="text-gray-700 leading-relaxed text-sm space-y-2">
+                <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Legal Validity in Court</h2>
+                <div className="text-sm text-gray-800 leading-relaxed space-y-2">
                   <ul className="list-disc pl-5 space-y-1">
                     <li>Each record forms a verifiable digital evidence package</li>
                     <li>Time, location, and vehicle data are objectively provable</li>
