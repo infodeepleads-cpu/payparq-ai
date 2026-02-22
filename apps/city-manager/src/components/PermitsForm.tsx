@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import SignaturePad from "./SignaturePad";
 
 interface PermitsFormProps {
   onClose: () => void;
@@ -30,8 +31,15 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
     camperZoneType: "", // U istoj zoni, Isključivo u posebnoj
     camperConditions: [], // Array of strings
     camperOther: "",
-    commentary: ""
+    commentary: "",
+    final_signature: "",
+    final_date: new Date().toISOString().split('T')[0],
+    final_time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" })
   });
+
+  const handleSignatureChange = (signature: string | null) => {
+    setFormData((prev: any) => ({ ...prev, final_signature: signature }));
+  };
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -367,22 +375,27 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
               <div>
-                <label className="block text-xs font-bold uppercase mb-1">Potpis City Managera</label>
-                <input 
-                  type="text" 
-                  className="w-full border border-gray-300 rounded p-2 text-sm"
-                  value={formData.final_signature}
-                  onChange={(e) => handleChange("final_signature", e.target.value)}
+                <SignaturePad 
+                  onChange={handleSignatureChange} 
+                  initialSignature={formData.final_signature} 
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase mb-1">Datum</label>
-                <input 
-                  type="date" 
-                  className="w-full border border-gray-300 rounded p-2 text-sm"
-                  value={formData.final_date}
-                  onChange={(e) => handleChange("final_date", e.target.value)}
-                />
+                <label className="block text-xs font-bold uppercase mb-1">Datum i Vrijeme</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="date" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={formData.final_date}
+                    onChange={(e) => handleChange("final_date", e.target.value)}
+                  />
+                  <input 
+                    type="time" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={formData.final_time}
+                    onChange={(e) => handleChange("final_time", e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -392,7 +405,7 @@ export default function PermitsForm({ onClose, onSave, initialData }: PermitsFor
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
           >
             Send to PayParq
           </button>

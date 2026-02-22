@@ -11,11 +11,12 @@ type Task = {
 
 type RecapEmail = {
   id: string;
-  date: string;
+  created_at: string; // Changed to match Inbox
   subject: string;
   preview: string;
   tasks: Task[];
   read: boolean;
+  from_address: string; // Added to match Inbox
 };
 
 const TASKS_KEY = "pp_tasks";
@@ -37,23 +38,37 @@ export default function Page() {
         const today = new Date();
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(22, 0, 0, 0); // Mock time
         
+        // Set today's time to now or specific time
+        today.setHours(22, 0, 0, 0); 
+
+        const formatSubjectDate = (d: Date) => d.toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
         const generatedEmails: RecapEmail[] = [
           {
             id: "today",
-            date: today.toLocaleDateString(),
-            subject: `Daily Recap - ${today.toLocaleDateString()}`,
+            created_at: today.toISOString(),
+            subject: `Daily Recap - ${formatSubjectDate(today)}`,
             preview: `Tasks: ${tasks.length} total, ${tasks.filter(t => t.completed).length} completed.`,
             tasks: tasks,
-            read: false
+            read: false,
+            from_address: "PayParq System"
           },
           {
             id: "yesterday",
-            date: yesterday.toLocaleDateString(),
-            subject: `Daily Recap - ${yesterday.toLocaleDateString()}`,
+            created_at: yesterday.toISOString(),
+            subject: `Daily Recap - ${formatSubjectDate(yesterday)}`,
             preview: "Tasks: 12 total, 10 completed.",
             tasks: [], // Mock empty for past
-            read: true
+            read: true,
+            from_address: "PayParq System"
           }
         ];
         
@@ -74,9 +89,8 @@ export default function Page() {
     <div className="h-screen bg-white">
       <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full">
         <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4 mb-4">
-          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX</span>
+          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY RECAP</span>
           <div className="flex items-center gap-4 flex-1">
-            <span className="text-[10px] text-gray-400">Daily Recaps</span>
           </div>
         </div>
 
@@ -87,26 +101,28 @@ export default function Page() {
               return (
                 <div
                   key={email.id}
-                  className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg"
+                  className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors rounded-lg"
                   onClick={() => setExpandedId(isExpanded ? null : email.id)}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${email.read ? "bg-transparent border border-gray-300" : "bg-black"}`}></div>
-                      <span className={`text-xs font-bold ${email.read ? "text-gray-700" : "text-black"}`}>
-                        {email.subject}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      22:00
+                  <div className="flex items-center justify-between mb-1 gap-4">
+                    <span className={`text-xs truncate ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
+                      {email.subject}
+                    </span>
+                    <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">
+                      {new Date(email.created_at).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
                     </span>
                   </div>
-                  <div className="pl-4">
+                  <div className="">
                     <div className="flex justify-between items-baseline mb-1">
                       <p className="text-[10px] text-gray-500 truncate">
-                        From: <span className="text-gray-800">PayParq System</span>
+                        From: <span className="text-gray-800">{email.from_address}</span>
                       </p>
-                      <span className="text-[10px] text-gray-400">{email.date}</span>
                     </div>
                     {!isExpanded && (
                       <div className="text-[10px] text-gray-500 truncate">
@@ -114,15 +130,26 @@ export default function Page() {
                       </div>
                     )}
                     {isExpanded && (
-                      <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-2 rounded border border-gray-100">
-                        <div className="space-y-2">
+                      <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100 w-full">
+                        <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2 gap-1">
+                          <span className="font-medium break-all">From: {email.from_address}</span>
+                          <span className="shrink-0">{new Date(email.created_at).toLocaleString(undefined, {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
+                        <div className="space-y-2 overflow-x-auto">
                           {email.tasks.length > 0 ? (
                             email.tasks.map(task => (
-                              <div key={task.id} className="flex items-center gap-2">
-                                <div className={`w-3 h-3 border flex items-center justify-center ${task.completed ? "bg-black border-black" : "border-gray-400 bg-white"}`}>
+                              <div key={task.id} className="flex items-start gap-2 break-words">
+                                <div className={`w-3 h-3 border flex items-center justify-center shrink-0 mt-0.5 ${task.completed ? "bg-black border-black" : "border-gray-400 bg-white"}`}>
                                   {task.completed && <div className="w-1.5 h-1.5 bg-white" />}
                                 </div>
-                                <span className={`text-xs ${task.completed ? "text-gray-400 line-through" : "text-black"}`}>
+                                <span className={`text-xs ${task.completed ? "text-gray-400 line-through" : "text-black"} break-words whitespace-normal`}>
                                   {task.title}
                                 </span>
                               </div>

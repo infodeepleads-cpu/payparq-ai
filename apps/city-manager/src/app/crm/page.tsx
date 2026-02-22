@@ -103,6 +103,7 @@ async function loadContacts(): Promise<Contact[]> {
 
 export default function Page() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,26 +187,49 @@ export default function Page() {
     }
   };
 
+  const [expandedTier, setExpandedTier] = useState<Tier | null>(null);
+
+  const filteredContacts = contacts.filter(c => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      c.decisionMaker.toLowerCase().includes(q) ||
+      (c.location && c.location.toLowerCase().includes(q)) ||
+      (c.status && c.status.toLowerCase().includes(q))
+    );
+  });
+
   // Group contacts by Tier for display
   const contactsByTier = TIERS.reduce((acc, tier) => {
-    acc[tier.id] = contacts.filter(c => c.tier === tier.id);
+    acc[tier.id] = filteredContacts.filter(c => c.tier === tier.id);
     return acc;
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="sm:flex sm:items-center mb-4">
-        <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">CRM</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            A list of all contacts including their name, location, capacity, and current status.
-          </p>
+    <div className="max-w-4xl w-full mx-auto px-8 pr-16 py-6 pb-32">
+      <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
+        <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
+        <span className="text-[10px] text-gray-400">Contacts & Status</span>
+      </div>
+
+      <div className="px-2 mb-4">
+        <div className="relative w-full">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search contacts..."
+            className="w-full pl-8 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[10px] focus:outline-none focus:ring-1 focus:ring-gray-300 focus:bg-white transition-all"
+          />
+          <svg className="w-3 h-3 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-8">
-        <h4 className="text-sm font-bold uppercase text-black mb-4 tracking-wide border-b border-gray-100 pb-2">Status Requirements</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 text-sm text-gray-600">
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 mx-2">
+        <h4 className="text-xs font-bold uppercase text-black mb-3 tracking-wide border-b border-gray-100 pb-2">Status Requirements</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-gray-600">
           <div><span className="font-bold text-gray-900">1. Entry:</span> Date</div>
           <div><span className="font-bold text-gray-900">2. Live DEMO:</span> Date</div>
           <div><span className="font-bold text-gray-900">3. Yes Date:</span> Expiration date if contract</div>
@@ -214,163 +238,200 @@ export default function Page() {
         </div>
       </div>
 
-      <div className="flex flex-col space-y-8">
+      <div className="space-y-1">
         {TIERS.map((tier) => {
           const tierContacts = contactsByTier[tier.id];
+          const isExpanded = expandedTier === tier.id;
 
           return (
-            <div key={tier.id} className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 min-w-full">
-                <h3 className="text-lg font-medium leading-6 text-gray-900">
-                  Tier {tier.id}: {tier.label}
-                </h3>
+            <div key={tier.id} className="border-b border-gray-100 last:border-0">
+              <div 
+                onClick={() => setExpandedTier(isExpanded ? null : tier.id)}
+                className={`group py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${isExpanded ? "bg-gray-50" : ""}`}
+              >
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xs font-bold text-black">Tier {tier.id}: {tier.label}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">
+                    {tierContacts.length}
+                  </span>
+                  <svg 
+                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 sm:pl-6 w-12">
-                      #
-                    </th>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 sm:pl-6">
-                      a) Decision Maker
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      b) Location
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      c) Cap
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      d) Status
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      e) Next Step
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                      f) Notes
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+
+              {isExpanded && (
+                <div className="pl-4 pr-2 pb-4 space-y-3 mt-2">
                   {tierContacts.length === 0 ? (
-                    <tr>
-                      <td className="px-3 py-4 text-sm text-gray-500" colSpan={7}>
-                        No records
-                      </td>
-                    </tr>
-                  ) : tierContacts.map((contact) => {
-                    const localIndex = tierContacts.findIndex(c => c.id === contact.id) + 1;
-                    
-                    return (
-                      <tr key={contact.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-bold text-gray-900 sm:pl-6">
-                          {localIndex}.
-                        </td>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          {editingId === contact.id ? (
-                            <input
-                              type="text"
-                              value={contact.decisionMaker}
-                              onChange={(e) => updateContact(contact.id, { decisionMaker: e.target.value })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                          ) : (
-                            contact.decisionMaker
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {editingId === contact.id ? (
-                            <input
-                              type="text"
-                              value={contact.location || contact.city || ""}
-                              onChange={(e) => updateContact(contact.id, { location: e.target.value })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                          ) : (
-                            contact.location || contact.city
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {editingId === contact.id ? (
-                            <input
-                              type="number"
-                              value={contact.estimatedCapacity}
-                              onChange={(e) => updateContact(contact.id, { estimatedCapacity: Number(e.target.value) })}
-                              className="block w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                          ) : (
-                            contact.estimatedCapacity
-                          )}
-                        </td>
-                        <td className="px-3 py-4 text-sm text-gray-500 min-w-[200px]">
-                          {editingId === contact.id ? (
-                            <input
-                              type="text"
-                              value={contact.status || ""}
-                              onChange={(e) => updateContact(contact.id, { status: e.target.value })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                          ) : (
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800`}>
-                              {contact.status}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-4 text-sm text-gray-500 min-w-[200px]">
-                          {editingId === contact.id ? (
-                            <input
-                              type="text"
-                              value={contact.nextStep || ""}
-                              onChange={(e) => updateContact(contact.id, { nextStep: e.target.value })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            />
-                          ) : (
-                            <span className="whitespace-pre-wrap truncate max-w-xs">{contact.nextStep}</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-4 text-sm text-gray-500">
-                          {editingId === contact.id ? (
-                            <textarea
-                              value={contact.notes || ""}
-                              onChange={(e) => updateContact(contact.id, { notes: e.target.value })}
-                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                              rows={3}
-                            />
-                          ) : (
-                            <p className="whitespace-pre-wrap truncate max-w-xs">{contact.notes}</p>
-                          )}
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <p className="text-xs text-gray-400 italic py-2">No contacts in this tier.</p>
+                  ) : (
+                    tierContacts.map((contact, idx) => (
+                      <div key={contact.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Left Column (3 fields): a, b, c */}
+                          <div className="flex flex-col gap-3">
+                            {/* a) Decision Maker */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">a) Decision Maker</span>
+                              <div className="text-sm font-bold text-gray-900 break-words">
+                                {editingId === contact.id ? (
+                                  <input
+                                    type="text"
+                                    value={contact.decisionMaker}
+                                    onChange={(e) => updateContact(contact.id, { decisionMaker: e.target.value })}
+                                    className="border-gray-300 rounded text-sm p-1.5 w-full"
+                                    placeholder="Decision Maker"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : contact.decisionMaker}
+                              </div>
+                            </div>
+
+                            {/* b) Location */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">b) Location</span>
+                              <div className="text-xs text-gray-700 break-words">
+                                {editingId === contact.id ? (
+                                  <input
+                                    type="text"
+                                    value={contact.location || ""}
+                                    onChange={(e) => updateContact(contact.id, { location: e.target.value })}
+                                    className="border-gray-300 rounded text-xs p-1.5 w-full"
+                                    placeholder="Location"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (contact.location || contact.city)}
+                              </div>
+                            </div>
+
+                            {/* c) Capacity */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">c) Capacity</span>
+                              <div className="text-xs text-gray-700">
+                                {editingId === contact.id ? (
+                                  <input
+                                    type="number"
+                                    value={contact.estimatedCapacity}
+                                    onChange={(e) => updateContact(contact.id, { estimatedCapacity: Number(e.target.value) })}
+                                    className="border-gray-300 rounded text-xs p-1.5 w-full"
+                                    placeholder="Capacity"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : contact.estimatedCapacity}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Column (3 fields): d, e, f */}
+                          <div className="flex flex-col gap-3">
+                            {/* d) Status */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">d) Status</span>
+                              <div>
+                                {editingId === contact.id ? (
+                                  <input
+                                    type="text"
+                                    value={contact.status || ""}
+                                    onChange={(e) => updateContact(contact.id, { status: e.target.value })}
+                                    className="border-gray-300 rounded text-xs p-1.5 w-full"
+                                    placeholder="Status"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 break-words max-w-full">
+                                    {contact.status}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* e) Next Step */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">e) Next Step</span>
+                              <div className="text-xs text-gray-700 break-words">
+                                {editingId === contact.id ? (
+                                  <input
+                                    type="text"
+                                    value={contact.nextStep || ""}
+                                    onChange={(e) => updateContact(contact.id, { nextStep: e.target.value })}
+                                    className="border-gray-300 rounded text-xs p-1.5 w-full"
+                                    placeholder="Next Step"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (contact.nextStep || "-")}
+                              </div>
+                            </div>
+
+                            {/* f) Notes */}
+                            <div>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">f) Notes</span>
+                              <div className="text-xs text-gray-700 whitespace-pre-wrap break-words">
+                                {editingId === contact.id ? (
+                                  <textarea
+                                    value={contact.notes || ""}
+                                    onChange={(e) => updateContact(contact.id, { notes: e.target.value })}
+                                    className="border-gray-300 rounded text-xs p-1.5 w-full"
+                                    rows={3}
+                                    placeholder="Notes"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (contact.notes || "-")}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-start gap-3 mt-4 flex-wrap">
+                          <button
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: `Contact: ${contact.decisionMaker}`,
+                                  text: `Decision Maker: ${contact.decisionMaker}\nLocation: ${contact.location}\nStatus: ${contact.status}\nNext Step: ${contact.nextStep}`,
+                                }).catch(console.error);
+                              } else {
+                                alert("Share not supported on this device");
+                              }
+                            }}
+                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
+                          >
+                            SHARE
+                          </button>
                           {editingId === contact.id ? (
                             <button
-                              onClick={() => setEditingId(null)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                              onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase"
                             >
-                              Save
+                              SAVE
                             </button>
                           ) : (
                             <button
-                              onClick={() => setEditingId(contact.id)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                              onClick={(e) => { e.stopPropagation(); setEditingId(contact.id); }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
                             >
-                              Edit
+                              EDIT
                             </button>
                           )}
                           <button
-                            onClick={() => deleteContact(contact.id)}
-                            className="text-indigo-600 hover:text-indigo-900"
+                            onClick={(e) => { e.stopPropagation(); deleteContact(contact.id); }}
+                            className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase"
                           >
-                            Delete
+                            DELETE
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

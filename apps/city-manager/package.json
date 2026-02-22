@@ -13,12 +13,14 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.97.0",
+    "@types/react-signature-canvas": "^1.0.7",
     "groq-sdk": "^0.37.0",
     "next": "latest",
     "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-markdown": "^10.1.0",
+    "react-signature-canvas": "^1.1.0-alpha.2",
     "resend": "^6.9.2",
     "web-push": "latest",
     "zod": "latest"

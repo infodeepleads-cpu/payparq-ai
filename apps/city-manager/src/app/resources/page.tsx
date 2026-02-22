@@ -58,7 +58,7 @@ export default function Page() {
         <div className="grid grid-cols-1 gap-8">
           {categories.map((category) => (
             <div key={category}>
-              <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">
+              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">
                 {category}
               </h2>
               <div className="flex flex-col">
@@ -67,15 +67,15 @@ export default function Page() {
                   .map((item) => (
                     <div 
                       key={item.id} 
-                      className="flex items-center justify-between py-2 px-2 border-b border-gray-100 transition-colors hover:bg-gray-50"
+                      className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between"
                     >
-                      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">{item.name}</span>
+                      <span className="text-xs font-bold text-black shrink-0 mr-4">{item.name}</span>
                       {item.link ? (
                         <a 
                           href={item.link} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-xs font-bold text-black hover:text-gray-700 underline"
+                          className="text-xs text-gray-500 hover:text-gray-700 underline text-right break-all"
                         >
                           {item.linkLabel || "View Link"}
                         </a>

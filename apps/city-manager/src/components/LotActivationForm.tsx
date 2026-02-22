@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getSupabase } from "../lib/supabase";
+import SignaturePad from "./SignaturePad";
 
 interface LocationEntry {
   id: string;
@@ -45,11 +46,16 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
     }
   ]);
   const [signature, setSignature] = useState(initialData?.signature || "");
-  const [date, setDate] = useState(initialData?.date || "");
+  const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(initialData?.time || new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" }));
+
+  const handleSignatureChange = (newSignature: string | null) => {
+    setSignature(newSignature || "");
+  };
 
   const handleSend = () => {
     const subject = encodeURIComponent("Filled Lot Activation List");
-    const body = encodeURIComponent(JSON.stringify({ locations, signature, date }, null, 2));
+    const body = encodeURIComponent(JSON.stringify({ locations, signature, date, time }, null, 2));
     window.location.href = `mailto:payparq@outlook.com?subject=${subject}&body=${body}`;
   };
 
@@ -224,7 +230,7 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center z-20">
-          <h2 className="text-lg font-bold text-black">IV. ZAKLJUČAK CITY MANAGERA - LOT ACTIVATION LIST</h2>
+          <h2 className="text-lg font-bold text-black">LOT ACTIVATION LIST</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
         </div>
         
@@ -319,12 +325,43 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
           >
             <span className="text-xl">+</span> ADD ANOTHER LOCATION
           </button>
+
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 rounded text-black mb-4">
+              VIII. ZAVRŠNA NAPOMENA
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+              <div>
+                <SignaturePad 
+                  onChange={handleSignatureChange} 
+                  initialSignature={signature} 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase mb-1">Datum i Vrijeme</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="date" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                  <input 
+                    type="time" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
           >
             Send to PayParq
           </button>
@@ -341,7 +378,7 @@ export default function LotActivationForm({ onClose, onSave, initialData }: LotA
                 alert("Please upload at least one photo for each location.");
                 return;
               }
-              onSave({ locations, signature, date });
+              onSave({ locations, signature, date, time });
             }}
             className="px-4 py-2 text-sm font-bold bg-black text-white rounded hover:bg-gray-800"
           >

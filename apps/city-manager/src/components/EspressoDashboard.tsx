@@ -105,6 +105,65 @@ export default function EspressoDashboard() {
     }));
   }, [mapLotsCompleted, activateLotCompleted, progress.currentTier]);
 
+  // Sync Daily Form Tasks to Chat Task List
+  useEffect(() => {
+    try {
+      const TASKS_KEY = "pp_tasks";
+      const rawTasks = localStorage.getItem(TASKS_KEY);
+      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      let updated = false;
+
+      const dailyFormTasks = [
+        { 
+          id: `daily-permits-t${progress.currentTier}`, 
+          title: `Fill Permits & Public Form (Tier ${progress.currentTier})`,
+          completed: !!docsState[`t${progress.currentTier}-permits`]
+        },
+        { 
+          id: `daily-competition-t${progress.currentTier}`, 
+          title: `Fill Competition Analysis Form (Tier ${progress.currentTier})`,
+          completed: !!docsState[`t${progress.currentTier}-competition`]
+        },
+        { 
+          id: `daily-activation-t${progress.currentTier}`, 
+          title: `Fill Lot Activation List (Tier ${progress.currentTier})`,
+          completed: !!docsState[`t${progress.currentTier}-activation`]
+        },
+        { 
+          id: `daily-specific-t${progress.currentTier}`, 
+          title: `Fill ${progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis (Tier ${progress.currentTier})`,
+          completed: !!docsState[`t${progress.currentTier}-specific`]
+        }
+      ];
+
+      dailyFormTasks.forEach(dt => {
+        const existingIdx = tasks.findIndex((t: any) => t.id === dt.id);
+        if (existingIdx >= 0) {
+          if (tasks[existingIdx].completed !== dt.completed) {
+            tasks[existingIdx].completed = dt.completed;
+            updated = true;
+          }
+        } else {
+          tasks.push({
+            id: dt.id,
+            title: dt.title,
+            completed: dt.completed,
+            confirmed: false,
+            createdAt: Date.now()
+          });
+          updated = true;
+        }
+      });
+
+      if (updated) {
+        localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+        window.dispatchEvent(new Event("storage"));
+      }
+    } catch (e) {
+      console.error("Failed to sync daily tasks", e);
+    }
+  }, [docsState, progress.currentTier]);
+
   const sendEmail = (e: React.MouseEvent, subject: string, data: any) => {
     e.stopPropagation();
     if (!data) {
@@ -118,9 +177,9 @@ export default function EspressoDashboard() {
   return (
     <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 pb-32">
       {/* Header matching Inbox style */}
-      <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
+      <div className="flex items-center border-b border-gray-100 mb-6 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">ESPRESSO</span>
-        <span className="text-[10px] text-gray-400">Tier {progress.currentTier}</span>
+        <span className="text-[10px] text-gray-400">Tier {progress.currentTier}/7</span>
       </div>
 
       <div className="space-y-8">
@@ -162,40 +221,9 @@ export default function EspressoDashboard() {
 
         {/* 0. Documents */}
         <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Documents</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Documents</h2>
           <div className="space-y-1">
-            {/* HUB Activation Form (Priority) */}
-            <div 
-              onClick={() => setShowActivationForm(true)}
-              className={`group border-l-4 border-l-blue-600 border-y border-r border-gray-100 py-4 hover:bg-blue-50/30 cursor-pointer transition-colors px-3 rounded-r-lg flex items-center justify-between shadow-sm mb-4 ${
-                activationData ? "bg-blue-50/50" : "bg-white"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activationData ? "bg-green-500" : "bg-blue-600 animate-pulse"}`}></div>
-                <div>
-                  <h3 className="text-sm font-black text-blue-900 uppercase tracking-tight">HUB Activation Form</h3>
-                  <p className="text-[10px] font-medium text-blue-600/70">
-                    {activationData ? "Ready for review" : "CRITICAL • Required for every activation"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded border ${
-                  activationData 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-blue-200 text-blue-700 bg-blue-50"
-                }`}>
-                  {activationData ? "EDIT FORM" : "FILL NOW"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled HUB Activation Form", activationData)}
-                  className="text-[10px] font-bold text-blue-700 hover:text-blue-900 uppercase tracking-wider bg-blue-100/50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
-                >
-                  SEND FORM
-                </button>
-              </div>
-            </div>
+
 
             {/* Permits */}
             <div 
@@ -204,12 +232,11 @@ export default function EspressoDashboard() {
                 docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50/50" : ""
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-permits`] ? "bg-green-500" : "bg-black"}`}></div>
+              <div className="flex items-center gap-2">
                 <div>
                   <h3 className="text-xs font-bold text-black">Permits & Public</h3>
-                  <p className="text-[10px] text-gray-500">
-                    {docsState[`t${progress.currentTier}-permits`] ? "Filled" : "Required"}
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">
+                    {docsState[`t${progress.currentTier}-permits`] ? "FILLED" : "FILL FORM"}
                   </p>
                 </div>
               </div>
@@ -223,7 +250,7 @@ export default function EspressoDashboard() {
                 </span>
                 <button
                   onClick={(e) => sendEmail(e, "Filled Permits Form", permitsData)}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
                 >
                   SEND FORM
                 </button>
@@ -237,12 +264,11 @@ export default function EspressoDashboard() {
                 docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50/50" : ""
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-competition`] ? "bg-green-500" : "bg-black"}`}></div>
+              <div className="flex items-center gap-2">
                 <div>
                   <h3 className="text-xs font-bold text-black">Competition Analysis</h3>
-                  <p className="text-[10px] text-gray-500">
-                    {docsState[`t${progress.currentTier}-competition`] ? "Filled" : "Required"}
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">
+                    {docsState[`t${progress.currentTier}-competition`] ? "FILLED" : "FILL FORM"}
                   </p>
                 </div>
               </div>
@@ -256,7 +282,7 @@ export default function EspressoDashboard() {
                 </span>
                 <button
                   onClick={(e) => sendEmail(e, "Filled Competition Analysis", competitionData)}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
                 >
                   SEND FORM
                 </button>
@@ -271,11 +297,10 @@ export default function EspressoDashboard() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-activation`] ? "bg-green-500" : "bg-black"}`}></div>
                 <div>
                   <h3 className="text-xs font-bold text-black">Lot Activation List</h3>
-                  <p className="text-[10px] text-gray-500">
-                    {docsState[`t${progress.currentTier}-activation`] ? "Filled" : "Required"}
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">
+                    {docsState[`t${progress.currentTier}-activation`] ? "FILLED" : "FILL FORM"}
                   </p>
                 </div>
               </div>
@@ -289,7 +314,7 @@ export default function EspressoDashboard() {
                 </span>
                 <button
                   onClick={(e) => sendEmail(e, "Filled Lot Activation List", lotData)}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
                 >
                   SEND FORM
                 </button>
@@ -303,14 +328,13 @@ export default function EspressoDashboard() {
                 docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${docsState[`t${progress.currentTier}-specific`] ? "bg-green-500" : "bg-black"}`}></div>
+              <div className="flex items-center gap-2">
                 <div>
                   <h3 className="text-xs font-bold text-black">
                     {progress.currentTier === 1 ? "Airport Analysis" : progress.currentTier === 6 ? "Hotel Analysis" : progress.currentTier === 7 ? "Whales Corporation Analysis" : "Area Analysis"}
                   </h3>
-                  <p className="text-[10px] text-gray-500">
-                    {docsState[`t${progress.currentTier}-specific`] ? "Filled" : "Required"}
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">
+                    {docsState[`t${progress.currentTier}-specific`] ? "FILLED" : "FILL FORM"}
                   </p>
                 </div>
               </div>
@@ -324,7 +348,39 @@ export default function EspressoDashboard() {
                 </span>
                 <button
                   onClick={(e) => sendEmail(e, "Filled Specific Analysis", airportData)}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wider"
+                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
+                >
+                  SEND FORM
+                </button>
+              </div>
+            </div>
+
+            {/* HUB Activation Form (Moved to end) */}
+            <div 
+              onClick={() => setShowActivationForm(true)}
+              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${
+                activationData ? "bg-gray-50/50" : ""
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div>
+                  <h3 className="text-sm font-black text-black uppercase tracking-tight">HUB Activation Form</h3>
+                  <p className="text-[10px] text-gray-500 font-bold mt-1">
+                    {activationData ? "READY FOR REVIEW" : "FILL FORM"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
+                  activationData 
+                    ? "border-green-200 text-green-700 bg-green-50" 
+                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
+                }`}>
+                  {activationData ? "EDIT FORM" : "FILL FORM"}
+                </span>
+                <button
+                  onClick={(e) => sendEmail(e, "Filled HUB Activation Form", activationData)}
+                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
                 >
                   SEND FORM
                 </button>
@@ -333,110 +389,110 @@ export default function EspressoDashboard() {
           </div>
         </section>
 
-        {/* 3. Daily Tasks */}
+        {/* 1. Daily Tasks */}
         <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Daily Tasks</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">Daily Tasks</h2>
           
           <div className="space-y-1">
             <div 
               onClick={() => setShowPermitsForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
             >
-               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-permits`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-400 line-through" : "text-black"}`}>
                   Fill Permits & Public Form
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
+               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {docsState[`t${progress.currentTier}-permits`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
 
             <div 
               onClick={() => setShowCompetitionForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-competition`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-400 line-through" : "text-black"}`}>
                   Fill Competition Analysis Form
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {docsState[`t${progress.currentTier}-competition`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
 
             <div 
               onClick={() => setShowLotForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-2"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-activation`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-400 line-through" : "text-black"}`}>
                   Fill Lot Activation List
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {docsState[`t${progress.currentTier}-activation`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
 
             <div 
               onClick={() => setShowAirportForm(true)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
                   Fill {progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
 
             <div 
               onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>
                   Map All Relevant Lots
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
 
             <div 
               onClick={() => setActivateLotCompleted(!activateLotCompleted)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center gap-3"
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>
                   Activate 1 Lot (Try to close best first)
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
+              </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
+              }`}>
+                {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
             </div>
           </div>

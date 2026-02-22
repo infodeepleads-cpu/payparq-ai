@@ -81,7 +81,7 @@ export default function Inbox() {
                     }}
                   >
                     <div className="flex items-center justify-between mb-1 gap-4">
-                      <span className={`text-xs truncate ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
+                      <span className={`text-xs break-words ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
                         {email.subject}
                       </span>
                       <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">
@@ -96,20 +96,20 @@ export default function Inbox() {
                     </div>
                     <div className="">
                       <div className="flex justify-between items-baseline mb-1">
-                        <p className="text-[10px] text-gray-500 truncate">
+                        <p className="text-[10px] text-gray-500 break-all">
                           From: <span className="text-gray-800">{email.from_address}</span>
                         </p>
                       </div>
                       {!isExpanded && (
-                        <div className="text-[10px] text-gray-500 truncate">
-                          {email.text_body?.substring(0, 80) || "No preview available"}
+                        <div className="text-[10px] text-gray-500 break-all whitespace-normal w-full pr-8">
+                          {email.text_body || "No preview available"}
                         </div>
                       )}
                       {isExpanded && (
                         <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100">
-                          <div className="flex justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2">
-                            <span>From: {email.from_address}</span>
-                            <span>{new Date(email.created_at).toLocaleString(undefined, {
+                          <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2 gap-1">
+                            <span className="break-all">From: {email.from_address}</span>
+                            <span className="shrink-0">{new Date(email.created_at).toLocaleString(undefined, {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',

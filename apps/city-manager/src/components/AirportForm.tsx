@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import SignaturePad from "./SignaturePad";
 
 interface AirportFormProps {
   onClose: () => void;
@@ -20,8 +21,13 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
     pressureOther: "",
     commentary: "",
     final_signature: "",
-    final_date: ""
+    final_date: new Date().toISOString().split('T')[0],
+    final_time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: "2-digit", minute: "2-digit" })
   });
+
+  const handleSignatureChange = (signature: string | null) => {
+    setFormData((prev: any) => ({ ...prev, final_signature: signature }));
+  };
 
   const handleSend = () => {
     const subject = encodeURIComponent("Filled Airport Analysis");
@@ -48,7 +54,7 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center z-20">
-        <h2 className="text-lg font-bold text-black">AIRPORT SHUTTLE</h2>
+        <h2 className="text-lg font-bold text-black">AIRPORT ANALYSIS</h2>
         <button onClick={onClose} className="text-gray-500 hover:text-black">✕</button>
       </div>
         
@@ -75,9 +81,9 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
             </div>
           </div>
 
-          {/* 6. Opći stav aerodroma */}
+          {/* 1. Opći stav aerodroma */}
           <div className="border-t pt-4">
-            <label className="block text-sm font-bold mb-2">6. Opći stav aerodroma</label>
+            <label className="block text-sm font-bold mb-2">1. Opći stav aerodroma</label>
             <p className="text-xs text-gray-600 mb-2">Stav aerodroma prema privatnim parkiralištima u okolici:</p>
             <div className="flex flex-wrap gap-4 mb-2">
               {["Pozitivan", "Neutralan", "Negativan", "Nejasan"].map(opt => (
@@ -94,9 +100,9 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
             </div>
           </div>
 
-          {/* 7. Ograničenja */}
+          {/* 2. Ograničenja */}
           <div className="border-t pt-4">
-            <label className="block text-sm font-bold mb-2">7. Ograničenja</label>
+            <label className="block text-sm font-bold mb-2">2. Ograničenja</label>
             <p className="text-xs text-gray-600 mb-2">Postoje li ograničenja vezana uz:</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
               {["Cijene", "Oglašavanje", "Znakove", "Transfer putnika", "Komunikaciju s korisnicima"].map(item => (
@@ -118,9 +124,9 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
             />
           </div>
 
-          {/* 8. Pritisci ili rizici */}
+          {/* 3. Pritisci ili rizici */}
           <div className="border-t pt-4">
-            <label className="block text-sm font-bold mb-2">8. Pritisci ili rizici</label>
+            <label className="block text-sm font-bold mb-2">3. Pritisci ili rizici</label>
             <p className="text-xs text-gray-600 mb-2">Postoje li formalni ili neformalni pritisci na privatne parkinge?</p>
             <div className="flex gap-4 mb-3">
               {["NE", "DA"].map(opt => (
@@ -175,26 +181,31 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
 
           <div className="border-t pt-4">
             <h3 className="text-sm font-bold uppercase bg-gray-100 p-2 rounded text-black mb-4">
-              VIII. ZAVRŠNA NAPOMENA
+              IV. ZAVRŠNA NAPOMENA
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
               <div>
-                <label className="block text-xs font-bold uppercase mb-1">Potpis City Managera</label>
-                <input 
-                  type="text" 
-                  className="w-full border border-gray-300 rounded p-2 text-sm"
-                  value={formData.final_signature}
-                  onChange={(e) => handleChange("final_signature", e.target.value)}
+                <SignaturePad 
+                  onChange={handleSignatureChange} 
+                  initialSignature={formData.final_signature} 
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase mb-1">Datum</label>
-                <input 
-                  type="date" 
-                  className="w-full border border-gray-300 rounded p-2 text-sm"
-                  value={formData.final_date}
-                  onChange={(e) => handleChange("final_date", e.target.value)}
-                />
+                <label className="block text-xs font-bold uppercase mb-1">Datum i Vrijeme</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="date" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={formData.final_date}
+                    onChange={(e) => handleChange("final_date", e.target.value)}
+                  />
+                  <input 
+                    type="time" 
+                    className="w-full border border-gray-300 rounded p-2 text-sm"
+                    value={formData.final_time}
+                    onChange={(e) => handleChange("final_time", e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -204,7 +215,7 @@ export default function AirportForm({ onClose, onSave, initialData }: AirportFor
         <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 flex justify-end gap-2 z-20">
           <button 
             onClick={handleSend}
-            className="px-4 py-2 text-sm font-bold bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-6 py-2 bg-black text-white text-sm font-medium rounded-md hover:bg-gray-800 transition-colors"
           >
             Send to PayParq
           </button>
