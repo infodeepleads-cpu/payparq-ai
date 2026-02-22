@@ -1,4 +1,7 @@
 "use client";
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
 import React, { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { getSupabase } from "../lib/supabase";
@@ -858,6 +861,67 @@ export default function MachineIo() {
             window.dispatchEvent(new Event("pp_reminders_update"));
             console.log("Reminder scheduled successfully!");
             systemNote = `✓ System: Reminder set for ${formatCET(time)} CET`;
+
+            // Native Logic: Schedule Local Notification & Add to Calendar
+            if (Capacitor.isNativePlatform()) {
+              try {
+                // 1. Request Local Notification Permissions
+                const notifs = await LocalNotifications.checkPermissions();
+                if (notifs.display !== 'granted') {
+                  await LocalNotifications.requestPermissions();
+                }
+
+                // 2. Schedule Local Notification
+                await LocalNotifications.schedule({
+                  notifications: [{
+                    title: "City Manager Reminder",
+                    body: data.taskTitle,
+                    id: Math.abs(newReminder.id % 2147483647), // Ensure valid 32-bit int
+                    schedule: { at: time },
+                    sound: undefined,
+                    attachments: undefined,
+                    actionTypeId: "",
+                    extra: null
+                  }]
+                });
+                systemNote += " (Native Alert Set)";
+
+                // 3. Add to Calendar (Attempt silently, or prompt if needed)
+                try {
+                  const calPerms = await CapacitorCalendar.checkAllPermissions();
+                  let hasWrite = false;
+                  // Handle different permission structures or just request if not granted
+                  // We try to request full access if we don't have it
+                  if (calPerms.result?.writeCalendar !== 'granted' && calPerms.result?.readCalendar !== 'granted') {
+                     // Request full access
+                     await CapacitorCalendar.requestFullCalendarAccess();
+                     hasWrite = true; 
+                  } else {
+                     hasWrite = true;
+                  }
+
+                  if (hasWrite) {
+                    await CapacitorCalendar.createEvent({
+                      title: data.taskTitle,
+                      startDate: time.getTime(),
+                      endDate: time.getTime() + (60 * 60 * 1000), // Default 1 hour
+                      location: "City Manager App",
+                      notes: "Created via City Manager AI",
+                      isAllDay: false
+                    });
+                    systemNote += " (+ Calendar)";
+                  }
+                } catch (calErr) {
+                  console.error("Calendar error:", calErr);
+                  // Don't fail the whole operation if calendar fails
+                }
+
+              } catch (nativeErr) {
+                console.error("Native scheduling error:", nativeErr);
+                systemNote += " (Native Error)";
+              }
+            }
+
             try {
               await fetch("/api/reminders/schedule", {
                 method: "POST",
