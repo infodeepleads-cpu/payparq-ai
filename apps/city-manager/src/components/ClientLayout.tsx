@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import MachineIo from "./MachineIo";
 import ResizableLayout from "./ResizableLayout";
+import DailyRecap from "./DailyRecap";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,6 +24,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {children}
         </ResizableLayout>
       </div>
+      <DailyRecap />
     </div>
   );
 }

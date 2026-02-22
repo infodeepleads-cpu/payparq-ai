@@ -240,7 +240,7 @@ export default function MachineIo() {
   const completeTaskLocal = (title: string) => {
     const { tasks, idx } = findTaskIndex(title);
     if (idx >= 0) {
-      tasks[idx] = { ...tasks[idx], completed: true };
+      tasks[idx] = { ...tasks[idx], completed: true, completedAt: Date.now() };
       writeTasks(tasks);
       return tasks[idx];
     }
