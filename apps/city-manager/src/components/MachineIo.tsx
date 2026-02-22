@@ -903,7 +903,7 @@ export default function MachineIo() {
             </>
          )}
 
-         <div className="shrink-0 z-30 bg-white border-b border-gray-100 w-full">
+         <div className="shrink-0 z-30 bg-white border-b border-gray-100 w-full hidden md:block">
            <div className="w-full px-4 py-2 flex items-center justify-between">
              <span className="text-xs font-semibold tracking-tight text-black">machine.io</span>
            </div>

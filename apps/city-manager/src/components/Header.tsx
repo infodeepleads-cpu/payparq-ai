@@ -35,15 +35,6 @@ export default function Header() {
         </div>
 
       <div className="flex items-center gap-1 md:gap-2 ml-[1cm]">
-          {/* Mission */}
-        <Link 
-          href={{ pathname: "/mission" }}
-          className="group relative flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-md transition-colors text-gray-600 hover:bg-gray-100 focus:outline-none"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-3.866 0-7 1.79-7 4v4h14v-4c0-2.21-3.134-4-7-4z" /></svg>
-          <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Mission</span>
-        </Link>
-
         {/* Reminders */}
         <Link 
           href={{ pathname: "/reminders" }}
@@ -62,6 +53,15 @@ export default function Header() {
           <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Browser</span>
         </Link>
 
+        {/* Resources */}
+        <Link 
+          href={{ pathname: "/resources" }}
+          className="group relative flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-md transition-colors text-gray-600 hover:bg-gray-100 focus:outline-none"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>
+          <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Resources</span>
+        </Link>
+
         {/* Settings Wrench */}
         <Link 
           href={{ pathname: "/settings" }}
@@ -72,18 +72,6 @@ export default function Header() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Settings</span>
-        </Link>
-
-        {/* Credentials */}
-        <Link 
-          href={{ pathname: "/profile" }}
-          className="group relative flex items-center justify-center w-10 h-10 rounded-md transition-colors text-gray-600 hover:bg-gray-100 focus:outline-none"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          <span className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-            <div className="font-medium">{userName || 'User'}</div>
-            <div className="text-gray-400 text-[10px] uppercase tracking-wider mt-0.5">Credentials</div>
-          </span>
         </Link>
 
         {/* Logout */}
