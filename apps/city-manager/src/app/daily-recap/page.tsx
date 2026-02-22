@@ -108,7 +108,7 @@ export default function Page() {
                     <span className={`text-xs truncate ${email.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
                       {email.subject}
                     </span>
-                    <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">
+                    <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap pr-2">
                       {new Date(email.created_at).toLocaleString(undefined, {
                         month: 'short',
                         day: 'numeric',

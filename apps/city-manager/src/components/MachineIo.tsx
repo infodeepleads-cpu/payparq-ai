@@ -946,7 +946,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-4 md:pb-6 pl-0 pr-4 md:px-0 touch-auto min-h-[80px]">
+          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-4 md:pb-6 pl-1 pr-4 md:px-0 touch-auto min-h-[80px]">
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-2 block">
                  <TopControlsWidget />

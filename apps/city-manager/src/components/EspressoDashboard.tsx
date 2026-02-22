@@ -240,21 +240,7 @@ export default function EspressoDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                  docsState[`t${progress.currentTier}-permits`] 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-                }`}>
-                  {docsState[`t${progress.currentTier}-permits`] ? "EDIT FORM" : "FILL FORM"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled Permits Form", permitsData)}
-                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
-                >
-                  SEND FORM
-                </button>
-              </div>
+
             </div>
 
             {/* Competition */}
@@ -272,21 +258,7 @@ export default function EspressoDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                  docsState[`t${progress.currentTier}-competition`] 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-                }`}>
-                  {docsState[`t${progress.currentTier}-competition`] ? "EDIT FORM" : "FILL FORM"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled Competition Analysis", competitionData)}
-                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
-                >
-                  SEND FORM
-                </button>
-              </div>
+
             </div>
 
             {/* Lot Activation */}
@@ -304,21 +276,7 @@ export default function EspressoDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                  docsState[`t${progress.currentTier}-activation`] 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-                }`}>
-                  {docsState[`t${progress.currentTier}-activation`] ? "EDIT FORM" : "FILL FORM"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled Lot Activation List", lotData)}
-                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
-                >
-                  SEND FORM
-                </button>
-              </div>
+
             </div>
 
             {/* Area Analysis */}
@@ -338,21 +296,7 @@ export default function EspressoDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                  docsState[`t${progress.currentTier}-specific`] 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-                }`}>
-                  {docsState[`t${progress.currentTier}-specific`] ? "EDIT FORM" : "FILL FORM"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled Specific Analysis", airportData)}
-                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
-                >
-                  SEND FORM
-                </button>
-              </div>
+
             </div>
 
             {/* HUB Activation Form (Moved to end) */}
@@ -370,21 +314,7 @@ export default function EspressoDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[10px] font-medium px-2 py-1 rounded border ${
-                  activationData 
-                    ? "border-green-200 text-green-700 bg-green-50" 
-                    : "border-gray-200 text-gray-600 bg-white group-hover:border-gray-300"
-                }`}>
-                  {activationData ? "EDIT FORM" : "FILL FORM"}
-                </span>
-                <button
-                  onClick={(e) => sendEmail(e, "Filled HUB Activation Form", activationData)}
-                  className="text-[10px] font-bold text-black hover:text-gray-900 uppercase tracking-wider"
-                >
-                  SEND FORM
-                </button>
-              </div>
+
             </div>
           </div>
         </section>

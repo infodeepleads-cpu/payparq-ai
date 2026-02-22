@@ -206,7 +206,7 @@ export default function Page() {
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-4xl w-full mx-auto px-8 pr-16 py-6 pb-32">
+    <div className="max-w-4xl w-full mx-auto px-2 md:px-8 md:pr-16 py-6 pb-32 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
         <span className="text-[10px] text-gray-400">Contacts & Status</span>
@@ -273,7 +273,7 @@ export default function Page() {
                     <p className="text-xs text-gray-400 italic py-2">No contacts in this tier.</p>
                   ) : (
                     tierContacts.map((contact, idx) => (
-                      <div key={contact.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <div key={contact.id} className="p-0 rounded-lg">
                         <div className="grid grid-cols-2 gap-4">
                           {/* Left Column (3 fields): a, b, c */}
                           <div className="flex flex-col gap-3">
@@ -401,28 +401,28 @@ export default function Page() {
                                 alert("Share not supported on this device");
                               }
                             }}
-                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
+                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
                           >
                             SHARE
                           </button>
                           {editingId === contact.id ? (
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
-                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase"
+                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
                             >
                               SAVE
                             </button>
                           ) : (
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(contact.id); }}
-                              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
+                              className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
                             >
                               EDIT
                             </button>
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteContact(contact.id); }}
-                            className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase"
+                            className="text-[10px] font-bold text-black hover:text-gray-700 uppercase"
                           >
                             DELETE
                           </button>

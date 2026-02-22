@@ -1,10 +1,7 @@
 import "../styles/globals.css";
 import type { Metadata, Viewport } from "next";
 import { PwaProvider } from "../components/PwaProvider";
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
-import MachineIo from "../components/MachineIo";
-import ResizableLayout from "../components/ResizableLayout";
+import ClientLayout from "../components/ClientLayout";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -32,15 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="h-[100dvh] fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary">
         <PwaProvider />
-        <div className="flex flex-col h-full w-full bg-background overflow-hidden pt-[60px]">
-          <Header />
-          <div className="flex flex-1 overflow-hidden relative w-full">
-            <Sidebar />
-            <ResizableLayout rightPanel={<MachineIo />}>
-              {children}
-            </ResizableLayout>
-          </div>
-        </div>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

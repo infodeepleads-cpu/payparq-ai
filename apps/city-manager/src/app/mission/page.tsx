@@ -69,15 +69,15 @@ export default function Page() {
   const MissionItem = ({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) => (
     <div 
       onClick={onClick}
-      className={`flex items-center justify-between py-2 px-2 border-b border-gray-100 ${onClick ? "cursor-pointer hover:bg-gray-50" : ""} transition-colors`}
+      className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1 ${onClick ? "cursor-pointer" : ""}`}
     >
-      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</span>
-      <span className="text-xs font-bold text-black">{value}</span>
+      <span className="text-xs font-bold text-black shrink-0">{label}</span>
+      <span className="text-xs text-gray-500">{value}</span>
     </div>
   );
 
   return (
-    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6">
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 overflow-x-hidden">
       <div className="flex items-center justify-between mb-6 border-b border-black pb-2">
         <h1 className="text-xl font-bold tracking-tight text-black">MISSION</h1>
         <div className="flex items-center gap-4"></div>
@@ -86,7 +86,7 @@ export default function Page() {
       <div className="grid grid-cols-1 gap-8">
         {/* Primary Metrics */}
         <div>
-          <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Performance</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">Performance</h2>
           <div className="flex flex-col">
             <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
             <MissionItem label="Lots Mapped" value={lotsMapped} />
@@ -96,7 +96,7 @@ export default function Page() {
 
         {/* Strategic Initiatives */}
         <div>
-          <h2 className="text-xs font-bold text-black uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Strategic Initiatives</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2 border-b border-gray-100 pb-1">Strategic Initiatives</h2>
           <div className="flex flex-col">
             <MissionItem 
               label="SMART CITY PROGRAM" 

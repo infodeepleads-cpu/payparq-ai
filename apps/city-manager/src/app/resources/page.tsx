@@ -50,7 +50,7 @@ export default function Page() {
 
   return (
     <div className="h-screen bg-white overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-4 md:px-0 py-6">
+      <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 overflow-x-hidden">
         <div className="flex items-center justify-between mb-6 border-b border-black pb-2">
           <h1 className="text-xl font-bold tracking-tight text-black">RESOURCES</h1>
         </div>
@@ -67,15 +67,15 @@ export default function Page() {
                   .map((item) => (
                     <div 
                       key={item.id} 
-                      className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between"
+                      className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1"
                     >
-                      <span className="text-xs font-bold text-black shrink-0 mr-4">{item.name}</span>
+                      <span className="text-xs font-bold text-black shrink-0">{item.name}</span>
                       {item.link ? (
                         <a 
                           href={item.link} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-xs text-gray-500 hover:text-gray-700 underline text-right break-all"
+                          className="text-xs text-gray-500 hover:text-gray-700 underline break-all"
                         >
                           {item.linkLabel || "View Link"}
                         </a>
