@@ -36,7 +36,7 @@ const DEFAULT_RESOURCES: ResourceItem[] = [
   { id: "m-review", name: "Review Management", category: "Mentorship", link: "/resources/review-management", linkLabel: "Outperform Expectations" },
   { id: "m-objection", name: "Objection Handling", category: "Mentorship", link: "/resources/objection-handling", linkLabel: "Common Objections & Legal Basis" },
   { id: "m-scripts", name: "Scripts", category: "Mentorship", link: "/resources/scripts", linkLabel: "Personalized Outreach Framework" },
-  { id: "m-3keys", name: "3 Key Solutions", category: "Mentorship", link: "/resources/mentorship", linkLabel: "3 Key Solutions" },
+  { id: "m-3keys", name: "3 Biggest Problems We Solve", category: "Mentorship", link: "/resources/mentorship", linkLabel: "3 Biggest Problems We Solve" },
 ];
 
 export default function Page() {
@@ -50,7 +50,7 @@ export default function Page() {
 
   return (
     <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
-      <div className="max-w-3xl w-full mx-auto px-1 md:px-0 py-4 overflow-x-hidden">
+      <div className="max-w-3xl w-full mx-auto px-1 md:px-0 pt-4 pb-32 overflow-x-hidden">
         <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
           <span className="text-xs font-semibold tracking-tight text-black mr-4">RESOURCES</span>
         </div>
