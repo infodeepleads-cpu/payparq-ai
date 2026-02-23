@@ -906,7 +906,7 @@ export default function MachineIo() {
                       startDate: time.getTime(),
                       endDate: time.getTime() + (60 * 60 * 1000), // Default 1 hour
                       location: "City Manager App",
-                      notes: "Created via City Manager AI",
+                      description: "Created via City Manager AI",
                       isAllDay: false
                     });
                     systemNote += " (+ Calendar)";
