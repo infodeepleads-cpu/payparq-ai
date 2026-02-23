@@ -874,8 +874,8 @@ export default function MachineIo() {
                 // 2. Schedule Local Notification
                 await LocalNotifications.schedule({
                   notifications: [{
-                    title: "City Manager Reminder",
-                    body: data.taskTitle,
+                    title: data.taskTitle,
+                    body: "City Manager Reminder",
                     id: Math.abs(newReminder.id % 2147483647), // Ensure valid 32-bit int
                     schedule: { at: time },
                     sound: undefined,
@@ -1076,7 +1076,7 @@ export default function MachineIo() {
          </div>
 
       {!threadId || messages.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center pl-0 pr-4 md:px-4 overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center justify-end md:justify-center pl-0 pr-4 md:px-4 overflow-y-auto pb-4 md:pb-0">
            <div className="w-full max-w-3xl mx-auto">
              <div className="w-full mb-1 block">
                <TopControlsWidget />
