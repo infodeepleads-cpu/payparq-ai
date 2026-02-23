@@ -23,8 +23,13 @@ export default function Header() {
     try {
       const supabase = getSupabase();
       await supabase.auth.signOut();
+      localStorage.clear(); // Ensure all local data is wiped
       window.location.href = "/auth";
-    } catch {}
+    } catch {
+      // Force clear even if signOut fails
+      localStorage.clear();
+      window.location.href = "/auth";
+    }
   };
 
   return (
