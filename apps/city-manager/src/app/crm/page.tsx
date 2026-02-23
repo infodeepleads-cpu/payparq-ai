@@ -194,6 +194,60 @@ export default function Page() {
 
   const [expandedTier, setExpandedTier] = useState<Tier | null>(null);
 
+  const addNewContactToTier = async (tierId: Tier) => {
+    const supabase = getSupabase();
+    
+    // Default values for new contact
+    const newContact = {
+      tier: tierId,
+      decision_maker: "New Contact",
+      location: "",
+      estimated_capacity: 0,
+      status: "Entry Prewarm (Mail)",
+      created_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase.from("crm_contacts").insert(newContact).select().single();
+    
+    if (error) {
+      console.error("Error creating new contact:", error);
+      alert("Failed to create new contact.");
+      return;
+    }
+    
+    if (data) {
+      // Optimistic update
+      const optimisticContact: Contact = {
+        id: data.id,
+        tier: data.tier,
+        decisionMaker: data.decision_maker,
+        location: data.location,
+        estimatedCapacity: data.estimated_capacity,
+        status: data.status,
+        nextStep: data.next_step,
+        contractType: data.contract_type,
+        contractAction: data.contract_action,
+        expirationDate: data.expiration_date,
+        followUpDate: data.follow_up_date,
+        noReason: data.no_reason,
+        restartTime: data.restart_time,
+        notes: data.notes,
+        createdAt: new Date(data.created_at).getTime(),
+        city: data.location,
+        decisionStatus: data.status
+      };
+      
+      setContacts(prev => [optimisticContact, ...prev]);
+      setEditingId(data.id);
+      setExpandedTier(tierId);
+      setSearchQuery("");
+
+      // Trigger global update
+      window.dispatchEvent(new Event("crm_storage"));
+      localStorage.setItem("crm_update_signal", Date.now().toString());
+    }
+  };
+
   const filteredContacts = contacts.filter(c => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -256,6 +310,15 @@ export default function Page() {
               >
                 <div className="flex items-center gap-3">
                   <h3 className="text-xs font-bold text-black">Tier {tier.id}: {tier.label}</h3>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addNewContactToTier(tier.id);
+                    }}
+                    className="ml-2 text-[10px] font-bold text-black hover:text-gray-700 uppercase bg-transparent border-none outline-none focus:outline-none focus:ring-0"
+                  >
+                    +
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center min-w-[20px] h-5 text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 rounded-full">

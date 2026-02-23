@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-type ResourceCategory = "Legal & Finance" | "Follow Up Materials" | "Mentorship";
+type ResourceCategory = "Notes" | "Legal & Finance" | "Follow Up Materials" | "Mentorship";
 
 interface ResourceItem {
   id: string;
@@ -14,6 +14,9 @@ interface ResourceItem {
 }
 
 const DEFAULT_RESOURCES: ResourceItem[] = [
+  // Notes
+  { id: "notes-main", name: "My Notes", category: "Notes", link: "/resources/notes", linkLabel: "View Notes" },
+
   // Legal & Finance
   { id: "lf-contracts", name: "Contracts", category: "Legal & Finance", link: "https://www.payparq.com/terms", linkLabel: "www.payparq.com/terms" },
   { id: "lf-invoices", name: "Invoices", category: "Legal & Finance", link: "https://www.stripe.com", linkLabel: "www.stripe.com" },
@@ -43,6 +46,7 @@ export default function Page() {
   const resources = DEFAULT_RESOURCES;
 
   const categories: ResourceCategory[] = [
+    "Notes",
     "Legal & Finance", 
     "Follow Up Materials", 
     "Mentorship", 

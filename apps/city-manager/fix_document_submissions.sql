@@ -65,3 +65,15 @@ create policy "Admins can view all progress" on user_progress
 drop policy if exists "Admins can update all progress" on user_progress;
 create policy "Admins can update all progress" on user_progress
   for update using (auth.jwt() ->> 'email' = 'payparq@outlook.com');
+
+-- Helper function to execute SQL from client (Service Role only)
+-- This allows us to run future migrations from the IDE via scripts
+create or replace function exec_sql(sql text)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  execute sql;
+end;
+$$;

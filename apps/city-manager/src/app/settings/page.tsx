@@ -20,7 +20,7 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full text-black p-4 md:p-8">
+    <div className="flex flex-col min-h-full text-black p-4 md:p-8 pb-32">
       <h3 className="text-lg font-medium text-gray-900 mb-6">Settings</h3>
       
       <div className="space-y-6 max-w-2xl">

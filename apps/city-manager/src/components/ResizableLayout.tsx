@@ -65,7 +65,7 @@ export default function ResizableLayout({ children, rightPanel }: ResizableLayou
           style={{ width: isRoot ? undefined : '100%' }} // Ensure full width on mobile
         >
           {/* Apply width only on desktop to allow resizing */}
-          <div className="md:block h-full w-full md:w-[var(--middle-width)]" style={{ '--middle-width': `${middleWidth}px` } as React.CSSProperties}>
+          <div className="md:block min-h-full w-full md:w-[var(--middle-width)]" style={{ '--middle-width': `${middleWidth}px` } as React.CSSProperties}>
             <div className="max-w-3xl w-full mx-auto px-0 md:px-0 overflow-x-hidden">
               {children}
             </div>
