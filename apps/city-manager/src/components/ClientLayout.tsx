@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar } from "@capacitor/status-bar";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
@@ -10,6 +13,13 @@ import DailyRecap from "./DailyRecap";
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.hide().catch(() => {});
+      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+    }
+  }, []);
 
   if (isAuthPage) {
     return <main className="h-full w-full bg-white">{children}</main>;

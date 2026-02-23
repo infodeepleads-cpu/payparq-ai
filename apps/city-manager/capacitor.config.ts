@@ -7,6 +7,13 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://city-manager-xi.vercel.app',
     cleartext: true
+  },
+  plugins: {
+    StatusBar: {
+      style: 'DARK',
+      overlaysWebView: true,
+      visible: false
+    }
   }
 };
 
