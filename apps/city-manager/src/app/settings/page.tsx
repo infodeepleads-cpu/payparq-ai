@@ -43,6 +43,26 @@ export default function SettingsPage() {
            <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">General</h4>
            <p className="text-sm text-gray-500">Application settings will appear here.</p>
         </section>
+
+        {/* Mobile App Section */}
+        <section className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+           <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Mobile App</h4>
+           <div className="flex flex-col gap-4">
+             <p className="text-sm text-gray-600">
+               Download the Android application to get push notifications and calendar integration.
+             </p>
+             <a 
+               href="/city-manager.apk" 
+               download
+               className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-fit"
+             >
+               <svg className="mr-2 -ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+               </svg>
+               Download Android APK
+             </a>
+           </div>
+        </section>
       </div>
     </div>
   );
