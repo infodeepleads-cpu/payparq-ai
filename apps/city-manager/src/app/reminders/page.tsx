@@ -65,7 +65,7 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="max-w-4xl w-full mx-auto px-1 md:px-0 py-8 overflow-x-hidden">
+    <div className="max-w-4xl w-full mx-auto pl-0 pr-3 md:px-0 py-8 overflow-x-hidden">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reminders</h1>

@@ -275,6 +275,7 @@ const InputArea = React.memo(({
 });
 
 export default function MachineIo() {
+  const [isNative, setIsNative] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -288,6 +289,11 @@ export default function MachineIo() {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [reminders, setReminders] = useState<any[]>([]);
   const CET_TZ = "Europe/Zagreb";
+
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
+
   const formatCET = (d: Date) =>
     d.toLocaleString("en-GB", {
       timeZone: CET_TZ,
@@ -1118,7 +1124,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className="shrink-0 z-30 bg-white border-t border-gray-50 pt-4 pb-4 md:pb-6 pl-1 pr-8 md:px-0 touch-auto min-h-[80px]">
+          <div className={`shrink-0 z-30 bg-white border-t border-gray-50 pt-4 ${isNative ? 'pb-20' : 'pb-12'} md:pb-6 pl-1 pr-8 md:px-0 touch-auto min-h-[80px]`}>
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-2 block">
                  <TopControlsWidget />
