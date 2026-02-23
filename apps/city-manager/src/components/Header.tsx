@@ -28,7 +28,7 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[60px] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] border-b border-gray-100 bg-sidebar shrink-0 z-50 overflow-visible">
+    <header className="fixed top-0 left-0 right-0 w-full flex items-center h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] border-b border-gray-100 bg-sidebar shrink-0 z-50 overflow-visible">
         {/* Logo */}
         <div className="flex items-center justify-center shrink-0 w-auto px-1 md:w-auto md:px-0 md:mr-0">
           <h1 className="text-xl font-bold text-black tracking-tight">PayParq</h1>

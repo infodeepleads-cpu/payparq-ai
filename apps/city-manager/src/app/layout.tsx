@@ -10,7 +10,7 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  themeColor: "#ffffff",
+  themeColor: "#000000",
 };
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="h-[100dvh] fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary">
+      <body className="h-screen w-screen fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary safe-area-inset-top">
         <PwaProvider />
         <ClientLayout>{children}</ClientLayout>
       </body>

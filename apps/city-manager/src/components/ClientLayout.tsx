@@ -16,13 +16,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-background overflow-hidden pt-[60px]">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
       <Header />
-      <div className="flex flex-1 overflow-x-hidden overflow-y-hidden relative pl-[60px]">
+      <div className="flex-1 flex overflow-hidden pt-[calc(60px+env(safe-area-inset-top))] relative">
         <Sidebar />
-        <ResizableLayout rightPanel={<MachineIo />}>
-          {children}
-        </ResizableLayout>
+        <main className="flex-1 flex flex-col pl-[60px] h-full overflow-hidden w-full relative">
+          <ResizableLayout rightPanel={<MachineIo />}>
+            {children}
+          </ResizableLayout>
+        </main>
       </div>
       <DailyRecap />
     </div>
