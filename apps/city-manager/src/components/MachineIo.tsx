@@ -379,6 +379,7 @@ export default function MachineIo() {
 
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -573,7 +574,11 @@ export default function MachineIo() {
     }
     try {
       const raw = localStorage.getItem(MSG_PREFIX + id);
-      const parsed: Message[] = raw ? JSON.parse(raw) : [];
+      if (!raw) {
+        setMessages([]);
+        return;
+      }
+      const parsed: Message[] = JSON.parse(raw);
       // Ensure historical messages do not animate
       setMessages(parsed.map(m => ({ ...m, animate: false })));
     } catch {
@@ -602,16 +607,47 @@ export default function MachineIo() {
   };
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    
-    // If the last message is an assistant message and is animating, 
-    // we need to scroll multiple times as the content grows.
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior
+      });
+    };
+
+    const isNearBottom = () => {
+      const threshold = 150;
+      const position = scrollContainer.scrollTop + scrollContainer.offsetHeight;
+      const height = scrollContainer.scrollHeight;
+      return height - position < threshold;
+    };
+
     const lastMsg = messages[messages.length - 1];
+    
+    // Always scroll to bottom for new user messages
+    if (lastMsg?.role === "user") {
+      scrollToBottom("smooth");
+      return;
+    }
+
+    // For assistant messages or other updates, only scroll if already near bottom
+    if (isNearBottom()) {
+      // Use "auto" during animation to avoid smooth scroll lag/queueing
+      const behavior = (lastMsg?.role === "assistant" && lastMsg.animate) ? "auto" : "smooth";
+      scrollToBottom(behavior);
+    }
+    
+    // If assistant is animating, keep scrolling to bottom as content grows,
+    // but ONLY if the user hasn't scrolled away.
     if (lastMsg?.role === "assistant" && lastMsg.animate) {
       const interval = setInterval(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        if (isNearBottom()) {
+          scrollToBottom("auto");
+        }
       }, 100);
-      const timeout = setTimeout(() => clearInterval(interval), 3000); // Stop after 3s (approx animation time)
+      const timeout = setTimeout(() => clearInterval(interval), 3000);
       return () => {
         clearInterval(interval);
         clearTimeout(timeout);
@@ -1155,7 +1191,10 @@ export default function MachineIo() {
        </div>
      ) : (
        <div className="w-full flex flex-col h-full">
-          <div className="flex-1 w-full overflow-y-auto scroll-smooth border-b border-gray-50">
+          <div 
+            ref={scrollRef}
+            className="flex-1 w-full overflow-y-auto border-b border-gray-50"
+          >
            <div className="max-w-3xl mx-auto px-4 md:px-0 pt-4 pb-4">
              <div className="flex flex-col space-y-4">
              {messages.map((m, i) => (
