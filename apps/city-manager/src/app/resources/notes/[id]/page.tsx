@@ -104,7 +104,7 @@ export default function NoteDetailPage() {
   };
 
   return (
-    <div className="h-screen bg-white flex flex-col fixed inset-0 z-50 overflow-hidden">
+    <div className="h-screen bg-white flex flex-col fixed inset-0 z-[2000] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-6 bg-white z-10">
         <Link href="/resources/notes" className="text-black -ml-2 appearance-none !border-none !outline-none !shadow-none !ring-0 !bg-transparent hover:!bg-transparent active:!bg-transparent focus:!bg-transparent transition-colors focus:ring-0" style={{ WebkitTapHighlightColor: "transparent" }}>
