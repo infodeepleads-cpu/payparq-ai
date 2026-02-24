@@ -20,10 +20,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       const initStatusBar = async () => {
         try {
           await StatusBar.show();
-          await StatusBar.setBackgroundColor({ color: '#000000' });
+          await StatusBar.setBackgroundColor({ color: '#F9F9F9' });
           await StatusBar.setOverlaysWebView({ overlay: true });
-          // Ensure style is set to dark (white text) since background is black
-          await StatusBar.setStyle({ style: 'DARK' as any });
+          // Set to LIGHT style (dark icons) because background is light gray (#F9F9F9)
+          await StatusBar.setStyle({ style: 'LIGHT' as any });
         } catch (e) {
           console.error('StatusBar error:', e);
         }

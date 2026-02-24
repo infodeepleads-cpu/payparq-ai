@@ -36,8 +36,8 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 w-full border-b border-gray-100 bg-sidebar shrink-0 z-[999] overflow-visible flex flex-col">
-      {/* Status Bar background for mobile/APK */}
-      <div className="h-[env(safe-area-inset-top,0px)] bg-black w-full" />
+      {/* Status Bar background for mobile/APK - Matches bg-sidebar (#F9F9F9) */}
+      <div className="h-[env(safe-area-inset-top,0px)] bg-[#F9F9F9] w-full" />
       
       <div className="w-full h-[40px] flex items-center px-4 relative">
         {/* Logo - Left aligned */}
