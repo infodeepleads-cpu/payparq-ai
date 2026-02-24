@@ -20,6 +20,13 @@ body {
 
 * {
   -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 button, input, textarea {
   outline: none;

@@ -1,33 +1,38 @@
  "use client";
  import { useEffect, useState } from "react";
- import { getSupabase } from "../../../lib/supabase";
- export const dynamic = "force-dynamic";
- export default function Confirm() {
-   const [status, setStatus] = useState<"pending" | "ok" | "error">("pending");
-   const [message, setMessage] = useState<string>("Confirming your email…");
-   useEffect(() => {
-     const params = new URLSearchParams(window.location.search);
-     const token_hash = params.get("token_hash");
-     const email = params.get("email");
-     if (!token_hash || !email) {
-       setStatus("error");
-       setMessage("Missing confirmation details.");
-       return;
-     }
-     const supabase = getSupabase();
-     supabase.auth.verifyOtp({ type: "email", token_hash, email }).then(({ data, error }) => {
-       if (error) {
-         setStatus("error");
-         setMessage(error.message);
-       } else {
-         setStatus("ok");
-         setMessage("Email confirmed. You can close this tab.");
-         setTimeout(() => {
-           window.location.href = "/auth";
-         }, 1500);
-       }
-     });
-   }, []);
+import { getSupabase } from "../../../lib/supabase";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+export const dynamic = "force-dynamic";
+
+export default function Confirm() {
+  const [status, setStatus] = useState<"pending" | "ok" | "error">("pending");
+  const { t } = useLanguage();
+  const [message, setMessage] = useState<string>(t('confirming_email'));
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get("token_hash");
+    const email = params.get("email");
+    if (!token_hash || !email) {
+      setStatus("error");
+      setMessage(t('missing_confirmation_details'));
+      return;
+    }
+    const supabase = getSupabase();
+    supabase.auth.verifyOtp({ type: "email", token_hash, email }).then(({ data, error }) => {
+      if (error) {
+        setStatus("error");
+        setMessage(error.message);
+      } else {
+        setStatus("ok");
+        setMessage(t('email_confirmed_close'));
+        setTimeout(() => {
+          window.location.href = "/auth";
+        }, 1500);
+      }
+    });
+  }, [t]);
    return (
      <div className="flex h-full bg-white">
        <div className="flex-1 flex items-center justify-center">

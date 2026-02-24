@@ -40,13 +40,13 @@ type MainTask = {
 };
 
 const TIERS = [
-  { id: 1 as Tier, label: "Airport land", requiredLots: 3, requiredActivations: 1 },
-  { id: 2 as Tier, label: "Empty land (City lots)", requiredLots: 5, requiredActivations: 1 },
-  { id: 3 as Tier, label: "Crowded Lots", requiredLots: 7, requiredActivations: 1 },
-  { id: 4 as Tier, label: "Villas / Apartments", requiredLots: 5, requiredActivations: 1 },
-  { id: 5 as Tier, label: "Single-power owners", requiredLots: 4, requiredActivations: 1 },
-  { id: 6 as Tier, label: "Hotels", requiredLots: 3, requiredActivations: 1 },
-  { id: 7 as Tier, label: "Whales (corporations)", requiredLots: 2, requiredActivations: 1 },
+  { id: 1 as Tier, labelKey: "airport_land", requiredLots: 3, requiredActivations: 1 },
+  { id: 2 as Tier, labelKey: "empty_land", requiredLots: 5, requiredActivations: 1 },
+  { id: 3 as Tier, labelKey: "crowded_lots", requiredLots: 7, requiredActivations: 1 },
+  { id: 4 as Tier, labelKey: "villas_apartments", requiredLots: 5, requiredActivations: 1 },
+  { id: 5 as Tier, labelKey: "single_power", requiredLots: 4, requiredActivations: 1 },
+  { id: 6 as Tier, labelKey: "hotels", requiredLots: 3, requiredActivations: 1 },
+  { id: 7 as Tier, labelKey: "whales", requiredLots: 2, requiredActivations: 1 },
 ];
 
 const HIGH_LEVERAGE_TASKS: EspressoTask[] = [];
@@ -318,10 +318,13 @@ export function useEspressoSystem() {
       // Check if tier requirements are met (but not necessarily completed via document approval)
       const tierData = TIERS.find(t => t.id === task.tier);
       if (tierData) {
-        const completed = updatedProgress.tiersCompleted[task.tier];
+        const tierStatus = updatedProgress.tiersCompleted[task.tier];
         // Only mark requirements met, completion depends on document approval for Tiers 1, 6, 7
         
-        const reqMet = completed.lotsMapped >= tierData.requiredLots && completed.lotsActivated >= tierData.requiredActivations;
+        // If ultra mode is on, requirements are doubled
+        const multiplier = progress.ultraMode ? 2 : 1;
+        const reqMet = tierStatus.lotsMapped >= (tierData.requiredLots * multiplier) && 
+                       tierStatus.lotsActivated >= (tierData.requiredActivations * multiplier);
         
         if (reqMet) {
           // If no document required (Tiers 2-5), mark completed

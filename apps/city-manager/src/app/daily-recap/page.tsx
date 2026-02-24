@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Task = {
   id: string;
@@ -24,6 +25,7 @@ const TASKS_KEY = "pp_tasks";
 export default function Page() {
   const [emails, setEmails] = useState<RecapEmail[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const loadData = () => {
@@ -55,20 +57,24 @@ export default function Page() {
           {
             id: "today",
             created_at: today.toISOString(),
-            subject: `Daily Recap - ${formatSubjectDate(today)}`,
-            preview: `Tasks: ${tasks.length} total, ${tasks.filter(t => t.completed).length} completed.`,
+            subject: t('daily_recap_subject').replace('{date}', formatSubjectDate(today)),
+            preview: t('tasks_summary')
+              .replace('{total}', String(tasks.length))
+              .replace('{completed}', String(tasks.filter(t => t.completed).length)),
             tasks: tasks,
             read: false,
-            from_address: "PayParq System"
+            from_address: t('payparq_system')
           },
           {
             id: "yesterday",
             created_at: yesterday.toISOString(),
-            subject: `Daily Recap - ${formatSubjectDate(yesterday)}`,
-            preview: "Tasks: 12 total, 10 completed.",
+            subject: t('daily_recap_subject').replace('{date}', formatSubjectDate(yesterday)),
+            preview: t('tasks_summary')
+              .replace('{total}', "12")
+              .replace('{completed}', "10"),
             tasks: [], // Mock empty for past
             read: true,
-            from_address: "PayParq System"
+            from_address: t('payparq_system')
           }
         ];
         
@@ -83,13 +89,13 @@ export default function Page() {
     loadData();
     window.addEventListener("storage", loadData);
     return () => window.removeEventListener("storage", loadData);
-  }, []);
+  }, [t]);
 
   return (
     <div className="h-screen bg-white">
       <div className="flex h-[calc(100vh-20px)] flex-col items-center overflow-y-auto w-full overflow-x-hidden">
         <div className="max-w-3xl w-full mx-auto px-1 md:px-0 py-0.5 flex items-center border-b border-gray-100 mt-4 mb-4">
-          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">DAILY RECAP</span>
+          <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">{t('daily_recap_title')}</span>
           <div className="flex items-center gap-4 flex-1">
           </div>
         </div>
@@ -112,7 +118,7 @@ export default function Page() {
                   <div className="">
                     <div className="flex justify-between items-baseline mb-1">
                       <p className="text-[10px] text-gray-500 truncate">
-                        From: <span className="text-gray-800">{email.from_address}</span>
+                        {t('from_label_prefix')} <span className="text-gray-800">{email.from_address}</span>
                       </p>
                     </div>
                     {!isExpanded && (
@@ -123,7 +129,7 @@ export default function Page() {
                     {isExpanded && (
                       <div className="mt-2 text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-100 w-full max-w-full">
                         <div className="flex flex-col sm:flex-row sm:justify-between text-xs text-gray-500 mb-4 border-b border-gray-200 pb-2 gap-1">
-                          <span className="font-medium break-all">From: {email.from_address}</span>
+                          <span className="font-medium break-all">{t('from_label_prefix')} {email.from_address}</span>
                         </div>
                         <div className="space-y-2 overflow-x-auto">
                           {email.tasks.length > 0 ? (
@@ -138,7 +144,7 @@ export default function Page() {
                               </div>
                             ))
                           ) : (
-                            <p className="text-xs text-gray-400 italic">No detailed records for this date.</p>
+                            <p className="text-xs text-gray-400 italic">{t('no_detailed_records')}</p>
                           )}
                         </div>
                       </div>

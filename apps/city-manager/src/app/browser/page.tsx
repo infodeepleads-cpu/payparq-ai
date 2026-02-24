@@ -26,7 +26,7 @@ export default function BrowserPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-60px)] md:h-full bg-gray-50">
+    <div className="flex flex-col h-[calc(100vh-40px)] md:h-full bg-gray-50">
       {/* Modern Browser Toolbar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-sidebar border-b border-gray-200 shadow-sm sticky top-0 z-10">
         

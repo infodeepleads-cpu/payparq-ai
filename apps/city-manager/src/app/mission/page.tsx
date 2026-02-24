@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Duplicate Contact type to avoid dependency issues for now
 type Contact = {
@@ -32,6 +33,7 @@ export default function Page() {
   const [smartProgram, setSmartProgram] = useState(false);
   const [airportHub, setAirportHub] = useState(false);
   const [cityHub, setCityHub] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     setContacts(loadContacts());
@@ -77,42 +79,40 @@ export default function Page() {
   );
 
   return (
-    <div className="max-w-3xl w-full mx-auto px-1 md:px-0 py-4 overflow-x-hidden">
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-4 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
-        <span className="text-xs font-semibold tracking-tight text-black mr-4">MISSION</span>
+        <span className="text-xs font-semibold tracking-tight text-black mr-4">{t('mission')}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
         {/* Primary Metrics */}
         <div>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Performance</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('performance')}</h2>
           <div className="flex flex-col space-y-1">
-            <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
-            <MissionItem label="Lots Mapped" value={lotsMapped} />
-            <MissionItem label="Lots Activated" value={lotsActivated} />
+            <MissionItem label={t('current_revenue')} value={`${currentValue.toLocaleString()}€`} />
+            <MissionItem label={t('lots_mapped')} value={lotsMapped} />
+            <MissionItem label={t('lots_activated')} value={lotsActivated} />
           </div>
         </div>
 
         {/* Strategic Initiatives */}
         <div>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Strategic Initiatives</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('strategic_initiatives')}</h2>
           <div className="flex flex-col space-y-1">
             <MissionItem 
-              label="SMART CITY PROGRAM" 
-              value={smartProgram ? "YES" : "NO"} 
+              label={t('smart_city_program')} 
+              value={smartProgram ? t('yes') : t('no')} 
             />
             <MissionItem 
-              label="AIRPORT HUB(CONTRACT)" 
-              value={airportHub ? "YES" : "NO"} 
+              label={t('airport_hub_contract')} 
+              value={airportHub ? t('yes') : t('no')} 
             />
             <MissionItem 
-              label="CITY HUB(CONTRACT)" 
-              value={cityHub ? "YES" : "NO"} 
+              label={t('city_hub_contract')} 
+              value={cityHub ? t('yes') : t('no')} 
             />
           </div>
         </div>
-        
-        
       </div>
     </div>
   );

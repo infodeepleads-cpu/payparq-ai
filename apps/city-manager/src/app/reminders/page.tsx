@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Reminder = {
   id: number;
@@ -11,6 +12,7 @@ type Reminder = {
 export default function RemindersPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [permission, setPermission] = useState("default");
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     // Check permission
@@ -51,6 +53,7 @@ export default function RemindersPage() {
   };
 
   const deleteReminder = (id: number) => {
+    if (!confirm(t('delete_reminder_confirm'))) return;
     const next = reminders.filter((r) => r.id !== id);
     setReminders(next);
     localStorage.setItem("pp_reminders", JSON.stringify(next));
@@ -58,6 +61,7 @@ export default function RemindersPage() {
   };
 
   const clearCompleted = () => {
+    if (!confirm(t('clear_completed_confirm'))) return;
     const next = reminders.filter((r) => !r.fired);
     setReminders(next);
     localStorage.setItem("pp_reminders", JSON.stringify(next));
@@ -65,10 +69,28 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="max-w-4xl w-full mx-auto pl-0 pr-3 md:px-0 py-8 overflow-x-hidden">
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-8 overflow-x-hidden">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reminders</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('reminders')}</h1>
+        </div>
+        <div className="flex gap-2">
+          {permission !== 'granted' && (
+            <button
+              onClick={requestPermission}
+              className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-medium hover:bg-blue-100 transition-colors"
+            >
+              {t('enable_notifications')}
+            </button>
+          )}
+          {reminders.some(r => r.fired) && (
+            <button
+              onClick={clearCompleted}
+              className="text-xs bg-gray-50 text-gray-600 px-3 py-1.5 rounded-full font-medium hover:bg-gray-100 transition-colors"
+            >
+              {t('clear_completed')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -76,7 +98,7 @@ export default function RemindersPage() {
         <ul className="divide-y divide-gray-200">
           {reminders.length === 0 ? (
             <li className="px-6 py-12 text-center text-gray-500">
-              No reminders scheduled.
+              {t('no_reminders')}
             </li>
           ) : (
             reminders.map((reminder) => {
@@ -92,7 +114,7 @@ export default function RemindersPage() {
                         {reminder.title}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {date.toLocaleString("en-GB", { timeZone: "Europe/Zagreb", hour12: false })} CET
+                        {date.toLocaleString(language === 'hr' ? 'hr-HR' : 'en-GB', { timeZone: "Europe/Zagreb", hour12: false })} CET
                       </p>
                     </div>
                   </div>

@@ -29,18 +29,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-background">
       <Header />
-      <div className="flex-1 flex overflow-hidden pt-[calc(60px+env(safe-area-inset-top))] relative">
+      <div className="flex-1 flex overflow-hidden pt-[40px] relative">
         <Sidebar />
-        <main className="flex-1 flex flex-col pl-[60px] pr-[1.125rem] h-full overflow-hidden w-full relative">
+        <main className="flex-1 flex flex-col pl-[40px] h-full overflow-hidden w-full relative">
           <div className="flex-1 overflow-hidden relative">
             <div className="h-full w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
-              <div className={`max-w-3xl w-full mx-auto px-4 md:px-0 overflow-x-hidden ${isHomePage ? 'pb-40' : 'pb-8'}`}>
+              <div className={`max-w-3xl w-full mx-auto overflow-x-hidden ${isHomePage ? 'pb-40' : 'pb-8'}`}>
                   {children}
                 </div>
             </div>
           </div>
           {isHomePage && (
-            <div className="fixed bottom-0 left-[60px] right-0 bg-white border-t border-gray-100 z-30">
+            <div className="fixed bottom-0 left-[40px] right-0 bg-white z-30">
               <MachineIo />
             </div>
           )}

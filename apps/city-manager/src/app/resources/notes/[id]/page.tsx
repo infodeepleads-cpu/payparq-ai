@@ -134,17 +134,17 @@ export default function NoteDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col pl-6 pr-8 pb-8 overflow-y-auto bg-white">
+      <div className="flex-1 flex flex-col pl-6 pr-8 pb-8 overflow-y-auto bg-white" style={{ fontFamily: 'Arial, sans-serif' }}>
         <input
           type="text"
           placeholder="Title"
-          className="text-xl font-serif font-bold mb-4 outline-none placeholder-gray-500 w-full bg-transparent border-none focus:ring-0 px-0 tracking-tight text-black"
+          className="text-xl font-bold mb-4 outline-none placeholder-gray-500 w-full bg-transparent border-none focus:ring-0 px-0 tracking-tight text-black"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <textarea
           placeholder="Start typing..."
-          className="flex-1 resize-none outline-none placeholder-gray-500 w-full text-base bg-transparent leading-relaxed border-none focus:ring-0 px-0 text-black font-light"
+          className="flex-1 resize-none outline-none placeholder-gray-500 w-full text-[0.65rem] bg-transparent leading-relaxed border-none focus:ring-0 px-0 text-black font-light"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />

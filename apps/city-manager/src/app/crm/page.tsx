@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getSupabase, getCurrentUser } from "../../lib/supabase";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Tier = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -50,17 +51,7 @@ type Contact = {
   decisionStatus?: string;
 };
 
-const TIERS: { id: Tier; label: string }[] = [
-  { id: 1, label: "Airport land" },
-  { id: 2, label: "Empty land (City lots)" },
-  { id: 3, label: "Crowded Lots (Restaurants/Bars/Shops/Homeowners)" },
-  { id: 4, label: "Villas / Apartments" },
-  { id: 5, label: "Single-power owners (Lots, Garages, Multi-Owners)" },
-  { id: 6, label: "Hotels" },
-  { id: 7, label: "Whales (corporations / multi-decision)" },
-];
 
-const KEY = "pp_crm_contacts";
 
 async function loadContacts(): Promise<Contact[]> {
   try {
@@ -101,10 +92,22 @@ async function loadContacts(): Promise<Contact[]> {
   }
 }
 
-export default function Page() {
+export default function CrmPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { t } = useLanguage();
+
+  const TIERS = useMemo(() => [
+    { id: 1 as Tier, label: t('airport_land') },
+    { id: 2 as Tier, label: t('empty_land') },
+    { id: 3 as Tier, label: t('crowded_lots') },
+    { id: 4 as Tier, label: t('villas_apartments') },
+    { id: 5 as Tier, label: t('single_power') },
+    { id: 6 as Tier, label: t('hotels') },
+    { id: 7 as Tier, label: t('whales') },
+  ], [t]);
 
   useEffect(() => {
     const loadAndSetContacts = async () => {
@@ -265,10 +268,10 @@ export default function Page() {
   }, {} as Record<Tier, Contact[]>);
 
   return (
-    <div className="max-w-4xl w-full mx-auto pl-0 pr-3 md:px-0 py-6 pb-32 overflow-x-hidden">
+    <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-6 pb-32 overflow-x-hidden">
       <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2">
         <span className="text-xs font-semibold tracking-tight text-black mr-4">CRM</span>
-        <span className="text-[10px] text-gray-400">Contacts & Status</span>
+        <span className="text-[10px] text-gray-400">{t('crm_contacts_status')}</span>
       </div>
 
       <div className="pl-2 pr-[75px] mb-4">
@@ -277,7 +280,7 @@ export default function Page() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search contacts..."
+            placeholder={t('search_contacts')}
             className="w-full pl-8 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[10px] focus:outline-none focus:ring-1 focus:ring-gray-300 focus:bg-white transition-all"
           />
           <svg className="w-3 h-3 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,13 +290,13 @@ export default function Page() {
       </div>
 
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mb-6 mx-2">
-        <h4 className="text-xs font-bold uppercase text-black mb-3 tracking-wide border-b border-gray-100 pb-2">Status Requirements</h4>
+        <h4 className="text-xs font-bold uppercase text-black mb-3 tracking-wide border-b border-gray-100 pb-2">{t('status_requirements')}</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-gray-600">
-          <div><span className="font-bold text-gray-900">1. Entry:</span> Date</div>
-          <div><span className="font-bold text-gray-900">2. Live DEMO:</span> Date</div>
-          <div><span className="font-bold text-gray-900">3. Yes Date:</span> Expiration date if contract</div>
-          <div><span className="font-bold text-gray-900">4. No Date:</span> Reason/Improvement</div>
-          <div><span className="font-bold text-gray-900">5. Follow Up Date:</span> Date</div>
+          <div><span className="font-bold text-gray-900">1. {t('entry')}:</span> Date</div>
+          <div><span className="font-bold text-gray-900">2. {t('live_demo')}:</span> Date</div>
+          <div><span className="font-bold text-gray-900">3. {t('yes_date')}:</span> Expiration date if contract</div>
+          <div><span className="font-bold text-gray-900">4. {t('no_date')}:</span> Reason/Improvement</div>
+          <div><span className="font-bold text-gray-900">5. {t('follow_up_date_label')}:</span> Date</div>
         </div>
       </div>
 
@@ -309,7 +312,7 @@ export default function Page() {
                 className={`group py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between ${isExpanded ? "bg-gray-50" : ""}`}
               >
                 <div className="flex items-center gap-3">
-                  <h3 className="text-xs font-bold text-black">Tier {tier.id}: {tier.label}</h3>
+                  <h3 className="text-xs font-bold text-black">{t('tier_label')} {tier.id}: {tier.label}</h3>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -330,7 +333,7 @@ export default function Page() {
               {isExpanded && (
                 <div className="pl-4 pr-2 pb-4 space-y-3 mt-2 overflow-x-hidden">
                   {tierContacts.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic py-2">No contacts in this tier.</p>
+                    <p className="text-xs text-gray-400 italic py-2">{t('no_contacts')}</p>
                   ) : (
                     tierContacts.map((contact, idx) => (
                       <div key={contact.id} className="p-0 rounded-lg">
@@ -339,7 +342,7 @@ export default function Page() {
                           <div className="flex flex-col gap-3">
                             {/* a) Decision Maker */}
                             <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">a) Decision Maker</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">a) {t('decision_maker')}</span>
                               <div className="text-sm font-bold text-gray-900 break-words">
                                 {editingId === contact.id ? (
                                   <input
@@ -356,7 +359,7 @@ export default function Page() {
 
                             {/* b) Location */}
                             <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">b) Location</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">b) {t('location')}</span>
                               <div className="text-xs text-gray-700 break-words">
                                 {editingId === contact.id ? (
                                   <input
@@ -373,7 +376,7 @@ export default function Page() {
 
                             {/* c) Capacity */}
                             <div>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">c) Capacity</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">c) {t('capacity')}</span>
                               <div className="text-xs text-gray-700">
                                 {editingId === contact.id ? (
                                   <input

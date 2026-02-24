@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getSupabase } from "../../lib/supabase";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function Auth() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -32,7 +34,7 @@ export default function Auth() {
         window.location.href = "/";
       }
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+      setError(err.message || t('auth_error_generic'));
       setLoading(false);
     }
   };
@@ -58,13 +60,13 @@ export default function Auth() {
         window.location.href = "/";
         return;
       } else {
-        setMessage(`Confirmation email sent to ${email}. Please check your spam folder.`);
+        setMessage(t('auth_confirmation_sent').replace('{email}', email));
         setEmail("");
         setPassword("");
       }
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+      setError(err.message || t('auth_error_generic'));
       setLoading(false);
     }
   };
@@ -72,7 +74,7 @@ export default function Auth() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setError("Please enter both email and password.");
+      setError(t('auth_missing_fields'));
       return;
     }
     
@@ -90,7 +92,7 @@ export default function Auth() {
       <div className="w-[85%] max-w-[300px] space-y-5 mx-auto -translate-x-4">
         <div className="text-center space-y-2">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">PayParq Manager</h2>
-          <h1 className="text-lg font-semibold tracking-tight">{mode === "signin" ? "Welcome back" : "Create an account"}</h1>
+          <h1 className="text-lg font-semibold tracking-tight">{mode === "signin" ? t('welcome_back') : t('create_account')}</h1>
         </div>
         
         <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-full">
@@ -102,7 +104,7 @@ export default function Auth() {
             }}
             className={`py-2 text-xs font-medium rounded-full transition-all ${mode === "signin" ? "bg-black text-white shadow-sm" : "bg-white text-black"}`}
           >
-            Sign In
+            {t('sign_in')}
           </button>
           <button
             onClick={() => {
@@ -112,7 +114,7 @@ export default function Auth() {
             }}
             className={`py-2 text-xs font-medium rounded-full transition-all ${mode === "signup" ? "bg-black text-white shadow-sm" : "bg-white text-black"}`}
           >
-            Create Account
+            {t('create_account_btn')}
           </button>
         </div>
 
@@ -124,7 +126,7 @@ export default function Auth() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Full Name"
+                  placeholder={t('full_name')}
                   className="flex-1 bg-transparent border-0 px-4 text-xs placeholder:text-gray-400 focus:ring-0 focus:outline-none"
                 />
               </div>
@@ -143,7 +145,7 @@ export default function Auth() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder={t('password')}
                 className="flex-1 bg-transparent border-0 px-4 text-xs placeholder:text-gray-400 focus:ring-0 focus:outline-none"
               />
             </div>
@@ -153,7 +155,7 @@ export default function Auth() {
             disabled={loading}
             className="inline-flex items-center justify-center w-full h-10 rounded-full bg-black px-8 text-xs font-medium text-white shadow transition-colors hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50"
           >
-            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : mode === "signup" ? "Sign up with Email" : "Sign In"}
+            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : mode === "signup" ? t('sign_up_email') : t('sign_in')}
           </button>
         </form>
 
@@ -163,10 +165,17 @@ export default function Auth() {
         </div>
 
         <div className="text-center text-[10px] text-gray-500">
-          By clicking continue, you agree to our{" "}
-          <a href="https://www.payparq.com/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">Terms</a>{" "}
-          and{" "}
-          <a href="https://www.payparq.com/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">Privacy Policy</a>.
+          {t('auth_terms_agreement')
+            .split('{terms}').flatMap((part, i, arr) => 
+              i === arr.length - 1 ? [part] : [part, <a key="terms" href="https://www.payparq.com/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">{t('terms')}</a>]
+            )
+            .flatMap((part, i, arr) => {
+              if (typeof part !== 'string') return [part];
+              return part.split('{privacy}').flatMap((p, j, a) => 
+                j === a.length - 1 ? [p] : [p, <a key="privacy" href="https://www.payparq.com/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">{t('privacy')}</a>]
+              );
+            })
+          }
         </div>
       </div>
     </div>

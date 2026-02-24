@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Task = {
   id: string;
@@ -18,13 +19,15 @@ export default function Taskbar() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   const dragX = useRef<number>(0);
-  const apps = [
-    { id: "start", label: "Start" },
-    { id: "chat", label: "Chat" },
-    { id: "crm", label: "CRM" },
-    { id: "mail", label: "Inbox" },
-    { id: "mission", label: "Mission" },
-  ];
+  const { t } = useLanguage();
+
+  const apps = useMemo(() => [
+    { id: "start", label: t('start') },
+    { id: "chat", label: t('chat') },
+    { id: "crm", label: t('crm') },
+    { id: "mail", label: t('inbox') },
+    { id: "mission", label: t('mission') },
+  ], [t]);
 
   useEffect(() => {
     const load = () => {
@@ -96,10 +99,10 @@ export default function Taskbar() {
 
   return (
     <div className="w-full border-t border-gray-100 bg-white">
-      <div className="max-w-3xl w-full mx-auto px-0 py-1 flex items-center gap-2">
+      <div className="max-w-3xl w-full mx-auto px-4 md:px-0 py-1 flex items-center gap-2">
         <button
           className="h-11 min-w-11 w-11 rounded-md border border-gray-200 text-[11px] font-semibold text-black bg-white hover:bg-gray-50 shrink-0"
-          aria-label="Start"
+          aria-label={t('start')}
         >
           ●
         </button>
@@ -141,7 +144,7 @@ export default function Taskbar() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             className="relative h-11 min-w-11 w-11 rounded-md border border-gray-200 text-[11px] font-medium text-black bg-white hover:bg-gray-50"
-            aria-label="Notifications"
+            aria-label={t('notifications')}
           >
             🔔
             {notifications > 0 && (

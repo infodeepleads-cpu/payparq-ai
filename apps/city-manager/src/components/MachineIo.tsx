@@ -6,6 +6,7 @@ import React, { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { getSupabase } from "../lib/supabase";
 import TopControlsWidget from "../components/TopControlsWidget";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type SuggestResponse = {
   nextStep: string;
@@ -97,6 +98,7 @@ const InputArea = React.memo(({
   handleFileSelect
 }: InputAreaProps) => {
   const [isListening, setIsListening] = useState(false);
+  const { t } = useLanguage();
   const recognitionRef = useRef<any>(null);
 
   const toggleListening = () => {
@@ -136,7 +138,7 @@ const InputArea = React.memo(({
   };
 
   return (
-    <div className={`relative w-full max-w-3xl mx-auto pr-8 transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
+    <div className={`relative w-full max-w-3xl mx-auto px-4 md:px-0 transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
       {selectedImage && (
         <div className="relative mb-2 w-fit">
           <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
@@ -176,7 +178,7 @@ const InputArea = React.memo(({
                 sendMessage();
               }
             }}
-            placeholder={isListening ? "Listening..." : "Ask anything..."}
+            placeholder={isListening ? t('listening') : t('ask_anything')}
             className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
             autoFocus
             autoComplete="off"
@@ -188,7 +190,7 @@ const InputArea = React.memo(({
           <div className="flex items-center gap-2 shrink-0">
             <div className="relative">
               {showModelSelector && (
-                <div className="hidden md:block absolute bottom-full right-0 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom-right shadow-xl border border-gray-100">
+                <div className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom shadow-xl border border-gray-100">
                     <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
                       {AI_MODELS.map((model, idx) => (
                         <button
@@ -285,7 +287,30 @@ export default function MachineIo() {
   const loadingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const { t } = useLanguage();
 
+  const AI_MODELS = [
+    { id: "auto", name: t('auto_model') },
+    { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B (Groq)" },
+    { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B (Groq)" },
+    { id: "separator-1", name: "──────────", disabled: true },
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+    { id: "groq/compound-mini", name: "Groq Compound Mini" },
+    { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick 17B (Groq)" },
+    { id: "meta-llama/llama-4-scout-17b-16e-instruct", name: "Llama 4 Scout 17B (Groq)" },
+    { id: "meta-llama/llama-guard-4-12b", name: "Llama Guard 4 12B (Groq)" },
+    { id: "meta-llama/llama-prompt-guard-2-22m", name: "Prompt Guard 2 22M (Groq)" },
+    { id: "meta-llama/llama-prompt-guard-2-86m", name: "Prompt Guard 2 86M (Groq)" },
+    { id: "moonshotai/kimi-k2-instruct", name: "Kimi K2 Instruct (Groq)" },
+    { id: "moonshotai/kimi-k2-instruct-0905", name: "Kimi K2 Instruct 0905 (Groq)" },
+    { id: "openai/gpt-oss-120b", name: "GPT OSS 120B (Groq)" },
+    { id: "openai/gpt-oss-20b", name: "GPT OSS 20B (Groq)" },
+    { id: "openai/gpt-oss-safeguard-20b", name: "GPT OSS Safeguard 20B (Groq)" },
+    { id: "qwen/qwen3-32b", name: "Qwen3 32B (Groq)" },
+    { id: "whisper-large-v3", name: "Whisper Large v3 (Groq)" },
+    { id: "whisper-large-v3-turbo", name: "Whisper Large v3 Turbo (Groq)" },
+  ];
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [reminders, setReminders] = useState<any[]>([]);
   const CET_TZ = "Europe/Zagreb";
@@ -632,17 +657,17 @@ export default function MachineIo() {
       saveMessages(id!, nextUserMsgs);
       let resultText = "";
       if (cmd.type === "add") {
-        const t = addTaskLocal(cmd.title);
-        resultText = `Task added: ${t.title}`;
+        const t_item = addTaskLocal(cmd.title);
+        resultText = `${t('task_added')}: ${t_item.title}`;
       } else if (cmd.type === "remove") {
         const r = removeTaskLocal(cmd.title);
-        resultText = r ? `Task removed: ${r.title}` : `Task not found: ${cmd.title}`;
+        resultText = r ? `${t('task_removed')}: ${r.title}` : `${t('task_not_found')}: ${cmd.title}`;
       } else if (cmd.type === "complete") {
         const c = completeTaskLocal(cmd.title);
-        resultText = c ? `Task completed: ${c.title}` : `Task not found: ${cmd.title}`;
+        resultText = c ? `${t('task_completed')}: ${c.title}` : `${t('task_not_found')}: ${cmd.title}`;
       } else if (cmd.type === "confirm") {
         const c = confirmTaskLocal(cmd.title);
-        resultText = c ? `Task confirmed: ${c.title}` : `Complete the task before confirming: ${cmd.title}`;
+        resultText = c ? `${t('task_confirmed')}: ${c.title}` : `${t('complete_before_confirm')}: ${cmd.title}`;
       }
       const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: resultText, animate: false }];
       setMessages(finalMsgs);
@@ -855,12 +880,12 @@ export default function MachineIo() {
           const saved = await addCRMContact(data.crmContact);
           console.log("Saved result:", saved);
           const name = saved?.decisionMaker || "Contact";
-          const tierText = typeof saved?.tier !== "undefined" ? ` (Tier ${saved.tier})` : "";
-          systemNote = `✓ System: CRM updated: ${name}${tierText}`;
+          const tierText = typeof saved?.tier !== "undefined" ? ` (${t('tier')} ${saved.tier})` : "";
+          systemNote = `✓ System: ${t('crm_updated')}: ${name}${tierText}`;
         } else if (data.action === "update_crm_contact" && data.crmContact) {
           const updated = await updateCRMContact(data.crmContact);
           const name = updated?.decisionMaker || data.crmContact?.decisionMaker || "Contact";
-          systemNote = `✓ System: CRM updated: ${name}`;
+          systemNote = `✓ System: ${t('crm_updated')}: ${name}`;
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
           console.log("=== SCHEDULING REMINDER ===");
           console.log("TaskTitle:", data.taskTitle);
@@ -879,7 +904,7 @@ export default function MachineIo() {
             setReminders(current);
             window.dispatchEvent(new Event("pp_reminders_update"));
             console.log("Reminder scheduled successfully!");
-            systemNote = `✓ System: Reminder set for ${formatCET(time)} CET`;
+            systemNote = `✓ System: ${t('reminder_set_for')} ${formatCET(time)} CET`;
 
             // Native Logic: Schedule Local Notification & Add to Calendar
             if (Capacitor.isNativePlatform()) {
@@ -903,7 +928,7 @@ export default function MachineIo() {
                     extra: null
                   }]
                 });
-                systemNote += " (Native Alert Set)";
+                systemNote += ` (${t('native_alert_set')})`;
 
                 // 3. Add to Calendar (Attempt silently, or prompt if needed)
                 try {
@@ -912,11 +937,11 @@ export default function MachineIo() {
                   // Handle different permission structures or just request if not granted
                   // We try to request full access if we don't have it
                   if (calPerms.result?.writeCalendar !== 'granted' && calPerms.result?.readCalendar !== 'granted') {
-                     // Request full access
-                     await CapacitorCalendar.requestFullCalendarAccess();
-                     hasWrite = true; 
+                    // Request full access
+                    await CapacitorCalendar.requestFullCalendarAccess();
+                    hasWrite = true; 
                   } else {
-                     hasWrite = true;
+                    hasWrite = true;
                   }
 
                   if (hasWrite) {
@@ -928,7 +953,7 @@ export default function MachineIo() {
                       description: "Created via City Manager AI",
                       isAllDay: false
                     });
-                    systemNote += " (+ Calendar)";
+                    systemNote += ` (${t('calendar_added')})`;
                   }
                 } catch (calErr) {
                   console.error("Calendar error:", calErr);
@@ -937,7 +962,7 @@ export default function MachineIo() {
 
               } catch (nativeErr) {
                 console.error("Native scheduling error:", nativeErr);
-                systemNote += " (Native Error)";
+                systemNote += ` (${t('native_error')})`;
               }
             }
 
@@ -950,7 +975,7 @@ export default function MachineIo() {
             } catch {}
           } catch (e) {
             console.error("Failed to schedule reminder:", e);
-            systemNote = `⚠ System: Failed to schedule reminder (Invalid time format from AI)`;
+            systemNote = `⚠ System: ${t('reminder_failed')}`;
           }
           console.log("=== END SCHEDULING ===");
         } else if ((assistantText.includes("reminder") && (assistantText.includes("set") || assistantText.includes("scheduled"))) && data.action !== "schedule_reminder") {
@@ -960,7 +985,7 @@ export default function MachineIo() {
            console.log("But action was:", data.action);
            console.log("Expected action: schedule_reminder");
            console.log("=================================");
-           systemNote = `⚠ System: AI confirmed a reminder verbally but failed to schedule it (Action was: ${data.action || "None"}). Please try again.`;
+           systemNote = `⚠ System: ${t('reminder_mismatch')} (Action was: ${data.action || "None"}). ${t('try_again')}.`;
         }
       }
       
@@ -1089,55 +1114,54 @@ export default function MachineIo() {
          )}
 
       {!threadId || messages.length === 0 ? (
-        <div className="w-full flex flex-col">
-           <div className="max-w-3xl mx-auto px-4 md:px-0 w-full pt-12 md:pt-24 pb-8">
-             <div className="w-full mb-3">
-               <TopControlsWidget />
-             </div>
-           </div>
-           <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} border-t border-gray-100`}>
-             <div className="max-w-3xl mx-auto w-full">
-               <InputArea 
-                 centered={false}
-                 input={input}
-                 setInput={setInput}
-                 selectedImage={selectedImage}
-                 setSelectedImage={setSelectedImage}
-                 fileInputRef={fileInputRef}
-                 inputRef={inputRef}
-                 showModelSelector={showModelSelector}
-                 setShowModelSelector={setShowModelSelector}
-                 selectedModel={selectedModel}
-                 setSelectedModel={setSelectedModel}
-                 loading={loading}
-                 sendMessage={sendMessage}
-                 handleFileSelect={handleFileSelect}
-               />
-             </div>
-           </div>
-        </div>
-      ) : (
-        <div className="w-full flex flex-col">
-          <div className="w-full overflow-y-auto scroll-smooth border-b border-gray-50 max-h-[60vh]">
-            <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
-              <div className="flex flex-col space-y-4">
-              {messages.map((m, i) => (
-                  <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
-              ))}
-              {loading && <LoadingIndicator />}
-              {error && (
-                <div className="w-full py-2 text-center">
-                   <span className="text-red-500 text-sm bg-red-50 px-4 py-1.5 rounded-full border border-red-100">{error}</span>
-                </div>
-              )}
-                <div ref={bottomRef} />
+        <div className="w-full flex flex-col min-h-[40vh]">
+           <div className="flex-1" />
+           <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} border-t border-gray-100`}>
+            <div className="max-w-3xl mx-auto w-full">
+              <div className="w-full">
+                <TopControlsWidget />
               </div>
+              <InputArea 
+                centered={false}
+                input={input}
+                setInput={setInput}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                fileInputRef={fileInputRef}
+                inputRef={inputRef}
+                showModelSelector={showModelSelector}
+                setShowModelSelector={setShowModelSelector}
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                loading={loading}
+                sendMessage={sendMessage}
+                handleFileSelect={handleFileSelect}
+              />
             </div>
           </div>
+       </div>
+     ) : (
+       <div className="w-full flex flex-col">
+         <div className="w-full overflow-y-auto scroll-smooth border-b border-gray-50 max-h-[60vh]">
+           <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
+             <div className="flex flex-col space-y-4">
+             {messages.map((m, i) => (
+                 <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
+             ))}
+             {loading && <LoadingIndicator />}
+             {error && (
+               <div className="w-full py-2 text-center">
+                  <span className="text-red-500 text-sm bg-red-50 px-4 py-1.5 rounded-full border border-red-100">{error}</span>
+               </div>
+             )}
+               <div ref={bottomRef} />
+             </div>
+           </div>
+         </div>
 
-          <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
+         <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
              <div className="max-w-3xl mx-auto w-full">
-               <div className="w-full mb-3">
+               <div className="w-full">
                  <TopControlsWidget />
                </div>
                <InputArea 

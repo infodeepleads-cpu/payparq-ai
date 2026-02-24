@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupabase, getCurrentUser, isSuperAdmin } from "../../lib/supabase";
 
 type InboxItem = {
@@ -21,6 +22,7 @@ export default function Inbox() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     checkAdmin();
@@ -98,13 +100,13 @@ export default function Inbox() {
         .eq("status", "pending")
         .order("created_at", { ascending: false });
         
-      if (submissions) {
+          if (submissions) {
         const submissionItems: InboxItem[] = submissions.map((s: any) => ({
           id: s.id,
           type: "submission" as const,
           created_at: s.created_at,
-          from: s.user_id ? `User ${s.user_id.substring(0, 8)}...` : "Unknown User",
-          subject: `[REVIEW] Document Submission: Tier ${s.tier} (${s.type})`,
+          from: s.user_id ? `${t('submission_prefix')} ${s.user_id.substring(0, 8)}...` : t('unknown_user'),
+          subject: t('document_submission_subject').replace('{tier}', String(s.tier)).replace('{type}', s.type),
           body: s.content,
           read: false,
           status: s.status,
@@ -134,7 +136,7 @@ export default function Inbox() {
   const approveSubmission = async (item: InboxItem) => {
     if (item.type !== "submission" || !item.submissionId) return;
     
-    if (!confirm(`Are you sure you want to approve this Tier ${item.tier} submission?`)) return;
+    if (!confirm(t('approve_submission_confirm').replace('{tier}', String(item.tier)))) return;
 
     try {
       const supabase = getSupabase();
@@ -173,7 +175,7 @@ export default function Inbox() {
           .eq("status", "approved");
           
         const approvedTypes = new Set(approvedSubs?.map(s => s.type) || []);
-        const allApproved = requiredTypes.every(t => approvedTypes.has(t));
+        const allApproved = requiredTypes.every(t_type => approvedTypes.has(t_type));
         
         if (allApproved) {
            // Advance User Tier
@@ -193,37 +195,37 @@ export default function Inbox() {
                  tiers_completed: tiersCompleted
               }).eq("user_id", userId);
            }
-           alert("Submission approved. User has completed all requirements for Tier " + tier + " and has been advanced to Tier " + (tier + 1) + ".");
+           alert(t('submission_approved_advance_alert').replace('{tier}', String(tier)).replace('{nextTier}', String(tier + 1)));
         } else {
-           const missing = requiredTypes.filter(t => !approvedTypes.has(t));
-           alert(`Submission approved. User still needs to complete: ${missing.join(", ")} to advance.`);
+           const missing = requiredTypes.filter(t_type => !approvedTypes.has(t_type));
+           alert(t('submission_approved_missing_alert').replace('{missing}', missing.join(", ")));
         }
       }
 
-      alert("Submission approved and user progressed.");
+      alert(t('submission_approved_alert'));
       fetchInbox(); // Refresh
       
     } catch (e) {
       console.error("Approval failed", e);
-      alert("Failed to approve submission.");
+      alert(t('approval_failed_alert'));
     }
   };
 
   return (
     <div className="h-screen bg-white overflow-x-hidden">
       <div className="flex h-[calc(100vh-20px)] flex-col items-stretch overflow-y-auto w-full overflow-x-hidden">
-        <div className="max-w-3xl w-full mx-auto mt-6 px-1 md:px-0 overflow-y-auto flex-1 flex flex-col">
+        <div className="max-w-3xl w-full mx-auto mt-6 px-4 md:px-0 overflow-y-auto flex-1 flex flex-col">
           <div className="flex items-center border-b border-gray-100 pb-2 mb-6">
-            <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">INBOX {isAdmin && "(Admin Mode)"}</span>
+            <span className="text-xs font-semibold tracking-tight text-black mr-4 shrink-0">{t('inbox')} {isAdmin && `(${t('inbox_admin_mode')})`}</span>
           </div>
           
           {loading ? (
             <div className="flex-1 flex justify-center items-center w-full min-h-[50vh] px-4">
-              <div className="text-center text-gray-400 text-sm">Loading...</div>
+              <div className="text-center text-gray-400 text-sm">{t('loading')}</div>
             </div>
           ) : items.length === 0 ? (
             <div className="flex-1 flex justify-center items-center w-full min-h-[50vh] px-4">
-              <div className="text-center text-gray-400 text-sm">No items.</div>
+              <div className="text-center text-gray-400 text-sm">{t('no_items')}</div>
             </div>
           ) : (
             <div className="space-y-1 pb-10 overflow-x-hidden">
@@ -244,21 +246,21 @@ export default function Inbox() {
                   >
                     <div className="flex items-center justify-between mb-1 gap-4">
                       <span className={`text-xs break-words min-w-0 flex-1 whitespace-normal ${item.read ? "font-normal text-gray-600" : "font-bold text-black"}`}>
-                        {isSubmission ? `[REVIEW] ${item.subject}` : item.subject}
+                        {isSubmission ? `${t('review_prefix')} ${item.subject}` : item.subject}
                       </span>
                       {isSubmission && (
                         <span className="text-[10px] bg-black text-white px-2 py-0.5 rounded-full shrink-0">
-                          Action Required
+                          {t('action_required')}
                         </span>
                       )}
                     </div>
                     <div className="">
                       <div className="flex flex-col gap-0.5 mb-1">
                         <p className="text-[10px] text-gray-500 break-all">
-                          From: <span className="text-gray-800">{item.from}</span>
+                          {t('from_label').replace('{sender}', item.from)}
                         </p>
                         <span className="text-xs text-gray-500 whitespace-nowrap">
-                          {new Date(item.created_at).toLocaleString(undefined, {
+                          {new Date(item.created_at).toLocaleString(language === 'hr' ? 'hr-HR' : 'en-US', {
                             month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
                           })}
                         </span>
@@ -277,7 +279,7 @@ export default function Inbox() {
                                  }}
                                  className="bg-black text-white px-4 py-2 text-xs rounded-lg hover:bg-gray-800 font-bold"
                                >
-                                 Review & Grade
+                                 {t('review_grade')}
                                </button>
                              </div>
                            )}

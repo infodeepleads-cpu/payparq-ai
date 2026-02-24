@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EspressoTask, useEspressoSystem } from "../hooks/useEspressoSystem";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface DailyTaskSelectionProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
   const { getHighLeverageTasks, selectDailyTasks, progress } = useEspressoSystem();
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [ultraMode, setUltraMode] = useState(progress.ultraMode);
+  const { t } = useLanguage();
 
   const highLeverageTasks = getHighLeverageTasks(5); // Show top 5 tasks
   const kpiMultiplier = ultraMode ? 1.2 : 1; // 20% harsher in ultra mode
@@ -41,8 +43,8 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
       <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">🌅 Good Morning!</h2>
-            <p className="text-gray-600">Choose your high-leverage tasks for today</p>
+            <h2 className="text-2xl font-bold text-gray-900">{t('good_morning')}</h2>
+            <p className="text-gray-600">{t('choose_tasks')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -57,9 +59,9 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
             >
               <span className="flex items-center gap-2">
                 {ultraMode ? (
-                  <>🔥 Ultra Mode Active</>
+                  <>{t('ultra_mode_active')}</>
                 ) : (
-                  <>⚡ Activate Ultra Mode</>
+                  <>{t('activate_ultra_mode')}</>
                 )}
               </span>
             </button>
@@ -68,8 +70,8 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
 
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Tier {progress.currentTier} Progress:</strong> Complete tasks to unlock the next tier.
-            {ultraMode && " 🔥 Ultra Mode: 20% harsher KPIs, more rewards!"}
+            <strong>{t('tier_progress').replace('{tier}', String(progress.currentTier))}:</strong> {t('complete_tasks_unlock')}
+            {ultraMode && t('ultra_mode_desc')}
           </p>
         </div>
 
@@ -101,10 +103,10 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
                       {task.category}
                     </span>
                     <span className="text-orange-600 font-medium">
-                      Leverage: {task.leverage}/10
+                      {t('leverage')}: {task.leverage}/10
                     </span>
                     <span className="text-green-600 font-bold">
-                      KPI Target: {getTaskKPI(task)}
+                      {t('kpi_target')}: {getTaskKPI(task)}
                     </span>
                   </div>
                 </div>
@@ -115,21 +117,21 @@ export default function DailyTaskSelection({ onClose }: DailyTaskSelectionProps)
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Selected: {selectedTasks.length} tasks
+            {t('selected_count').replace('{count}', String(selectedTasks.length))}
           </div>
           <div className="flex gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800"
             >
-              Skip for now
+              {t('skip_now')}
             </button>
             <button
               onClick={handleConfirmSelection}
               disabled={selectedTasks.length === 0}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              Start Day ({selectedTasks.length})
+              {t('start_day')} ({selectedTasks.length})
             </button>
           </div>
         </div>

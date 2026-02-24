@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import type { Metadata, Viewport } from "next";
 import { PwaProvider } from "../components/PwaProvider";
 import ClientLayout from "../components/ClientLayout";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -27,9 +28,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="h-screen w-screen fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary safe-area-inset-top">
-        <PwaProvider />
-        <ClientLayout>{children}</ClientLayout>
+      <body className="h-screen w-screen fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary">
+        <LanguageProvider>
+          <PwaProvider />
+          <ClientLayout>{children}</ClientLayout>
+        </LanguageProvider>
       </body>
     </html>
   );

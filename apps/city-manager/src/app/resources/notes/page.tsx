@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Note {
   id: string;
@@ -13,6 +14,7 @@ interface Note {
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const savedNotes = localStorage.getItem("cm_notes");
@@ -40,7 +42,7 @@ export default function NotesPage() {
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
           </Link>
           <div className="w-full text-center flex items-center justify-center h-full">
-            <span className="text-sm font-bold tracking-tight text-black uppercase relative -top-[4px]">Notes</span>
+            <span className="text-sm font-bold tracking-tight text-black uppercase relative -top-[4px]">{t('notes')}</span>
           </div>
            <div className="w-6"></div>
         </div>
@@ -48,7 +50,7 @@ export default function NotesPage() {
         {notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             <svg className="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            <p className="text-sm">No notes yet. Create one!</p>
+            <p className="text-sm">{t('no_notes')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -57,7 +59,7 @@ export default function NotesPage() {
                 key={note.id}
                 href={`/resources/notes/${note.id}`}
                 className="block h-full no-underline hover:no-underline focus:no-underline visited:no-underline outline-none focus:outline-none decoration-transparent"
-                style={{ textDecoration: "none", WebkitTapHighlightColor: "transparent" }}
+                style={{ textDecoration: "none", WebkitTapHighlightColor: "transparent", fontFamily: 'Arial, sans-serif' }}
               >
                 <div className={`border rounded-lg py-3 pl-2 pr-4 h-40 overflow-hidden hover:shadow-md transition-shadow flex flex-col bg-white relative group ${note.pinned ? 'border-black' : 'border-gray-200'}`}>
                   {note.pinned && (
@@ -65,7 +67,7 @@ export default function NotesPage() {
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
                     </div>
                   )}
-                  <h3 className="font-bold text-sm mb-1 truncate text-gray-900 pr-6">{note.title || "Untitled"}</h3>
+                  <h3 className="font-bold text-sm mb-1 truncate text-gray-900 pr-6">{note.title || t('untitled')}</h3>
                   <p className="text-xs text-gray-600 line-clamp-6 whitespace-pre-wrap flex-1">{note.content}</p>
                   <div className="text-[10px] text-gray-400 mt-2 text-right">
                     {new Date(note.updatedAt).toLocaleDateString()}

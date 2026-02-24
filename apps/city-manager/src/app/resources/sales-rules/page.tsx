@@ -1,129 +1,95 @@
+"use client";
+
 import React from 'react';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SalesRulesPage() {
+  const { t } = useLanguage();
+
   return (
     <div className="h-screen bg-white overflow-y-auto overflow-x-hidden">
-      <div className="max-w-3xl w-full mx-auto pl-0 pr-7 md:px-0 pt-4 pb-32 overflow-x-hidden">
+      <div className="max-w-3xl w-full mx-auto px-1 md:px-0 pt-4 pb-32 overflow-x-hidden">
         <div className="flex items-center border-b border-gray-100 mb-6 pb-2">
-          <span className="text-xs font-semibold tracking-tight text-black uppercase">Sales & Contact Rules</span>
+          <span className="text-xs font-semibold tracking-tight text-black uppercase">{t('sales_contact_rules')}</span>
         </div>
         
-        <div className="space-y-8">
+        <div className="space-y-10">
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Channels</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Phone, Email, SMS, WhatsApp — only if the user initiates contact via that channel.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('channels')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('channels_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Demo & Trial</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              All demos, no-risk trials, and activations are live, in person, with the decision maker, on the first contact. 
-              If he is not there then call and try to set appointment never pitch on the phone but always say urgently what it is about.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('demo_trial')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('demo_trial_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Closing on the Phone</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Never close on the phone on the first contact. Phone is for setting appointment today/tommorow/term. 
-              Follow-Ups closes, and Upsells can be done by the phone but first contact never.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('closing_phone')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('closing_phone_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Next Step Discipline</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Every interaction must end with a scheduled call or meeting at an exact time.
-              <br />
-              If more information is requested: send it immediately, then call the same day to close.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('next_step_discipline')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('next_step_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Appointments</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Appointments are set by phone only — today (danas) or tomorrow (sutra) if not possible schedule a term. 
-              No open-ended scheduling.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('appointments')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('appointments_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Speed Rule</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Call within 60 seconds of any response.
-              <br />
-              If seen in person, close immediately if not schedule appointment call and follow up with more info immediately then try to close on the phone.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('speed_rule')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('speed_rule_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Lead Entry & Pre-Warm</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Initial prewarm contact should be via email if possible if not by the phone, then cold walk in PITCH phone appointment if not there.
-              <br />
-              Walk Cold in Script through Digitisation + Grants, Empty Lot activation for empty land owners.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('lead_entry')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('lead_entry_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Objection Handling</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              If objections arise, log them into machine.io.
-              <br />
-              If still “no,” ask: What would this need to have for you to say yes?
-              <br />
-              Record the answer in machine.io.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('objection_handling_rule')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('objection_handling_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Data Discipline</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Every interaction with a lead must be logged and described in Supabase / machine.io.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('data_discipline')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('data_discipline_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Conversation Minimum</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Aim for at least 1 minute of live conversation per contact — this lowers resistance.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('conv_minimum')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('conv_minimum_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Operator Support</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Use Chat for materials: emails, contracts, invoices, drafts, tactics, appearance guidance, reminders, complex WHALE sales, multi-demo flows, company research, and lobbying strategies.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('operator_support')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('operator_support_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Daily Improvement</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              Learn the product every day. Improve it continuously.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('daily_improvement')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('daily_improvement_desc')}</p>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Urgency & Framing</h2>
-            <div className="text-sm text-gray-800 leading-relaxed">
-              Every prospect interaction is urgent and value-driven:
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>You have unused capacity.</li>
-                <li>I will stop unauthorized vehicles.</li>
-                <li>I will increase reviews, revenue, safety, and digitization.</li>
-                <li>I will eliminate congestion.</li>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('urgency_framing')}</h2>
+            <div className="text-sm text-gray-800 leading-relaxed space-y-2">
+              <p>{t('urgency_framing_desc')}</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>{t('unused_capacity')}</li>
+                <li>{t('stop_unauthorized')}</li>
+                <li>{t('increase_reviews')}</li>
+                <li>{t('eliminate_congestion')}</li>
               </ul>
             </div>
           </section>
 
           <section>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Decision Maker Rule</h2>
-            <p className="text-sm text-gray-800 leading-relaxed">
-              No decision maker = no close. Always reach the decision maker.
-            </p>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t('decision_maker_rule')}</h2>
+            <p className="text-sm text-gray-800 leading-relaxed">{t('decision_maker_rule_desc')}</p>
           </section>
         </div>
       </div>

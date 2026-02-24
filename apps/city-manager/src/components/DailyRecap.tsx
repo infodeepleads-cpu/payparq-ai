@@ -1,26 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getSupabase } from "../lib/supabase";
-
-const MOTIVATIONAL_QUOTES = [
-  "Reflect on your wins today.",
-  "Tomorrow is a new opportunity.",
-  "Consistency is key.",
-  "Small steps lead to big changes.",
-  "Rest well, perform better tomorrow.",
-  "Focus on what you can control.",
-  "Every day is a chance to improve.",
-  "Success is the sum of small efforts.",
-  "Learn from today, plan for tomorrow.",
-  "You are capable of more than you know."
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function DailyRecap() {
   const [isOpen, setIsOpen] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [crmUpdates, setCrmUpdates] = useState<any[]>([]);
   const [quote, setQuote] = useState("");
+  const { t } = useLanguage();
+
+  const MOTIVATIONAL_QUOTES = useMemo(() => [
+    t('quote_1'),
+    t('quote_2'),
+    t('quote_3'),
+    t('quote_4'),
+    t('quote_5'),
+    t('quote_6'),
+    t('quote_7'),
+    t('quote_8'),
+    t('quote_9'),
+    t('quote_10')
+  ], [t]);
 
   useEffect(() => {
     const checkTime = () => {
@@ -91,50 +93,50 @@ export default function DailyRecap() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
         <div className="bg-black text-white p-6 shrink-0">
-          <h2 className="text-xl font-bold">Daily Recap</h2>
+          <h2 className="text-xl font-bold">{t('daily_recap')}</h2>
           <p className="text-gray-400 text-sm">{new Date().toLocaleDateString()}</p>
         </div>
         
         <div className="p-6 space-y-6 overflow-y-auto">
           {/* Tasks */}
           <div>
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Completed Tasks</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{t('completed_tasks')}</h3>
             {tasks.length > 0 ? (
               <ul className="space-y-2">
-                {tasks.map((t, i) => (
+                {tasks.map((t_item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
                     <span className="text-green-500 mt-0.5 shrink-0">✓</span>
-                    <span className="line-through text-gray-500 break-words">{t.title}</span>
+                    <span className="line-through text-gray-500 break-words">{t_item.title}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-400 italic">No tasks completed today.</p>
+              <p className="text-sm text-gray-400 italic">{t('no_tasks_today')}</p>
             )}
           </div>
 
           {/* CRM Updates */}
           <div>
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">CRM Activity</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{t('crm_activity')}</h3>
             {crmUpdates.length > 0 ? (
               <ul className="space-y-2">
                 {crmUpdates.map((c, i) => (
                   <li key={i} className="text-sm bg-gray-50 p-3 rounded border border-gray-100">
-                    <div className="font-semibold text-gray-900">{c.decision_maker || "Contact"}</div>
+                    <div className="font-semibold text-gray-900">{c.decision_maker || t('contact')}</div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {c.location ? `${c.location} • ` : ""}{c.status || "No status"}
+                      {c.location ? `${c.location} • ` : ""}{c.status || t('no_status')}
                     </div>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-gray-400 italic">No new CRM contacts today.</p>
+              <p className="text-sm text-gray-400 italic">{t('no_crm_today')}</p>
             )}
           </div>
 
           {/* Motivation */}
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-            <h3 className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-2">Advice for Tomorrow</h3>
+            <h3 className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-2">{t('advice_tomorrow')}</h3>
             <p className="text-blue-900 font-medium italic text-sm">"{quote}"</p>
           </div>
         </div>
@@ -144,7 +146,7 @@ export default function DailyRecap() {
             onClick={() => setIsOpen(false)}
             className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
           >
-            Close & Rest
+            {t('close_rest')}
           </button>
         </div>
       </div>

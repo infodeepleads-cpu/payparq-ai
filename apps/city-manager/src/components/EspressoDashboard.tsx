@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useEspressoSystem } from "../hooks/useEspressoSystem";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupabase, getCurrentUser, isSuperAdmin } from "../lib/supabase";
 import PermitsForm from "./PermitsForm";
 import ActivationKitForm from "./ActivationKitForm";
@@ -53,6 +54,7 @@ export default function EspressoDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [allUserProgress, setAllUserProgress] = useState<any[]>([]);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     checkAdmin();
@@ -259,7 +261,7 @@ export default function EspressoDashboard() {
     if (status === "approved") {
       return (
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">PASSED</span>
+          <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">{t('passed')}</span>
           <span className="text-[10px] text-gray-400">{timestamp}</span>
         </div>
       );
@@ -267,7 +269,7 @@ export default function EspressoDashboard() {
     if (status === "rejected") {
       return (
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded">REJECTED</span>
+          <span className="text-[10px] text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded">{t('rejected')}</span>
           <span className="text-[10px] text-gray-400">{timestamp}</span>
         </div>
       );
@@ -275,15 +277,15 @@ export default function EspressoDashboard() {
     if (status === "pending") {
       return (
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded">PENDING REVIEW</span>
+          <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-2 py-0.5 rounded">{t('pending_review')}</span>
           <span className="text-[10px] text-gray-400">{timestamp}</span>
         </div>
       );
     }
     if (isFilled) {
-       return <span className="text-[10px] text-blue-600 font-bold">FILLED</span>;
+       return <span className="text-[10px] text-blue-600 font-bold">{t('filled')}</span>;
     }
-    return <span className="text-[10px] text-gray-500 font-bold">FILL FORM</span>;
+    return <span className="text-[10px] text-gray-500 font-bold">{t('fill_form')}</span>;
   };
 
   const canOpenForm = (type: string) => {
@@ -295,7 +297,7 @@ export default function EspressoDashboard() {
     if (canOpenForm(type)) {
       showFn(true);
     } else {
-      alert("This form is currently under review or approved and cannot be edited.");
+      alert(t('under_review_alert'));
     }
   };
 
@@ -358,7 +360,7 @@ export default function EspressoDashboard() {
       
     } catch (e) {
       console.error("Submission failed", e);
-      alert("Failed to submit document. Please try again.");
+      alert(t('submission_failed_alert'));
     }
   };
 
@@ -427,22 +429,22 @@ export default function EspressoDashboard() {
       const dailyFormTasks = [
         { 
           id: `daily-permits-t${progress.currentTier}`, 
-          title: `Fill Permits & Public Form (Tier ${progress.currentTier})`,
+          title: `${t('fill_permits_task')} (Tier ${progress.currentTier})`,
           completed: !!docsState[`t${progress.currentTier}-permits`]
         },
         { 
           id: `daily-competition-t${progress.currentTier}`, 
-          title: `Fill Competition Analysis Form (Tier ${progress.currentTier})`,
+          title: `${t('fill_competition_task')} (Tier ${progress.currentTier})`,
           completed: !!docsState[`t${progress.currentTier}-competition`]
         },
         { 
           id: `daily-activation-t${progress.currentTier}`, 
-          title: `Fill Lot Activation List (Tier ${progress.currentTier})`,
+          title: `${t('fill_lot_activation_task')} (Tier ${progress.currentTier})`,
           completed: !!docsState[`t${progress.currentTier}-activation`]
         },
         { 
           id: `daily-specific-t${progress.currentTier}`, 
-          title: `Fill ${progress.currentTier === 1 ? "Airport" : progress.currentTier === 6 ? "Hotel" : progress.currentTier === 7 ? "Whales Corporation" : "Area"} Analysis (Tier ${progress.currentTier})`,
+          title: `Fill ${progress.currentTier === 1 ? t('airport_analysis') : progress.currentTier === 6 ? t('hotel_analysis') : progress.currentTier === 7 ? t('whales_analysis') : t('area_analysis')} (Tier ${progress.currentTier})`,
           completed: !!docsState[`t${progress.currentTier}-specific`]
         }
       ];
@@ -476,73 +478,77 @@ export default function EspressoDashboard() {
   }, [docsState, progress.currentTier]);
 
   if (loadingAdmin) {
-    return <div className="p-8 text-center text-sm text-gray-500">Loading mission control...</div>;
+    return <div className="p-8 text-center text-sm text-gray-500">{t('loading_mission_control')}</div>;
   }
 
   if (isAdmin) {
     return (
-      <div className="max-w-4xl w-full mx-auto px-4 py-8 pb-32">
-        <div className="flex items-center justify-start border-b border-gray-200 mb-8 pb-4 pl-1">
-          <span className="text-sm font-bold tracking-tight text-black mr-4">MISSION CONTROL</span>
-          <span className="text-xs text-gray-500 uppercase tracking-wider">Super Admin View</span>
-        </div>
+      <div className="w-full py-8 pb-32 -ml-[0.3cm]">
+        <div className="w-full">
+          <div className="flex items-center justify-start border-b border-gray-200 mb-8 pb-4 pl-1">
+            <span className="text-sm font-bold tracking-tight text-black mr-4">{t('mission_control')}</span>
+            <span className="text-xs text-gray-500 uppercase tracking-wider">{t('super_admin_view')}</span>
+          </div>
 
-        <div className="space-y-8">
-          {/* Mission Status Overview */}
-          <section className="text-left pl-1">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 text-left">Global Progress</h2>
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="w-full">
-                <table className="w-full text-sm text-left table-fixed">
-                  <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-bold">
-                    <tr>
-                      <th className="px-2 py-3 font-bold text-gray-900 w-1/4 text-left pl-4">User ID</th>
-                      <th className="px-2 py-3 font-bold text-gray-900 w-1/4 text-left pl-4">Tier</th>
-                      <th className="px-2 py-3 font-bold text-gray-900 w-1/4 text-left pl-4">Last Active</th>
-                      <th className="px-2 py-3 font-bold text-gray-900 w-1/4 text-left pl-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {allUserProgress.map((user) => (
-                      <tr key={user.user_id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-2 py-4 font-medium text-black truncate pl-4" title={user.user_id}>
-                          {user.user_id.substring(0, 8)}...
-                        </td>
-                        <td className="px-2 py-4 pl-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-black text-white">
-                            Tier {user.current_tier}
-                          </span>
-                        </td>
-                        <td className="px-2 py-4 text-gray-500 pl-4">
-                          {new Date(user.updated_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-2 py-4 pl-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium justify-center ${
-                            user.current_tier >= 7 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-blue-50 text-blue-700"
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.current_tier >= 7 ? "bg-green-500" : "bg-blue-500"}`}></span>
-                            {user.current_tier >= 7 ? "Completed" : "Active"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {allUserProgress.length === 0 && (
+          <div className="space-y-8">
+            {/* Mission Status Overview */}
+            <section className="text-left pl-1">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 text-left">{t('global_progress')}</h2>
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="w-full">
+                  <table className="w-full text-sm text-left table-auto">
+                    <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 font-bold">
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                          No active users found.
-                        </td>
+                        <th className="px-1 py-3 font-bold text-gray-900 text-left pl-2">{t('user_id')}</th>
+                        <th className="px-1 py-3 font-bold text-gray-900 text-left pl-2">Tier</th>
+                        <th className="px-1 py-3 font-bold text-gray-900 text-left pl-2">{t('last_active')}</th>
+                        <th className="px-1 py-3 font-bold text-gray-900 text-left pl-2">{t('status')}</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {allUserProgress.map((user) => (
+                        <tr key={user.user_id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-1 py-4 font-medium text-black truncate pl-2" title={user.user_id}>
+                            {user.user_id.substring(0, 8)}...
+                          </td>
+                          <td className="px-1 py-4 pl-2">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-black text-white">
+                              Tier {user.current_tier}
+                            </span>
+                          </td>
+                          <td className="px-1 py-4 text-gray-500 pl-2 text-xs">
+                            {new Date(user.updated_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-1 py-4 pl-2">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium justify-center ${
+                              user.current_tier >= 7 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-blue-50 text-blue-700"
+                            }`}>
+                              <span className={`w-1 h-1 rounded-full ${user.current_tier >= 7 ? "bg-green-500" : "bg-blue-500"}`}></span>
+                              {user.current_tier >= 7 ? t('completed') : t('active')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {allUserProgress.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                            {t('no_users')}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-            <p className="mt-4 text-xs text-gray-500 text-left">
-              * Document review and approvals are handled in the <a href="/inbox" className="text-black underline">Inbox</a>.
-            </p>
-          </section>
+              <p className="mt-4 text-xs text-gray-500 text-left">
+                {t('inbox_link_note').split(language === 'hr' ? 'Sandučiću' : 'Inbox')[0]}
+                <a href="/inbox" className="text-black underline">{t('inbox')}</a>
+                {t('inbox_link_note').split(language === 'hr' ? 'Sandučiću' : 'Inbox')[1]}
+              </p>
+            </section>
+          </div>
         </div>
       </div>
     );
@@ -605,17 +611,17 @@ export default function EspressoDashboard() {
             }}
             tier={progress.currentTier}
             type="stakeholder"
-            title={progress.currentTier === 6 ? "Hotel Analysis (Essay)" : "Whales Corporation Analysis (Essay)"}
+            title={progress.currentTier === 6 ? `${t('hotel_analysis')} (Essay)` : `${t('whales_analysis')} (Essay)`}
             placeholder={progress.currentTier === 6 
-              ? "Analyze the hotel landscape in your area. Who are the key players? What are their parking needs? How can we approach them?"
-              : "Analyze the major corporations (Whales) in your area. What is their parking situation? Who are the decision makers?"
+              ? t('hotel_analysis_placeholder')
+              : t('whales_analysis_placeholder')
             }
           />
         )}
 
         {/* 0. Documents */}
         <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Documents</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('documents')}</h2>
           <div className="space-y-1">
 
 
@@ -628,7 +634,7 @@ export default function EspressoDashboard() {
             >
               <div className="flex items-center gap-2">
                 <div>
-                  <h3 className="text-xs font-bold text-black">Permits & Public</h3>
+                  <h3 className="text-xs font-bold text-black">{t('permits_public')}</h3>
                   <div className="mt-1">
                     {getStatusBadge("permits", !!docsState[`t${progress.currentTier}-permits`])}
                   </div>
@@ -646,7 +652,7 @@ export default function EspressoDashboard() {
             >
               <div className="flex items-center gap-2">
                 <div>
-                  <h3 className="text-xs font-bold text-black">Competition Analysis</h3>
+                  <h3 className="text-xs font-bold text-black">{t('competition_analysis')}</h3>
                   <div className="mt-1">
                     {getStatusBadge("competition", !!docsState[`t${progress.currentTier}-competition`])}
                   </div>
@@ -664,7 +670,7 @@ export default function EspressoDashboard() {
             >
               <div className="flex items-center gap-3">
                 <div>
-                  <h3 className="text-xs font-bold text-black">Lot Activation List</h3>
+                  <h3 className="text-xs font-bold text-black">{t('lot_activation_list')}</h3>
                   <div className="mt-1">
                     {getStatusBadge("lot_activation", !!docsState[`t${progress.currentTier}-activation`])}
                   </div>
@@ -681,7 +687,7 @@ export default function EspressoDashboard() {
               >
                 <div className="flex items-center gap-2">
                   <div>
-                    <h3 className="text-xs font-bold text-black">Airport Analysis</h3>
+                    <h3 className="text-xs font-bold text-black">{t('airport_analysis')}</h3>
                     <div className="mt-1">
                       {getStatusBadge("airport", !!docsState[`t${progress.currentTier}-specific`])}
                     </div>
@@ -697,7 +703,7 @@ export default function EspressoDashboard() {
               >
                 <div className="flex items-center gap-2">
                   <div>
-                    <h3 className="text-xs font-bold text-black">Stakeholder Analysis</h3>
+                    <h3 className="text-xs font-bold text-black">{t('stakeholder_analysis')}</h3>
                     <div className="mt-1">
                       {getStatusBadge("stakeholder", !!docsState[`t${progress.currentTier}-specific`])}
                     </div>
@@ -715,7 +721,7 @@ export default function EspressoDashboard() {
             >
               <div className="flex items-center gap-2">
                 <div>
-                  <h3 className="text-sm font-black text-black uppercase tracking-tight">HUB Activation Form</h3>
+                  <h3 className="text-sm font-black text-black uppercase tracking-tight">{t('hub_activation_form')}</h3>
                   <div className="mt-1">
                     {getStatusBadge("hub_activation", !!activationData)}
                   </div>
@@ -728,7 +734,7 @@ export default function EspressoDashboard() {
 
         {/* 1. Daily Tasks */}
         <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">Daily Tasks</h2>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">{t('daily_tasks')}</h2>
           
           <div className="space-y-1">
             <div 
@@ -737,7 +743,7 @@ export default function EspressoDashboard() {
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  Fill Permits & Public Form
+                  {t('fill_permits_task')}
                 </h3>
                 <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
               </div>
@@ -754,9 +760,9 @@ export default function EspressoDashboard() {
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  Fill Competition Analysis Form
+                  {t('fill_competition_task')}
                 </h3>
-                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
+                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
               </div>
               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                 docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300 bg-white"
@@ -771,9 +777,9 @@ export default function EspressoDashboard() {
             >
               <div className="flex-1">
                 <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  Fill Lot Activation List
+                  {t('fill_lot_activation_task')}
                 </h3>
-                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
+                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
               </div>
               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                 docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300 bg-white"
@@ -789,9 +795,9 @@ export default function EspressoDashboard() {
               >
                 <div className="flex-1">
                   <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
-                    Fill Airport Analysis
+                    {t('fill_airport_analysis_task')}
                   </h3>
-                  <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
+                  <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
                 </div>
                 <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                   docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
@@ -808,94 +814,94 @@ export default function EspressoDashboard() {
               >
                 <div className="flex-1">
                   <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
-                    Fill {progress.currentTier === 6 ? "Hotel" : "Whales Corporation"} Analysis
-                  </h3>
-                  <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
-                </div>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                  docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
-                }`}>
-                  {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                </div>
-              </div>
-            )}
-
-            <div 
-              onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
-            >
-              <div className="flex-1">
-                <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>
-                  Map All Relevant Lots
+                  {t('fill_analysis').replace('{type}', progress.currentTier === 6 ? t('hotel') : t('whales_corporation'))}
                 </h3>
-                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
+                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
               </div>
               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
+                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
               }`}>
-                {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </div>
             </div>
+          )}
 
-            <div 
-              onClick={() => setActivateLotCompleted(!activateLotCompleted)}
-              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
-            >
-              <div className="flex-1">
-                <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>
-                  Activate 1 Lot (Try to close best first)
-                </h3>
-                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
-              </div>
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
+          <div 
+            onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
+            className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+          >
+            <div className="flex-1">
+              <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>
+                {t('map_relevant_lots')}
+              </h3>
+              <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
             </div>
-          </div>
-        </section>
-
-        {/* Mission Section */}
-        <section>
-          <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2 mt-8">
-            <span className="text-xs font-semibold tracking-tight text-black mr-4">MISSION</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {/* Primary Metrics */}
-            <div>
-              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Performance</h2>
-              <div className="flex flex-col space-y-1">
-                <MissionItem label="Current Revenue" value={`${currentValue.toLocaleString()}€`} />
-                <MissionItem label="Lots Mapped" value={lotsMapped} />
-                <MissionItem label="Lots Activated" value={lotsActivated} />
-              </div>
-            </div>
-
-            {/* Strategic Initiatives */}
-            <div>
-              <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Strategic Initiatives</h2>
-              <div className="flex flex-col space-y-1">
-                <MissionItem 
-                  label="SMART CITY PROGRAM" 
-                  value={smartProgram ? "YES" : "NO"} 
-                  onClick={() => setSmartProgram(!smartProgram)}
-                />
-                <MissionItem 
-                  label="AIRPORT HUB(CONTRACT)" 
-                  value={airportHub ? "YES" : "NO"} 
-                  onClick={() => setAirportHub(!airportHub)}
-                />
-                <MissionItem 
-                  label="CITY HUB(CONTRACT)" 
-                  value={cityHub ? "YES" : "NO"} 
-                  onClick={() => setCityHub(!cityHub)}
-                />
-              </div>
+            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+              mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
+            }`}>
+              {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
             </div>
           </div>
-        </section>
+
+          <div 
+            onClick={() => setActivateLotCompleted(!activateLotCompleted)}
+            className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+          >
+            <div className="flex-1">
+              <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>
+                {t('activate_1_lot_goal')}
+              </h3>
+              <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
+            </div>
+            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+              activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
+            }`}>
+              {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mission Section */}
+      <section>
+        <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2 mt-8">
+          <span className="text-xs font-semibold tracking-tight text-black mr-4">{t('mission')}</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+          {/* Primary Metrics */}
+          <div>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('performance')}</h2>
+            <div className="flex flex-col space-y-1">
+              <MissionItem label={t('current_revenue')} value={`${currentValue.toLocaleString()}€`} />
+              <MissionItem label={t('lots_mapped')} value={lotsMapped} />
+              <MissionItem label={t('lots_activated')} value={lotsActivated} />
+            </div>
+          </div>
+
+          {/* Strategic Initiatives */}
+          <div>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('strategic_initiatives')}</h2>
+            <div className="flex flex-col space-y-1">
+              <MissionItem 
+                label={t('smart_city_program')} 
+                value={smartProgram ? t('yes') : t('no')} 
+                onClick={() => setSmartProgram(!smartProgram)}
+              />
+              <MissionItem 
+                label={t('airport_hub_contract')} 
+                value={airportHub ? t('yes') : t('no')} 
+                onClick={() => setAirportHub(!airportHub)}
+              />
+              <MissionItem 
+                label={t('city_hub_contract')} 
+                value={cityHub ? t('yes') : t('no')} 
+                onClick={() => setCityHub(!cityHub)}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
       </div>
     </div>
   );
