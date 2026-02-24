@@ -17,9 +17,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      StatusBar.show().catch(() => {});
-      StatusBar.setBackgroundColor({ color: '#000000' }).catch(() => {});
-      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      const initStatusBar = async () => {
+        try {
+          await StatusBar.show();
+          await StatusBar.setBackgroundColor({ color: '#000000' });
+          await StatusBar.setOverlaysWebView({ overlay: false });
+          // Ensure style is set to dark (white text) since background is black
+          await StatusBar.setStyle({ style: 'DARK' as any });
+        } catch (e) {
+          console.error('StatusBar error:', e);
+        }
+      };
+      initStatusBar();
     }
   }, []);
 
