@@ -35,15 +35,18 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full h-[40px] border-b border-gray-100 bg-sidebar shrink-0 z-[999] overflow-visible">
-      <div className="w-full h-full flex items-center px-4 relative">
+    <header className="fixed top-0 left-0 right-0 w-full border-b border-gray-100 bg-sidebar shrink-0 z-[999] overflow-visible flex flex-col">
+      {/* Status Bar background for mobile/APK */}
+      <div className="h-[env(safe-area-inset-top,0px)] bg-black w-full" />
+      
+      <div className="w-full h-[40px] flex items-center px-4 relative">
         {/* Logo - Left aligned */}
         <Link href="/" className="text-xl font-bold text-black tracking-tight hover:opacity-80 transition-opacity no-underline shrink-0 z-20">
           PayParq
         </Link>
 
         {/* Icons - Centered relative to screen and shifted right by ~1.0cm (38px) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 top-[env(safe-area-inset-top,0px)]">
           <div className="flex items-center justify-center gap-[14px] md:gap-[22px] pointer-events-auto translate-x-[38px]">
             {/* Reminders */}
             <Link 

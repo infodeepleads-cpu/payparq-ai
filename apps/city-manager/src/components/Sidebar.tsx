@@ -117,7 +117,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Removed spacer to prevent horizontal overflow; layout now uses padding on content container */}
-      <aside className="fixed left-0 top-[40px] bottom-0 w-[40px] bg-sidebar border-r border-gray-100 flex flex-col items-center py-4 z-[100]">
+      <aside className="fixed left-0 top-[calc(40px+env(safe-area-inset-top,0px))] bottom-0 w-[40px] bg-sidebar border-r border-gray-100 flex flex-col items-center py-4 z-[100]">
         
         {/* Main Categories (Overflow visible for tooltips) */}
         <div className="px-2 py-2 space-y-3 overflow-visible border-b border-gray-100">
