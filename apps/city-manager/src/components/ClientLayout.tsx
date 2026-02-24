@@ -21,7 +21,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         try {
           await StatusBar.show();
           await StatusBar.setBackgroundColor({ color: '#000000' });
-          await StatusBar.setOverlaysWebView({ overlay: false });
+          await StatusBar.setOverlaysWebView({ overlay: true });
           // Ensure style is set to dark (white text) since background is black
           await StatusBar.setStyle({ style: 'DARK' as any });
         } catch (e) {
@@ -39,7 +39,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-background">
       <Header />
-      <div className="flex-1 flex overflow-hidden pt-[40px] relative">
+      <div className="flex-1 flex overflow-hidden pt-[calc(40px+env(safe-area-inset-top,0px))] relative">
         <Sidebar />
         <main className="flex-1 flex flex-col pl-[40px] h-full overflow-hidden w-full relative">
           <div className="flex-1 overflow-hidden relative">
