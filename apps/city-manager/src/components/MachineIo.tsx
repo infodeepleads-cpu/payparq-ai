@@ -188,9 +188,9 @@ const InputArea = React.memo(({
             ref={inputRef}
           />
           <div className="flex items-center gap-2 shrink-0">
-            <div className="relative">
+            <div>
               {showModelSelector && (
-                <div className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-white/95 backdrop-blur-sm rounded-lg overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom shadow-xl border border-gray-100">
+                <div className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom shadow-2xl border border-gray-100">
                     <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
                       {AI_MODELS.map((model, idx) => (
                         <button
@@ -1072,7 +1072,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col bg-white relative w-full overflow-hidden">
+    <div className="flex flex-col relative w-full overflow-visible">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>

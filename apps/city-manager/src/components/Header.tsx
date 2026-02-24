@@ -44,7 +44,7 @@ export default function Header() {
 
         {/* Icons - Centered relative to screen and shifted right by ~1.0cm (38px) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="flex items-center justify-center gap-2 md:gap-4 pointer-events-auto translate-x-[38px]">
+          <div className="flex items-center justify-center gap-[14px] md:gap-[22px] pointer-events-auto translate-x-[38px]">
             {/* Reminders */}
             <Link 
               href={{ pathname: "/reminders" }}
@@ -72,13 +72,14 @@ export default function Header() {
               <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{t('resources')}</span>
             </Link>
 
-            {/* Settings Wrench */}
+            {/* Settings Cog */}
             <Link 
               href={{ pathname: "/settings" }}
               className="group relative flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-md transition-colors text-gray-600 hover:bg-gray-100 focus:outline-none"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75a4.5 4.5 0 01-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 11-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 016.336-4.486l-3.276 3.276a3.004 3.004 0 002.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">{t('settings')}</span>
             </Link>
