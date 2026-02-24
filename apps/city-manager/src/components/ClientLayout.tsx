@@ -17,7 +17,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       StatusBar.hide().catch(() => {});
-      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#000000' }).catch(() => {});
+      StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
     }
   }, []);
 
