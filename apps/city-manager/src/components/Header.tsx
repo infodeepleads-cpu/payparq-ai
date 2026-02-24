@@ -46,7 +46,7 @@ export default function Header() {
         </Link>
 
         {/* Icons - Centered relative to screen and shifted right by ~1.0cm (38px) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 top-[env(safe-area-inset-top,0px)]">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="flex items-center justify-center gap-[14px] md:gap-[22px] pointer-events-auto translate-x-[38px]">
             {/* Reminders */}
             <Link 
