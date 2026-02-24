@@ -78,10 +78,10 @@ export default function TopControlsWidget() {
   };
 
   return (
-    <div className="block z-20 w-full mb-2">
-      <div className="w-full max-w-3xl mx-auto transition-all duration-200">
+    <div className="relative z-20 w-full mb-2">
+      <div className="w-full max-w-3xl mx-auto transition-all duration-200 px-4 md:pr-10 md:pl-0">
         {isExpanded && (
-          <div className="mb-2 max-h-40 overflow-y-auto p-2 space-y-1 thin-scrollbar bg-transparent">
+          <div className="absolute bottom-full left-0 right-10 mb-2 max-h-40 overflow-y-auto p-2 space-y-1 thin-scrollbar bg-white border border-gray-100 rounded-lg shadow-sm">
             {tasks.length === 0 && <div className="text-center text-gray-400 py-4 text-[10px]">No tasks yet.</div>}
             {tasks.map(t => (
               <div key={t.id} className="group flex items-center justify-between p-1.5 rounded transition-all">

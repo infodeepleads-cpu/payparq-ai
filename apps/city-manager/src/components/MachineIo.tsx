@@ -136,7 +136,7 @@ const InputArea = React.memo(({
   };
 
   return (
-    <div className={`relative w-full max-w-3xl mx-auto transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
+    <div className={`relative w-full max-w-3xl mx-auto pr-8 transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
       {selectedImage && (
         <div className="relative mb-2 w-fit">
           <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
@@ -150,7 +150,7 @@ const InputArea = React.memo(({
           </button>
         </div>
       )}
-      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none">
+      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none focus-within:border-gray-300 transition-all">
          <button
            onClick={() => fileInputRef.current?.click()}
            className="bg-transparent border-0 p-2 focus:outline-none text-gray-400 hover:text-gray-600 transition-colors"
@@ -255,10 +255,10 @@ const InputArea = React.memo(({
             <button
                onClick={sendMessage}
                disabled={(!input.trim() && !selectedImage) || loading}
-               className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 focus:outline-none shadow-sm ${
+               className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 focus:outline-none shadow-none border-none ${
                  input.trim() || selectedImage
-                   ? "bg-zinc-900 text-white hover:bg-zinc-800" 
-                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                   ? "bg-transparent text-black" 
+                   : "bg-transparent text-gray-300 cursor-not-allowed"
                }`}
                aria-label="Send"
                title="Send"
@@ -292,6 +292,19 @@ export default function MachineIo() {
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
+
+    if (Capacitor.isNativePlatform()) {
+      const handleResize = () => {
+        if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+          setTimeout(() => {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          }, 100);
+        }
+      };
+
+      window.visualViewport?.addEventListener('resize', handleResize);
+      return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   const formatCET = (d: Date) =>
@@ -565,7 +578,7 @@ export default function MachineIo() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
   useEffect(() => {
     const init = () => {
@@ -1034,7 +1047,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white relative w-full overscroll-none md:overscroll-auto touch-pan-y md:touch-auto">
+    <div className="flex flex-col bg-white relative w-full overflow-hidden">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>
@@ -1075,20 +1088,14 @@ export default function MachineIo() {
             </>
          )}
 
-         <div className="shrink-0 z-30 bg-white border-b border-gray-100 w-full hidden md:block">
-           <div className="w-full px-4 py-2 flex items-center justify-between">
-             <span className="text-xs font-semibold tracking-tight text-black">machine.io</span>
-           </div>
-         </div>
-
       {!threadId || messages.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-end md:justify-center pl-0 pr-8 md:px-4 overflow-y-auto pb-4 md:pb-0">
-           <div className="w-full max-w-3xl mx-auto">
-             <div className="w-full mb-1 block">
+        <div className="w-full">
+           <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
+             <div className="w-full mb-3">
                <TopControlsWidget />
              </div>
              <InputArea 
-               centered={true}
+               centered={false}
                input={input}
                setInput={setInput}
                selectedImage={selectedImage}
@@ -1106,17 +1113,17 @@ export default function MachineIo() {
            </div>
         </div>
       ) : (
-        <>
-          <div className="flex-1 overflow-y-auto scroll-smooth touch-auto">
-            <div className="max-w-3xl mx-auto pl-0 pr-8 md:px-0 py-8 pb-4">
-              <div className="flex flex-col space-y-8">
+        <div className="w-full">
+          <div className="max-h-[40vh] overflow-y-auto scroll-smooth border-b border-gray-50">
+            <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
+              <div className="flex flex-col space-y-4">
               {messages.map((m, i) => (
                   <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
               ))}
               {loading && <LoadingIndicator />}
               {error && (
-                <div className="w-full py-4 text-center">
-                   <span className="text-red-500 text-sm bg-red-50 px-4 py-2 rounded-full border border-red-100">{error}</span>
+                <div className="w-full py-2 text-center">
+                   <span className="text-red-500 text-sm bg-red-50 px-4 py-1.5 rounded-full border border-red-100">{error}</span>
                 </div>
               )}
                 <div ref={bottomRef} />
@@ -1124,9 +1131,9 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className={`shrink-0 z-30 bg-white border-t border-gray-50 pt-4 ${isNative ? 'pb-20' : 'pb-12'} md:pb-6 pl-1 pr-8 md:px-0 touch-auto min-h-[80px]`}>
+          <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'}`}>
              <div className="max-w-3xl mx-auto w-full">
-               <div className="w-full mb-2 block">
+               <div className="w-full mb-3">
                  <TopControlsWidget />
                </div>
                <InputArea 
@@ -1144,12 +1151,9 @@ export default function MachineIo() {
                  sendMessage={sendMessage}
                  handleFileSelect={handleFileSelect}
                />
-               <p className="text-center text-xs text-gray-400 mt-2 pb-safe">
-                  machine.io invites you to challenge it so we can go deeper.
-               </p>
              </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

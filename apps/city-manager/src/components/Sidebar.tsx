@@ -90,7 +90,7 @@ export default function Sidebar() {
   const setCurrentThread = (id: string) => {
     localStorage.setItem(CURRENT_KEY, id);
     setCurrent(id);
-    window.dispatchEvent(new Event("pp-current-thread", { bubbles: true, composed: true }));
+    window.dispatchEvent(new CustomEvent("pp-current-thread", { detail: { id } }));
   };
 
   const removeThread = (id: string) => {
@@ -100,7 +100,7 @@ export default function Sidebar() {
     if (currentId === id) {
       localStorage.removeItem(CURRENT_KEY);
       setCurrent(null);
-      window.dispatchEvent(new Event("pp-current-thread"));
+      window.dispatchEvent(new CustomEvent("pp-current-thread", { detail: { id: null } }));
     }
   };
 
