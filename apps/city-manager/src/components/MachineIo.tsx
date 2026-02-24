@@ -1156,7 +1156,7 @@ export default function MachineIo() {
      ) : (
        <div className="w-full flex flex-col h-full">
           <div className="flex-1 w-full overflow-y-auto scroll-smooth border-b border-gray-50">
-           <div className="max-w-3xl mx-auto px-4 md:px-0 pt-4 pb-12">
+           <div className="max-w-3xl mx-auto px-4 md:px-0 pt-4 pb-4">
              <div className="flex flex-col space-y-4">
              {messages.map((m, i) => (
                  <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
@@ -1167,7 +1167,7 @@ export default function MachineIo() {
                   <span className="text-red-500 text-sm bg-red-50 px-4 py-1.5 rounded-full border border-red-100">{error}</span>
                </div>
              )}
-               <div ref={bottomRef} className="h-20" />
+               <div ref={bottomRef} className="h-4" />
              </div>
            </div>
          </div>
