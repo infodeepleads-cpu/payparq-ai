@@ -603,6 +603,20 @@ export default function MachineIo() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    
+    // If the last message is an assistant message and is animating, 
+    // we need to scroll multiple times as the content grows.
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === "assistant" && lastMsg.animate) {
+      const interval = setInterval(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 100);
+      const timeout = setTimeout(() => clearInterval(interval), 3000); // Stop after 3s (approx animation time)
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
   }, [messages, loading]);
 
   useEffect(() => {
@@ -1072,7 +1086,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col relative w-full overflow-visible">
+    <div className="flex flex-col relative w-full h-full overflow-hidden">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>
@@ -1114,9 +1128,8 @@ export default function MachineIo() {
          )}
 
       {!threadId || messages.length === 0 ? (
-        <div className="w-full flex flex-col min-h-[40vh]">
-           <div className="flex-1" />
-           <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} border-t border-gray-100`}>
+        <div className="w-full flex flex-col h-full justify-end">
+           <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-2'} border-t border-gray-100`}>
             <div className="max-w-3xl mx-auto w-full">
               <div className="w-full">
                 <TopControlsWidget />
@@ -1141,9 +1154,9 @@ export default function MachineIo() {
           </div>
        </div>
      ) : (
-       <div className="w-full flex flex-col">
-         <div className="w-full overflow-y-auto scroll-smooth border-b border-gray-50 max-h-[60vh]">
-           <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
+       <div className="w-full flex flex-col h-full">
+          <div className="flex-1 w-full overflow-y-auto scroll-smooth border-b border-gray-50">
+           <div className="max-w-3xl mx-auto px-4 md:px-0 pt-4 pb-12">
              <div className="flex flex-col space-y-4">
              {messages.map((m, i) => (
                  <ChatMessage key={i} role={m.role} content={m.content} animate={m.animate} />
@@ -1154,12 +1167,12 @@ export default function MachineIo() {
                   <span className="text-red-500 text-sm bg-red-50 px-4 py-1.5 rounded-full border border-red-100">{error}</span>
                </div>
              )}
-               <div ref={bottomRef} />
+               <div ref={bottomRef} className="h-20" />
              </div>
            </div>
          </div>
 
-         <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
+         <div className={`bg-white px-4 md:px-0 pt-0 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full">
                  <TopControlsWidget />

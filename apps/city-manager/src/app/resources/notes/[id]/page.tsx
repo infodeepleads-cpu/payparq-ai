@@ -144,7 +144,7 @@ export default function NoteDetailPage() {
         />
         <textarea
           placeholder="Start typing..."
-          className="flex-1 resize-none outline-none placeholder-gray-500 w-full text-[0.65rem] bg-transparent leading-relaxed border-none focus:ring-0 px-0 text-black font-light"
+          className="flex-1 resize-none outline-none placeholder-gray-500 w-full text-[0.8rem] bg-transparent leading-relaxed border-none focus:ring-0 px-0 text-black font-light"
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />

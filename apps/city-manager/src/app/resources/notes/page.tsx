@@ -68,7 +68,7 @@ export default function NotesPage() {
                     </div>
                   )}
                   <h3 className="font-bold text-sm mb-1 truncate text-gray-900 pr-6">{note.title || t('untitled')}</h3>
-                  <p className="text-xs text-gray-600 line-clamp-6 whitespace-pre-wrap flex-1">{note.content}</p>
+                  <p className="text-[0.9rem] text-gray-600 line-clamp-5 whitespace-pre-wrap flex-1">{note.content}</p>
                   <div className="text-[10px] text-gray-400 mt-2 text-right">
                     {new Date(note.updatedAt).toLocaleDateString()}
                   </div>
