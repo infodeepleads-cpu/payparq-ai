@@ -13,6 +13,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
   const isHomePage = pathname === "/";
+  const isNewNotePage = pathname === "/resources/notes/new";
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -22,7 +23,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  if (isAuthPage) {
+  if (isAuthPage || isNewNotePage) {
     return <main className="h-full w-full bg-white">{children}</main>;
   }
 
