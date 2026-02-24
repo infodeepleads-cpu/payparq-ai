@@ -12,6 +12,7 @@ import DailyRecap from "./DailyRecap";
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/auth");
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -32,14 +33,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <main className="flex-1 flex flex-col pl-[60px] pr-[1.125rem] h-full overflow-hidden w-full relative">
           <div className="flex-1 overflow-hidden relative">
             <div className="h-full w-full overflow-y-auto overflow-x-hidden scrollbar-hide">
-              <div className="max-w-3xl w-full mx-auto px-4 md:px-0 overflow-x-hidden">
+              <div className={`max-w-3xl w-full mx-auto px-4 md:px-0 overflow-x-hidden ${isHomePage ? 'pb-40' : 'pb-8'}`}>
                   {children}
                 </div>
             </div>
           </div>
-          <div className="w-full bg-white border-t border-gray-100 shrink-0">
-            <MachineIo />
-          </div>
+          {isHomePage && (
+            <div className="fixed bottom-0 left-[60px] right-0 bg-white border-t border-gray-100 z-30">
+              <MachineIo />
+            </div>
+          )}
         </main>
       </div>
       <DailyRecap />

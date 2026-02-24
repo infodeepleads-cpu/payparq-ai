@@ -1089,32 +1089,36 @@ export default function MachineIo() {
          )}
 
       {!threadId || messages.length === 0 ? (
-        <div className="w-full">
-           <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
+        <div className="w-full flex flex-col">
+           <div className="max-w-3xl mx-auto px-4 md:px-0 w-full pt-12 md:pt-24 pb-8">
              <div className="w-full mb-3">
                <TopControlsWidget />
              </div>
-             <InputArea 
-               centered={false}
-               input={input}
-               setInput={setInput}
-               selectedImage={selectedImage}
-               setSelectedImage={setSelectedImage}
-               fileInputRef={fileInputRef}
-               inputRef={inputRef}
-               showModelSelector={showModelSelector}
-               setShowModelSelector={setShowModelSelector}
-               selectedModel={selectedModel}
-               setSelectedModel={setSelectedModel}
-               loading={loading}
-               sendMessage={sendMessage}
-               handleFileSelect={handleFileSelect}
-             />
+           </div>
+           <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} border-t border-gray-100`}>
+             <div className="max-w-3xl mx-auto w-full">
+               <InputArea 
+                 centered={false}
+                 input={input}
+                 setInput={setInput}
+                 selectedImage={selectedImage}
+                 setSelectedImage={setSelectedImage}
+                 fileInputRef={fileInputRef}
+                 inputRef={inputRef}
+                 showModelSelector={showModelSelector}
+                 setShowModelSelector={setShowModelSelector}
+                 selectedModel={selectedModel}
+                 setSelectedModel={setSelectedModel}
+                 loading={loading}
+                 sendMessage={sendMessage}
+                 handleFileSelect={handleFileSelect}
+               />
+             </div>
            </div>
         </div>
       ) : (
-        <div className="w-full">
-          <div className="max-h-[40vh] overflow-y-auto scroll-smooth border-b border-gray-50">
+        <div className="w-full flex flex-col">
+          <div className="w-full overflow-y-auto scroll-smooth border-b border-gray-50 max-h-[60vh]">
             <div className="max-w-3xl mx-auto px-4 md:px-0 py-4">
               <div className="flex flex-col space-y-4">
               {messages.map((m, i) => (
@@ -1131,7 +1135,7 @@ export default function MachineIo() {
             </div>
           </div>
 
-          <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'}`}>
+          <div className={`bg-white px-4 md:px-0 py-4 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full mb-3">
                  <TopControlsWidget />
