@@ -123,11 +123,17 @@ export default function RideHailingWidget() {
 
         // If no real drivers, keep some mock ones for demo purposes
         if (drivers.length === 0) {
-          const mockDrivers = Array.from({ length: 3 }).map((_, i) => ({
-            id: `mock-driver-${i}`,
-            lat: location.lat + (Math.random() - 0.5) * 0.01,
-            lng: location.lng + (Math.random() - 0.5) * 0.01,
-          }));
+          const time = Date.now() / 2000; // Time factor for animation
+          const mockDrivers = Array.from({ length: 4 }).map((_, i) => {
+            const radius = 0.008 + (i * 0.002);
+            const angle = time + (i * (Math.PI / 2));
+            return {
+              id: `mock-driver-${i}`,
+              lat: location.lat + Math.sin(angle) * radius,
+              lng: location.lng + Math.cos(angle) * radius,
+              rotation: (angle * 180 / Math.PI) + 90
+            };
+          });
           setNearbyDrivers(mockDrivers);
         } else {
           setNearbyDrivers(drivers);
@@ -149,12 +155,16 @@ export default function RideHailingWidget() {
     nearbyDrivers.forEach(driver => {
       if (!otherDriversMarkers.current[driver.id]) {
         const el = document.createElement("div");
-        el.className = "w-8 h-8 pointer-events-none";
+        el.className = "w-8 h-8 pointer-events-none transition-all duration-1000 ease-linear";
         el.innerHTML = `<svg viewBox="0 0 24 24" fill="black" class="w-full h-full"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>`;
         otherDriversMarkers.current[driver.id] = new mapboxgl.Marker(el)
           .setLngLat([driver.lng, driver.lat])
           .addTo(map.current!);
       } else {
+        const el = otherDriversMarkers.current[driver.id].getElement();
+        if (driver.rotation !== undefined) {
+          el.style.transform = `rotate(${driver.rotation}deg)`;
+        }
         otherDriversMarkers.current[driver.id].setLngLat([driver.lng, driver.lat]);
       }
     });
@@ -460,14 +470,29 @@ export default function RideHailingWidget() {
       {/* Hidden helper for Tailwind classes used in markers */}
       <div className="hidden bg-blue-500 bg-black" />
 
-      {/* Background Map - Hidden in search step, visible from destination onwards */}
+      {/* Map Section - 30% height on destination step, full screen otherwise */}
       <div 
         ref={mapContainer} 
-        className={`absolute inset-0 w-full h-full z-0 transition-opacity duration-500 ${step === 'search' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} 
+        className={`z-0 transition-all duration-700 ease-in-out bg-gray-100
+          ${step === 'search' ? 'absolute inset-0 opacity-0 pointer-events-none' : 'opacity-100'}
+          ${step === 'destination' && !isConfirmed ? 'h-[30%] w-full shrink-0 relative border-b border-gray-100' : 'absolute inset-0 w-full h-full'}
+        `}
       />
 
-      {/* 1. Header with elegant 'parq' branding - Floating Overlay */}
-      {step !== 'search' && (
+      {/* Duration Overlay on Map (only in destination step) */}
+      {step === 'destination' && !isConfirmed && routeData && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in zoom-in duration-500">
+          <div className="bg-black text-white px-4 py-2 rounded-full shadow-2xl flex items-center space-x-2 border border-white/20 backdrop-blur-md">
+            <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+            <span className="text-xs font-black tracking-tight">{Math.round(routeData.duration / 60)} min</span>
+          </div>
+        </div>
+      )}
+
+      {/* UI Content - Takes 70% height on destination step */}
+      <div className={`relative z-10 flex-1 flex flex-col min-h-0 ${step === 'destination' && !isConfirmed ? 'bg-white rounded-t-[2.5rem] shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.1)] -mt-10 animate-in slide-in-from-bottom duration-700' : ''}`}>
+        {/* 1. Header with elegant 'parq' branding - Floating Overlay (only when map is full screen) */}
+        {step !== 'search' && (step !== 'destination' || isConfirmed) && (
         <div className="absolute top-0 left-0 right-0 z-[100] px-6 py-8 pointer-events-none">
           <div className="flex items-center justify-between pointer-events-auto">
             <div className="bg-white/80 backdrop-blur-md px-5 py-2 rounded-2xl shadow-sm border border-white/20">
