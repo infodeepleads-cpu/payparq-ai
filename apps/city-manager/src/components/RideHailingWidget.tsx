@@ -233,6 +233,9 @@ export default function RideHailingWidget() {
     if (!location || !destination || !routeData) return;
     
     setIsLoadingEstimate(true);
+    setGeoError(null);
+    console.log("Fetching estimate for:", { routeData, h3Index });
+
     try {
       const res = await fetch("/api/rides/estimate", {
         method: "POST",
@@ -240,14 +243,28 @@ export default function RideHailingWidget() {
         body: JSON.stringify({
           dist_meters: routeData.distance,
           time_seconds: routeData.duration,
-          h3_zone_id: h3Index,
-          is_payparq_lot: false // Could be dynamic later
+          h3_zone_id: h3Index || h3.latLngToCell(location.lat, location.lng, 7), // Ensure H3 index exists
+          is_payparq_lot: false
         }),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch estimate");
+      }
+
       const data = await res.json();
-      setEstimate(data.fare);
-    } catch (err) {
+      console.log("Estimate API Response:", data);
+      
+      if (data.fare !== undefined) {
+        setEstimate(data.fare);
+      } else {
+        throw new Error("Invalid fare data received");
+      }
+    } catch (err: any) {
       console.error("Estimate error:", err);
+      setGeoError(`Fare Error: ${err.message}`);
+      setEstimate(null);
     } finally {
       setIsLoadingEstimate(false);
     }

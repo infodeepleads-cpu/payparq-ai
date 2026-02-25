@@ -7,40 +7,46 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Note: 
 
 export async function POST(request: Request) {
   try {
-    const { pickup, destination, h3Index, isPayParqLot } = await request.json();
-
-    if (!pickup || !destination || !h3Index) {
-      return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
-    }
-
-    // 1. Fetch Distance & Time from Mapbox (Mocking for now as we don't have the API key in context)
-    // In production, you would call: https://api.mapbox.com/directions-matrix/v1/mapbox/driving/...
+    const body = await request.json();
+    console.log("Estimate API Request Body:", body);
     
-    // MOCK DATA (e.g., 5.2km, 12 minutes)
-    const mockDistMeters = 5200;
-    const mockTimeSeconds = 720;
+    // Support both old and new field names for backward compatibility
+    const dist_meters = body.dist_meters || body.distance_meters;
+    const time_seconds = body.time_seconds || body.duration_seconds;
+    const h3_zone_id = body.h3_zone_id || body.h3Index;
+    const is_payparq_lot = body.is_payparq_lot || body.isPayParqLot || false;
+
+    if (!dist_meters || !time_seconds || !h3_zone_id) {
+      return NextResponse.json({ 
+        error: "Missing required parameters", 
+        received: { dist_meters, time_seconds, h3_zone_id } 
+      }, { status: 400 });
+    }
 
     // 2. Call Postgres RPC for Fare Calculation
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
     const { data: fare, error } = await supabase.rpc('calculate_uber_fare', {
-      dist_meters: mockDistMeters,
-      time_seconds: mockTimeSeconds,
-      h3_zone_id: h3Index,
-      is_payparq_lot: isPayParqLot || false
+      dist_meters: dist_meters,
+      time_seconds: time_seconds,
+      h3_zone_id: h3_zone_id,
+      is_payparq_lot: is_payparq_lot
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('RPC Error:', error);
+      throw error;
+    }
 
     // 3. Return Upfront Price Estimate
     return NextResponse.json({
-      price: fare,
+      fare: fare, // Ensure we return the key expected by the frontend
       currency: 'EUR',
-      distance_km: (mockDistMeters / 1000).toFixed(1),
-      duration_min: Math.round(mockTimeSeconds / 60),
+      distance_km: (dist_meters / 1000).toFixed(1),
+      duration_min: Math.round(time_seconds / 60),
       breakdown: {
         base_fare: 2.50,
-        is_payparq_discounted: isPayParqLot || false,
-        surge_multiplier: 1.0 // This would come from the RPC logic
+        is_payparq_discounted: is_payparq_lot,
+        surge_multiplier: 1.0
       }
     });
 
