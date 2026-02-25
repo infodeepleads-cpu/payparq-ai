@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.97.0",
     "@types/react-signature-canvas": "^1.0.7",
     "groq-sdk": "^0.37.0",
+    "h3-js": "^4.4.0",
     "next": "latest",
     "openai": "latest",
     "react": "latest",
