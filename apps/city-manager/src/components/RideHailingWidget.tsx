@@ -12,6 +12,7 @@ export default function RideHailingWidget() {
   const [channel, setChannel] = useState<any>(null);
   const [estimate, setEstimate] = useState<any>(null);
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const getFareEstimate = async () => {
     if (!h3Index || !location) return;
@@ -76,6 +77,7 @@ export default function RideHailingWidget() {
         
         const index = h3.latLngToCell(latitude, longitude, 7);
         setH3Index(index);
+        setGeoError(null);
 
         // Broadcast location if online
         if (isOnline && channel) {
@@ -91,7 +93,14 @@ export default function RideHailingWidget() {
           });
         }
       },
-      (err) => console.error("Geolocation error:", err),
+      (err) => {
+        console.error("Geolocation error:", err.code, err.message);
+        let msg = "Location error. Please check GPS.";
+        if (err.code === 1) msg = "Location permission denied.";
+        if (err.code === 2) msg = "Location unavailable.";
+        if (err.code === 3) msg = "Location timeout.";
+        setGeoError(msg);
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
@@ -146,6 +155,16 @@ export default function RideHailingWidget() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto">
+        {/* Error Alert */}
+        {geoError && (
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center space-x-2 text-red-600 animate-in fade-in zoom-in duration-300">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-xs font-medium">{geoError}</span>
+          </div>
+        )}
+
         {/* Mock UI for now */}
         <div className="p-4 border border-gray-100 rounded-xl bg-gray-50">
           <p className="text-xs text-gray-500 uppercase font-bold mb-1">Current H3 Cell</p>
