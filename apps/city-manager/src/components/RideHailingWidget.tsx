@@ -10,18 +10,23 @@ import "mapbox-gl/dist/mapbox-gl.css";
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "pk.eyJ1Ijoia3phbWljIiwiYSI6ImNtbTF2MmFkOTAwbG0yc3Nld2MzaTE2dmMifQ.q4dvho0LQS1TY11pewfm1Q";
 
 export default function RideHailingWidget() {
-  const [isOnline, setIsOnline] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [destinationAddress, setDestinationAddress] = useState("");
   const [h3Index, setH3Index] = useState<string | null>(null);
-  const [nearbyDrivers, setNearbyDrivers] = useState<Record<string, any>>({});
-  const [channel, setChannel] = useState<any>(null);
   const [estimate, setEstimate] = useState<any>(null);
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Record<string, any>>({});
+  const [channel, setChannel] = useState<any>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [routeData, setRouteData] = useState<{ distance: number; duration: number } | null>(null);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const driverMarkers = useRef<{ [key: string]: mapboxgl.Marker }>({});
+  const routeLayerId = "route-line";
 
   // 0. Initialize Map
   useEffect(() => {
@@ -35,24 +40,32 @@ export default function RideHailingWidget() {
     });
 
     // Add manual location selection on click
-    map.current.on('click', (e) => {
+    map.current.on('click', async (e) => {
       const { lng, lat } = e.lngLat;
-      setLocation({ lat, lng });
-      const index = h3.latLngToCell(lat, lng, 7);
-      setH3Index(index);
-      setGeoError("Manual location set.");
       
-      // Update marker
-      if (map.current) {
-        if (!driverMarkers.current["self"]) {
-          const el = document.createElement("div");
-          el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
-          driverMarkers.current["self"] = new mapboxgl.Marker(el)
-            .setLngLat([lng, lat])
-            .addTo(map.current);
-        } else {
-          driverMarkers.current["self"].setLngLat([lng, lat]);
+      if (!location) {
+        // Set Pickup
+        setLocation({ lat, lng });
+        const index = h3.latLngToCell(lat, lng, 7);
+        setH3Index(index);
+        setGeoError("Pickup set manually.");
+        
+        if (map.current) {
+          if (!driverMarkers.current["self"]) {
+            const el = document.createElement("div");
+            el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
+            driverMarkers.current["self"] = new mapboxgl.Marker(el)
+              .setLngLat([lng, lat])
+              .addTo(map.current);
+          } else {
+            driverMarkers.current["self"].setLngLat([lng, lat]);
+          }
         }
+      } else {
+        // Set Destination
+        setDestination({ lat, lng });
+        setGeoError("Destination set.");
+        await fetchRoute([location.lng, location.lat], [lng, lat]);
       }
     });
 
@@ -119,25 +132,100 @@ export default function RideHailingWidget() {
     return () => clearInterval(interval);
   }, [nearbyDrivers]);
 
+  // Fetch Route from Mapbox
+  const fetchRoute = async (start: [number, number], end: [number, number]) => {
+    try {
+      const query = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`
+      );
+      const json = await query.json();
+      const data = json.routes[0];
+      const route = data.geometry.coordinates;
+      
+      setRouteData({
+        distance: data.distance, // meters
+        duration: data.duration, // seconds
+      });
+
+      if (map.current) {
+        // Update or add route line
+        if (map.current.getSource('route')) {
+          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: route
+            }
+          });
+        } else {
+          map.current.addLayer({
+            id: routeLayerId,
+            type: 'line',
+            source: {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: route
+                }
+              }
+            },
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 5,
+              'line-opacity': 0.75
+            }
+          });
+        }
+
+        // Add destination marker
+        if (driverMarkers.current["destination"]) {
+          driverMarkers.current["destination"].setLngLat(end);
+        } else {
+          const el = document.createElement("div");
+          el.className = "w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-lg";
+          driverMarkers.current["destination"] = new mapboxgl.Marker(el)
+            .setLngLat(end)
+            .addTo(map.current);
+        }
+
+        // Fit map to show both
+        const bounds = new mapboxgl.LngLatBounds()
+          .extend(start)
+          .extend(end);
+        map.current.fitBounds(bounds, { padding: 50 });
+      }
+    } catch (err) {
+      console.error("Error fetching route:", err);
+    }
+  };
+
   const getFareEstimate = async () => {
-    if (!h3Index || !location) return;
+    if (!location || !destination || !routeData) return;
     
     setIsLoadingEstimate(true);
     try {
-      const response = await fetch('/api/rides/estimate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/rides/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pickup: location,
-          destination: { lat: 45.815, lng: 15.981 }, // Mock destination (Zagreb Center)
-          h3Index: h3Index,
-          isPayParqLot: true // Testing the discount logic
-        })
+          dist_meters: routeData.distance,
+          time_seconds: routeData.duration,
+          h3_zone_id: h3Index,
+          is_payparq_lot: false // Could be dynamic later
+        }),
       });
-      const data = await response.json();
-      setEstimate(data);
+      const data = await res.json();
+      setEstimate(data.fare);
     } catch (err) {
-      console.error("Fare estimate failed:", err);
+      console.error("Estimate error:", err);
     } finally {
       setIsLoadingEstimate(false);
     }
@@ -314,16 +402,53 @@ export default function RideHailingWidget() {
         </div>
 
         {/* Fare Estimate Section */}
+        <div className="space-y-3">
+          <div className="relative">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Pickup</label>
+            <input
+              type="text"
+              placeholder={location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "Click on map to set pickup..."}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-black outline-none transition-all"
+              readOnly
+            />
+            <div className="absolute right-4 top-9 w-2 h-2 rounded-full bg-blue-500" />
+          </div>
+
+          <div className="relative">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Destination</label>
+            <input
+              type="text"
+              placeholder={destination ? `${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}` : "Click on map to set destination..."}
+              className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-black outline-none transition-all"
+              readOnly
+            />
+            <div className="absolute right-4 top-9 w-2 h-2 rounded-full bg-red-500" />
+          </div>
+        </div>
+
+        {routeData && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Distance</p>
+              <p className="text-sm font-bold text-black">{(routeData.distance / 1000).toFixed(1)} km</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+              <p className="text-[10px] text-gray-500 uppercase font-bold">Duration</p>
+              <p className="text-sm font-bold text-black">{Math.round(routeData.duration / 60)} min</p>
+            </div>
+          </div>
+        )}
+
         {estimate ? (
           <div className="p-4 border-2 border-black rounded-xl bg-white shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Estimated Fare</p>
-                <h3 className="text-2xl font-black text-black">{estimate.price} {estimate.currency}</h3>
+                <h3 className="text-2xl font-black text-black">€{Number(estimate).toFixed(2)}</h3>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase font-bold">Distance</p>
-                <p className="text-xs font-bold text-black">{estimate.distance_km} km</p>
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Price Match</p>
+                <p className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">Uber 2026 Adjusted</p>
               </div>
             </div>
             
@@ -331,16 +456,12 @@ export default function RideHailingWidget() {
               <div className="flex-1">
                 <p className="text-[10px] text-gray-400">Includes -10% PayParq Discount</p>
               </div>
-              <div className="flex items-center text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">
-                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                PRICE MATCHED
-              </div>
             </div>
           </div>
         ) : (
           <button 
             onClick={getFareEstimate}
-            disabled={!h3Index || isLoadingEstimate}
+            disabled={!location || !destination || isLoadingEstimate}
             className="w-full p-4 border border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-black hover:text-black transition-all group"
           >
             {isLoadingEstimate ? (
