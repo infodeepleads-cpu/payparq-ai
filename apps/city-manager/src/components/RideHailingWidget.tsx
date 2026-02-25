@@ -30,48 +30,63 @@ export default function RideHailingWidget() {
 
   // 0. Initialize Map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current) return;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [15.9819, 45.8150],
-      zoom: 13,
-    });
+    // Use a small delay to ensure container is rendered and has dimensions
+    const timer = setTimeout(() => {
+      if (map.current) return;
 
-    // Add manual location selection on click
-    map.current.on('click', async (e) => {
-      const { lng, lat } = e.lngLat;
-      
-      if (!location) {
-        // Set Pickup
-        setLocation({ lat, lng });
-        const index = h3.latLngToCell(lat, lng, 7);
-        setH3Index(index);
-        setGeoError("Pickup set manually.");
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current!,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [15.9819, 45.8150],
+        zoom: 13,
+      });
+
+      map.current.on('load', () => {
+        map.current?.resize();
+      });
+
+      // Add manual location selection on click
+      map.current.on('click', async (e) => {
+        const { lng, lat } = e.lngLat;
         
-        if (map.current) {
-          if (!driverMarkers.current["self"]) {
-            const el = document.createElement("div");
-            el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
-            driverMarkers.current["self"] = new mapboxgl.Marker(el)
-              .setLngLat([lng, lat])
-              .addTo(map.current);
+        setLocation(prevLocation => {
+          if (!prevLocation) {
+            // Set Pickup
+            const index = h3.latLngToCell(lat, lng, 7);
+            setH3Index(index);
+            setGeoError("Pickup set manually.");
+            
+            if (map.current) {
+              if (!driverMarkers.current["self"]) {
+                const el = document.createElement("div");
+                el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
+                driverMarkers.current["self"] = new mapboxgl.Marker(el)
+                  .setLngLat([lng, lat])
+                  .addTo(map.current);
+              } else {
+                driverMarkers.current["self"].setLngLat([lng, lat]);
+              }
+            }
+            return { lat, lng };
           } else {
-            driverMarkers.current["self"].setLngLat([lng, lat]);
+            // Set Destination
+            setDestination({ lat, lng });
+            setGeoError("Destination set.");
+            fetchRoute([prevLocation.lng, prevLocation.lat], [lng, lat]);
+            return prevLocation;
           }
-        }
-      } else {
-        // Set Destination
-        setDestination({ lat, lng });
-        setGeoError("Destination set.");
-        await fetchRoute([location.lng, location.lat], [lng, lat]);
-      }
-    });
+        });
+      });
+    }, 100);
 
     return () => {
-      map.current?.remove();
-      map.current = null;
+      clearTimeout(timer);
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
   }, []);
 
@@ -365,24 +380,59 @@ export default function RideHailingWidget() {
     });
   };
 
+  const resetRoute = () => {
+    setLocation(null);
+    setDestination(null);
+    setRouteData(null);
+    setEstimate(null);
+    setGeoError("Select pickup on map.");
+    
+    if (map.current) {
+      if (driverMarkers.current["self"]) {
+        driverMarkers.current["self"].remove();
+        delete driverMarkers.current["self"];
+      }
+      if (driverMarkers.current["destination"]) {
+        driverMarkers.current["destination"].remove();
+        delete driverMarkers.current["destination"];
+      }
+      if (map.current.getLayer(routeLayerId)) {
+        map.current.removeLayer(routeLayerId);
+      }
+      if (map.current.getSource('route')) {
+        map.current.removeSource('route');
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white p-4">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-black">Ride Hailing</h2>
-        <button 
-          onClick={() => setIsOnline(!isOnline)}
-          className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-          }`}
-        >
-          {isOnline ? 'ONLINE' : 'GO ONLINE'}
-        </button>
+        <div className="flex items-center space-x-2">
+          {(location || destination) && (
+            <button 
+              onClick={resetRoute}
+              className="px-3 py-1.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-colors uppercase tracking-wider"
+            >
+              Reset
+            </button>
+          )}
+          <button 
+            onClick={() => setIsOnline(!isOnline)}
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            {isOnline ? 'ONLINE' : 'GO ONLINE'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto">
         {/* Map Visualization */}
-        <div className="h-48 w-full rounded-2xl overflow-hidden border border-gray-100 shadow-inner relative">
-          <div ref={mapContainer} className="absolute inset-0" />
+        <div className="h-64 w-full rounded-2xl overflow-hidden border border-gray-100 shadow-inner relative bg-gray-50">
+          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
         </div>
 
         {/* Error Alert */}
