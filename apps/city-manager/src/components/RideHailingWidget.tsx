@@ -243,27 +243,32 @@ export default function RideHailingWidget() {
         body: JSON.stringify({
           dist_meters: routeData.distance,
           time_seconds: routeData.duration,
-          h3_zone_id: h3Index || h3.latLngToCell(location.lat, location.lng, 7), // Ensure H3 index exists
+          h3_zone_id: h3Index || h3.latLngToCell(location.lat, location.lng, 7),
           is_payparq_lot: false
         }),
       });
 
+      console.log("Response status:", res.status);
+      
       if (!res.ok) {
         const errorData = await res.json();
+        console.error("API Error data:", errorData);
         throw new Error(errorData.error || "Failed to fetch estimate");
       }
 
       const data = await res.json();
-      console.log("Estimate API Response:", data);
+      console.log("Estimate API Full Response:", data);
       
-      if (data.fare !== undefined) {
+      if (data.fare !== undefined && data.fare !== null) {
+        console.log("Setting estimate to:", data.fare);
         setEstimate(data.fare);
+        setGeoError(null); // Clear any previous fare errors
       } else {
         throw new Error("Invalid fare data received");
       }
     } catch (err: any) {
-      console.error("Estimate error:", err);
-      setGeoError(`Fare Error: ${err.message}`);
+      console.error("Estimate error details:", err);
+      setGeoError(`Price Calculation Error: ${err.message}`);
       setEstimate(null);
     } finally {
       setIsLoadingEstimate(false);
@@ -513,32 +518,43 @@ export default function RideHailingWidget() {
           </div>
         )}
 
-        {(isLoadingEstimate || estimate) && (
-          <div className={`p-4 border-2 ${isLoadingEstimate ? 'border-gray-200 bg-gray-50' : 'border-black bg-white'} rounded-xl shadow-sm transition-all duration-300`}>
+        {(isLoadingEstimate || estimate !== null) && (
+          <div className={`p-5 border-2 ${isLoadingEstimate ? 'border-gray-200 bg-gray-50' : 'border-black bg-white shadow-xl scale-[1.02]'} rounded-2xl transition-all duration-500`}>
             {isLoadingEstimate ? (
-              <div className="flex flex-col items-center justify-center py-4 space-y-3">
-                <svg className="animate-spin h-6 w-6 text-black" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-widest">Calculating Price...</p>
-              </div>
-            ) : estimate ? (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Estimated Fare</p>
-                    <h3 className="text-2xl font-black text-black">€{Number(estimate).toFixed(2)}</h3>
+              <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                <div className="relative">
+                  <svg className="animate-spin h-8 w-8 text-black" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-1 h-1 bg-black rounded-full animate-ping" />
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-gray-500 uppercase font-bold">Price Match</p>
-                    <p className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">Uber 2026 Adjusted</p>
+                </div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Securing Upfront Price...</p>
+              </div>
+            ) : estimate !== null ? (
+              <div className="animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Guaranteed Fare</p>
+                    <div className="flex items-baseline space-x-1">
+                      <span className="text-4xl font-black text-black tracking-tighter">€{Number(estimate).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="bg-black text-white px-3 py-1.5 rounded-full">
+                    <p className="text-[10px] font-black uppercase tracking-wider">Economy</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2 py-2 border-t border-gray-100 mt-2">
-                  <div className="flex-1">
-                    <p className="text-[10px] text-gray-400">Includes -10% PayParq Discount</p>
+                <div className="space-y-2 border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tight text-gray-500">
+                    <span>PayParq Discount</span>
+                    <span className="text-green-600">-10% Applied</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tight text-gray-500">
+                    <span>Pricing Strategy</span>
+                    <span className="text-black">Uber 2026 Model</span>
                   </div>
                 </div>
               </div>

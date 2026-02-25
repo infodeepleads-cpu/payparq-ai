@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         dist_meters: dist_meters,
         time_seconds: time_seconds,
         h3_zone_id: h3_zone_id,
-        is_payparq_lot: is_pay_parq_lot
+        is_payparq_lot: is_payparq_lot
       });
       
       if (!rpcError && rpcFare) {
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       duration_min: Math.round(duration_min),
       breakdown: {
         base_fare: base_fare,
-        is_payparq_discounted: is_pay_parq_lot,
+        is_payparq_discounted: is_payparq_lot,
         surge_multiplier: 1.0
       }
     });
