@@ -15,7 +15,13 @@ export function getSupabase() {
     );
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false, // Disable persistence to avoid Navigator LockManager timeout issues in dev
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
   return supabaseInstance;
 }
 

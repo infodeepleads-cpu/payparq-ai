@@ -44,7 +44,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <main className="flex-1 flex flex-col pl-[40px] h-full overflow-hidden w-full relative">
           <div className="flex-1 overflow-hidden relative">
             <div className="h-full w-full overflow-y-auto scrollbar-hide">
-              <div className={`max-w-3xl w-full mx-auto ${isHomePage ? 'pb-8' : 'pb-8'}`}>
+              <div className={`max-w-3xl w-full mx-auto h-full ${isHomePage ? 'pb-8' : 'pb-8'}`}>
                   {children}
                 </div>
             </div>
