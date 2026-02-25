@@ -133,6 +133,13 @@ export default function RideHailingWidget() {
     };
   }, []);
 
+  // 1.5 Auto-trigger Fare Estimate when routeData changes
+  useEffect(() => {
+    if (routeData && location && destination) {
+      getFareEstimate();
+    }
+  }, [routeData]);
+
   // Cleanup markers when drivers go offline
   useEffect(() => {
     const interval = setInterval(() => {
@@ -489,43 +496,37 @@ export default function RideHailingWidget() {
           </div>
         )}
 
-        {estimate ? (
-          <div className="p-4 border-2 border-black rounded-xl bg-white shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Estimated Fare</p>
-                <h3 className="text-2xl font-black text-black">€{Number(estimate).toFixed(2)}</h3>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase font-bold">Price Match</p>
-                <p className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">Uber 2026 Adjusted</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2 py-2 border-t border-gray-100 mt-2">
-              <div className="flex-1">
-                <p className="text-[10px] text-gray-400">Includes -10% PayParq Discount</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <button 
-            onClick={getFareEstimate}
-            disabled={!location || !destination || isLoadingEstimate}
-            className="w-full p-4 border border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-black hover:text-black transition-all group"
-          >
+        {(isLoadingEstimate || estimate) && (
+          <div className={`p-4 border-2 ${isLoadingEstimate ? 'border-gray-200 bg-gray-50' : 'border-black bg-white'} rounded-xl shadow-sm transition-all duration-300`}>
             {isLoadingEstimate ? (
-              <span className="flex items-center justify-center text-sm font-medium">
-                <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+              <div className="flex flex-col items-center justify-center py-4 space-y-3">
+                <svg className="animate-spin h-6 w-6 text-black" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Calculating Price...
-              </span>
-            ) : (
-              <span className="text-sm font-medium">Get Upfront Price Estimate</span>
-            )}
-          </button>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-widest">Calculating Price...</p>
+              </div>
+            ) : estimate ? (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Estimated Fare</p>
+                    <h3 className="text-2xl font-black text-black">€{Number(estimate).toFixed(2)}</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-500 uppercase font-bold">Price Match</p>
+                    <p className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">Uber 2026 Adjusted</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2 py-2 border-t border-gray-100 mt-2">
+                  <div className="flex-1">
+                    <p className="text-[10px] text-gray-400">Includes -10% PayParq Discount</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         )}
 
         <div className="p-4 border border-gray-100 rounded-xl">
