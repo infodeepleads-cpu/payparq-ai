@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSupabase, getCurrentUser } from "../lib/supabase";
 import * as h3 from "h3-js";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+// Placeholder token
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "pk.eyJ1Ijoia3phbWljIiwiYSI6ImNtbTF2MmFkOTAwbG0yc3Nld2MzaTE2dmMifQ.q4dvho0LQS1TY11pewfm1Q";
 
 export default function RideHailingWidget() {
   const [isOnline, setIsOnline] = useState(false);
@@ -13,6 +18,106 @@ export default function RideHailingWidget() {
   const [estimate, setEstimate] = useState<any>(null);
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const driverMarkers = useRef<{ [key: string]: mapboxgl.Marker }>({});
+
+  // 0. Initialize Map
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [15.9819, 45.8150],
+      zoom: 13,
+    });
+
+    // Add manual location selection on click
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      setLocation({ lat, lng });
+      const index = h3.latLngToCell(lat, lng, 7);
+      setH3Index(index);
+      setGeoError("Manual location set.");
+      
+      // Update marker
+      if (map.current) {
+        if (!driverMarkers.current["self"]) {
+          const el = document.createElement("div");
+          el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
+          driverMarkers.current["self"] = new mapboxgl.Marker(el)
+            .setLngLat([lng, lat])
+            .addTo(map.current);
+        } else {
+          driverMarkers.current["self"].setLngLat([lng, lat]);
+        }
+      }
+    });
+
+    return () => {
+      map.current?.remove();
+      map.current = null;
+    };
+  }, []);
+
+  // 1. Initialize Realtime Channel
+  useEffect(() => {
+    const supabase = getSupabase();
+    const newChannel = supabase.channel('ride-hailing-v1', {
+      config: {
+        broadcast: { self: false },
+      },
+    });
+
+    newChannel
+      .on('broadcast', { event: 'driver-location' }, (payload) => {
+        const { driverId, lat, lng, h3Index: driverH3 } = payload.payload;
+        
+        // Update nearby drivers state
+        setNearbyDrivers(prev => ({
+          ...prev,
+          [driverId]: { lat, lng, h3Index: driverH3, lastUpdate: Date.now() }
+        }));
+
+        // Update map markers
+        if (map.current) {
+          if (!driverMarkers.current[driverId]) {
+            const el = document.createElement("div");
+            el.className = "w-8 h-8 bg-black rounded-full flex items-center justify-center border-2 border-white shadow-lg transition-all transform hover:scale-110";
+            el.innerHTML = `<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 21h8M6 3h12l-1 7H7L6 3z"></path></svg>`;
+            
+            driverMarkers.current[driverId] = new mapboxgl.Marker(el)
+              .setLngLat([lng, lat])
+              .addTo(map.current);
+          } else {
+            driverMarkers.current[driverId].setLngLat([lng, lat]);
+          }
+        }
+      })
+      .subscribe();
+
+    setChannel(newChannel);
+
+    return () => {
+      supabase.removeChannel(newChannel);
+    };
+  }, []);
+
+  // Cleanup markers when drivers go offline
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      Object.keys(driverMarkers.current).forEach(id => {
+        if (!nearbyDrivers[id] || now - nearbyDrivers[id].lastUpdate > 30000) {
+          driverMarkers.current[id].remove();
+          delete driverMarkers.current[id];
+        }
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [nearbyDrivers]);
 
   const getFareEstimate = async () => {
     if (!h3Index || !location) return;
@@ -70,6 +175,19 @@ export default function RideHailingWidget() {
   useEffect(() => {
     if (typeof window === "undefined" || !("geolocation" in navigator)) return;
 
+    // Fallback location for development (Zagreb Center)
+    const setFallbackLocation = () => {
+      const fallbackLat = 45.8150;
+      const fallbackLng = 15.9819;
+      setLocation({ lat: fallbackLat, lng: fallbackLng });
+      const index = h3.latLngToCell(fallbackLat, fallbackLng, 7);
+      setH3Index(index);
+      
+      if (map.current) {
+        map.current.flyTo({ center: [fallbackLng, fallbackLat], zoom: 14 });
+      }
+    };
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -78,6 +196,22 @@ export default function RideHailingWidget() {
         const index = h3.latLngToCell(latitude, longitude, 7);
         setH3Index(index);
         setGeoError(null);
+
+        // Update Map
+        if (map.current) {
+          map.current.flyTo({ center: [longitude, latitude], zoom: 14 });
+          
+          // Add/Update user marker
+          if (!driverMarkers.current["self"]) {
+            const el = document.createElement("div");
+            el.className = "w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg";
+            driverMarkers.current["self"] = new mapboxgl.Marker(el)
+              .setLngLat([longitude, latitude])
+              .addTo(map.current);
+          } else {
+            driverMarkers.current["self"].setLngLat([longitude, latitude]);
+          }
+        }
 
         // Broadcast location if online
         if (isOnline && channel) {
@@ -95,13 +229,16 @@ export default function RideHailingWidget() {
       },
       (err) => {
         console.error("Geolocation error:", err.code, err.message);
-        let msg = "Location error. Please check GPS.";
-        if (err.code === 1) msg = "Location permission denied.";
-        if (err.code === 2) msg = "Location unavailable.";
-        if (err.code === 3) msg = "Location timeout.";
+        let msg = "Location error. Using fallback (Zagreb).";
+        if (err.code === 1) msg = "Permission denied. Using fallback.";
+        if (err.code === 2) msg = "Location unavailable. Using fallback.";
+        if (err.code === 3) msg = "Location timeout. Using fallback.";
         setGeoError(msg);
+        
+        // Use fallback if real GPS fails
+        setFallbackLocation();
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -155,6 +292,11 @@ export default function RideHailingWidget() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto">
+        {/* Map Visualization */}
+        <div className="h-48 w-full rounded-2xl overflow-hidden border border-gray-100 shadow-inner relative">
+          <div ref={mapContainer} className="absolute inset-0" />
+        </div>
+
         {/* Error Alert */}
         {geoError && (
           <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center space-x-2 text-red-600 animate-in fade-in zoom-in duration-300">
