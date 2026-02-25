@@ -16,6 +16,7 @@ export default function RideHailingWidget() {
   const [destinationAddress, setDestinationAddress] = useState("");
   const [h3Index, setH3Index] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<any>(null);
+  const [selectedClass, setSelectedClass] = useState<string>('economy');
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<Record<string, any>>({});
@@ -259,10 +260,10 @@ export default function RideHailingWidget() {
       const data = await res.json();
       console.log("Estimate API Full Response:", data);
       
-      if (data.fare !== undefined && data.fare !== null) {
-        console.log("Setting estimate to:", data.fare);
-        setEstimate(data.fare);
-        setGeoError(null); // Clear any previous fare errors
+      if (data.estimates && data.estimates.length > 0) {
+        console.log("Setting estimates:", data.estimates);
+        setEstimate(data.estimates);
+        setGeoError(null);
       } else {
         throw new Error("Invalid fare data received");
       }
@@ -518,78 +519,68 @@ export default function RideHailingWidget() {
           </div>
         )}
 
-        {(isLoadingEstimate || estimate !== null) && (
-          <div className={`p-5 border-2 ${isLoadingEstimate ? 'border-gray-200 bg-gray-50' : 'border-black bg-white shadow-xl scale-[1.02]'} rounded-2xl transition-all duration-500`}>
-            {isLoadingEstimate ? (
-              <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                <div className="relative">
-                  <svg className="animate-spin h-8 w-8 text-black" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-1 h-1 bg-black rounded-full animate-ping" />
-                  </div>
-                </div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Securing Upfront Price...</p>
-              </div>
-            ) : estimate !== null ? (
-              <div className="animate-in fade-in zoom-in-95 duration-500">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-1">Guaranteed Fare</p>
-                    <div className="flex items-baseline space-x-1">
-                      <span className="text-4xl font-black text-black tracking-tighter">€{Number(estimate).toFixed(2)}</span>
+        {/* Vehicle Class Selection */}
+        {(isLoadingEstimate || (estimate && estimate.length > 0)) && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Available Rides</h3>
+            <div className="space-y-2">
+              {isLoadingEstimate ? (
+                [1, 2, 3].map((i) => (
+                  <div key={i} className="h-20 bg-gray-50 animate-pulse rounded-2xl border border-gray-100" />
+                ))
+              ) : (
+                estimate.map((vClass: any) => (
+                  <button
+                    key={vClass.id}
+                    onClick={() => setSelectedClass(vClass.id)}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${
+                      selectedClass === vClass.id 
+                        ? 'border-black bg-white shadow-lg scale-[1.02]' 
+                        : 'border-transparent bg-gray-50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-10 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                        {/* Car Icon Placeholder */}
+                        <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center space-x-2">
+                          <p className="font-bold text-black">{vClass.name}</p>
+                          <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex items-center">
+                            <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M13 7H7v6h6V7z" /><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            {vClass.arrival_estimate} min
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-medium">{vClass.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-black text-white px-3 py-1.5 rounded-full">
-                    <p className="text-[10px] font-black uppercase tracking-wider">Economy</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tight text-gray-500">
-                    <span>PayParq Discount</span>
-                    <span className="text-green-600">-10% Applied</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tight text-gray-500">
-                    <span>Pricing Strategy</span>
-                    <span className="text-black">Uber 2026 Model</span>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+                    <div className="text-right">
+                      <p className="text-lg font-black text-black">€{vClass.fare.toFixed(2)}</p>
+                      {vClass.id === 'economy' && (
+                        <p className="text-[9px] text-green-600 font-bold uppercase tracking-tighter">-10% PayParq</p>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
 
-        <div className="p-4 border border-gray-100 rounded-xl">
-          <h3 className="text-sm font-medium mb-3">Nearby Drivers</h3>
-          <div className="space-y-3">
-            {Object.keys(nearbyDrivers).length > 0 ? (
-              Object.entries(nearbyDrivers).map(([id, driver]) => (
-                <div key={id} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 21h8M6 3h12l-1 7H7L6 3z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-black">Driver {id.slice(0, 5)}</p>
-                      <p className="text-[10px] text-gray-500">{driver.h3Index}</p>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-green-600 font-bold">LIVE</div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-gray-400 italic">Looking for drivers in your area...</p>
-            )}
-          </div>
-        </div>
-
-        <button className="w-full py-3 bg-black text-white rounded-xl font-medium text-sm hover:bg-gray-900 transition-colors">
-          Request a Ride
+        <button 
+          disabled={!destination || isLoadingEstimate}
+          className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all duration-300 shadow-xl ${
+            !destination || isLoadingEstimate 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              : 'bg-black text-white hover:bg-gray-900 active:scale-[0.98]'
+          }`}
+        >
+          {isLoadingEstimate ? 'Calculating...' : `Request ${estimate?.find((e: any) => e.id === selectedClass)?.name || 'Ride'}`}
         </button>
       </div>
     </div>

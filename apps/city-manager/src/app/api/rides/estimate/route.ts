@@ -23,52 +23,67 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // 2. Calculate Fare using Uber 2026 Logic (Directly in TS as fallback for missing RPC)
-    const base_fare = 2.50;
-    const per_km_rate = 1.20;
-    const per_min_rate = 0.25;
-    
+    // 2. Define Uber-style Vehicle Classes with Multipliers
+    const vehicleClasses = [
+      {
+        id: 'economy',
+        name: 'Economy',
+        base_fare: 2.50,
+        per_km: 1.20,
+        per_min: 0.25,
+        multiplier: 1.0,
+        image: '/cars/economy.png',
+        description: 'Affordable, everyday rides',
+        capacity: 4
+      },
+      {
+        id: 'comfort',
+        name: 'Comfort',
+        base_fare: 3.50,
+        per_km: 1.50,
+        per_min: 0.35,
+        multiplier: 1.3,
+        image: '/cars/comfort.png',
+        description: 'Newer cars with extra legroom',
+        capacity: 4
+      },
+      {
+        id: 'lux',
+        name: 'Lux',
+        base_fare: 5.00,
+        per_km: 2.50,
+        per_min: 0.50,
+        multiplier: 2.0,
+        image: '/cars/lux.png',
+        description: 'Premium rides in high-end cars',
+        capacity: 4
+      }
+    ];
+
     const distance_km = dist_meters / 1000;
     const duration_min = time_seconds / 60;
-    
-    let calculated_fare = base_fare + (distance_km * per_km_rate) + (duration_min * per_min_rate);
-    
-    // Apply PayParq Discount if applicable
-    if (is_payparq_lot) {
-      calculated_fare = calculated_fare * 0.9; // 10% discount
-    }
 
-    // Attempt to call RPC, but fallback to TS calculation if it fails
-    let final_fare = calculated_fare;
-    try {
-      const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-      const { data: rpcFare, error: rpcError } = await supabase.rpc('calculate_uber_fare', {
-        dist_meters: dist_meters,
-        time_seconds: time_seconds,
-        h3_zone_id: h3_zone_id,
-        is_payparq_lot: is_payparq_lot
-      });
+    const estimates = vehicleClasses.map(vClass => {
+      let fare = (vClass.base_fare + (distance_km * vClass.per_km) + (duration_min * vClass.per_min)) * vClass.multiplier;
       
-      if (!rpcError && rpcFare) {
-        final_fare = rpcFare;
-      } else {
-        console.warn("RPC failed or not found, using TypeScript fallback calculation.");
+      if (is_payparq_lot) {
+        fare = fare * 0.9; // 10% PayParq Discount
       }
-    } catch (e) {
-      console.warn("Supabase RPC call failed, using fallback:", e);
-    }
 
-    // 3. Return Upfront Price Estimate
+      return {
+        ...vClass,
+        fare: parseFloat(fare.toFixed(2)),
+        currency: 'EUR',
+        arrival_estimate: Math.floor(Math.random() * 5) + 2 // Mock 2-7 min arrival
+      };
+    });
+
+    // 3. Return multi-class estimates
     return NextResponse.json({
-      fare: final_fare,
-      currency: 'EUR',
+      estimates,
       distance_km: distance_km.toFixed(1),
       duration_min: Math.round(duration_min),
-      breakdown: {
-        base_fare: base_fare,
-        is_payparq_discounted: is_payparq_lot,
-        surge_multiplier: 1.0
-      }
+      is_payparq_discounted: is_payparq_lot
     });
 
   } catch (error: any) {
