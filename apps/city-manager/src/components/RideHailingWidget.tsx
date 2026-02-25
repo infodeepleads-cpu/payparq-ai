@@ -10,6 +10,32 @@ export default function RideHailingWidget() {
   const [h3Index, setH3Index] = useState<string | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<Record<string, any>>({});
   const [channel, setChannel] = useState<any>(null);
+  const [estimate, setEstimate] = useState<any>(null);
+  const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
+
+  const getFareEstimate = async () => {
+    if (!h3Index || !location) return;
+    
+    setIsLoadingEstimate(true);
+    try {
+      const response = await fetch('/api/rides/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup: location,
+          destination: { lat: 45.815, lng: 15.981 }, // Mock destination (Zagreb Center)
+          h3Index: h3Index,
+          isPayParqLot: true // Testing the discount logic
+        })
+      });
+      const data = await response.json();
+      setEstimate(data);
+    } catch (err) {
+      console.error("Fare estimate failed:", err);
+    } finally {
+      setIsLoadingEstimate(false);
+    }
+  };
 
   // 1. Initialize Realtime Channel
   useEffect(() => {
@@ -125,6 +151,50 @@ export default function RideHailingWidget() {
           <p className="text-xs text-gray-500 uppercase font-bold mb-1">Current H3 Cell</p>
           <p className="text-sm font-mono text-black">{h3Index || 'Detecting...'}</p>
         </div>
+
+        {/* Fare Estimate Section */}
+        {estimate ? (
+          <div className="p-4 border-2 border-black rounded-xl bg-white shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Estimated Fare</p>
+                <h3 className="text-2xl font-black text-black">{estimate.price} {estimate.currency}</h3>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500 uppercase font-bold">Distance</p>
+                <p className="text-xs font-bold text-black">{estimate.distance_km} km</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2 py-2 border-t border-gray-100 mt-2">
+              <div className="flex-1">
+                <p className="text-[10px] text-gray-400">Includes -10% PayParq Discount</p>
+              </div>
+              <div className="flex items-center text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                PRICE MATCHED
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button 
+            onClick={getFareEstimate}
+            disabled={!h3Index || isLoadingEstimate}
+            className="w-full p-4 border border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-black hover:text-black transition-all group"
+          >
+            {isLoadingEstimate ? (
+              <span className="flex items-center justify-center text-sm font-medium">
+                <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Calculating Price...
+              </span>
+            ) : (
+              <span className="text-sm font-medium">Get Upfront Price Estimate</span>
+            )}
+          </button>
+        )}
 
         <div className="p-4 border border-gray-100 rounded-xl">
           <h3 className="text-sm font-medium mb-3">Nearby Drivers</h3>
