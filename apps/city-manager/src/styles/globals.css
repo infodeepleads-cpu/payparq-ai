@@ -13,8 +13,9 @@ html, body, #__next {
 }
 
 body {
-  background-color: #F9FAFB;
+  background-color: #ffffff;
   color: #000000;
+  font-family: Arial, sans-serif !important;
   -webkit-text-size-adjust: 100%; /* Prevent font boosting on mobile */
 }
 

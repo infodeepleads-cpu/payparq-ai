@@ -55,9 +55,9 @@ const LoadingIndicator = React.memo(() => {
   return (
     <div className="w-full py-8">
       <div className="max-w-3xl mx-auto flex items-center gap-6 px-4 md:px-0">
-        <div className="rounded-full bg-gray-300 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
+        <div className="rounded-full bg-black/10 animate-pulse" style={{ width: "1cm", height: "1cm" }} />
         <div className="flex items-center">
-          <span className="text-gray-400 text-sm">{dots}</span>
+          <span className="text-black/40 text-sm">{dots}</span>
         </div>
       </div>
     </div>
@@ -141,10 +141,10 @@ const InputArea = React.memo(({
     <div className={`relative w-full max-w-3xl mx-auto px-4 md:px-0 transition-all duration-300 ${centered ? 'scale-100 md:translate-y-2' : ''}`}>
       {selectedImage && (
         <div className="relative mb-2 w-fit">
-          <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-gray-200 shadow-sm" />
+          <img src={selectedImage} alt="Selected" className="h-20 rounded-lg border border-black/5 shadow-sm" />
           <button
             onClick={() => setSelectedImage(null)}
-            className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full p-0.5 hover:bg-black transition-colors"
+            className="absolute -top-2 -right-2 bg-black text-white rounded-full p-0.5 hover:bg-black transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -152,10 +152,10 @@ const InputArea = React.memo(({
           </button>
         </div>
       )}
-      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-gray-100 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none focus-within:border-gray-300 transition-all">
+      <div className="relative flex items-center w-full pl-3 pr-2 py-2 bg-white border border-black/5 shadow-pill rounded-full focus-within:ring-0 focus-within:outline-none focus-within:border-black/10 transition-all">
          <button
            onClick={() => fileInputRef.current?.click()}
-           className="bg-transparent border-0 p-2 focus:outline-none text-gray-400 hover:text-gray-600 transition-colors"
+           className="bg-transparent border-0 p-2 focus:outline-none text-black/40 hover:text-black/60 transition-colors"
            title="Upload image"
          >
            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -179,7 +179,7 @@ const InputArea = React.memo(({
               }
             }}
             placeholder={isListening ? t('listening') : t('ask_anything')}
-            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-gray-500 font-normal leading-tight self-center min-w-0"
+            className="flex-1 py-1.5 px-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base md:text-sm text-black placeholder:text-black/40 font-normal leading-tight self-center min-w-0"
             autoFocus
             autoComplete="off"
             autoCorrect="off"
@@ -190,7 +190,7 @@ const InputArea = React.memo(({
           <div className="flex items-center gap-2 shrink-0">
             <div>
               {showModelSelector && (
-                <div className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom shadow-2xl border border-gray-100">
+                <div className="hidden md:block absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden z-[9999] animate-in slide-in-from-bottom-2 fade-in duration-200 origin-bottom shadow-2xl border border-black/5">
                     <div className="max-h-60 overflow-y-auto p-2 space-y-1 thin-scrollbar">
                       {AI_MODELS.map((model, idx) => (
                         <button
@@ -203,10 +203,10 @@ const InputArea = React.memo(({
                           }}
                           className={`group flex items-center justify-between p-1.5 rounded transition-all w-full text-left border-none outline-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
                             model.disabled 
-                              ? "text-gray-300 cursor-default" 
+                              ? "text-black/20 cursor-default" 
                               : model.id === selectedModel
-                                 ? "text-black font-medium bg-gray-50"
-                                 : "text-gray-500 hover:text-black hover:bg-gray-50"
+                                 ? "text-black font-medium bg-black/5"
+                                 : "text-black/60 hover:text-black hover:bg-black/5"
                           }`}
                         >
                           <span className="text-xs truncate flex-1">{model.name}</span>
@@ -229,7 +229,7 @@ const InputArea = React.memo(({
               <button
                   type="button"
                   onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 border-0 text-gray-600 hover:text-black hover:bg-gray-200 focus:outline-none transition-colors group shadow-none ring-0"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-black/5 border-0 text-black/60 hover:text-black hover:bg-black/10 focus:outline-none transition-colors group shadow-none ring-0"
                   title="Select AI Model"
                >
                   <span className="text-xs font-medium leading-none">AI</span>
@@ -239,7 +239,7 @@ const InputArea = React.memo(({
                 type="button"
                 onClick={toggleListening}
                 disabled={loading}
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-0 focus:outline-none transition-colors shadow-none ring-0 ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-gray-100 text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-0 focus:outline-none transition-colors shadow-none ring-0 ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-black/5 text-black/60 hover:text-black hover:bg-black/10'}`}
                 aria-label="Voice"
                 title="Voice"
              >
@@ -1143,10 +1143,10 @@ export default function MachineIo() {
                        }}
                        className={`group flex items-center justify-between py-2 w-full text-left bg-transparent active:bg-transparent focus:bg-transparent hover:bg-transparent outline-none border-none ring-0 shadow-none hover:shadow-none focus:shadow-none active:shadow-none ${
                           model.disabled 
-                            ? "text-gray-300 cursor-default" 
+                            ? "text-black/20 cursor-default" 
                             : model.id === selectedModel
                               ? "text-black font-medium"
-                              : "text-gray-600"
+                              : "text-black/60"
                         }`}
                        style={{ WebkitTapHighlightColor: 'transparent' }}
                      >
@@ -1165,7 +1165,7 @@ export default function MachineIo() {
 
       {!threadId || messages.length === 0 ? (
         <div className="w-full flex flex-col h-full justify-end">
-           <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-2'} border-t border-gray-100`}>
+           <div className={`bg-white px-4 md:px-0 pt-2 ${isNative ? 'pb-[env(safe-area-inset-bottom)]' : 'pb-2'} border-t border-black/5`}>
             <div className="max-w-3xl mx-auto w-full">
               <div className="w-full">
                 <TopControlsWidget />
@@ -1193,7 +1193,7 @@ export default function MachineIo() {
        <div className="w-full flex flex-col h-full">
           <div 
             ref={scrollRef}
-            className="flex-1 w-full overflow-y-auto border-b border-gray-50"
+            className="flex-1 w-full overflow-y-auto border-b border-black/5"
           >
            <div className="max-w-3xl mx-auto px-4 md:px-0 pt-4 pb-4">
              <div className="flex flex-col space-y-4">
@@ -1211,7 +1211,7 @@ export default function MachineIo() {
            </div>
          </div>
 
-         <div className={`bg-white px-4 md:px-0 pt-0 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-gray-100`}>
+         <div className={`bg-white px-4 md:px-0 pt-0 ${isNative ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : 'pb-4'} shrink-0 border-t border-black/5`}>
              <div className="max-w-3xl mx-auto w-full">
                <div className="w-full">
                  <TopControlsWidget />

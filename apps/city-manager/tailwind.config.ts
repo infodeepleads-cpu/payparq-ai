@@ -10,15 +10,15 @@ const config: Config = {
     extend: {
       colors: {
         primary: "#000000",
-        sidebar: "#F9F9F9", // Light gray like screenshot
-        sidebarText: "#4B5563", // Dark gray text
-        sidebarHover: "#E5E7EB", // Light gray hover
+        sidebar: "#FFFFFF", // Changed from F9F9F9 to pure white
+        sidebarText: "#000000", // Changed from 4B5563 to black
+        sidebarHover: "#5A45E81A", // Very light purple (10% opacity)
         background: "#FFFFFF", // Pure white main bg
         surface: "#FFFFFF",
-        border: "#E5E7EB",
+        border: "#0000000D", // 5% black border instead of gray
         text: {
-          primary: "#111827",
-          secondary: "#6B7280",
+          primary: "#000000",
+          secondary: "#00000099", // 60% black text
           onDark: "#FFFFFF",
         },
       },
