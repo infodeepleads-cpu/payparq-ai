@@ -5,6 +5,7 @@ import * as h3 from "h3-js";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // Placeholder token
 const FALLBACK_TOKEN = "pk.eyJ1Ijoia3phbWljIiwiYSI6ImNtbTF2MmFkOTAwbG0yc3Nld2MzaTE2dmMifQ.q4dvho0LQS1TY11pewfm1Q";
@@ -160,6 +161,7 @@ const POPULAR_DESTINATIONS = [
 ];
 
 export default function RideHailingWidget() {
+  const router = useRouter();
   const [step, setStep] = useState<FlowStep>('search');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>({ lat: 43.5204, lng: 16.4316 });
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
@@ -1006,7 +1008,11 @@ export default function RideHailingWidget() {
                   ].map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setActiveCategory(cat.id as any)}
+                      onClick={() => {
+                        setActiveCategory(cat.id as any);
+                        if (cat.id === 'delivery') setSelectedClass('delivery');
+                        else if (cat.id === 'rides') setSelectedClass('parq_taxi');
+                      }}
                       className={`px-4 md:px-6 py-2 rounded-xl text-[12px] md:text-[13px] font-bold transition-all duration-300 flex items-center space-x-1.5 ${
                         activeCategory === cat.id
                           ? 'bg-black text-white'
@@ -1019,9 +1025,9 @@ export default function RideHailingWidget() {
                 </div>
 
                 {/* Unified Search Widget (Kamo?) */}
-                <div className="w-full max-w-[34rem] relative group z-[110] px-2 md:px-0">
-                  <div className="relative bg-white rounded-[1.25rem] md:rounded-[2rem] border-2 border-black p-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col md:flex-row items-center group-focus-within:shadow-[0_25px_70px_rgba(0,0,0,0.15)]">
-                    <div className="w-full md:w-auto flex items-center justify-center md:justify-start flex-1">
+                <div className="w-full max-w-[34rem] relative group z-[110] px-2 md:px-0 flex items-center md:space-x-3">
+                  <div className="flex-1 relative bg-white rounded-[1.25rem] md:rounded-[2rem] border-2 border-black p-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex items-center group-focus-within:shadow-[0_25px_70px_rgba(0,0,0,0.15)]">
+                    <div className="flex-1 flex items-center">
                       <input 
                         value={searchQuery}
                         onChange={(e) => {
@@ -1032,76 +1038,89 @@ export default function RideHailingWidget() {
                             setShowSuggestions(false);
                           }
                         }}
-                        onFocus={() => {
-                          setSearchType('destination');
-                          setSearchQuery("");
-                          setShowSuggestions(false);
-                        }}
+                        onFocus={() => { router.push("/map" as any); }}
+                        onClick={() => { router.push("/map" as any); }}
                         placeholder="Kamo?"
-                        className="flex-1 bg-transparent px-4 py-2.5 md:py-5 text-[16px] md:text-[22px] font-medium placeholder-black/15 focus:outline-none text-black text-center md:text-left"
+                        className="w-full bg-transparent px-4 py-3 md:py-5 text-[16px] md:text-[22px] font-medium placeholder-black/15 focus:outline-none text-black text-left"
                         autoFocus
                       />
                     </div>
                     
-                    <div className="hidden md:block h-12 w-[2px] bg-black/5 mx-3"></div>
+                    <div className="h-10 md:h-12 w-[2px] bg-black/5 mx-1 md:mx-2"></div>
 
-                    <div className="w-full md:w-auto relative mr-2 flex flex-col items-center p-2 md:p-0">
-                      {/* Polazak button - Desktop only */}
+                    <div className="flex items-center pr-1 md:pr-2">
+                      {/* Delivery Shortcut - Integrated Right */}
                       <button 
-                        onClick={() => setShowDatePicker(!showDatePicker)}
-                        className="hidden md:flex w-full md:w-auto items-center justify-between md:justify-start space-x-4 px-6 py-4 bg-black/5 hover:bg-black hover:text-white rounded-xl md:rounded-2xl transition-all active:scale-95 group/schedule"
+                        onClick={() => {
+                          setActiveCategory('delivery');
+                          setSelectedClass('delivery');
+                        }}
+                        className="flex items-center space-x-2 px-3 md:px-5 py-2.5 md:py-4 bg-black/5 hover:bg-black hover:text-white rounded-xl md:rounded-2xl transition-all active:scale-95 group/delivery"
                       >
-                        <div className="flex items-center space-x-4">
-                          <svg className="w-6 h-6 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <div className="flex flex-col items-start leading-none text-left">
-                            <span className="text-[10px] uppercase tracking-[0.2em] font-black opacity-40 mb-1">Polazak</span>
-                            <span className="text-[14px] font-black whitespace-nowrap">
-                              {scheduledDate === new Date().toISOString().split('T')[0] ? 'Danas' : scheduledDate.split('-').reverse().slice(0, 2).join('.')} • {scheduledTime}
-                            </span>
-                          </div>
+                        <svg className="w-4 h-4 md:w-5 md:h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <div className="flex flex-col items-start leading-none text-left">
+                          <span className="text-[7px] md:text-[9px] uppercase tracking-[0.2em] font-black opacity-40 mb-0.5">Dostava</span>
+                          <span className="text-[11px] md:text-[13px] font-black whitespace-nowrap">Paketa</span>
                         </div>
                       </button>
-
-                      {/* Integrated Calendar - Desktop only dropdown, hidden on mobile as requested */}
-                      <div className={`hidden md:${showDatePicker ? 'flex' : 'hidden'} md:absolute md:top-full md:right-0 md:left-auto mt-2 md:mt-4 bg-white md:border-2 md:border-black rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 md:shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[130] w-full md:w-72 animate-in fade-in zoom-in duration-300 relative`}>
-                        <div className="flex flex-col space-y-4 w-full">
-                          <div className="flex flex-row space-x-3">
-                            <div className="flex-1">
-                              <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Datum</label>
-                              <input 
-                                type="date" 
-                                value={scheduledDate}
-                                onChange={(e) => setScheduledDate(e.target.value)}
-                                className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Vrijeme</label>
-                              <input 
-                                type="time" 
-                                value={scheduledTime}
-                                onChange={(e) => setScheduledTime(e.target.value)}
-                                className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
-                              />
-                            </div>
-                          </div>
-                          {/* Confirm button only on desktop where it's a dropdown */}
-                          <button 
-                            onClick={() => setShowDatePicker(false)}
-                            className="hidden md:block w-full bg-black text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
-                          >
-                            Potvrdi
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
-                  
-                  {/* Premium Suggestions Dropdown (Now integrated into unified widget) */}
-                  {showSuggestions && searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-4 bg-white border-2 border-black rounded-[2rem] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.2)] z-[120] animate-in slide-in-from-top-4 duration-500">
+
+                  {/* Polazak button - Now outside the main rectangle */}
+                  <button 
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className="hidden md:flex items-center space-x-3 px-5 py-4 bg-white border-2 border-black hover:bg-black hover:text-white rounded-2xl transition-all active:scale-95 group/schedule shadow-[0_10px_30px_rgba(0,0,0,0.05)]"
+                  >
+                    <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <div className="flex flex-col items-start leading-none text-left">
+                      <span className="text-[9px] uppercase tracking-[0.2em] font-black opacity-40 mb-1">Polazak</span>
+                      <span className="text-[13px] font-black whitespace-nowrap">
+                        {scheduledDate === new Date().toISOString().split('T')[0] ? 'Danas' : scheduledDate.split('-').reverse().slice(0, 2).join('.')} • {scheduledTime}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                  {/* Desktop Date Picker Dropdown */}
+                  <div className={`hidden md:${showDatePicker ? 'flex' : 'hidden'} md:absolute md:top-full md:right-0 md:left-auto mt-2 md:mt-4 bg-white md:border-2 md:border-black rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 md:shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[130] w-full md:w-72 animate-in fade-in zoom-in duration-300 relative`}>
+                    <div className="flex flex-col space-y-4 w-full">
+                      <div className="flex flex-row space-x-3">
+                        <div className="flex-1">
+                          <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Datum</label>
+                          <input 
+                            type="date" 
+                            value={scheduledDate}
+                            onChange={(e) => setScheduledDate(e.target.value)}
+                            className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Vrijeme</label>
+                          <input 
+                            type="time" 
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setShowDatePicker(false)}
+                        className="hidden md:block w-full bg-black text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+                      >
+                        Potvrdi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Premium Suggestions Dropdown (Now integrated into unified widget) */}
+                {showSuggestions && searchResults.length > 0 && (
+                    <div ref={suggestionsRef} className="absolute top-full left-0 right-0 mt-4 bg-white border-2 border-black rounded-[2rem] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.2)] z-[120] animate-in slide-in-from-top-4 duration-500">
                       {searchResults.map((item: any, i) => (
                         <button
                           key={i}
@@ -1132,8 +1151,6 @@ export default function RideHailingWidget() {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
 
             <div className="w-full md:w-auto px-4 md:px-6 relative flex flex-col items-center justify-center">
               <div className="w-full max-w-xl relative z-10 scale-[0.8] md:scale-100">
@@ -1194,10 +1211,8 @@ export default function RideHailingWidget() {
               </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Back button moved into header */}
+      )}
+    </div>
 
       <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (

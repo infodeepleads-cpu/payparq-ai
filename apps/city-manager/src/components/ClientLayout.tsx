@@ -15,6 +15,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAuthPage = pathname?.startsWith("/auth");
   const isHomePage = pathname === "/";
   const isNewNotePage = pathname === "/resources/notes/new";
+  const isMapPage = pathname?.startsWith("/map");
 
   useEffect(() => {
     const handleToggle = (e: any) => setHideLayout(e.detail);
@@ -45,18 +46,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-background">
-      {!hideLayout && <Header />}
-      <div className={`flex-1 flex overflow-hidden ${!hideLayout ? 'pt-[40px]' : ''} relative`}>
-        {!hideLayout && <Sidebar />}
-        <main className={`flex-1 flex flex-col ${!hideLayout ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
+      {!(hideLayout || isMapPage) && <Header />}
+      <div className={`flex-1 flex overflow-hidden ${!(hideLayout || isMapPage) ? 'pt-[40px]' : ''} relative`}>
+        {!(hideLayout || isMapPage) && <Sidebar />}
+        <main className={`flex-1 flex flex-col ${!(hideLayout || isMapPage) ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
           <div className="flex-1 overflow-hidden relative">
             <div className="h-full w-full overflow-y-auto scrollbar-hide">
-              <div className={`max-w-3xl w-full mx-auto h-full ${hideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'}`}>
+              <div className={`max-w-3xl w-full mx-auto h-full ${(hideLayout || isMapPage) ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'}`}>
                   {children}
                 </div>
             </div>
           </div>
-          {isHomePage && !hideLayout && (
+          {isHomePage && !(hideLayout || isMapPage) && (
             <div className="absolute top-0 right-0 bottom-0 left-[40px] z-50 pointer-events-none flex flex-col justify-end">
               <div className="w-full pointer-events-auto max-h-full flex flex-col h-full">
                 <MachineIo />
