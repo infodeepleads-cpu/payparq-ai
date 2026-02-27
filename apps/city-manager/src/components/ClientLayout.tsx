@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar } from "@capacitor/status-bar";
 import { usePathname, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import MachineIo from "./MachineIo";
 import DailyRecap from "./DailyRecap";
+
+const MachineIo = dynamic(() => import("./MachineIo"), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -51,28 +53,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-background">
-      {!shouldHideLayout && <Header />}
-      <div className={`flex-1 flex overflow-hidden ${!shouldHideLayout ? 'pt-[40px]' : ''} relative`}>
-        {!shouldHideLayout && <Sidebar />}
-        <main className={`flex-1 flex flex-col ${!shouldHideLayout ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
-          <div className="flex-1 overflow-hidden relative">
-            <div className="h-full w-full overflow-y-auto scrollbar-hide">
-              <div className={`max-w-3xl w-full mx-auto h-full ${shouldHideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'}`}>
-                  {children}
-                </div>
-            </div>
-          </div>
-          {showChat && !shouldHideLayout && (
-            <div className="absolute top-0 right-0 bottom-0 left-[40px] z-50 pointer-events-none flex flex-col justify-end">
-              <div className="w-full pointer-events-auto max-h-full flex flex-col h-full">
-                <MachineIo />
+    <Suspense fallback={null}>
+      <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-background">
+        {!shouldHideLayout && <Header />}
+        <div className={`flex-1 flex overflow-hidden ${!shouldHideLayout ? 'pt-[40px]' : ''} relative`}>
+          {!shouldHideLayout && <Sidebar />}
+          <main className={`flex-1 flex flex-col ${!shouldHideLayout ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
+            <div className="flex-1 overflow-hidden relative">
+              <div className="h-full w-full overflow-y-auto scrollbar-hide">
+                <div className={`max-w-3xl w-full mx-auto h-full ${shouldHideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'}`}>
+                    {children}
+                  </div>
               </div>
             </div>
-          )}
-        </main>
+            {showChat && !shouldHideLayout && (
+              <div className="absolute top-0 right-0 bottom-0 left-[40px] z-50 pointer-events-none flex flex-col justify-end">
+                <div className="w-full pointer-events-auto max-h-full flex flex-col h-full">
+                  <MachineIo />
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+        <DailyRecap />
       </div>
-      <DailyRecap />
-    </div>
+    </Suspense>
   );
 }

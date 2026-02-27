@@ -899,9 +899,30 @@ export default function RideHailingWidget() {
     const lng = searchParams.get('dest_lng');
     if (!lat || !lng) {
       initialParamsHandled.current = true;
-      setStep('destination');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const hasDest =
+      !!searchParams.get("dest_lat") ||
+      !!searchParams.get("dest1_lat") ||
+      !!searchParams.get("dest2_lat") ||
+      !!searchParams.get("dest3_lat");
+    if (!hasDest) {
+      const params = new URLSearchParams();
+      const pLat = searchParams.get("pickup_lat");
+      const pLng = searchParams.get("pickup_lng");
+      const pName = searchParams.get("pickup_name");
+      if (pLat && pLng) {
+        params.set("pickup_lat", pLat);
+        params.set("pickup_lng", pLng);
+      }
+      if (pName) params.set("pickup_name", pName);
+      if (typeof window !== "undefined" && window.location.pathname !== "/map") {
+        router.replace(params.toString() ? `/map?${params.toString()}` : "/map");
+      }
+    }
+  }, [router, searchParams]);
 
   const getFareEstimate = async () => {
     if (!routeData || !destinationAddress) {
