@@ -260,8 +260,8 @@ function MapContent() {
     <div className="relative w-full h-screen bg-white">
       <div ref={mapContainer} className="absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-t border-black/5 h-[50vh]">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="flex items-center gap-2 mb-2" style={{ height: "1cm" }}>
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+          <div className="flex items-center gap-2 sticky top-0 bg-white z-10 pt-4 pb-2">
             <button
               onClick={() => router.back()}
               className="p-2 w-9 h-9 text-black hover:opacity-60 transition-opacity active:scale-95 bg-gray-100 rounded-full shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
