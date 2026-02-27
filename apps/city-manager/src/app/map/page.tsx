@@ -330,7 +330,7 @@ export default function MapPage() {
                     {idx === 0 ? (
                       <button
                         onClick={handleSwap}
-                        className="ml-2 w-9 h-9 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 group shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
+                        className="ml-1 w-9 h-9 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 group shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
                         aria-label="Zamijeni lokacije"
                       >
                         <svg className="w-5 h-5 group-active:rotate-180 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
