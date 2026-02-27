@@ -340,7 +340,7 @@ export default function MapPage() {
                     ) : (
                       <button
                         onClick={() => setDestinations(prev => prev.filter(d => d.id !== dest.id))}
-                        className="ml-2 w-9 h-9 rounded-full flex items-center justify-center bg-white text-red-600 hover:opacity-70 transition-all active:scale-95 shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
+                        className="ml-1 w-9 h-9 rounded-full flex items-center justify-center bg-white text-red-600 hover:opacity-70 transition-all active:scale-95 shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
                         aria-label="Ukloni odredište"
                       >
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12"/></svg>
