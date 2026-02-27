@@ -45,7 +45,11 @@ export default function PaymentPage() {
         <div className="flex flex-col space-y-4 mb-4 px-2">
           <div className="flex items-center space-x-3">
             <button 
-              onClick={() => router.push("/rides" as any)}
+              onClick={() => {
+                const params = new URLSearchParams(window.location.search);
+                params.set('step', 'destination');
+                router.push(`/rides?${params.toString()}` as any);
+              }}
               className="p-1 -ml-1 bg-transparent border-0 shadow-none outline-none cursor-pointer active:scale-90 transition-all"
             >
               <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

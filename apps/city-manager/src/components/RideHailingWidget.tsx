@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as h3 from "h3-js";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -19,11 +19,88 @@ import { getSupabase } from "../lib/supabase";
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
 
-type FlowStep = 'home' | 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm';
+type FlowStep = 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm';
 
 type RideClass = 'parq_go' | 'parq_taxi' | 'smart_arrival' | 'comfort' | 'van' | 'delivery';
 
 const BRAND_VIOLET = '#5B6CFF';
+const parqGoIconSide = (accent: string) =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+      <defs>
+        <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#ffffff" />
+          <stop offset="40%" style="stop-color:#f3f4f6" />
+          <stop offset="100%" style="stop-color:#d1d5db" />
+        </linearGradient>
+        <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${accent};stop-opacity:0.8" />
+          <stop offset="50%" style="stop-color:${accent};stop-opacity:0.9" />
+          <stop offset="100%" style="stop-color:${accent};stop-opacity:0.7" />
+        </linearGradient>
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+          <feOffset dx="2" dy="2" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.15"/>
+          </feComponentTransfer>
+          <feMerge> 
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/> 
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Ground Shadow -->
+      <ellipse cx="100" cy="85" rx="85" ry="8" fill="rgba(0,0,0,0.08)" filter="blur(5px)" />
+      
+      <!-- Main Car Body -->
+      <path d="M20 62 
+               L20 55 
+               Q20 48 35 45 
+               L55 42 
+               Q65 15 100 14 
+               L150 14 
+               Q180 16 190 45 
+               L195 48 
+               Q205 50 205 55 
+               L205 62 
+               Q205 65 200 65
+               L25 65
+               Q20 65 20 62
+               Z" 
+            fill="url(#bodyGrad)" 
+            stroke="#e5e7eb" 
+            stroke-width="0.5" 
+            filter="url(#softShadow)" />
+      
+      <!-- Windows -->
+      <path d="M70 40 
+               Q78 18 105 16 
+               L148 16 
+               Q175 18 182 40 
+               Z" 
+            fill="url(#glassGrad)" />
+      
+      <!-- Window Reflections -->
+      <path d="M85 22 Q115 18 150 22" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.3" fill="none" />
+      <rect x="120" y="16" width="1.5" height="24" fill="white" opacity="0.2" />
+      
+      <!-- Wheels -->
+      <g>
+        <circle cx="55" cy="65" r="14" fill="#1f2937" />
+        <circle cx="55" cy="65" r="7" fill="#4b5563" stroke="#9ca3af" stroke-width="1" />
+        <circle cx="165" cy="65" r="14" fill="#1f2937" />
+        <circle cx="165" cy="65" r="7" fill="#4b5563" stroke="#9ca3af" stroke-width="1" />
+      </g>
+      
+      <!-- Lights -->
+      <path d="M20 54 Q15 54 15 58 L15 60 Q15 63 20 63" fill="#fff9c4" />
+      <path d="M205 54 Q210 54 210 58 L210 60 Q210 63 205 63" fill="#ffcdd2" />
+    </svg>`
+  );
+
 const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
@@ -91,11 +168,11 @@ const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
 
 const RIDE_CLASSES: Record<RideClass, { label: string; description: string; basePrice: number; multiplier: number; icon: string; capacity: number }> = {
   parq_go: { 
-    label: 'Parq GO', 
+    label: 'Standard', 
     description: 'GO Everyday Rides', 
     basePrice: 1.2, 
     multiplier: 1.0,
-    icon: modernRealisticCar3D('#8B5CF6'),
+    icon: '/images/standard-car.png',
     capacity: 4
   },
   parq_taxi: { 
@@ -103,7 +180,7 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     description: 'GO & Back 2 Way Ride', 
     basePrice: 2.4, 
     multiplier: 1.8,
-    icon: modernRealisticCar3D('#8B5CF6'),
+    icon: '/images/standard-car.png',
     capacity: 4
   },
   comfort: { 
@@ -111,7 +188,7 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     description: 'Comfort & Luxury', 
     basePrice: 1.8, 
     multiplier: 1.4,
-    icon: modernRealisticCar3D('#8B5CF6'),
+    icon: '/images/standard-car.png',
     capacity: 4
   },
   van: { 
@@ -119,7 +196,7 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     description: 'Space for Groups', 
     basePrice: 3.0, 
     multiplier: 2.0,
-    icon: modernRealisticCar3D('#8B5CF6', true),
+    icon: '/images/standard-car.png',
     capacity: 6
   },
   smart_arrival: { 
@@ -128,7 +205,7 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     basePrice: 1.0, 
     multiplier: 0.8,
     capacity: 4,
-    icon: modernRealisticCar3D('#8B5CF6')
+    icon: '/images/standard-car.png'
   },
   delivery: { 
     label: 'Kasnije', 
@@ -136,7 +213,7 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     basePrice: 1.0, 
     multiplier: 1.0,
     capacity: 4,
-    icon: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" ry="3" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>`)
+    icon: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" ry="3" /><line x1="16" y1="2" x2="16" x2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>`)
   },
 };
 
@@ -166,7 +243,7 @@ const POPULAR_DESTINATIONS = [
 export default function RideHailingWidget() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<FlowStep>('home');
+  const [step, setStep] = useState<FlowStep>('search');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>({ lat: 43.5204, lng: 16.4316 });
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
   const [pickupAddress, setPickupAddress] = useState("Poljud, Split");
@@ -222,7 +299,7 @@ export default function RideHailingWidget() {
     }
     
     const stepParam = params.get('step') as FlowStep | null;
-    if (stepParam && ['home', 'search', 'destination', 'payment', 'tracking', 'reservation', 'confirm'].includes(stepParam)) {
+    if (stepParam && ['search', 'destination', 'payment', 'tracking', 'reservation', 'confirm'].includes(stepParam)) {
       setStep(stepParam);
     }
   }, []);
@@ -682,7 +759,7 @@ export default function RideHailingWidget() {
       el.innerHTML = `
         <div class="flex flex-col items-center">
           <div class="px-3 py-1.5 mb-2 rounded-lg bg-white shadow-xl border-2 border-black flex items-center gap-2 transform transition-transform group-hover:scale-105">
-            <span class="text-[12px] font-black text-black whitespace-nowrap">${label}</span>
+            <span class="text-[12px] font-light text-black whitespace-nowrap">${label}</span>
             <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
           </div>
           <div class="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg"></div>
@@ -694,12 +771,12 @@ export default function RideHailingWidget() {
           <div class="flex items-stretch mb-2 border-2 border-black rounded-lg overflow-hidden shadow-xl">
             <div class="bg-black text-white px-2 flex items-center justify-center">
               <div class="flex flex-col items-center">
-                <span class="text-[11px] font-black leading-none">${waitTime || 4}</span>
-                <span class="text-[6px] font-bold uppercase leading-none mt-0.5">min</span>
+                <span class="text-[11px] font-light leading-none">${waitTime || 4}</span>
+                <span class="text-[6px] font-light uppercase leading-none mt-0.5">min</span>
               </div>
             </div>
             <div class="px-3 py-1.5 bg-white flex items-center gap-2 transform transition-transform group-hover:scale-105">
-              <span class="text-[12px] font-black text-black whitespace-nowrap">${label}</span>
+              <span class="text-[12px] font-light text-black whitespace-nowrap">${label}</span>
               <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
             </div>
           </div>
@@ -1109,27 +1186,23 @@ export default function RideHailingWidget() {
     <div className="relative w-full h-screen bg-white font-sans text-black overflow-y-auto custom-scrollbar flex flex-col scroll-smooth">
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 z-[10000] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300">
-          <div className="relative w-24 h-24 mb-8">
-            <div className="absolute inset-0 border-4 border-black/20 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-black rounded-full border-t-transparent animate-spin"></div>
-            <div className="absolute inset-4 bg-black rounded-full flex items-center justify-center shadow-2xl">
-              <svg className="w-8 h-8 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        <div className="absolute inset-0 z-[10000] bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center border border-black/5 scale-90 md:scale-100">
+            <div className="relative w-12 h-12 mb-4">
+              <div className="absolute inset-0 border-2 border-black/5 rounded-full"></div>
+              <div className="absolute inset-0 border-2 border-black rounded-full border-t-transparent animate-spin"></div>
             </div>
+            <h3 className="text-black text-[15px] font-normal tracking-tight">Tražimo vozača...</h3>
           </div>
-          <h3 className="text-white text-[24px] font-black uppercase tracking-[0.2em] animate-pulse">Tražimo vozača</h3>
-          <p className="text-white/40 text-[13px] font-bold mt-2 uppercase tracking-widest">Pripremite se za polazak</p>
         </div>
       )}
 
-      {/* Routing overlay (less intrusive) */}
+      {/* Routing overlay */}
       {isRouting && (
-        <div className="absolute inset-0 z-[9999] bg-white/40 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
-          <div className="bg-black text-white px-6 py-3 rounded-2xl flex items-center space-x-3 shadow-2xl animate-pulse">
-            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            <span className="font-black text-[14px] uppercase tracking-widest">Računamo rutu...</span>
+        <div className="absolute inset-0 z-[9999] bg-white/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
+          <div className="bg-white text-black px-5 py-2.5 rounded-2xl flex items-center space-x-3 shadow-lg border border-black/5">
+            <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+            <span className="font-normal text-[12px] tracking-tight">Računamo rutu...</span>
           </div>
         </div>
       )}
@@ -1141,146 +1214,22 @@ export default function RideHailingWidget() {
       <div 
         ref={mapContainer} 
         className={`absolute inset-0 z-0 bg-white transition-all duration-300 rounded-none border-0 ${
-          step === 'home' || step === 'search' ? 'invisible opacity-0' : 'visible opacity-100 h-full'
+          step === 'search' ? 'invisible opacity-0' : 'visible opacity-100 h-full'
         }`}
         style={{ backfaceVisibility: 'hidden' }}
       />
 
       {/* UI Content Layer */}
-      <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'home' || step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
+      <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'home' || step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
           <div className={`relative transition-all duration-300 ${
-            step === 'home' || step === 'search' 
+            step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
               : 'w-full px-2 h-10 bg-white rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-black/10 flex items-center justify-between'
           }`}>
 
-            {step === 'home' && (
-              <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col p-6 pointer-events-auto space-y-8 bg-white overflow-y-auto custom-scrollbar h-full">
-                {/* AI Promo Banner */}
-                {isAIBooking && (
-                  <div className="bg-black text-white p-4 rounded-3xl flex items-center justify-between shadow-xl animate-in fade-in slide-in-from-top duration-500">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="text-[14px] font-black uppercase tracking-wider">10% AI PROMO</div>
-                        <div className="text-[10px] text-white/50 font-bold uppercase tracking-widest">Primijenjeno na sve AI rezervacije</div>
-                      </div>
-                    </div>
-                    <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">Aktivno</div>
-                  </div>
-                )}
-
-                {/* Main Search Section */}
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">Kamo?</h1>
-                  <button
-                    onClick={() => { setStep('search'); }}
-                    className="w-full flex items-center bg-black/[0.03] hover:bg-black/[0.05] border-2 border-black/5 rounded-[2rem] px-6 h-[1.6cm] transition-all active:scale-95 group"
-                  >
-                    <svg className="w-6 h-6 text-black/20 group-hover:text-black/40 transition-colors mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <span className="text-[18px] font-bold text-black/30">Gdje želite ići?</span>
-                  </button>
-                </div>
-
-                {/* Categories Grid */}
-                <div className="grid grid-cols-1 gap-4">
-                  <button
-                    onClick={() => { setStep('search'); }}
-                    className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'rides' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
-                  >
-                    <div className="flex items-center justify-between relative z-10">
-                      <div className="flex flex-col items-start">
-                        <span className="text-[20px] font-black uppercase tracking-tighter">Vožnja</span>
-                        <span className={`text-[11px] font-bold uppercase tracking-widest opacity-50`}>Naruči odmah</span>
-                      </div>
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${activeCategory === 'rides' ? 'bg-white/10' : 'bg-black/5'}`}>
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                        </svg>
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setActiveCategory('parking')}
-                      className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'parking' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
-                    >
-                      <div className="flex flex-col items-start space-y-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeCategory === 'parking' ? 'bg-white/10' : 'bg-black/5'}`}>
-                          <span className="font-black text-lg">P</span>
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-[15px] font-black uppercase tracking-tighter">Parking</span>
-                          <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Rezerviraj</span>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setActiveCategory('delivery')}
-                      className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'delivery' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
-                    >
-                      <div className="flex flex-col items-start space-y-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeCategory === 'delivery' ? 'bg-white/10' : 'bg-black/5'}`}>
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-[15px] font-black uppercase tracking-tighter">Dostava</span>
-                          <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Paketi</span>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Recent Locations */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/30">Nedavno</span>
-                    <button className="text-[11px] font-black uppercase tracking-[0.2em] text-black/60">Vidi sve</button>
-                  </div>
-                  <div className="space-y-2">
-                    {MOCK_HISTORY.slice(0, 2).map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          setDestination({ lat: item.lat, lng: item.lng });
-                          setDestinationAddress(item.address);
-                          setStep('destination');
-                          if (location) {
-                            fetchRoute([location.lng, location.lat], [item.lng, item.lat]);
-                          }
-                        }}
-                        className="w-full flex items-center p-4 rounded-[1.5rem] hover:bg-black/[0.02] transition-colors border border-transparent hover:border-black/5 group"
-                      >
-                        <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
-                          <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-[14px] font-bold text-black">{item.name}</span>
-                          <span className="text-[11px] font-medium text-black/30 truncate max-w-[200px]">{item.address}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step !== 'home' && step !== 'search' && (
+            {step !== 'search' && (
               <button
                   onClick={() => {
                     if (isConfirmed) {
@@ -1311,18 +1260,18 @@ export default function RideHailingWidget() {
               </button>
             )}
             
-            {step !== 'home' && step !== 'search' && (
+            {step !== 'search' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
-                <span className="text-[13px] font-bold text-black truncate min-w-0 shrink">
+                <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
                 </span>
                 
                 {/* Arrow to first destination */}
                 <svg className="w-3 h-3 text-black/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
 
-                <span className="text-[13px] font-black text-black truncate min-w-0 shrink">
+                <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
                   {destinationAddress.split(',')[0]}
                 </span>
 
@@ -1330,9 +1279,9 @@ export default function RideHailingWidget() {
                 {extraDestinations.map((dest, idx) => (
                   <div key={idx} className="flex items-center space-x-1.5 shrink-0 min-w-0">
                     <svg className="w-3 h-3 text-black/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
-                    <span className="text-[13px] font-black text-black truncate min-w-0 shrink">
+                    <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
                       {dest.name.split(',')[0]}
                     </span>
                   </div>
@@ -1340,7 +1289,7 @@ export default function RideHailingWidget() {
               </div>
             )}
 
-            {step !== 'home' && step !== 'search' && (
+            {step !== 'search' && (
               <button
                 onClick={() => {
                   const params = new URLSearchParams();
@@ -1368,68 +1317,65 @@ export default function RideHailingWidget() {
           </div>
         </div>
 
-        {/* Search Step Content intentionally minimal to match old look */}
+        {/* Search Step Content */}
         {step === 'search' && (
           <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col pointer-events-auto bg-white min-h-screen">
-            <div className="flex items-center w-full px-6 py-4 border-b border-black/5 bg-white sticky top-0 z-10">
+            <div className="flex items-center w-full px-5 py-3 border-b border-black/5 bg-white sticky top-0 z-10">
               <button
-                onClick={() => setStep('home')}
-                className="mr-4 p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors"
+                onClick={() => router.push('/' as any)}
+                className="mr-3 p-1.5 -ml-1 hover:bg-black/5 rounded-full transition-colors"
               >
-                <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <div className="flex items-center flex-1 bg-black/[0.03] rounded-2xl border border-black/5 px-4 py-2">
-                <svg className="w-5 h-5 text-black/30 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+              <div className="flex items-center flex-1 bg-black/[0.03] rounded-xl px-3 py-1.5">
                 <input
                   autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Kamo?"
-                  className="w-full bg-transparent text-[16px] font-bold placeholder-black/20 focus:outline-none text-black"
+                  className="w-full bg-transparent text-[16px] font-normal placeholder-black/30 focus:outline-none text-black"
                 />
               </div>
             </div>
 
             {/* Suggestions / Results */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
               {searchQuery.length > 0 ? (
                 searchResults.length > 0 ? (
                   searchResults.map((item: any) => (
                     <button
                       key={item.id}
                       onClick={() => selectSearchResult(item)}
-                      className="w-full flex items-center p-4 rounded-3xl hover:bg-black/[0.02] transition-all border border-transparent hover:border-black/5 group"
+                      className="w-full flex items-center p-3 rounded-2xl hover:bg-black/[0.01] transition-all border border-transparent hover:border-black/5 group"
                     >
-                      <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
-                        <svg className="w-5 h-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
+                        <svg className="w-4 h-4 text-black/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                       </div>
                       <div className="flex flex-col items-start text-left">
-                        <span className="text-[15px] font-black text-black uppercase tracking-tight">{item.name}</span>
-                        <span className="text-[12px] font-bold text-black/30 truncate max-w-[250px] uppercase tracking-wider">{item.address}</span>
+                        <span className="text-[14px] font-light text-black tracking-tight">{item.name}</span>
+                        <span className="text-[11px] font-light text-black/30 truncate max-w-[250px] tracking-wide">{item.address}</span>
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-black/20">
-                    <svg className="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex flex-col items-center justify-center py-20 text-black/10">
+                    <svg className="w-10 h-10 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <span className="text-sm font-black uppercase tracking-widest">Nema rezultata</span>
+                    <span className="text-[11px] font-normal uppercase tracking-widest">Nema rezultata</span>
                   </div>
                 )
               ) : (
-                <div className="space-y-6 pt-4">
+                <div className="space-y-4 pt-4">
                   <div className="px-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/30">Popularno</span>
+                    <span className="text-[10px] font-normal uppercase tracking-[0.15em] text-black/20">Popularno</span>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {POPULAR_DESTINATIONS.map((item) => (
                       <button
                         key={item.id}
@@ -1441,16 +1387,16 @@ export default function RideHailingWidget() {
                             fetchRoute([location.lng, location.lat], [item.lng, item.lat]);
                           }
                         }}
-                        className="w-full flex items-center p-4 rounded-3xl hover:bg-black/[0.02] transition-all border border-transparent hover:border-black/5 group"
+                        className="w-full flex items-center p-3 rounded-2xl hover:bg-black/[0.01] transition-all border border-transparent hover:border-black/5 group"
                       >
-                        <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
-                          <svg className="w-5 h-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
+                          <svg className="w-4 h-4 text-black/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           </svg>
                         </div>
                         <div className="flex flex-col items-start text-left">
-                          <span className="text-[14px] font-black text-black uppercase tracking-tight">{item.name}</span>
-                          <span className="text-[11px] font-bold text-black/30 truncate max-w-[250px] uppercase tracking-wider">{item.address}</span>
+                          <span className="text-[14px] font-light text-black tracking-tight">{item.name}</span>
+                          <span className="text-[11px] font-light text-black/30 truncate max-w-[250px] tracking-wide">{item.address}</span>
                         </div>
                       </button>
                     ))}
@@ -1463,7 +1409,7 @@ export default function RideHailingWidget() {
 
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'home' || step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
             <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
@@ -1477,157 +1423,150 @@ export default function RideHailingWidget() {
 
           <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[3.5rem] border-x border-t border-black/5 p-8 flex flex-col"
-            style={{ height: 'calc(50vh + 1.5cm)', paddingBottom: 'calc(max(24px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
+            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/5 p-6 flex flex-col"
+            style={{ height: 'calc(45vh + 1.5cm)', paddingBottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
           >
-          <div className="w-16 h-1.5 bg-black/10 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          <div className="w-[38px] h-1.5 bg-black/[0.12] rounded-full mx-auto mb-6 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
-            <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-10 duration-700">
-              <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[]).map((key) => {
+            <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+              <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[]).map((key, index) => {
                   const config = RIDE_CLASSES[key];
                   const isSelected = selectedClass === key;
+                  const isParqGo = key === 'parq_go';
                   return (
-                    <button 
-                      key={key}
-                      onClick={() => {
-                        setSelectedClass(key);
-                        if (key === 'delivery') router.push('/calendar' as any);
-                      }}
-                      className={`w-full flex items-center justify-between p-5 rounded-[2.5rem] transition-all duration-500 ${
-                        isSelected 
-                            ? 'bg-black text-white shadow-[0_25px_50px_rgba(0,0,0,0.25)] scale-[1.03] z-10' 
-                            : 'bg-gray-50/50 hover:bg-gray-100/80 text-black'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-5">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${isSelected ? 'bg-white/10 rotate-6 scale-110' : 'bg-white shadow-sm'}`}>
-                          <img src={config.icon} alt={config.label} className="w-10 h-10 object-contain" />
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <h3 className={`text-[17px] font-bold leading-tight mb-1 ${isSelected ? 'text-white' : 'text-black'}`}>
-                            {config.label}
-                          </h3>
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-[12px] font-medium h-[20px] flex items-center px-2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-black/60'}`}>
+                    <React.Fragment key={key}>
+                      <button 
+                        onClick={() => {
+                          setSelectedClass(key);
+                          if (key === 'delivery') router.push('/calendar' as any);
+                        }}
+                        className={`w-full flex items-center justify-between py-1 px-3 rounded-2xl transition-all duration-300 ${
+                          isSelected 
+                              ? 'bg-white border-2 border-[#A855F7] shadow-sm' 
+                              : 'bg-white border-2 border-transparent hover:bg-black/[0.02]'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
+                            <img src={config.icon} alt={config.label} className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex flex-col items-start leading-none">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="text-[14px] font-medium text-black">
+                                {config.label}
+                              </h3>
+                              <div className="flex items-center text-black/30">
+                                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                  <circle cx="9" cy="7" r="4" />
+                                </svg>
+                                <span className="ml-0.5 text-[10px] font-medium">{config.capacity}</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-black/40 mt-[-3px]">
                               {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                            </span>
-                            <span className={`text-[12px] font-medium ${isSelected ? 'text-white/60' : 'text-black/40'}`}>
-                              {(arrivalTimeStr ? arrivalTimeStr : '—')}
+                              {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
                             </span>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end">
-                        {isLoadingEstimate ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="w-4 h-4 border-2 border-black/10 border-t-black rounded-full animate-spin" />
-                          </div>
-                        ) : (() => {
-                          const base = getClassPrice(key as RideClass);
-                          if (base == null) return <span className={`text-[16px] font-bold ${isSelected ? 'text-white/20' : 'text-black/5'}`}>—</span>;
-                          const discounted = isAIBooking ? base * 0.9 : base;
-                          return (
-                            <>
-                              {isAIBooking && (
-                                <span className={`text-[12px] font-medium line-through mb-0.5 ${isSelected ? 'text-white/40' : 'text-black/20'}`}>
-                                  €{base.toFixed(2)}
+                        
+                        <div className="flex flex-col items-end">
+                          {isLoadingEstimate ? (
+                            <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                          ) : (() => {
+                            const base = getClassPrice(key as RideClass);
+                            if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
+                            const discounted = isAIBooking ? base * 0.9 : base;
+                            return (
+                              <div className="flex flex-col items-end">
+                                {isAIBooking && (
+                                  <span className="text-[9px] line-through text-black/20">
+                                    €{base.toFixed(2)}
+                                  </span>
+                                )}
+                                <span className="text-[15px] font-medium text-black">
+                                  €{discounted.toFixed(2)}
                                 </span>
-                              )}
-                              <span className={`text-[20px] font-bold ${isSelected ? 'text-white' : 'text-black'}`}>
-                                €{discounted.toFixed(2)}
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </button>
+                      {index === 2 && (
+                        <div className="w-[38px] h-1 bg-black/10 rounded-full mx-auto my-1" />
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className="mt-auto pt-4 border-t border-black/5 space-y-4">
-                <div className="flex items-center justify-between">
-                  {/* Payment Widget */}
+              <div className="mt-auto pt-2 space-y-4">
+                <div className="flex items-center justify-between px-1">
                   <button 
-                    onClick={() => router.push('/payment' as any)}
-                    className="bg-white border-2 border-black rounded-2xl flex items-center justify-between px-4 shadow-md active:scale-95 transition-all group/payment overflow-hidden"
-                    style={{ height: '0.8cm' }}
+                    onClick={() => {
+                      const params = new URLSearchParams(window.location.search);
+                      router.push(`/payment?${params.toString()}` as any);
+                    }}
+                    className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
                   >
-                    <div className="flex items-center space-x-2">
-                      <div className="w-5 h-5 flex items-center justify-center">
-                        {paymentMethod === 'card' && (
-                          <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="2" y="5" width="20" height="14" rx="2" />
-                            <line x1="2" y1="10" x2="22" y2="10" />
-                          </svg>
-                        )}
-                        {paymentMethod === 'cash' && (
-                          <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="2" y="6" width="20" height="12" rx="2" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                        )}
-                        {paymentMethod === 'gpay' && <span className="text-[8px] font-bold">GPay</span>}
-                        {paymentMethod === 'apay' && <span className="text-[8px] font-bold">Pay</span>}
-                        {paymentMethod === 'payparq' && (
-                          <div className="w-4 h-4 bg-black rounded-[6px] flex items-center justify-center">
-                            <span className="text-[7px] font-black text-white leading-none">PQ</span>
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[12px] font-bold text-black truncate">
-                        {paymentMethod === 'payparq' ? 'Payparq račun' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
-                      </span>
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      {paymentMethod === 'card' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="5" width="20" height="14" rx="2" />
+                          <line x1="2" y1="10" x2="22" y2="10" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'cash' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="6" width="20" height="12" rx="2" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
+                      {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
+                      {paymentMethod === 'payparq' && (
+                        <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
+                          <span className="text-[7px] font-medium text-white leading-none">PQ</span>
+                        </div>
+                      )}
                     </div>
-                    <svg className={`w-4 h-4 text-black/20 transition-transform duration-500 ${isPaymentSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
+                      {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                    </span>
                   </button>
 
-                  <div className="flex items-center space-x-2">
-                    {isScheduledMode && (
-                      <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
-                        <span className="text-[9px] font-black uppercase tracking-wider">Kako biste željeli platiti?</span>
-                      </div>
-                    )}
+                  <div className="flex items-center space-x-4">
                     {isAIBooking && (
-                      <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">-10% AI</span>
+                      <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
+                        <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                        <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
                       </div>
                     )}
+                    <button 
+                      onClick={() => router.push('/calendar' as any)}
+                      className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                    >
+                      <svg className="w-4 h-4 text-black/60 group-hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                      <span className="text-[13px] font-medium text-black/60 group-hover:text-black transition-colors">Schedule</span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-[0.2cm] mb-[2cm] md:mb-[1.5cm]">
-                  <button 
-                    onClick={handleConfirmRide}
-                    className="flex-1 bg-black text-white h-[1.4cm] rounded-[2.5rem] flex items-center justify-center space-x-4 hover:bg-black/90 transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 group/order overflow-hidden relative"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                    <span className="text-[18px] font-bold tracking-tight relative z-10">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
-                    <svg className="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                    </svg>
-                  </button>
-                  {/* Calendar Widget - Sized to match CTA height, fully rounded */}
-                  <button 
-                    onClick={() => router.push('/calendar' as any)}
-                    className="bg-black text-white rounded-full flex items-center justify-center shrink-0 shadow-xl active:scale-95 transition-all hover:bg-black/90 w-[1.4cm] h-[1.4cm]"
-                  >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="3" y="4" width="18" height="18" rx="3" ry="3" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                  </button>
-                </div>
+                <button 
+                  onClick={handleConfirmRide}
+                  className="w-full bg-[#A855F7] text-white h-[46px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#9333EA] transition-all active:scale-[0.98] shadow-none border-0 ring-0 focus:ring-0"
+                >
+                  <span className="text-[15px] font-bold">Naruči {RIDE_CLASSES[selectedClass].label}</span>
+                </button>
               </div>
             </div>
           )}
