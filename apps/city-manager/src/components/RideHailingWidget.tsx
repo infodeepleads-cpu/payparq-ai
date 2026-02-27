@@ -168,7 +168,7 @@ const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
 
 const RIDE_CLASSES: Record<RideClass, { label: string; description: string; basePrice: number; multiplier: number; icon: string; capacity: number }> = {
   parq_go: { 
-    label: 'Standard', 
+    label: 'Parq Standard', 
     description: 'GO Everyday Rides', 
     basePrice: 1.2, 
     multiplier: 1.0,
@@ -176,8 +176,8 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     capacity: 4
   },
   parq_taxi: { 
-    label: 'GO & Back', 
-    description: 'GO & Back 2 Way Ride', 
+    label: 'GO & GO', 
+    description: 'GO & GO 2 Way Ride', 
     basePrice: 2.4, 
     multiplier: 1.8,
     icon: '/images/standard-car.png',
@@ -335,6 +335,7 @@ export default function RideHailingWidget() {
   const ACCENT_PURPLE = "#8B5CF6"; // Vibrant Violet
   const CARD_BG = "#FFFFFF";
   const prevDriverState = useRef<{ [key: string]: { lat: number; lng: number; rotation: number } }>({});
+  const fallbackStyleTried = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
@@ -635,7 +636,14 @@ export default function RideHailingWidget() {
 
         map.current.on('error', (e) => {
           const err: any = e as any;
-          console.error("Mapbox error event:", err?.error?.message || err?.message || err);
+          const msg = err?.error?.message || err?.message || err;
+          console.error("Mapbox error event:", msg);
+          if (!fallbackStyleTried.current && typeof msg === 'string' && /style/i.test(msg)) {
+            fallbackStyleTried.current = true;
+            try {
+              map.current?.setStyle("mapbox://styles/mapbox/light-v11");
+            } catch {}
+          }
         });
       }
     } catch (err) {
@@ -744,43 +752,39 @@ export default function RideHailingWidget() {
 
   const updateMarker = (id: string, lngLat: [number, number], type: 'pickup' | 'destination', overrideLabel?: string, waitTime?: number) => {
     if (!map.current) return;
-    if (driverMarkers.current[id]) {
-      driverMarkers.current[id].remove();
+    
+    // Use consistent keys to prevent duplicates
+    const markerKey = type === 'pickup' ? 'self' : 'destination';
+    
+    if (driverMarkers.current[markerKey]) {
+      driverMarkers.current[markerKey].remove();
     }
 
     const el = document.createElement("div");
-    const address = overrideLabel || (type === 'pickup' ? pickupAddress : destinationAddress) || '';
-    const label = address.split(',')[0] || (type === 'pickup' ? 'Start' : 'Destination');
-
-    el.className = 'flex flex-col items-center group cursor-pointer';
+    // Set explicit dimensions to ensure perfect centering with anchor: 'center'
+    el.className = 'group cursor-pointer relative w-2.5 h-2.5 flex items-center justify-center';
     
-    // Uber-style markers: Circle for pickup, Square for destination
+    const displayTime = arrivalTimeStr || '23:04';
+
     if (type === 'pickup') {
+      // Pickup ONLY has the bullseye, NO cloud label (removed "Poljud" cloud)
       el.innerHTML = `
-        <div class="flex flex-col items-center">
-          <div class="px-3 py-1.5 mb-2 rounded-lg bg-white shadow-xl border-2 border-black flex items-center gap-2 transform transition-transform group-hover:scale-105">
-            <span class="text-[12px] font-light text-black whitespace-nowrap">${label}</span>
-            <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
-          </div>
-          <div class="w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg"></div>
+        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#A855F7] bg-white flex items-center justify-center shadow-sm">
+          <div class="w-1 h-1 rounded-full bg-[#A855F7]"></div>
         </div>
       `;
     } else {
+      // Destination has the "Arrive [time]" cloud label
       el.innerHTML = `
-        <div class="flex flex-col items-center">
-          <div class="flex items-stretch mb-2 border-2 border-black rounded-lg overflow-hidden shadow-xl">
-            <div class="bg-black text-white px-2 flex items-center justify-center">
-              <div class="flex flex-col items-center">
-                <span class="text-[11px] font-light leading-none">${waitTime || 4}</span>
-                <span class="text-[6px] font-light uppercase leading-none mt-0.5">min</span>
-              </div>
-            </div>
-            <div class="px-3 py-1.5 bg-white flex items-center gap-2 transform transition-transform group-hover:scale-105">
-              <span class="text-[12px] font-light text-black whitespace-nowrap">${label}</span>
-              <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
-            </div>
+        <!-- Cloud Label - Positioned absolutely above the marker -->
+        <div class="absolute bottom-full mb-3 px-3 py-1.5 rounded-full bg-white shadow-xl border border-black/5 flex items-center justify-center transform transition-transform group-hover:scale-105 whitespace-nowrap pointer-events-none">
+          <span class="text-[13px] font-light text-black">Arrive ${displayTime}</span>
+        </div>
+        <!-- Bullseye Marker -->
+        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#A855F7] bg-[#A855F7] flex items-center justify-center shadow-sm">
+          <div class="w-[7px] h-[7px] rounded-full border-[1.5px] border-[#A855F7] bg-white flex items-center justify-center">
+            <div class="w-0.5 h-0.5 rounded-full bg-[#A855F7]"></div>
           </div>
-          <div class="w-4 h-4 bg-black rounded-md border-2 border-white shadow-lg"></div>
         </div>
       `;
     }
@@ -796,9 +800,9 @@ export default function RideHailingWidget() {
       setSheetSnap('expanded');
     };
 
-    driverMarkers.current[id] = new mapboxgl.Marker({
+    driverMarkers.current[markerKey] = new mapboxgl.Marker({
       element: el,
-      anchor: 'bottom'
+      anchor: 'center'
     })
       .setLngLat(lngLat)
       .addTo(map.current);
@@ -830,12 +834,22 @@ export default function RideHailingWidget() {
         const duration = Math.ceil(data.duration / 60);
         const distance = (data.distance / 1000).toFixed(1);
         
+        // Use the exact start and end points of the route geometry for markers
+        // This ensures the markers are perfectly aligned with the route line
+        const snappedPickup = route[0];
+        const snappedDestination = route[route.length - 1];
+
         console.log(`Route fetched: ${distance}km, ${duration}min`);
         setRouteData({ distance: data.distance, duration: data.duration });
         
         setEtaMinutes(duration);
         const arrival = new Date(Date.now() + data.duration * 1000);
-        setArrivalTimeStr(arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+        const arrivalStr = arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        setArrivalTimeStr(arrivalStr);
+        
+        // Update markers to be exactly on the route endpoints
+        updateMarker("pickup", snappedPickup, "pickup", pickupAddress);
+        updateMarker("destination", snappedDestination, "destination", destinationAddress);
         
         if (map.current && map.current.isStyleLoaded()) {
           const mapInstance = map.current;
@@ -872,7 +886,7 @@ export default function RideHailingWidget() {
             },
             paint: {
               'line-color': ACCENT_PURPLE,
-              'line-width': 6,
+              'line-width': 9,
               'line-opacity': 0.2,
               'line-blur': 6
             }
@@ -888,14 +902,11 @@ export default function RideHailingWidget() {
             },
             paint: {
               'line-color': ACCENT_PURPLE,
-              'line-width': 3,
+              'line-width': 4.5,
               'line-opacity': 1,
               'line-blur': 0
             }
           });
-          
-          updateMarker("self", start, "pickup");
-          updateMarker("destination", end, "destination", undefined, 4);
           
           // Fit map to route bounds
           const bounds = new mapboxgl.LngLatBounds();
@@ -1183,7 +1194,7 @@ export default function RideHailingWidget() {
    };
 
   return (
-    <div className="relative w-full h-screen bg-white font-sans text-black overflow-y-auto custom-scrollbar flex flex-col scroll-smooth">
+    <div className="relative w-full h-[100dvh] bg-white font-sans text-black overflow-hidden flex flex-col scroll-smooth">
       {/* Loading Overlay */}
       {loading && (
         <div className="absolute inset-0 z-[10000] bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -1222,11 +1233,11 @@ export default function RideHailingWidget() {
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4 -mx-px'}`}>
           <div className={`relative transition-all duration-300 ${
             step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
-              : 'w-full px-2 h-10 bg-white rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-black/10 flex items-center justify-between'
+              : 'w-full px-4 h-11 bg-white rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.12)] border border-black/10 flex items-center justify-between'
           }`}>
 
             {step !== 'search' && (
@@ -1262,13 +1273,13 @@ export default function RideHailingWidget() {
             
             {step !== 'search' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
-                <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
+                <span className="text-[13px] font-medium text-[#A855F7] truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
                 </span>
                 
                 {/* Arrow to first destination */}
                 <svg className="w-3 h-3 text-black/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
 
                 <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
@@ -1320,7 +1331,7 @@ export default function RideHailingWidget() {
         {/* Search Step Content */}
         {step === 'search' && (
           <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col pointer-events-auto bg-white min-h-screen">
-            <div className="flex items-center w-full px-5 py-3 border-b border-black/5 bg-white sticky top-0 z-10">
+            <div className="flex items-center w-full px-4 py-3 border-b border-black/5 bg-white sticky top-0 z-10">
               <button
                 onClick={() => router.push('/' as any)}
                 className="mr-3 p-1.5 -ml-1 hover:bg-black/5 rounded-full transition-colors"
@@ -1409,7 +1420,7 @@ export default function RideHailingWidget() {
 
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 -mx-px ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
             <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
@@ -1423,15 +1434,17 @@ export default function RideHailingWidget() {
 
           <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/5 p-6 flex flex-col"
+            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/5 px-4 pt-0 pb-6 flex flex-col"
             style={{ height: 'calc(45vh + 1.5cm)', paddingBottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
           >
-          <div className="w-[1cm] h-[0.1cm] bg-black/[0.12] rounded-full mx-auto mt-[0.1cm] mb-[0.1cm] cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          <div className="absolute top-[0.2cm] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/20 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/30 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          
+          <div className="h-[calc(0.4cm+4px)] shrink-0"></div>
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
             <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-              <div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+              <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
                 {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[]).map((key, index) => {
                   const config = RIDE_CLASSES[key];
                   const isSelected = selectedClass === key;
@@ -1443,57 +1456,104 @@ export default function RideHailingWidget() {
                           setSelectedClass(key);
                           if (key === 'delivery') router.push('/calendar' as any);
                         }}
-                        className={`w-full flex items-center justify-between py-1 px-3 rounded-2xl transition-all duration-300 ${
+                        className={`w-full flex items-center justify-between transition-all duration-300 rounded-2xl group relative overflow-hidden ${
                           isSelected 
-                              ? 'bg-white border-2 border-[#A855F7] shadow-sm' 
-                              : 'bg-white border-2 border-transparent hover:bg-black/[0.02]'
+                            ? 'h-[2.6cm] bg-white border-2 border-[#A855F7] shadow-lg px-6' 
+                            : 'h-[1.3cm] px-3 bg-white border-2 border-transparent hover:bg-black/[0.02]'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
-                            <img src={config.icon} alt={config.label} className="w-full h-full object-contain" />
-                          </div>
-                          <div className="flex flex-col items-start leading-none">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="text-[14px] font-medium text-black">
-                                {config.label}
-                              </h3>
-                              <div className="flex items-center text-black/30">
-                                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                  <circle cx="9" cy="7" r="4" />
-                                </svg>
-                                <span className="ml-0.5 text-[10px] font-medium">{config.capacity}</span>
-                              </div>
+                        {isSelected ? (
+                          // Expanded State (Selected)
+                          <div className="flex items-center w-full justify-between">
+                            <div className="w-28 h-14 flex items-center justify-center -ml-2">
+                              <img src={config.icon} alt={config.label} className="w-full h-full object-contain scale-125" />
                             </div>
-                            <span className="text-[10px] text-black/40 mt-[-3px]">
-                              {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                              {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-end">
-                          {isLoadingEstimate ? (
-                            <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
-                          ) : (() => {
-                            const base = getClassPrice(key as RideClass);
-                            if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
-                            const discounted = isAIBooking ? base * 0.9 : base;
-                            return (
-                              <div className="flex flex-col items-end">
-                                {isAIBooking && (
-                                  <span className="text-[9px] line-through text-black/20">
-                                    €{base.toFixed(2)}
-                                  </span>
-                                )}
-                                <span className="text-[15px] font-medium text-black">
-                                  €{discounted.toFixed(2)}
-                                </span>
+                            
+                            <div className="flex flex-col items-end space-y-0.5">
+                              <div className="flex items-center space-x-2">
+                                <h3 className="text-[14px] font-medium text-black leading-none">
+                                  {config.label}
+                                </h3>
+                                <div className="flex items-center text-black/30">
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                  </svg>
+                                  <span className="ml-0.5 text-[11px] font-medium">{config.capacity}</span>
+                                </div>
                               </div>
-                            );
-                          })()}
-                        </div>
+                              
+                              <div className="flex flex-col items-end">
+                                {isLoadingEstimate ? (
+                                  <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                                ) : (() => {
+                                  const base = getClassPrice(key as RideClass);
+                                  if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
+                                  const discounted = isAIBooking ? base * 0.9 : base;
+                                  return (
+                                    <span className="text-[14px] font-medium text-black leading-none">
+                                      €{discounted.toFixed(2)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+
+                              <span className="text-[11px] text-black/40 leading-none">
+                                {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          // Normal State (Not Selected)
+                          <>
+                            <div className="flex items-center space-x-3">
+                               <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
+                                 <img src={config.icon} alt={config.label} className="w-full h-full object-contain" />
+                               </div>
+                               <div className="flex flex-col items-start leading-none justify-center mt-[-1px]">
+                                   <div className="flex items-center space-x-2">
+                                     <h3 className="text-[13px] font-medium text-black leading-none">
+                                       {config.label}
+                                     </h3>
+                                     <div className="flex items-center text-black/30">
+                                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                         <circle cx="9" cy="7" r="4" />
+                                       </svg>
+                                       <span className="ml-0.5 text-[10px] font-medium">{config.capacity}</span>
+                                     </div>
+                                   </div>
+                                   <span className="text-[10px] text-black/40 mt-[-3px] leading-none">
+                                      {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                      {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
+                                    </span>
+                                 </div>
+                            </div>
+                            
+                            <div className="flex flex-col items-end">
+                              {isLoadingEstimate ? (
+                                <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                              ) : (() => {
+                                const base = getClassPrice(key as RideClass);
+                                if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
+                                const discounted = isAIBooking ? base * 0.9 : base;
+                                return (
+                                  <div className="flex flex-col items-end">
+                                    {isAIBooking && (
+                                      <span className="text-[9px] line-through text-black/20">
+                                        €{base.toFixed(2)}
+                                      </span>
+                                    )}
+                                    <span className="text-[15px] font-medium text-black">
+                                      €{discounted.toFixed(2)}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </>
+                        )}
                       </button>
                       {index === 2 && (
                         <div className="w-[38px] h-1 bg-black/10 rounded-full mx-auto my-1" />
@@ -1505,7 +1565,7 @@ export default function RideHailingWidget() {
 
               {/* World-Class Payment & Action Bar */}
               <div className="mt-auto pt-2 space-y-4">
-                <div className="flex items-center justify-between px-1">
+                <div className="flex items-center justify-between px-0">
                   <button 
                     onClick={() => {
                       const params = new URLSearchParams(window.location.search);
@@ -1550,13 +1610,10 @@ export default function RideHailingWidget() {
                       onClick={() => router.push('/calendar' as any)}
                       className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
                     >
-                      <svg className="w-4 h-4 text-black/60 group-hover:text-black transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                        <line x1="16" y1="2" x2="16" y2="6" />
-                        <line x1="8" y1="2" x2="8" y2="6" />
-                        <line x1="3" y1="10" x2="21" y2="10" />
+                      <svg className="w-4 h-4 text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
                       </svg>
-                      <span className="text-[13px] font-medium text-black/60 group-hover:text-black transition-colors">Schedule</span>
+                      <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
                     </button>
                   </div>
                 </div>

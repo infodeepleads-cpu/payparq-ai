@@ -27,42 +27,42 @@ export async function POST(request: Request) {
     const vehicleClasses = [
       {
         id: 'parq_go',
-        name: 'Parq Go',
+        name: 'Parq Standard',
         base_fare: 0.80,
         per_km: 0.47,
         per_min: 0.08,
         multiplier: 1.0,
-        description: 'Like UberX, quick and affordable',
+        description: 'GO Everyday Rides',
         capacity: 4
       },
       {
         id: 'parq_taxi',
-        name: 'Parq & Taxi',
+        name: 'GO & GO',
         base_fare: 1.20,
         per_km: 0.60,
         per_min: 0.12,
-        multiplier: 1.0,
-        description: 'Free parking spot + 2 rides included',
+        multiplier: 1.8,
+        description: 'GO & GO 2 Way Ride',
         capacity: 4
       },
       {
         id: 'comfort',
-        name: 'Comfort',
+        name: 'Park GO Premium',
         base_fare: 1.00,
         per_km: 0.55,
         per_min: 0.10,
-        multiplier: 1.2,
-        description: 'Newer cars with extra legroom',
+        multiplier: 1.4,
+        description: 'Comfort & Luxury',
         capacity: 4
       },
       {
         id: 'van',
-        name: 'Van',
+        name: 'Parq Van',
         base_fare: 2.00,
         per_km: 0.80,
         per_min: 0.15,
-        multiplier: 1.5,
-        description: 'Large cars for groups up to 6',
+        multiplier: 2.0,
+        description: 'Space for Groups',
         capacity: 6
       },
       {
@@ -74,6 +74,16 @@ export async function POST(request: Request) {
         multiplier: 1.6,
         description: 'Guaranteed return ride for your trip',
         capacity: 4
+      },
+      {
+        id: 'delivery',
+        name: 'Parq Delivery',
+        base_fare: 1.50,
+        per_km: 0.40,
+        per_min: 0.05,
+        multiplier: 1.2,
+        description: 'Fast local delivery',
+        capacity: 1
       }
     ];
 

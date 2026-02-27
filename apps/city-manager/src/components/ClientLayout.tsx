@@ -21,6 +21,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isMapPage = pathname?.startsWith("/map");
   const isPaymentPage = pathname?.startsWith("/payment");
   const isCalendarPage = pathname?.startsWith("/calendar");
+  const isRidesPage = pathname?.startsWith("/rides");
   const showChat = (searchParams?.get("show_chat") === "1" || searchParams?.get("show_chat") === "true");
 
   useEffect(() => {
@@ -46,9 +47,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const shouldHideLayout = hideLayout || isMapPage || isPaymentPage || isCalendarPage;
+  const shouldHideLayout = hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage;
 
-  if (isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage) {
+  if (isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage) {
     return <main className="h-full w-full bg-white">{children}</main>;
   }
 
