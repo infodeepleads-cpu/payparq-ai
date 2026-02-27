@@ -618,19 +618,19 @@ export default function RideHailingWidget() {
       `;
     } else {
       el.innerHTML = `
-        <div class="flex flex-col items-center relative">
-          <div class="px-3 py-1.5 mb-2 rounded-lg bg-white shadow-xl border-2 border-black flex items-center gap-2 transform transition-transform group-hover:scale-105">
-            <span class="text-[12px] font-black text-black whitespace-nowrap">${label}</span>
-            <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
-          </div>
-          
-          <div class="absolute -right-14 top-1/2 -translate-y-1/2 bg-black text-white w-10 h-10 flex items-center justify-center rounded-lg shadow-xl border-2 border-white">
-            <div class="flex flex-col items-center">
-              <span class="text-[14px] font-black leading-none">${waitTime || 4}</span>
-              <span class="text-[8px] font-bold uppercase leading-none mt-0.5">min</span>
+        <div class="flex flex-col items-center">
+          <div class="flex items-stretch mb-2 border-2 border-black rounded-lg overflow-hidden shadow-xl">
+            <div class="bg-black text-white px-2 flex items-center justify-center">
+              <div class="flex flex-col items-center">
+                <span class="text-[11px] font-black leading-none">${waitTime || 4}</span>
+                <span class="text-[6px] font-bold uppercase leading-none mt-0.5">min</span>
+              </div>
+            </div>
+            <div class="px-3 py-1.5 bg-white flex items-center gap-2 transform transition-transform group-hover:scale-105">
+              <span class="text-[12px] font-black text-black whitespace-nowrap">${label}</span>
+              <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
             </div>
           </div>
-
           <div class="w-4 h-4 bg-black rounded-md border-2 border-white shadow-lg"></div>
         </div>
       `;
@@ -1350,11 +1350,11 @@ export default function RideHailingWidget() {
 
       <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
-          <div className="mb-[-28px] z-[10000] relative px-8">
-            <div className="bg-black h-[40px] rounded-t-[2rem] flex items-center justify-center shadow-[0_-15px_40px_rgba(0,0,0,0.25)] relative border-x-[4px] border-t-[4px] border-black">
+          <div className="mb-[-20px] z-[10000] relative px-6">
+            <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
               <div className="flex items-center space-x-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></div>
-                <span className="text-[12px] font-black text-white uppercase tracking-[0.25em]">10% AI PROMO AKTIVAN</span>
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
+                <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">10% AI PROMO APPLIED</span>
               </div>
             </div>
           </div>
@@ -1362,10 +1362,10 @@ export default function RideHailingWidget() {
 
         <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-30px_100px_rgba(0,0,0,0.12)] rounded-t-[4rem] border-x border-t border-black/5 p-8 pb-12 flex flex-col"
-            style={{ height: 'calc(50vh + 1.5cm)', transform: 'translateZ(0)' }}
+            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[3.5rem] border-x border-t border-black/5 p-8 flex flex-col"
+            style={{ height: 'calc(50vh + 1.5cm)', paddingBottom: 'max(24px, env(safe-area-inset-bottom))', transform: 'translateZ(0)' }}
           >
-          <div className="w-20 h-1.5 bg-black/10 rounded-full mx-auto mb-10 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          <div className="w-16 h-1.5 bg-black/10 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
@@ -1378,15 +1378,15 @@ export default function RideHailingWidget() {
                     <button 
                       key={key}
                       onClick={() => setSelectedClass(key)}
-                      className={`w-full flex items-center justify-between p-6 rounded-[3rem] transition-all duration-700 ${
+                      className={`w-full flex items-center justify-between p-5 rounded-[2.5rem] transition-all duration-500 ${
                         isSelected 
-                            ? 'bg-black text-white shadow-[0_30px_60px_rgba(0,0,0,0.3)] scale-[1.02] z-10' 
-                            : 'bg-gray-50/50 hover:bg-gray-100/80 text-black border border-black/5'
+                            ? 'bg-black text-white shadow-[0_25px_50px_rgba(0,0,0,0.25)] scale-[1.03] z-10' 
+                            : 'bg-gray-50/50 hover:bg-gray-100/80 text-black'
                       }`}
                     >
-                      <div className="flex items-center space-x-6">
-                        <div className={`w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all duration-700 ${isSelected ? 'bg-white/15 rotate-3 scale-110' : 'bg-white shadow-md'}`}>
-                          <img src={config.icon} alt={config.label} className="w-12 h-12 object-contain" />
+                      <div className="flex items-center space-x-5">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-700 ${isSelected ? 'bg-white/10 rotate-6 scale-110' : 'bg-white shadow-sm'}`}>
+                          <img src={config.icon} alt={config.label} className="w-10 h-10 object-contain" />
                         </div>
                         <div className="flex flex-col items-start">
                           <h3 className={`text-[17px] font-bold leading-tight mb-1 ${isSelected ? 'text-white' : 'text-black'}`}>
@@ -1432,63 +1432,66 @@ export default function RideHailingWidget() {
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className="mt-auto pt-6 border-t border-black/5 space-y-6">
+              <div className="mt-auto pt-4 border-t border-black/5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="relative">
-                    <button 
-                      onClick={() => setIsPaymentSelectorOpen(!isPaymentSelectorOpen)}
-                      className="flex items-center space-x-4 px-6 py-4 bg-gray-50/80 rounded-[2.5rem] hover:bg-gray-100 transition-all group/payment border border-black/5"
-                    >
-                      <div className="w-12 h-12 bg-white rounded-[1.2rem] flex items-center justify-center group-hover/payment:scale-110 transition-transform shadow-md">
+                  {/* Payment Widget */}
+                  <button 
+                    onClick={() => setIsPaymentSelectorOpen(!isPaymentSelectorOpen)}
+                    className="bg-white border-2 border-black rounded-2xl flex items-center justify-between px-4 shadow-md active:scale-95 transition-all group/payment overflow-hidden"
+                    style={{ height: '0.8cm' }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <div className="w-5 h-5 flex items-center justify-center">
                         {paymentMethod === 'card' && (
-                          <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="2" y="5" width="20" height="14" rx="2" />
                             <line x1="2" y1="10" x2="22" y2="10" />
                           </svg>
                         )}
                         {paymentMethod === 'cash' && (
-                          <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="2" y="6" width="20" height="12" rx="2" />
                             <circle cx="12" cy="12" r="3" />
                           </svg>
                         )}
-                        {paymentMethod === 'gpay' && <span className="text-[10px] font-bold">GPay</span>}
-                        {paymentMethod === 'apay' && <span className="text-[10px] font-bold">Pay</span>}
+                        {paymentMethod === 'gpay' && <span className="text-[8px] font-bold">GPay</span>}
+                        {paymentMethod === 'apay' && <span className="text-[8px] font-bold">Pay</span>}
                       </div>
-                      <div className="flex flex-col items-start">
-                        <span className="text-[10px] font-medium text-black/40 uppercase tracking-widest">Plaćanje</span>
-                        <span className="text-[14px] font-bold text-black">
-                          {paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
-                        </span>
-                      </div>
-                      <svg className={`w-5 h-5 text-black/20 transition-transform duration-500 ${isPaymentSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
+                      <span className="text-[12px] font-bold text-black truncate">
+                        {paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                      </span>
+                    </div>
+                    <svg className={`w-4 h-4 text-black/20 transition-transform duration-500 ${isPaymentSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
                   {isAIBooking && (
-                    <div className="flex items-center space-x-3 bg-black text-white px-5 py-2.5 rounded-full shadow-lg">
-                      <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider">-10% AI PROMO</span>
+                    <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
+                      <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider">-10% AI</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center space-x-4 mb-[1.4cm]">
+                <div className="flex items-center space-x-[0.2cm] mb-[1cm]">
                   <button 
                     onClick={handleConfirmRide}
-                    className="flex-1 bg-black text-white h-20 rounded-[3rem] flex items-center justify-center space-x-4 hover:bg-black/90 transition-all duration-700 shadow-[0_30px_70px_rgba(0,0,0,0.35)] active:scale-95 group/order overflow-hidden relative"
+                    className="flex-1 bg-black text-white h-[1.4cm] rounded-[2.5rem] flex items-center justify-center space-x-4 hover:bg-black/90 transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 group/order overflow-hidden relative"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                    <span className="text-[20px] font-bold tracking-tight relative z-10">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
-                    <svg className="w-7 h-7 relative z-10 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="text-[18px] font-bold tracking-tight relative z-10">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
+                    <svg className="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                   </button>
-                  <button className="w-20 h-20 bg-black text-white rounded-full flex items-center justify-center shrink-0 shadow-[0_30px_70px_rgba(0,0,0,0.3)] active:scale-95 transition-all hover:bg-black/90 border-2 border-white/5">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                      <rect x="3" y="4" width="18" height="18" rx="4" ry="4" />
+                  {/* Calendar Widget - Sized to match CTA height, fully rounded */}
+                  <button 
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className="bg-black text-white rounded-full flex items-center justify-center shrink-0 shadow-xl active:scale-95 transition-all hover:bg-black/90 w-[1.4cm] h-[1.4cm]"
+                  >
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <rect x="3" y="4" width="18" height="18" rx="3" ry="3" />
                       <line x1="16" y1="2" x2="16" y2="6" />
                       <line x1="8" y1="2" x2="8" y2="6" />
                       <line x1="3" y1="10" x2="21" y2="10" />
