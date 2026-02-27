@@ -1393,8 +1393,11 @@ export default function RideHailingWidget() {
                             {config.label}
                           </h3>
                           <div className="flex items-center space-x-2">
+                            <span className={`text-[11px] font-bold h-[18px] flex items-center px-1.5 rounded-md ${isSelected ? 'bg-white/10 text-white' : 'bg-black/5 text-black'}`}>
+                              {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                            </span>
                             <span className={`text-[11px] font-bold ${isSelected ? 'text-white/60' : 'text-black/60'}`}>
-                              {(arrivalTimeStr ? arrivalTimeStr : '—')}{etaMinutes != null ? ` • ${etaMinutes} min` : ''}
+                              {(arrivalTimeStr ? arrivalTimeStr : '—')}
                             </span>
                             <span className={`text-[11px] font-bold ${isSelected ? 'text-white/40' : 'text-black/30'}`}>
                               {config.capacity} seats
@@ -1482,7 +1485,7 @@ export default function RideHailingWidget() {
                   className="w-full bg-black text-white h-14 rounded-[1.5rem] flex items-center justify-center space-x-3 hover:bg-black/90 transition-all duration-500 shadow-[0_15px_30px_rgba(0,0,0,0.15)] active:scale-95 group/order overflow-hidden relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                  <span className="text-[16px] font-black uppercase tracking-widest relative z-10">Naruči {RIDE_CLASSES[selectedClass].label}</span>
+                  <span className="text-[16px] font-black uppercase tracking-widest relative z-10">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                   <svg className="w-5 h-5 relative z-10 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
