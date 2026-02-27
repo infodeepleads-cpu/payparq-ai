@@ -263,7 +263,9 @@ function MapContent() {
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
           <div className="flex items-center gap-2 sticky top-0 bg-white z-10 pt-4 pb-2">
             <button
-              onClick={() => router.back()}
+              onClick={() => {
+                router.push('/' as any);
+              }}
               className="p-2 w-9 h-9 text-black hover:opacity-60 transition-opacity active:scale-95 bg-gray-100 rounded-full shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
               aria-label="Natrag"
             >

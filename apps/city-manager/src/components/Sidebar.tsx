@@ -143,7 +143,7 @@ export default function Sidebar() {
           <Link href={{ pathname: "/crm" }} className={`group relative flex items-center justify-center p-2 rounded-md transition-colors ${pathname.includes('crm') ? 'text-black' : 'text-black/60 hover:text-black'}`}>
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14c-4 0-7 2-7 4v3h14v-3c0-2-3-4-7-4z" /></svg>
           </Link>
-          <Link href={{ pathname: "/rides" }} className={`group relative flex items-center justify-center p-2 rounded-md transition-colors ${pathname.includes('rides') ? 'text-black' : 'text-black/60 hover:text-black'}`}>
+          <Link href={{ pathname: "/" }} className={`group relative flex items-center justify-center p-2 rounded-md transition-colors ${pathname === '/' ? 'text-black' : 'text-black/60 hover:text-black'}`}>
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </Link>
         </div>

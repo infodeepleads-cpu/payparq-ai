@@ -16,7 +16,10 @@ mapboxgl.accessToken = (rawToken && rawToken !== "undefined" && rawToken !== "nu
 
 import { getSupabase } from "../lib/supabase";
 
-type FlowStep = 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
+
+type FlowStep = 'home' | 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm';
 
 type RideClass = 'parq_go' | 'parq_taxi' | 'smart_arrival' | 'comfort' | 'van' | 'delivery';
 
@@ -65,7 +68,7 @@ const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
            <path d="M-75 15 L-88 18 L-88 28 L-75 25 Z" fill="#eee" stroke="#ccc" />
            <path d="M75 15 L88 18 L88 28 L75 25 Z" fill="#eee" stroke="#ccc" />`
         }
-        
+
         <!-- Front Grill -->
         <rect x="-40" y="${isVan ? '25' : '48'}" width="80" height="18" rx="10" fill="#4B5563" />
         <path d="M-35 ${isVan ? '31' : '54'} H35 M-35 ${isVan ? '37' : '60'} H35" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
@@ -128,12 +131,12 @@ const RIDE_CLASSES: Record<RideClass, { label: string; description: string; base
     icon: modernRealisticCar3D('#8B5CF6')
   },
   delivery: { 
-    label: 'Parq Dostavljač', 
-    description: 'Package Delivery', 
+    label: 'Kasnije', 
+    description: 'Schedule your ride', 
     basePrice: 1.0, 
-    multiplier: 0.9,
-    capacity: 1,
-    icon: modernRealisticCar3D('#8B5CF6')
+    multiplier: 1.0,
+    capacity: 4,
+    icon: 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" ry="3" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>`)
   },
 };
 
@@ -163,7 +166,7 @@ const POPULAR_DESTINATIONS = [
 export default function RideHailingWidget() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<FlowStep>('search');
+  const [step, setStep] = useState<FlowStep>('home');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>({ lat: 43.5204, lng: 16.4316 });
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
   const [pickupAddress, setPickupAddress] = useState("Poljud, Split");
@@ -178,12 +181,51 @@ export default function RideHailingWidget() {
 
   useEffect(() => {
     setIsMounted(true);
+    
     const now = new Date();
-    setScheduledTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
-    setScheduledDate(now.toISOString().split('T')[0]);
+    const defaultTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const defaultDate = now.toISOString().split('T')[0];
+
+    const loadScheduled = () => {
+      if (typeof window !== 'undefined') {
+        const savedDate = localStorage.getItem('pp_scheduledDate');
+        const savedTime = localStorage.getItem('pp_scheduledTime');
+        setScheduledDate(savedDate || defaultDate);
+        setScheduledTime(savedTime || defaultTime);
+      }
+    };
+
+    loadScheduled();
+
+    // Hide layout when in rides widget (since it's full screen)
+    window.dispatchEvent(new CustomEvent('toggle-layout', { detail: true }));
+
+    // Listen for visibility change or focus to update state when coming back from calendar page
+    const handleFocus = () => loadScheduled();
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.dispatchEvent(new CustomEvent('toggle-layout', { detail: false }));
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'gpay' | 'apay' | 'card' | 'cash'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'gpay' | 'apay' | 'card' | 'cash' | 'payparq'>('card');
+  const [isScheduledMode, setIsScheduledMode] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment_mode') === 'scheduled') {
+      setIsScheduledMode(true);
+      if (paymentMethod === 'cash') {
+        setPaymentMethod('card');
+      }
+    }
+    
+    const stepParam = params.get('step') as FlowStep | null;
+    if (stepParam && ['home', 'search', 'destination', 'payment', 'tracking', 'reservation', 'confirm'].includes(stepParam)) {
+      setStep(stepParam);
+    }
+  }, []);
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isRouting, setIsRouting] = useState(false);
@@ -200,6 +242,9 @@ export default function RideHailingWidget() {
   const [searchType, setSearchType] = useState<'pickup' | 'destination'>('destination');
   const initialParamsHandled = useRef(false);
   const [isPaymentSelectorOpen, setIsPaymentSelectorOpen] = useState(false);
+  const [accountType, setAccountType] = useState<'osobno' | 'posao'>('osobno');
+  const [payparqBalance, setPayparqBalance] = useState<number>(0);
+  const [showPayparqInfo, setShowPayparqInfo] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'parking' | 'rides' | 'delivery'>('rides');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAIBooking, setIsAIBooking] = useState(false);
@@ -218,6 +263,25 @@ export default function RideHailingWidget() {
   const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
   const [sheetHeight, setSheetHeight] = useState<number>(0);
   const dragStart = useRef<{ y: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMethod = localStorage.getItem('pp_paymentMethod') as ('gpay' | 'apay' | 'card' | 'cash' | 'payparq' | null);
+      const savedAcct = localStorage.getItem('pp_accountType') as ('osobno' | 'posao' | null);
+      if (savedMethod) setPaymentMethod(savedMethod);
+      if (savedAcct) setAccountType(savedAcct);
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && typeof window !== 'undefined') {
+        const savedMethod = localStorage.getItem('pp_paymentMethod') as ('gpay' | 'apay' | 'card' | 'cash' | 'payparq' | null);
+        const savedAcct = localStorage.getItem('pp_accountType') as ('osobno' | 'posao' | null);
+        if (savedMethod) setPaymentMethod(savedMethod);
+        if (savedAcct) setAccountType(savedAcct);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   const geoBearing = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const toRad = (d: number) => (d * Math.PI) / 180;
@@ -827,6 +891,18 @@ export default function RideHailingWidget() {
     }
   }, [searchParams, location]);
 
+  // Default experience when nema parametara iz /map:
+  // prikaži odmah destination step umjesto praznog search stepa
+  useEffect(() => {
+    if (initialParamsHandled.current) return;
+    const lat = searchParams.get('dest_lat');
+    const lng = searchParams.get('dest_lng');
+    if (!lat || !lng) {
+      initialParamsHandled.current = true;
+      setStep('destination');
+    }
+  }, [searchParams]);
+
   const getFareEstimate = async () => {
     if (!routeData || !destinationAddress) {
       console.log("Missing routeData or destinationAddress for estimate", { routeData, destinationAddress });
@@ -1009,7 +1085,7 @@ export default function RideHailingWidget() {
    };
 
   return (
-    <div className="relative w-full h-screen bg-white font-sans text-black overflow-hidden flex flex-col">
+    <div className="relative w-full h-screen bg-white font-sans text-black overflow-y-auto custom-scrollbar flex flex-col scroll-smooth">
       {/* Loading Overlay */}
       {loading && (
         <div className="absolute inset-0 z-[10000] bg-black/60 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -1044,21 +1120,146 @@ export default function RideHailingWidget() {
       <div 
         ref={mapContainer} 
         className={`absolute inset-0 z-0 bg-white transition-all duration-300 rounded-none border-0 ${
-          step === 'search' ? 'invisible opacity-0' : 'visible opacity-100 h-full'
+          step === 'home' || step === 'search' ? 'invisible opacity-0' : 'visible opacity-100 h-full'
         }`}
         style={{ backfaceVisibility: 'hidden' }}
       />
 
       {/* UI Content Layer */}
-      <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
+      <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'home' || step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'home' || step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
           <div className={`relative transition-all duration-300 ${
-            step === 'search' 
-              ? 'w-full h-10 md:h-12 border-b border-black/5 flex items-center justify-center px-3' 
+            step === 'home' || step === 'search' 
+              ? 'w-full h-auto flex flex-col items-center justify-center' 
               : 'w-full px-2 h-10 bg-white rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-black/10 flex items-center justify-between'
           }`}>
-            {step !== 'search' && (
+
+            {step === 'home' && (
+              <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col p-6 pointer-events-auto space-y-8 bg-white overflow-y-auto custom-scrollbar h-full">
+                {/* AI Promo Banner */}
+                {isAIBooking && (
+                  <div className="bg-black text-white p-4 rounded-3xl flex items-center justify-between shadow-xl animate-in fade-in slide-in-from-top duration-500">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-[14px] font-black uppercase tracking-wider">10% AI PROMO</div>
+                        <div className="text-[10px] text-white/50 font-bold uppercase tracking-widest">Primijenjeno na sve AI rezervacije</div>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">Aktivno</div>
+                  </div>
+                )}
+
+                {/* Main Search Section */}
+                <div className="space-y-4">
+                  <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">Kamo?</h1>
+                  <button
+                    onClick={() => { setStep('search'); }}
+                    className="w-full flex items-center bg-black/[0.03] hover:bg-black/[0.05] border-2 border-black/5 rounded-[2rem] px-6 h-[1.6cm] transition-all active:scale-95 group"
+                  >
+                    <svg className="w-6 h-6 text-black/20 group-hover:text-black/40 transition-colors mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="text-[18px] font-bold text-black/30">Gdje želite ići?</span>
+                  </button>
+                </div>
+
+                {/* Categories Grid */}
+                <div className="grid grid-cols-1 gap-4">
+                  <button
+                    onClick={() => { setStep('search'); }}
+                    className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'rides' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
+                  >
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="flex flex-col items-start">
+                        <span className="text-[20px] font-black uppercase tracking-tighter">Vožnja</span>
+                        <span className={`text-[11px] font-bold uppercase tracking-widest opacity-50`}>Naruči odmah</span>
+                      </div>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${activeCategory === 'rides' ? 'bg-white/10' : 'bg-black/5'}`}>
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setActiveCategory('parking')}
+                      className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'parking' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
+                    >
+                      <div className="flex flex-col items-start space-y-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeCategory === 'parking' ? 'bg-white/10' : 'bg-black/5'}`}>
+                          <span className="font-black text-lg">P</span>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="text-[15px] font-black uppercase tracking-tighter">Parking</span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Rezerviraj</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveCategory('delivery')}
+                      className={`group relative overflow-hidden p-6 rounded-[2.5rem] border-2 transition-all active:scale-[0.98] ${activeCategory === 'delivery' ? 'bg-black border-black text-white' : 'bg-white border-black/5 text-black hover:border-black/20'}`}
+                    >
+                      <div className="flex flex-col items-start space-y-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeCategory === 'delivery' ? 'bg-white/10' : 'bg-black/5'}`}>
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="text-[15px] font-black uppercase tracking-tighter">Dostava</span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest opacity-50">Paketi</span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent Locations */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/30">Nedavno</span>
+                    <button className="text-[11px] font-black uppercase tracking-[0.2em] text-black/60">Vidi sve</button>
+                  </div>
+                  <div className="space-y-2">
+                    {MOCK_HISTORY.slice(0, 2).map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setDestination({ lat: item.lat, lng: item.lng });
+                          setDestinationAddress(item.address);
+                          setStep('destination');
+                          if (location) {
+                            fetchRoute([location.lng, location.lat], [item.lng, item.lat]);
+                          }
+                        }}
+                        className="w-full flex items-center p-4 rounded-[1.5rem] hover:bg-black/[0.02] transition-colors border border-transparent hover:border-black/5 group"
+                      >
+                        <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
+                          <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="text-[14px] font-bold text-black">{item.name}</span>
+                          <span className="text-[11px] font-medium text-black/30 truncate max-w-[200px]">{item.address}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step !== 'home' && step !== 'search' && (
               <button
                   onClick={() => {
                     if (isConfirmed) {
@@ -1066,7 +1267,18 @@ export default function RideHailingWidget() {
                       setTrackingDriver(null);
                       setStep('destination');
                     } else {
-                      router.back();
+                      const params = new URLSearchParams();
+                      if (location) {
+                        params.set('pickup_lat', location.lat.toString());
+                        params.set('pickup_lng', location.lng.toString());
+                        params.set('pickup_name', pickupAddress);
+                      }
+                      if (destination) {
+                        params.set('dest_lat', destination.lat.toString());
+                        params.set('dest_lng', destination.lng.toString());
+                        params.set('dest_name', destinationAddress);
+                      }
+                      router.push(`/map?${params.toString()}` as any);
                     }
                   }}
                   className="w-7 h-7 rounded-full bg-white hover:bg-black/5 active:scale-95 transition flex items-center justify-center shrink-0 border border-black/10"
@@ -1078,7 +1290,7 @@ export default function RideHailingWidget() {
               </button>
             )}
             
-            {step !== 'search' && (
+            {step !== 'home' && step !== 'search' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
                 <span className="text-[13px] font-bold text-black truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
@@ -1107,7 +1319,7 @@ export default function RideHailingWidget() {
               </div>
             )}
 
-            {step !== 'search' && (
+            {step !== 'home' && step !== 'search' && (
               <button
                 onClick={() => {
                   const params = new URLSearchParams();
@@ -1135,228 +1347,102 @@ export default function RideHailingWidget() {
           </div>
         </div>
 
-        {/* Search Step - Full Screen Experience */}
+        {/* Search Step Content intentionally minimal to match old look */}
         {step === 'search' && (
-          <div className="relative w-full flex-1 flex flex-col md:flex-row bg-white pointer-events-auto animate-in fade-in duration-700 items-center justify-evenly md:justify-center md:gap-8 lg:gap-16 pb-4 md:pb-0 overflow-hidden -mt-16 md:-mt-24">
-            {/* Left/Top Section - Categories & Search */}
-            <div className="w-full md:w-auto flex flex-col items-center justify-center px-4 md:px-6 relative z-20">
-              <div className="w-full max-w-xl flex flex-col items-center text-center">
-                
-                {/* Ultra-Modern Category Selector */}
-                <div className="flex items-center justify-center space-x-1 mb-2 md:mb-6 p-1 bg-white border-2 border-black rounded-2xl scale-[0.85] md:scale-100">
-                  {[
-                    { id: 'parking', label: 'Parking' },
-                    { id: 'rides', label: 'Vožnje' },
-                    { id: 'delivery', label: 'Dostava' }
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setActiveCategory(cat.id as any);
-                        if (cat.id === 'delivery') setSelectedClass('delivery');
-                        else if (cat.id === 'rides') setSelectedClass('parq_taxi');
-                      }}
-                      className={`px-4 md:px-6 py-2 rounded-xl text-[12px] md:text-[13px] font-bold transition-all duration-300 flex items-center space-x-1.5 ${
-                        activeCategory === cat.id
-                          ? 'bg-black text-white'
-                          : 'text-black/40 hover:text-black hover:bg-black/5'
-                      }`}
-                    >
-                      <span>{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Unified Search Widget (Kamo?) */}
-                <div className="w-full max-w-[34rem] relative group z-[110] px-2 md:px-0 flex items-center md:space-x-3">
-                  <div className="flex-1 relative bg-white rounded-[1.25rem] md:rounded-[2rem] border-2 border-black p-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex items-center group-focus-within:shadow-[0_25px_70px_rgba(0,0,0,0.15)]">
-                    <div className="flex-1 flex items-center">
-                      <input 
-                        value={searchQuery}
-                        onChange={(e) => {
-                          handleSearch(e.target.value, 'destination');
-                          if (e.target.value.length > 0) {
-                            setShowSuggestions(true);
-                          } else {
-                            setShowSuggestions(false);
-                          }
-                        }}
-                        onFocus={() => { router.push("/map" as any); }}
-                        onClick={() => { router.push("/map" as any); }}
-                        placeholder="Kamo?"
-                        className="w-full bg-transparent px-4 py-3 md:py-5 text-[16px] md:text-[22px] font-medium placeholder-black/15 focus:outline-none text-black text-left"
-                      />
-                    </div>
-                    
-                    <div className="h-10 md:h-12 w-[2px] bg-black/5 mx-1 md:mx-2"></div>
-
-                    <div className="flex items-center pr-1 md:pr-2">
-                      {/* Delivery Shortcut - Integrated Right */}
-                      <button 
-                        onClick={() => {
-                          setActiveCategory('delivery');
-                          setSelectedClass('delivery');
-                        }}
-                        className="flex items-center space-x-2 px-3 md:px-5 py-2.5 md:py-4 bg-black/5 hover:bg-black hover:text-white rounded-xl md:rounded-2xl transition-all active:scale-95 group/delivery"
-                      >
-                        <svg className="w-4 h-4 md:w-5 md:h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <div className="flex flex-col items-start leading-none text-left">
-                          <span className="text-[7px] md:text-[9px] uppercase tracking-[0.2em] font-black opacity-40 mb-0.5">Dostava</span>
-                          <span className="text-[11px] md:text-[13px] font-black whitespace-nowrap">Paketa</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Polazak button - Now outside the main rectangle */}
-                  <button 
-                    onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="hidden md:flex items-center space-x-3 px-5 py-4 bg-white border-2 border-black hover:bg-black hover:text-white rounded-2xl transition-all active:scale-95 group/schedule shadow-[0_10px_30px_rgba(0,0,0,0.05)]"
-                  >
-                    <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <div className="flex flex-col items-start leading-none text-left">
-                      <span className="text-[9px] uppercase tracking-[0.2em] font-black opacity-40 mb-1">Polazak</span>
-                      <span className="text-[13px] font-black whitespace-nowrap">
-                        {!isMounted ? '...' : (scheduledDate === new Date().toISOString().split('T')[0] ? 'Danas' : scheduledDate.split('-').reverse().slice(0, 2).join('.'))} • {isMounted ? scheduledTime : '...'}
-                      </span>
-                    </div>
-                  </button>
-                </div>
-
-                  {/* Desktop Date Picker Dropdown */}
-                  <div className={`hidden md:${showDatePicker ? 'flex' : 'hidden'} md:absolute md:top-full md:right-0 md:left-auto mt-2 md:mt-4 bg-white md:border-2 md:border-black rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 md:shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[130] w-full md:w-72 animate-in fade-in zoom-in duration-300 relative`}>
-                    <div className="flex flex-col space-y-4 w-full">
-                      <div className="flex flex-row space-x-3">
-                        <div className="flex-1">
-                          <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Datum</label>
-                          <input 
-                            type="date" 
-                            value={scheduledDate}
-                            onChange={(e) => setScheduledDate(e.target.value)}
-                            className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-[9px] uppercase tracking-widest font-black text-black/30 mb-1.5 block text-center md:text-left">Vrijeme</label>
-                          <input 
-                            type="time" 
-                            value={scheduledTime}
-                            onChange={(e) => setScheduledTime(e.target.value)}
-                            className="w-full bg-black/5 border-2 border-transparent rounded-xl px-3 py-3 text-[13px] font-bold focus:outline-none focus:border-black transition-all text-center md:text-left"
-                          />
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setShowDatePicker(false)}
-                        className="hidden md:block w-full bg-black text-white py-4 rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
-                      >
-                        Potvrdi
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Premium Suggestions Dropdown (Now integrated into unified widget) */}
-                {showSuggestions && searchResults.length > 0 && (
-                    <div ref={suggestionsRef} className="absolute top-full left-0 right-0 mt-4 bg-white border-2 border-black rounded-[2rem] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.2)] z-[120] animate-in slide-in-from-top-4 duration-500">
-                      {searchResults.map((item: any, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setDestinationAddress(item.place_name);
-                            setDestination({ lat: item.center[1], lng: item.center[0] });
-                            setStep('destination');
-                            if (location) fetchRoute([item.center[0], item.center[1]], [location.lng, location.lat]);
-                            setShowSuggestions(false);
-                          }}
-                          className="w-full px-6 py-5 text-left hover:bg-black/5 transition-colors border-b border-black/10 last:border-0 flex items-center space-x-4 group/item"
-                        >
-                          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center flex-shrink-0 group-hover/item:bg-black group-hover/item:scale-110 transition-all shadow-lg">
-                            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                              <circle cx="12" cy="10" r="3" />
-                            </svg>
-                          </div>
-                          <div className="flex flex-col flex-1 min-w-0">
-                            <span className="text-[18px] text-black leading-tight truncate transition-colors">{item.place_name.split(',')[0]}</span>
-                            <span className="text-[13px] text-black/30 line-clamp-1">{item.place_name.split(',').slice(1).join(',')}</span>
-                          </div>
-                          <svg className="w-5 h-5 text-black/10 group-hover/item:text-black group-hover/item:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-            <div className="w-full md:w-auto px-4 md:px-6 relative flex flex-col items-center justify-center">
-              <div className="w-full max-w-xl relative z-10 scale-[0.8] md:scale-100">
-                <div className="space-y-3 md:space-y-6 text-center">
-                  <div className="space-y-1.5 md:space-y-4">
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-6 h-[1.5px] bg-black"></div>
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-black/40">Parq Intelligence</span>
-                      <div className="w-6 h-[1.5px] bg-black"></div>
-                    </div>
-                    <h2 className="text-[24px] md:text-[56px] text-black leading-[0.95] tracking-tight font-medium">
-                      Vaš osobni <br/>
-                      <span className="text-black/20 italic">concierge.</span>
-                    </h2>
-                  </div>
-
-                  <div className="space-y-3 md:space-y-6">
-                    <p className="text-[14px] md:text-[17px] text-black/50 leading-relaxed font-medium max-w-[280px] md:max-w-[320px] mx-auto">
-                      Pitajte bilo što — od rezervacije vožnje do pronalaska najboljeg parkinga u gradu.
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {["Najbliži parking?", "Taxi za 10 min", "Dostava paketa"].map((text) => (
-                        <button key={text} className="px-3 py-1.5 rounded-full border border-black/10 text-[11px] md:text-[12px] font-bold text-black/60 hover:border-black hover:text-black transition-all">
-                          {text}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center space-y-4 md:space-y-12">
-                    {/* Promo Label relocated here for mobile only flow */}
-                    <div className="flex items-center justify-center space-x-2">
-                      <span className="text-[10px] text-black/40 uppercase tracking-[0.25em] font-bold">10% discount via <span className="text-black">Parq AI</span></span>
-                    </div>
-
-                    <button 
-                      onClick={() => { setIsAIBooking(true); window.location.href = "/"; }}
-                      className="group inline-flex items-center space-x-3 md:space-x-8"
-                    >
-                      <div className="relative">
-                        <div className="w-14 h-14 md:w-24 md:h-24 bg-black rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-12 shadow-[0_20px_40px_rgba(0,0,0,0.3)]">
-                          <svg className="w-6 h-6 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                          </svg>
-                        </div>
-                        <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-black text-white text-[8px] md:text-[10px] font-black px-1.5 py-0.5 md:px-2 md:py-1 rounded-md border-2 border-white animate-bounce">
-                          -10%
-                        </div>
-                      </div>
-                      <div className="text-left">
-                        <span className="block text-[16px] md:text-[24px] text-black font-medium leading-none mb-1 md:mb-2 group-hover:translate-x-2 transition-transform">Započni Chat</span>
-                        <span className="block text-[8px] md:text-[11px] text-black/30 font-black uppercase tracking-[0.2em]">Dostupno 24/7</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
+          <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col pointer-events-auto bg-white min-h-screen">
+            <div className="flex items-center w-full px-6 py-4 border-b border-black/5 bg-white sticky top-0 z-10">
+              <button
+                onClick={() => setStep('home')}
+                className="mr-4 p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <div className="flex items-center flex-1 bg-black/[0.03] rounded-2xl border border-black/5 px-4 py-2">
+                <svg className="w-5 h-5 text-black/30 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Kamo?"
+                  className="w-full bg-transparent text-[16px] font-bold placeholder-black/20 focus:outline-none text-black"
+                />
               </div>
             </div>
-          </div>
-      )}
-    </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+            {/* Suggestions / Results */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {searchQuery.length > 0 ? (
+                searchResults.length > 0 ? (
+                  searchResults.map((item: any) => (
+                    <button
+                      key={item.id}
+                      onClick={() => selectSearchResult(item)}
+                      className="w-full flex items-center p-4 rounded-3xl hover:bg-black/[0.02] transition-all border border-transparent hover:border-black/5 group"
+                    >
+                      <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
+                        <svg className="w-5 h-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="text-[15px] font-black text-black uppercase tracking-tight">{item.name}</span>
+                        <span className="text-[12px] font-bold text-black/30 truncate max-w-[250px] uppercase tracking-wider">{item.address}</span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-black/20">
+                    <svg className="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span className="text-sm font-black uppercase tracking-widest">Nema rezultata</span>
+                  </div>
+                )
+              ) : (
+                <div className="space-y-6 pt-4">
+                  <div className="px-2">
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-black/30">Popularno</span>
+                  </div>
+                  <div className="space-y-1">
+                    {POPULAR_DESTINATIONS.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setDestination({ lat: item.lat, lng: item.lng });
+                          setDestinationAddress(item.name);
+                          setStep('destination');
+                          if (location) {
+                            fetchRoute([location.lng, location.lat], [item.lng, item.lat]);
+                          }
+                        }}
+                        className="w-full flex items-center p-4 rounded-3xl hover:bg-black/[0.02] transition-all border border-transparent hover:border-black/5 group"
+                      >
+                        <div className="w-12 h-12 bg-black/5 rounded-2xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
+                          <svg className="w-5 h-5 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col items-start text-left">
+                          <span className="text-[14px] font-black text-black uppercase tracking-tight">{item.name}</span>
+                          <span className="text-[11px] font-bold text-black/30 truncate max-w-[250px] uppercase tracking-wider">{item.address}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'home' || step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
             <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
@@ -1368,10 +1454,10 @@ export default function RideHailingWidget() {
           </div>
         )}
 
-        <div
+          <div
             ref={sheetRef}
             className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] rounded-t-[3.5rem] border-x border-t border-black/5 p-8 flex flex-col"
-            style={{ height: 'calc(50vh + 1.5cm)', paddingBottom: 'max(24px, env(safe-area-inset-bottom))', transform: 'translateZ(0)' }}
+            style={{ height: 'calc(50vh + 1.5cm)', paddingBottom: 'calc(max(24px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
           >
           <div className="w-16 h-1.5 bg-black/10 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
@@ -1385,7 +1471,10 @@ export default function RideHailingWidget() {
                   return (
                     <button 
                       key={key}
-                      onClick={() => setSelectedClass(key)}
+                      onClick={() => {
+                        setSelectedClass(key);
+                        if (key === 'delivery') router.push('/calendar' as any);
+                      }}
                       className={`w-full flex items-center justify-between p-5 rounded-[2.5rem] transition-all duration-500 ${
                         isSelected 
                             ? 'bg-black text-white shadow-[0_25px_50px_rgba(0,0,0,0.25)] scale-[1.03] z-10' 
@@ -1444,7 +1533,7 @@ export default function RideHailingWidget() {
                 <div className="flex items-center justify-between">
                   {/* Payment Widget */}
                   <button 
-                    onClick={() => setIsPaymentSelectorOpen(!isPaymentSelectorOpen)}
+                    onClick={() => router.push('/payment' as any)}
                     className="bg-white border-2 border-black rounded-2xl flex items-center justify-between px-4 shadow-md active:scale-95 transition-all group/payment overflow-hidden"
                     style={{ height: '0.8cm' }}
                   >
@@ -1464,9 +1553,14 @@ export default function RideHailingWidget() {
                         )}
                         {paymentMethod === 'gpay' && <span className="text-[8px] font-bold">GPay</span>}
                         {paymentMethod === 'apay' && <span className="text-[8px] font-bold">Pay</span>}
+                        {paymentMethod === 'payparq' && (
+                          <div className="w-4 h-4 bg-black rounded-[6px] flex items-center justify-center">
+                            <span className="text-[7px] font-black text-white leading-none">PQ</span>
+                          </div>
+                        )}
                       </div>
                       <span className="text-[12px] font-bold text-black truncate">
-                        {paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                        {paymentMethod === 'payparq' ? 'Payparq račun' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
                       </span>
                     </div>
                     <svg className={`w-4 h-4 text-black/20 transition-transform duration-500 ${isPaymentSelectorOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -1474,15 +1568,22 @@ export default function RideHailingWidget() {
                     </svg>
                   </button>
 
-                  {isAIBooking && (
-                    <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
-                      <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider">-10% AI</span>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {isScheduledMode && (
+                      <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
+                        <span className="text-[9px] font-black uppercase tracking-wider">Kako biste željeli platiti?</span>
+                      </div>
+                    )}
+                    {isAIBooking && (
+                      <div className="flex items-center space-x-2 bg-black text-white px-3 rounded-full shadow-lg" style={{ height: '0.8cm' }}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">-10% AI</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-[0.2cm] mb-[1.5cm]">
+                <div className="flex items-center space-x-[0.2cm] mb-[2cm] md:mb-[1.5cm]">
                   <button 
                     onClick={handleConfirmRide}
                     className="flex-1 bg-black text-white h-[1.4cm] rounded-[2.5rem] flex items-center justify-center space-x-4 hover:bg-black/90 transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 group/order overflow-hidden relative"
@@ -1495,7 +1596,7 @@ export default function RideHailingWidget() {
                   </button>
                   {/* Calendar Widget - Sized to match CTA height, fully rounded */}
                   <button 
-                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    onClick={() => router.push('/calendar' as any)}
                     className="bg-black text-white rounded-full flex items-center justify-center shrink-0 shadow-xl active:scale-95 transition-all hover:bg-black/90 w-[1.4cm] h-[1.4cm]"
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -1570,7 +1671,9 @@ export default function RideHailingWidget() {
                 <div className="flex flex-col items-end">
                   <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Plaćanje</span>
                   <div className="flex items-center space-x-1.5">
-                    <span className="text-[11px] font-black uppercase">{paymentMethod}</span>
+                    <span className="text-[11px] font-black uppercase">
+                      {paymentMethod === 'payparq' ? 'PAYPARQ' : paymentMethod === 'card' ? 'KARTICA' : paymentMethod === 'cash' ? 'GOTOVINA' : paymentMethod === 'gpay' ? 'GOOGLE PAY' : 'APPLE PAY'}
+                    </span>
                     <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
                       <svg className="w-3.5 h-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                     </div>
@@ -1597,6 +1700,111 @@ export default function RideHailingWidget() {
               </div>
             </div>
           )}
+          {isPaymentSelectorOpen && (
+            <div className="absolute inset-0 z-[200] bg-white rounded-t-[3.5rem] border-x border-t border-black/5 p-5 md:p-6 overflow-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[16px] md:text-[18px] font-black tracking-tight">Plaćanje</h3>
+                <button
+                  onClick={() => setIsPaymentSelectorOpen(false)}
+                  className="w-9 h-9 rounded-xl border-2 border-black flex items-center justify-center active:scale-95"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex items-center bg-black/5 rounded-xl p-1 mb-4">
+                <button
+                  onClick={() => setAccountType('osobno')}
+                  className={`flex-1 py-2 rounded-lg text-[11px] font-black ${accountType === 'osobno' ? 'bg-white border-2 border-black' : 'text-black/60'}`}
+                >
+                  Osobno
+                </button>
+                <button
+                  onClick={() => setAccountType('posao')}
+                  className={`flex-1 py-2 rounded-lg text-[11px] font-black ${accountType === 'posao' ? 'bg-white border-2 border-black' : 'text-black/60'}`}
+                >
+                  Posao
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {(!isScheduledMode) && (
+                  <button
+                    onClick={() => { setPaymentMethod('payparq'); setIsPaymentSelectorOpen(false); }}
+                    className="w-full flex items-center justify-between p-4 border-2 border-black rounded-2xl bg-white active:scale-95 transition-all"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
+                        <span className="text-[9px] font-black text-white leading-none">PQ</span>
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-[13px] font-black">Payparq račun</span>
+                        <span className="text-[10px] text-black/50">Saldo: €{payparqBalance.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <svg className="w-4 h-4 text-black/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                )}
+
+                {(!isScheduledMode) && (
+                  <button
+                    onClick={() => { setPaymentMethod('cash'); setIsPaymentSelectorOpen(false); }}
+                    className="w-full flex items-center justify-between p-4 border-2 border-black rounded-2xl bg-white active:scale-95 transition-all"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-7 h-7 bg-black/5 rounded-lg border-2 border-black flex items-center justify-center">
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="3" /></svg>
+                      </div>
+                      <span className="text-[13px] font-black">Gotovina</span>
+                    </div>
+                    <svg className="w-4 h-4 text-black/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 18l6-6-6-6"/></svg>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => { setPaymentMethod('gpay'); setIsPaymentSelectorOpen(false); }}
+                  className="w-full flex items-center justify-between p-4 border-2 border-black rounded-2xl bg-white active:scale-95 transition-all"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-7 h-7 bg-black/5 rounded-lg border-2 border-black flex items-center justify-center">
+                      <span className="text-[10px] font-black">GPay</span>
+                    </div>
+                    <span className="text-[13px] font-black">Google Pay</span>
+                  </div>
+                  <svg className="w-4 h-4 text-black/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+
+                <button
+                  onClick={() => { setPaymentMethod('card'); setIsPaymentSelectorOpen(false); }}
+                  className="w-full flex items-center justify-between p-4 border-2 border-dashed border-black rounded-2xl bg-white active:scale-95 transition-all"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-7 h-7 bg-black/5 rounded-lg border-2 border-black flex items-center justify-center">
+                      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                    </div>
+                    <span className="text-[13px] font-black">{isScheduledMode ? 'Kartica' : 'Dodaj karticu / način plaćanja'}</span>
+                  </div>
+                  <svg className="w-4 h-4 text-black/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowPayparqInfo(!showPayparqInfo)}
+                className="mt-4 text-[12px] font-bold underline underline-offset-4"
+              >
+                Što je Payparq račun?
+              </button>
+              {showPayparqInfo && (
+                <div className="mt-2 text-[11px] text-black/70">
+                  Payparq račun je interni novčanik za plaćanje vožnji i usluga. Možete ga nadoplatiti i koristiti kao primarni način plaćanja.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Calendar block removed - now uses separate /calendar page */}
         </div>
       </div>
     </div>

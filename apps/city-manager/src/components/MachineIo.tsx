@@ -956,7 +956,7 @@ export default function MachineIo() {
             console.log("Reminder scheduled successfully!");
             systemNote = `✓ System: ${t('reminder_set_for')} ${formatCET(time)} CET`;
 
-            // Native Logic: Schedule Local Notification & Add to Calendar
+            // Native Logic: Schedule Local Notification & (optionally) Add to Calendar
             if (Capacitor.isNativePlatform()) {
               try {
                 // 1. Request Local Notification Permissions
@@ -980,34 +980,37 @@ export default function MachineIo() {
                 });
                 systemNote += ` (${t('native_alert_set')})`;
 
-                // 3. Add to Calendar (Attempt silently, or prompt if needed)
-                try {
-                  const calPerms = await CapacitorCalendar.checkAllPermissions();
-                  let hasWrite = false;
-                  // Handle different permission structures or just request if not granted
-                  // We try to request full access if we don't have it
-                  if (calPerms.result?.writeCalendar !== 'granted' && calPerms.result?.readCalendar !== 'granted') {
-                    // Request full access
-                    await CapacitorCalendar.requestFullCalendarAccess();
-                    hasWrite = true; 
-                  } else {
-                    hasWrite = true;
-                  }
+                // 3. Add to Calendar (Attempt silently if available)
+                const calendarAvailable =
+                  typeof (CapacitorCalendar as any)?.checkAllPermissions === 'function' &&
+                  typeof (CapacitorCalendar as any)?.requestFullCalendarAccess === 'function' &&
+                  typeof (CapacitorCalendar as any)?.createEvent === 'function';
 
-                  if (hasWrite) {
-                    await CapacitorCalendar.createEvent({
-                      title: data.taskTitle,
-                      startDate: time.getTime(),
-                      endDate: time.getTime() + (60 * 60 * 1000), // Default 1 hour
-                      location: "City Manager App",
-                      description: "Created via City Manager AI",
-                      isAllDay: false
-                    });
-                    systemNote += ` (${t('calendar_added')})`;
+                if (calendarAvailable) {
+                  try {
+                    const calPerms = await (CapacitorCalendar as any).checkAllPermissions();
+                    let hasWrite = false;
+                    if (calPerms.result?.writeCalendar !== 'granted' && calPerms.result?.readCalendar !== 'granted') {
+                      await (CapacitorCalendar as any).requestFullCalendarAccess();
+                      hasWrite = true; 
+                    } else {
+                      hasWrite = true;
+                    }
+
+                    if (hasWrite) {
+                      await (CapacitorCalendar as any).createEvent({
+                        title: data.taskTitle,
+                        startDate: time.getTime(),
+                        endDate: time.getTime() + (60 * 60 * 1000), // Default 1 hour
+                        location: "City Manager App",
+                        description: "Created via City Manager AI",
+                        isAllDay: false
+                      });
+                      systemNote += ` (${t('calendar_added')})`;
+                    }
+                  } catch {
+                    // Calendar unavailable or failed; ignore silently on native as non-critical
                   }
-                } catch (calErr) {
-                  console.error("Calendar error:", calErr);
-                  // Don't fail the whole operation if calendar fails
                 }
 
               } catch (nativeErr) {
