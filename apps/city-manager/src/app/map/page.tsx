@@ -259,7 +259,7 @@ function MapContent() {
   return (
     <div className="relative w-full h-screen bg-white">
       <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute bottom-0 left-0 right-0 h-[50vh] bg-white rounded-t-xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[1000] flex flex-col border-t border-black/5">
+      <div className="absolute inset-x-0 bottom-0 z-[1000] flex flex-col bg-white rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-t border-black/5">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2" style={{ height: "1cm" }}>
             <button
