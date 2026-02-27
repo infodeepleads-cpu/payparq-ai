@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -11,6 +11,7 @@ mapboxgl.accessToken = rawToken && rawToken !== "undefined" && rawToken !== "nul
 
 export default function MapPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
@@ -20,6 +21,41 @@ export default function MapPage() {
   ]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [category, setCategory] = useState<"all" | "hospital" | "sport" | "landmark" | "shopping" | "beach">("all");
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const pLat = searchParams.get('pickup_lat');
+    const pLng = searchParams.get('pickup_lng');
+    const pName = searchParams.get('pickup_name');
+    const dLat = searchParams.get('dest_lat');
+    const dLng = searchParams.get('dest_lng');
+    const dName = searchParams.get('dest_name');
+
+    if (pLat && pLng) {
+      setOrigin({ lat: parseFloat(pLat), lng: parseFloat(pLng) });
+      if (pName) setOriginLabel(pName);
+    }
+
+    if (dLat && dLng) {
+      const existingDest = {
+        id: "d1",
+        query: dName || "",
+        suggestions: [],
+        coords: { lat: parseFloat(dLat), lng: parseFloat(dLng) }
+      };
+      
+      if (action === 'add_destination') {
+        setDestinations([
+          existingDest,
+          { id: "d2", query: "", suggestions: [], coords: null }
+        ]);
+      } else {
+        setDestinations([existingDest]);
+      }
+    } else if (action === 'add_destination') {
+      addDestination();
+    }
+  }, [searchParams]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Earth's radius in km
@@ -59,6 +95,11 @@ export default function MapPage() {
     if (category === "all") return popularNearby;
     return popularNearby.filter((d: any) => d.cat === category);
   }, [popularNearby, category]);
+
+  const showAddressesPanel = (() => {
+    const d = destinations[0];
+    return !!(d && d.query && d.query.trim().length > 0 && Array.isArray(d.suggestions) && d.suggestions.length > 0);
+  })();
 
   // Hide global header/sidebar for this page
   useEffect(() => {
@@ -174,85 +215,141 @@ export default function MapPage() {
   const handleChoose = (destId: string, feat: any) => {
     if (!feat || !feat.center) return;
     const [lng, lat] = feat.center;
-    setDestinations(prev => prev.map(d => d.id === destId ? { ...d, query: feat.place_name.split(",")[0], coords: { lat, lng }, suggestions: [] } : d));
+    const placeName = feat.place_name.split(",")[0];
+    
+    setDestinations(prev => prev.map(d => d.id === destId ? { ...d, query: placeName, coords: { lat, lng }, suggestions: [] } : d));
     
     if (mapRef.current) {
       mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
       new mapboxgl.Marker().setLngLat([lng, lat]).addTo(mapRef.current);
     }
+
+    // Prebaci na rides stranicu s parametrima
+    const params = new URLSearchParams();
+    
+    // Uvijek šalji polazište ako postoji
+    if (origin) {
+      params.set('pickup_lat', origin.lat.toString());
+      params.set('pickup_lng', origin.lng.toString());
+      params.set('pickup_name', originLabel);
+    }
+
+    // Šalji sve odabrane destinacije
+    const allDestinations = prev.map(d => d.id === destId ? { ...d, query: placeName, coords: { lat, lng } } : d);
+    
+    allDestinations.forEach((d, index) => {
+      if (d.coords) {
+        params.set(`dest${index + 1}_lat`, d.coords.lat.toString());
+        params.set(`dest${index + 1}_lng`, d.coords.lng.toString());
+        params.set(`dest${index + 1}_name`, d.query);
+      }
+    });
+
+    // Backward compatibility for single destination
+    if (lat && lng) {
+      params.set('dest_lat', lat.toString());
+      params.set('dest_lng', lng.toString());
+      params.set('dest_name', placeName);
+    }
+
+    router.push(`/rides?${params.toString()}`);
   };
 
   return (
     <div className="relative w-full h-screen bg-white">
       <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute top-4 left-0 w-full px-[3px] max-w-2xl space-y-3 z-[1000]">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full px-4 max-w-xl space-y-3 z-[1000]">
         <div className="flex items-center gap-2" style={{ height: "1cm" }}>
           <button
             onClick={() => router.back()}
-            className="p-2 text-black hover:opacity-60 transition-opacity active:scale-95 bg-white rounded-full shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
+            className="p-2 w-9 h-9 text-black hover:opacity-60 transition-opacity active:scale-95 bg-white rounded-full shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
             aria-label="Natrag"
-            style={{ height: "1cm", width: "1cm" }}
           >
             <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <div className="bg-white px-4 rounded-full border-0 shadow-none">
+          <div className="bg-white rounded-full border-0 shadow-none pl-3">
             <h1 className="text-black text-[14px] font-bold leading-[calc(1cm-4px)]">Odaberi destinaciju</h1>
           </div>
         </div>
         <div className="flex flex-col space-y-3">
-          <div className="bg-white rounded-2xl p-3 border-0 shadow-none">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-2xl px-2 border-0 shadow-none" style={{ height: "1cm" }}>
-                <div className="flex items-center space-x-2">
-                  <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                  <div className="font-bold text-[14px] truncate">{originLabel}</div>
+            <div className="bg-white rounded-2xl p-3 border-0 shadow-none">
+              <div className="space-y-3">
+              <div className="flex items-center justify-between h-[40px]">
+                <div className="relative flex items-center rounded-2xl border border-black shadow-md h-full flex-1 pl-[44px] mr-[6px]">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                  </div>
+                  <div className="font-bold text-[14px] truncate flex-1">{originLabel}</div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={addDestination}
-                  className="w-10 h-10 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 focus:outline-none focus:ring-0 outline-none ring-0"
-                    aria-label="Dodaj odredište"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
-                  </button>
-                </div>
+                <button
+                  onClick={addDestination}
+                  className="ml-2 w-9 h-9 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 border border-black shadow-md shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
+                  aria-label="Dodaj odredište"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
               </div>
 
               {destinations.map((dest, idx) => (
                 <div key={dest.id} className="space-y-2">
-                  <div className="flex items-center rounded-2xl px-2 border-0 shadow-none" style={{ height: "1cm" }}>
-                    <input
-                      value={dest.query}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setDestinations(prev => prev.map(d => d.id === dest.id ? { ...d, query: val } : d));
-                      }}
-                      placeholder={idx === 0 ? "Upiši adresu" : `Dodatno odredište ${idx + 1}`}
-                      className="flex-1 px-3 rounded-xl border-none bg-white focus:outline-none text-[14px] font-bold h-full min-w-0"
-                    />
-                    {idx === 0 && (
+                  <div className="flex items-center justify-between h-[40px]">
+                  <div className="relative flex items-center rounded-2xl border border-black shadow-md h-full flex-1 pl-[44px] mr-[6px]">
+                      <svg className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="11" cy="11" r="7" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      </svg>
+                      <input
+                        value={dest.query}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDestinations(prev => prev.map(d => d.id === dest.id ? { ...d, query: val } : d));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && dest.suggestions.length > 0) {
+                            handleChoose(dest.id, dest.suggestions[0]);
+                          }
+                        }}
+                        placeholder={idx === 0 ? "Upiši adresu" : `Dodatno odredište ${idx + 1}`}
+                        className="flex-1 pl-0 pr-10 rounded-xl border-none bg-white focus:outline-none text-[14px] font-bold h-full min-w-0"
+                      />
+                      {dest.query && dest.query.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDestinations(prev => prev.map(d => d.id === dest.id ? { ...d, query: "", suggestions: [] } : d));
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black text-white hover:opacity-70 focus:outline-none flex items-center justify-center z-10"
+                          aria-label="Obriši unos"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    {idx === 0 ? (
                       <button
                         onClick={handleSwap}
-                        className="ml-2 w-10 h-10 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 group shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
+                        className="ml-2 w-9 h-9 rounded-full flex items-center justify-center bg-white text-black hover:opacity-70 transition-all active:scale-95 group shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
                         aria-label="Zamijeni lokacije"
                       >
-                        <svg className="w-6 h-6 group-active:rotate-180 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <svg className="w-5 h-5 group-active:rotate-180 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                           <path d="M7 10l5-5 5 5M7 14l5 5 5-5" />
                         </svg>
                       </button>
-                    )}
-                    {idx > 0 && (
+                    ) : (
                       <button
                         onClick={() => setDestinations(prev => prev.filter(d => d.id !== dest.id))}
-                        className="ml-2 w-8 h-10 flex items-center justify-center bg-white text-red-600 hover:opacity-70 transition-all active:scale-95 shrink-0 focus:outline-none focus:ring-0 outline-none ring-0"
+                        className="ml-2 w-9 h-9 rounded-full flex items-center justify-center bg-white text-red-600 hover:opacity-70 transition-all active:scale-95 shrink-0 border border-black shadow-md focus:outline-none focus:ring-0 outline-none ring-0"
+                        aria-label="Ukloni odredište"
                       >
                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
                     )}
                   </div>
                     {/* Prijedlozi za ovaj input */}
-                    {dest.suggestions.length > 0 && (
-                      <div className="mt-1 max-h-48 overflow-auto bg-white rounded-xl">
+                    {idx !== 0 && dest.suggestions.length > 0 && (
+                      <div className="mt-1 max-h-48 overflow-auto bg-white rounded-xl border-0 shadow-none">
                         {dest.suggestions.map((f: any, i: number) => (
                           <button
                             key={i}
@@ -274,33 +371,55 @@ export default function MapPage() {
             </div>
             {/* Popularne destinacije ispod widgeta */}
             <div className="bg-white rounded-2xl p-3 border-0 shadow-none">
-              <div className="flex items-center space-x-2 mb-2">
+              <div className="flex items-center space-x-2 mb-2 pl-3">
                 <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                <span className="text-[12px] font-medium text-black">Najčešće i popularno</span>
+                <span className="text-[12px] font-medium text-black">{showAddressesPanel ? "Adrese" : "Najčešće i popularno"}</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                {filteredPopular.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => {
-                      const firstEmpty = destinations.find(d => !d.query) || destinations[0];
-                      handleChoose(firstEmpty.id, {
-                        place_name: `${d.name}, ${d.address}`,
-                        center: [d.lng, d.lat]
-                      });
-                    }}
-                    className="flex items-center justify-between w-full text-left px-3 py-2 rounded-lg bg-white hover:bg-black hover:text-white transition-colors focus:outline-none focus:ring-0 outline-none ring-0 border-0 shadow-none"
-                  >
-                    <div className="min-w-0 flex-1 mr-2">
-                      <div className="text-[14px] font-medium truncate">{d.name}</div>
-                      <div className="text-[11px] font-medium truncate opacity-70">{d.address}</div>
-                    </div>
-                    <div className="text-[12px] font-bold shrink-0">
-                      {origin ? `${calculateDistance(origin.lat, origin.lng, d.lat, d.lng).toFixed(1)} km` : "— km"}
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {showAddressesPanel ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  {destinations[0].suggestions.map((f: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => handleChoose(destinations[0].id, f)}
+                      className="flex items-center justify-between w-full text-left px-3 py-2 rounded-lg bg-white hover:bg-black hover:text-white transition-colors focus:outline-none focus:ring-0 outline-none ring-0 border-0 shadow-none"
+                    >
+                      <div className="min-w-0 flex-1 mr-2">
+                        <div className="text-[14px] font-medium truncate">{f.place_name?.split(",")[0]}</div>
+                        <div className="text-[11px] font-medium truncate opacity-70">{f.place_name?.split(",").slice(1).join(",")}</div>
+                      </div>
+                      <div className="text-[12px] font-bold shrink-0">
+                        {origin && Array.isArray(f.center) && f.center.length >= 2
+                          ? `${calculateDistance(origin.lat, origin.lng, f.center[1], f.center[0]).toFixed(1)} km`
+                          : "— km"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  {filteredPopular.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => {
+                        const firstEmpty = destinations.find(d => !d.query) || destinations[0];
+                        handleChoose(firstEmpty.id, {
+                          place_name: `${d.name}, ${d.address}`,
+                          center: [d.lng, d.lat]
+                        });
+                      }}
+                      className="flex items-center justify-between w-full text-left px-3 py-2 rounded-lg bg-white hover:bg-black hover:text-white transition-colors focus:outline-none focus:ring-0 outline-none ring-0 border-0 shadow-none"
+                    >
+                      <div className="min-w-0 flex-1 mr-2">
+                        <div className="text-[14px] font-medium truncate">{d.name}</div>
+                        <div className="text-[11px] font-medium truncate opacity-70">{d.address}</div>
+                      </div>
+                      <div className="text-[12px] font-bold shrink-0">
+                        {origin ? `${calculateDistance(origin.lat, origin.lng, d.lat, d.lng).toFixed(1)} km` : "— km"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
         </div>
       </div>

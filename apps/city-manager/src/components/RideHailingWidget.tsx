@@ -5,7 +5,7 @@ import * as h3 from "h3-js";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // Placeholder token
 const FALLBACK_TOKEN = "pk.eyJ1Ijoia3phbWljIiwiYSI6ImNtbTF2MmFkOTAwbG0yc3Nld2MzaTE2dmMifQ.q4dvho0LQS1TY11pewfm1Q";
@@ -162,11 +162,13 @@ const POPULAR_DESTINATIONS = [
 
 export default function RideHailingWidget() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<FlowStep>('search');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>({ lat: 43.5204, lng: 16.4316 });
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
   const [pickupAddress, setPickupAddress] = useState("Poljud, Split");
   const [destinationAddress, setDestinationAddress] = useState("");
+  const [extraDestinations, setExtraDestinations] = useState<any[]>([]);
   const [h3Index, setH3Index] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState<RideClass>('parq_taxi');
@@ -176,6 +178,7 @@ export default function RideHailingWidget() {
   const [paymentMethod, setPaymentMethod] = useState<'gpay' | 'apay' | 'card' | 'cash'>('card');
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isRouting, setIsRouting] = useState(false);
   const [routeData, setRouteData] = useState<{ distance: number; duration: number } | null>(null);
   const [trackingDriver, setTrackingDriver] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -187,6 +190,7 @@ export default function RideHailingWidget() {
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [searchType, setSearchType] = useState<'pickup' | 'destination'>('destination');
+  const initialParamsHandled = useRef(false);
   const [isPaymentSelectorOpen, setIsPaymentSelectorOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'parking' | 'rides' | 'delivery'>('rides');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -589,7 +593,7 @@ export default function RideHailingWidget() {
     }
   };
 
-  const updateMarker = (id: string, lngLat: [number, number], type: 'pickup' | 'destination', overrideLabel?: string) => {
+  const updateMarker = (id: string, lngLat: [number, number], type: 'pickup' | 'destination', overrideLabel?: string, waitTime?: number) => {
     if (!map.current) return;
     if (driverMarkers.current[id]) {
       driverMarkers.current[id].remove();
@@ -614,11 +618,19 @@ export default function RideHailingWidget() {
       `;
     } else {
       el.innerHTML = `
-        <div class="flex flex-col items-center">
+        <div class="flex flex-col items-center relative">
           <div class="px-3 py-1.5 mb-2 rounded-lg bg-white shadow-xl border-2 border-black flex items-center gap-2 transform transition-transform group-hover:scale-105">
             <span class="text-[12px] font-black text-black whitespace-nowrap">${label}</span>
             <svg class="w-3 h-3 text-black/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
           </div>
+          
+          <div class="absolute -right-14 top-1/2 -translate-y-1/2 bg-black text-white w-10 h-10 flex items-center justify-center rounded-lg shadow-xl border-2 border-white">
+            <div class="flex flex-col items-center">
+              <span class="text-[14px] font-black leading-none">${waitTime || 4}</span>
+              <span class="text-[8px] font-bold uppercase leading-none mt-0.5">min</span>
+            </div>
+          </div>
+
           <div class="w-4 h-4 bg-black rounded-md border-2 border-white shadow-lg"></div>
         </div>
       `;
@@ -649,7 +661,7 @@ export default function RideHailingWidget() {
       return;
     }
     
-    setLoading(true);
+    setIsRouting(true);
     try {
       console.log('Fetching route for:', start, end);
       const query = await fetch(
@@ -734,13 +746,13 @@ export default function RideHailingWidget() {
           });
           
           updateMarker("self", start, "pickup");
-          updateMarker("destination", end, "destination");
+          updateMarker("destination", end, "destination", undefined, 4);
           
           // Fit map to route bounds
           const bounds = new mapboxgl.LngLatBounds();
           route.forEach((coord: [number, number]) => bounds.extend(coord));
           mapInstance.fitBounds(bounds, { 
-            padding: { top: 60, bottom: 140, left: 60, right: 60 },
+            padding: { top: 80, bottom: 440, left: 40, right: 40 },
             duration: 1500
           });
         }
@@ -750,9 +762,62 @@ export default function RideHailingWidget() {
     } catch (error) {
       console.error('Error fetching route:', error);
     } finally {
-      setLoading(false);
+      setIsRouting(false);
     }
   };
+
+  // Handle query parameters from map page
+  useEffect(() => {
+    if (initialParamsHandled.current) return;
+    
+    const lat = searchParams.get('dest_lat');
+    const lng = searchParams.get('dest_lng');
+    const name = searchParams.get('dest_name');
+    const pLat = searchParams.get('pickup_lat');
+    const pLng = searchParams.get('pickup_lng');
+    const pName = searchParams.get('pickup_name');
+
+    // Handle multiple destinations
+    const extra: any[] = [];
+    let i = 2;
+    while (searchParams.has(`dest${i}_lat`)) {
+      extra.push({
+        lat: parseFloat(searchParams.get(`dest${i}_lat`)!),
+        lng: parseFloat(searchParams.get(`dest${i}_lng`)!),
+        name: searchParams.get(`dest${i}_name`)!
+      });
+      i++;
+    }
+
+    if (pLat && pLng && pName) {
+      setLocation({ lat: parseFloat(pLat), lng: parseFloat(pLng) });
+      setPickupAddress(pName);
+    }
+
+    if (lat && lng && name && (location || pLat)) {
+      initialParamsHandled.current = true;
+      const destinationCoords = { lat: parseFloat(lat), lng: parseFloat(lng) };
+      setDestination(destinationCoords);
+      setDestinationAddress(name);
+      setExtraDestinations(extra);
+      setStep('destination');
+      
+      // Pokušaj dohvatiti rutu čim je mapa spremna
+      const tryFetch = () => {
+        if (map.current && map.current.loaded()) {
+          const origin = pLat ? { lat: parseFloat(pLat), lng: parseFloat(pLng!) } : location;
+          if (origin) {
+            // Here we could handle multi-point routing if the API supports it, 
+            // but for now let's just use the final destination.
+            fetchRoute([origin.lng, origin.lat], [destinationCoords.lng, destinationCoords.lat]);
+          }
+        } else {
+          setTimeout(tryFetch, 100);
+        }
+      };
+      tryFetch();
+    }
+  }, [searchParams, location]);
 
   const getFareEstimate = async () => {
     if (!routeData || !destinationAddress) {
@@ -954,6 +1019,16 @@ export default function RideHailingWidget() {
         </div>
       )}
 
+      {/* Routing overlay (less intrusive) */}
+      {isRouting && (
+        <div className="absolute inset-0 z-[9999] bg-white/40 backdrop-blur-sm flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
+          <div className="bg-black text-white px-6 py-3 rounded-2xl flex items-center space-x-3 shadow-2xl animate-pulse">
+            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <span className="font-black text-[14px] uppercase tracking-widest">Računamo rutu...</span>
+          </div>
+        </div>
+      )}
+
       {/* Hidden helper for Tailwind classes used in markers */}
       <div className="hidden bg-white" />
 
@@ -969,27 +1044,87 @@ export default function RideHailingWidget() {
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className="relative w-full h-10 md:h-12 bg-white z-[1003] pointer-events-auto flex items-center justify-center flex-shrink-0">
-          {step !== 'search' && (
-            <button
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4'}`}>
+          <div className={`relative transition-all duration-300 ${
+            step === 'search' 
+              ? 'w-full h-10 md:h-12 border-b border-black/5 flex items-center justify-center px-3' 
+              : 'w-full px-2 h-10 bg-white rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-black/10 flex items-center justify-between'
+          }`}>
+            {step !== 'search' && (
+              <button
+                  onClick={() => {
+                    if (isConfirmed) {
+                      setIsConfirmed(false);
+                      setTrackingDriver(null);
+                      setStep('destination');
+                    } else {
+                      router.back();
+                    }
+                  }}
+                  className="w-7 h-7 rounded-full bg-white hover:bg-black/5 active:scale-95 transition flex items-center justify-center shrink-0 border border-black/10"
+                  aria-label="Back"
+                >
+                <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+            )}
+            
+            {step !== 'search' && (
+              <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
+                <span className="text-[13px] font-bold text-black truncate min-w-0 shrink">
+                  {pickupAddress.split(',')[0]}
+                </span>
+                
+                {/* Arrow to first destination */}
+                <svg className="w-3 h-3 text-black/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+
+                <span className="text-[13px] font-black text-black truncate min-w-0 shrink">
+                  {destinationAddress.split(',')[0]}
+                </span>
+
+                {/* Additional destinations */}
+                {extraDestinations.map((dest, idx) => (
+                  <div key={idx} className="flex items-center space-x-1.5 shrink-0 min-w-0">
+                    <svg className="w-3 h-3 text-black/30 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    <span className="text-[13px] font-black text-black truncate min-w-0 shrink">
+                      {dest.name.split(',')[0]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {step !== 'search' && (
+              <button
                 onClick={() => {
-                  if (isConfirmed) {
-                    setIsConfirmed(false);
-                    setTrackingDriver(null);
-                    setStep('destination');
-                  } else {
-                    setStep('search');
+                  const params = new URLSearchParams();
+                  params.set('action', 'add_destination');
+                  if (location) {
+                    params.set('pickup_lat', location.lat.toString());
+                    params.set('pickup_lng', location.lng.toString());
+                    params.set('pickup_name', pickupAddress);
                   }
+                  if (destination) {
+                    params.set('dest_lat', destination.lat.toString());
+                    params.set('dest_lng', destination.lng.toString());
+                    params.set('dest_name', destinationAddress);
+                  }
+                  router.push(`/map?${params.toString()}` as any);
                 }}
-                className="absolute left-3 w-6 h-6 rounded-full bg-white hover:bg-white active:scale-95 transition flex items-center justify-center shadow-sm"
-                aria-label="Back"
+                className="w-7 h-7 rounded-full bg-white hover:bg-black/5 active:scale-95 transition flex items-center justify-center shrink-0 border border-black/10"
+                aria-label="Add Route"
               >
-              <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-          )}
-          <span className={`text-black font-black tracking-tighter select-none text-xl transition-opacity duration-300 ${step === 'search' ? 'hidden' : 'opacity-100'}`}>parq</span>
+                <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Search Step - Full Screen Experience */}
@@ -1042,7 +1177,6 @@ export default function RideHailingWidget() {
                         onClick={() => { router.push("/map" as any); }}
                         placeholder="Kamo?"
                         className="w-full bg-transparent px-4 py-3 md:py-5 text-[16px] md:text-[22px] font-medium placeholder-black/15 focus:outline-none text-black text-left"
-                        autoFocus
                       />
                     </div>
                     
@@ -1214,7 +1348,7 @@ export default function RideHailingWidget() {
       )}
     </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'px-4 pb-4 translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
             <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
@@ -1228,7 +1362,7 @@ export default function RideHailingWidget() {
 
         <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-500 shadow-[0_-25px_80px_rgba(0,0,0,0.15)] rounded-t-[2.5rem] border-t-2 border-black p-6 flex flex-col"
+            className="relative bg-white pointer-events-auto transition-all duration-500 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-[2.5rem] border-2 border-black p-6 flex flex-col"
             style={{ height: sheetHeight, paddingBottom: 'max(24px, env(safe-area-inset-bottom))', transform: 'translateZ(0)' }}
           >
           <div className="w-12 h-1.5 bg-black rounded-full mx-auto mb-6 cursor-grab active:cursor-grabbing hover:bg-black transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
@@ -1270,7 +1404,12 @@ export default function RideHailingWidget() {
                       </div>
                       
                       <div className="flex flex-col items-end">
-                        {(() => {
+                        {isLoadingEstimate ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                            <span className="text-[14px] font-black text-black/20 italic tracking-tighter">Računam...</span>
+                          </div>
+                        ) : (() => {
                           const base = getClassPrice(key as RideClass);
                           if (base == null) return <span className={`text-[15px] font-black ${isSelected ? 'text-white/20' : 'text-black/10'}`}>—</span>;
                           const discounted = isAIBooking ? base * 0.9 : base;
