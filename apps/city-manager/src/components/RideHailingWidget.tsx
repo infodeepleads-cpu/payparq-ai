@@ -172,8 +172,16 @@ export default function RideHailingWidget() {
   const [h3Index, setH3Index] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<any>(null);
   const [selectedClass, setSelectedClass] = useState<RideClass>('parq_taxi');
-  const [scheduledTime, setScheduledTime] = useState<string>(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-  const [scheduledDate, setScheduledDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [scheduledTime, setScheduledTime] = useState<string>("");
+  const [scheduledDate, setScheduledDate] = useState<string>("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const now = new Date();
+    setScheduledTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    setScheduledDate(now.toISOString().split('T')[0]);
+  }, []);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'gpay' | 'apay' | 'card' | 'cash'>('card');
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
@@ -1213,7 +1221,7 @@ export default function RideHailingWidget() {
                     <div className="flex flex-col items-start leading-none text-left">
                       <span className="text-[9px] uppercase tracking-[0.2em] font-black opacity-40 mb-1">Polazak</span>
                       <span className="text-[13px] font-black whitespace-nowrap">
-                        {scheduledDate === new Date().toISOString().split('T')[0] ? 'Danas' : scheduledDate.split('-').reverse().slice(0, 2).join('.')} • {scheduledTime}
+                        {!isMounted ? '...' : (scheduledDate === new Date().toISOString().split('T')[0] ? 'Danas' : scheduledDate.split('-').reverse().slice(0, 2).join('.'))} • {isMounted ? scheduledTime : '...'}
                       </span>
                     </div>
                   </button>
@@ -1474,7 +1482,7 @@ export default function RideHailingWidget() {
                   )}
                 </div>
 
-                <div className="flex items-center space-x-[0.2cm] mb-[1cm]">
+                <div className="flex items-center space-x-[0.2cm] mb-[1.5cm]">
                   <button 
                     onClick={handleConfirmRide}
                     className="flex-1 bg-black text-white h-[1.4cm] rounded-[2.5rem] flex items-center justify-center space-x-4 hover:bg-black/90 transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-95 group/order overflow-hidden relative"
