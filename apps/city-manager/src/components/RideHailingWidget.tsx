@@ -1426,7 +1426,7 @@ export default function RideHailingWidget() {
             className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/5 p-6 flex flex-col"
             style={{ height: 'calc(45vh + 1.5cm)', paddingBottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
           >
-          <div className="w-[38px] h-1.5 bg-black/[0.12] rounded-full mx-auto mb-6 cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          <div className="w-[1cm] h-[0.1cm] bg-black/[0.12] rounded-full mx-auto mt-[0.1cm] mb-[0.1cm] cursor-grab active:cursor-grabbing hover:bg-black/20 transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
