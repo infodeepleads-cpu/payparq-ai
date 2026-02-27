@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import RideHailingWidget from "../../components/RideHailingWidget";
 import Link from "next/link";
 
@@ -24,7 +25,9 @@ export default function SetLocationPage() {
 
       {/* Main Content */}
       <div className="flex-1 max-w-md mx-auto w-full bg-white shadow-2xl">
-        <RideHailingWidget />
+        <Suspense fallback={<div className="w-full h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" /></div>}>
+          <RideHailingWidget />
+        </Suspense>
       </div>
 
       {/* Footer Info */}

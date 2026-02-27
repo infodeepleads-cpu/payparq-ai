@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -9,7 +9,7 @@ const FALLBACK_TOKEN = "pk.eyJ1Ijoia3phbWljIiwiYSI6ImNtbTF2MmFkOTAwbG0yc3Nld2Mza
 const rawToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string | undefined;
 mapboxgl.accessToken = rawToken && rawToken !== "undefined" && rawToken !== "null" && rawToken.length > 10 ? rawToken : FALLBACK_TOKEN;
 
-export default function MapPage() {
+function MapContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -425,6 +425,14 @@ export default function MapPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-screen bg-white flex items-center justify-center"><div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin" /></div>}>
+      <MapContent />
+    </Suspense>
   );
 }
 
