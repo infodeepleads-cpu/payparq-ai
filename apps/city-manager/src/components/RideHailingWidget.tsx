@@ -1348,7 +1348,7 @@ export default function RideHailingWidget() {
       )}
     </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'px-4 pb-4 translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
             <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
@@ -1362,8 +1362,8 @@ export default function RideHailingWidget() {
 
         <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-500 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-[2.5rem] border-2 border-black p-6 flex flex-col"
-            style={{ height: sheetHeight, paddingBottom: 'max(24px, env(safe-area-inset-bottom))', transform: 'translateZ(0)' }}
+            className="relative bg-white pointer-events-auto transition-all duration-500 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-t-[2.5rem] border-x-2 border-t-2 border-black p-6 flex flex-col"
+            style={{ height: '50vh', paddingBottom: 'max(24px, env(safe-area-inset-bottom))', transform: 'translateZ(0)' }}
           >
           <div className="w-12 h-1.5 bg-black rounded-full mx-auto mb-6 cursor-grab active:cursor-grabbing hover:bg-black transition-colors" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
