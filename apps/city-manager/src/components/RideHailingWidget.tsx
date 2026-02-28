@@ -169,7 +169,17 @@ const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
 const birdViewCarSVG = (accent: string = '#7C3AED') =>
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    `<svg width="40" height="80" viewBox="0 0 40 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="30" height="60" viewBox="0 0 40 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="carGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.25" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+
+      <!-- Glow Effect -->
+      <rect x="2" y="4" width="36" height="72" rx="12" fill="${accent}" fill-opacity="0.35" filter="url(#carGlow)"/>
+      
       <!-- Shadow -->
       <rect x="4" y="10" width="32" height="64" rx="10" fill="black" fill-opacity="0.15" filter="blur(3px)"/>
       
@@ -179,11 +189,11 @@ const birdViewCarSVG = (accent: string = '#7C3AED') =>
       <!-- Roof -->
       <rect x="9" y="28" width="22" height="26" rx="4" fill="white" stroke="#F3F4F6" stroke-width="1"/>
       
-      <!-- Windshield (Front) -->
-      <path d="M9 22 C9 22 20 18 31 22 L31 28 C31 28 20 24 9 28 Z" fill="${accent}" fill-opacity="0.85"/>
+      <!-- Windshield (Front) - NOW VIOLET AND CENTERED -->
+      <path d="M12 22 C12 22 20 18 28 22 L28 28 C28 28 20 24 12 28 Z" fill="${accent}" fill-opacity="0.95"/>
       
-      <!-- Rear Window -->
-      <path d="M9 54 C9 54 20 58 31 54 L31 60 C31 60 20 64 9 60 Z" fill="${accent}" fill-opacity="0.85"/>
+      <!-- Rear Window (Now simple dark) -->
+      <path d="M9 54 C9 54 20 58 31 54 L31 60 C31 60 20 64 9 60 Z" fill="#1F2937" fill-opacity="0.7"/>
       
       <!-- Side Windows -->
       <rect x="7" y="30" width="2" height="22" rx="1" fill="#1F2937" fill-opacity="0.7"/>
@@ -202,9 +212,6 @@ const birdViewCarSVG = (accent: string = '#7C3AED') =>
       <!-- Taillights -->
       <rect x="6" y="70" width="7" height="3" rx="1" fill="#F87171" fill-opacity="0.8"/>
       <rect x="27" y="70" width="7" height="3" rx="1" fill="#F87171" fill-opacity="0.8"/>
-      
-      <!-- Accent Line (Brand Color) -->
-      <rect x="18" y="38" width="4" height="6" rx="1" fill="${accent}" fill-opacity="0.8"/>
     </svg>`
   );
 
@@ -401,6 +408,7 @@ export default function RideHailingWidget() {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
   const [sheetHeight, setSheetHeight] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ y: number; height: number } | null>(null);
 
   useEffect(() => {
@@ -642,9 +650,9 @@ export default function RideHailingWidget() {
   useEffect(() => {
     const computeHeights = () => {
       const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-      // Reverted to mid-view standard (approx 50% vh)
-      const collapsed = Math.max(380, Math.min(460, Math.round(vh * 0.55)));
-      const expanded = Math.round(vh * 0.88);
+      // 228px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
+      const collapsed = 228; 
+      const expanded = vh; // Covers the whole screen including top widget
       setSheetHeight(sheetSnap === 'collapsed' ? collapsed : expanded);
     };
     computeHeights();
@@ -656,26 +664,36 @@ export default function RideHailingWidget() {
   const onSheetPointerDown = (e: React.PointerEvent) => {
     const startY = e.clientY;
     dragStart.current = { y: startY, height: sheetHeight };
+    setIsDragging(true);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const onSheetPointerMove = (e: React.PointerEvent) => {
     if (!dragStart.current) return;
     const dy = dragStart.current.y - e.clientY;
-    const next = Math.max(120, Math.min((typeof window !== 'undefined' ? window.innerHeight * 0.92 : 700), dragStart.current.height + dy));
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const next = Math.max(120, Math.min(vh * 0.95, dragStart.current.height + dy));
     setSheetHeight(next);
+    
+    // Dynamically switch snap state during drag for better visual feedback
+    const collapsed = 228;
+    const expanded = vh; // Covers the whole screen including top widget
+    const mid = (collapsed + expanded) / 2;
+    if (next > mid && sheetSnap !== 'expanded') setSheetSnap('expanded');
+    if (next <= mid && sheetSnap !== 'collapsed') setSheetSnap('collapsed');
   };
 
   const onSheetPointerUp = (e: React.PointerEvent) => {
     if (!dragStart.current) return;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const collapsed = Math.max(380, Math.min(460, Math.round(vh * 0.55)));
-    const expanded = Math.round(vh * 0.88);
+    const collapsed = 228;
+    const expanded = vh; // Covers the whole screen including top widget
     const mid = (collapsed + expanded) / 2;
     const snap = sheetHeight > mid ? 'expanded' : 'collapsed';
     setSheetSnap(snap);
     setSheetHeight(snap === 'collapsed' ? collapsed : expanded);
     dragStart.current = null;
+    setIsDragging(false);
   };
 
   // Handle step transitions and layout visibility
@@ -718,7 +736,7 @@ export default function RideHailingWidget() {
         console.log("Initializing map...");
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/mapbox/streets-v12",
+          style: "mapbox://styles/mapbox/light-v11",
           center: [16.4401, 43.5186],
           zoom: 16,
           pitch: 60,
@@ -1331,17 +1349,17 @@ export default function RideHailingWidget() {
         className={`fixed inset-0 z-0 bg-white transition-all duration-300 ${
           step === 'search' ? 'invisible opacity-0' : 'visible opacity-100'
         }`}
-        style={{ backfaceVisibility: 'hidden', willChange: 'transform' }}
+        style={{ backfaceVisibility: 'hidden', willChange: 'transform', filter: 'brightness(1.08) saturate(0.85) contrast(1.02)' }}
       />
 
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'pl-1 pr-4 pt-4 -mx-px -mt-px'}`}>
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 bg-white ${step === 'search' ? '' : 'border-b border-black/10 shadow-[0_15px_50px_rgba(0,0,0,0.08)] px-2'}`}>
           <div className={`relative transition-all duration-300 ${
             step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
-              : 'w-full px-4 h-11 bg-white rounded-2xl shadow-[0_15px_45px_rgba(0,0,0,0.12)] border border-black/10 flex items-center justify-between'
+              : 'w-full px-2 h-[1.3cm] flex items-center justify-between'
           }`}>
 
             {step !== 'search' && (
@@ -1377,7 +1395,7 @@ export default function RideHailingWidget() {
             
             {step !== 'search' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
-                <span className="text-[13px] font-medium text-[#6D28D9] truncate min-w-0 shrink">
+                <span className="text-[14px] font-medium text-[#6D28D9] truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
                 </span>
                 
@@ -1386,7 +1404,7 @@ export default function RideHailingWidget() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
 
-                <span className="text-[13px] font-light text-black truncate min-w-0 shrink">
+                <span className="text-[14px] font-light text-black truncate min-w-0 shrink">
                   {destinationAddress.split(',')[0]}
                 </span>
 
@@ -1444,7 +1462,7 @@ export default function RideHailingWidget() {
                   <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <div className="flex items-center flex-1 bg-black/[0.03] rounded-xl px-3 py-1.5">
+              <div className="flex items-center flex-1 bg-white border border-black/10 rounded-xl px-3 py-1.5 shadow-sm">
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -1523,13 +1541,20 @@ export default function RideHailingWidget() {
 
       </div>
 
-      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 -mx-px ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-0 left-0 right-0 z-[9999] flex flex-col justify-end transition-all duration-500 ${step === 'search' ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
         {isAIBooking && (
           <div className="mb-[-20px] z-[10000] relative px-6">
-            <div className="bg-black h-[32px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-                <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">10% AI PROMO APPLIED</span>
+            <div className="bg-black h-[38px] rounded-t-2xl flex items-center justify-center shadow-[0_-10px_30px_rgba(0,0,0,0.2)] relative border-x-[3px] border-t-[3px] border-black px-4">
+              <div className="flex items-center space-x-3 w-full justify-center">
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0"></div>
+                <div className="flex items-center space-x-2 overflow-hidden">
+                  <span className="text-[12px] font-black text-white uppercase tracking-[0.15em] whitespace-nowrap">10% AI PROMO APPLIED</span>
+                  {arrivalTimeStr && (
+                    <span className="text-[12px] font-black text-white uppercase tracking-[0.15em] whitespace-nowrap bg-white/20 px-2 py-0.5 rounded-md">
+                      Arrive {arrivalTimeStr}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1537,18 +1562,25 @@ export default function RideHailingWidget() {
 
           <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/10 px-4 pt-0 pb-6 flex flex-col"
-            style={{ height: 'calc(45vh + 1.5cm)', paddingBottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
+            className={`fixed bottom-0 left-0 right-0 bg-white pointer-events-auto transition-all shadow-[0_-15px_50px_rgba(0,0,0,0.1)] rounded-t-[1.5rem] border-t border-black/10 px-2 pt-0 flex flex-col antialiased z-[1005] ${isDragging ? 'duration-0' : 'duration-700'}`}
+            style={{ height: `${sheetHeight}px`, paddingBottom: 'calc(max(4px, env(safe-area-inset-bottom)))', transform: 'translateZ(0)' }}
           >
-          <div className="absolute top-[0.2cm] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/20 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/30 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+          <div className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/40 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/60 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
           
-          <div className="h-[calc(0.4cm+4px)] shrink-0"></div>
+          <div className="h-[12px] shrink-0"></div>
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
             <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-5 duration-700">
-              <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
-                {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[]).map((key, index) => {
+              <div 
+                className={`flex-1 overflow-y-auto custom-scrollbar ${sheetSnap === 'collapsed' ? 'overflow-hidden pt-1' : 'space-y-2'}`}
+                onPointerDown={onSheetPointerDown} 
+                onPointerMove={onSheetPointerMove} 
+                onPointerUp={onSheetPointerUp}
+              >
+                {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[])
+                  .filter(key => sheetSnap === 'expanded' || key === selectedClass)
+                  .map((key, index) => {
                   const config = RIDE_CLASSES[key];
                   const isSelected = selectedClass === key;
                   const isParqGo = key === 'parq_go';
@@ -1561,94 +1593,113 @@ export default function RideHailingWidget() {
                         }}
                         className={`w-full flex items-center justify-between transition-all duration-300 rounded-2xl group relative overflow-hidden ${
                           isSelected 
-                            ? 'h-[2.6cm] bg-white border-[3px] border-[#6D28D9] shadow-lg px-2' 
-                            : 'h-[1.3cm] px-2 bg-white border-2 border-transparent hover:bg-black/[0.02]'
+                            ? 'h-[3.0cm] bg-white border-[3px] border-[#6D28D9] shadow-lg px-2 py-[0.1cm]' 
+                            : 'h-[1.5cm] px-2 py-[0.1cm] bg-white border-2 border-transparent hover:bg-black/[0.02]'
                         }`}
                       >
                         {isSelected ? (
                           // Expanded State (Selected)
                           <div className="flex items-center w-full justify-between">
-                            <div className="w-32 h-16 flex items-center justify-center ml-1">
-                              <img src={config.icon} alt={config.label} className="w-full h-full object-contain scale-125" />
+                            <div className="w-32 h-16 flex items-center justify-center ml-[0.3cm]">
+                              <img 
+                                src={config.icon} 
+                                alt={config.label} 
+                                className="w-full h-full object-contain scale-125 contrast-[1.12] brightness-[1.04] saturate-[1.05] antialiased" 
+                                style={{ imageRendering: 'auto' }}
+                              />
                             </div>
                             
-                            <div className="flex flex-col items-end space-y-0.5">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="text-[14px] font-medium text-black leading-none">
+                              <div className="flex flex-col items-end space-y-0.5 mr-[0.2cm]">
+                               <div className="flex items-center space-x-2 leading-none">
+                                  <h3 className="text-[14px] font-light text-black leading-none tracking-tight">
                                   {config.label}
                                 </h3>
-                                <div className="flex items-center text-black/30">
-                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                  </svg>
-                                  <span className="ml-0.5 text-[11px] font-medium">{config.capacity}</span>
+                                  <div className="flex items-center text-black/60 leading-none">
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                      <circle cx="9" cy="7" r="4" />
+                                    </svg>
+                                    <span className="ml-0.5 text-[11px] font-bold tracking-tight leading-none">{config.capacity}</span>
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="flex flex-col items-end">
-                                {isLoadingEstimate ? (
-                                  <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
-                                ) : (() => {
-                                  const base = getClassPrice(key as RideClass);
-                                  if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
-                                  const discounted = isAIBooking ? base * 0.9 : base;
-                                  return (
-                                    <span className="text-[14px] font-medium text-black leading-none">
+                                
+                                <div className="flex flex-col items-end leading-none">
+                                  {isLoadingEstimate ? (
+                                    <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                                  ) : (() => {
+                                    const base = getClassPrice(key as RideClass);
+                                    if (base == null) return <span className="text-[13px] font-medium text-black/5 tracking-tight leading-none">—</span>;
+                                    const discounted = isAIBooking ? base * 0.9 : base;
+                                    return (
+                                      <span className="text-[14px] font-light text-black leading-none tracking-tight">
                                       €{discounted.toFixed(2)}
                                     </span>
-                                  );
-                                })()}
+                                    );
+                                  })()}
+                                </div>
+  
+                                <span className="text-[11px] text-black/60 font-light leading-none tracking-tight">
+                                  {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                  {arrivalTimeStr ? (
+                                    <>
+                                      {' • '}
+                                      <span className="font-light">{arrivalTimeStr}</span>
+                                    </>
+                                  ) : ''}
+                                </span>
                               </div>
-
-                              <span className="text-[11px] text-black/40 leading-none">
-                                {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                                {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
-                              </span>
-                            </div>
                           </div>
                         ) : (
                           // Normal State (Not Selected)
                           <>
-                            <div className="flex items-center space-x-3">
-                               <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
-                                 <img src={config.icon} alt={config.label} className="w-full h-full object-contain" />
-                               </div>
-                               <div className="flex flex-col items-start leading-none justify-center mt-[-1px]">
-                                   <div className="flex items-center space-x-2">
-                                     <h3 className="text-[13px] font-medium text-black leading-none">
-                                       {config.label}
-                                     </h3>
-                                     <div className="flex items-center text-black/30">
-                                       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                         <circle cx="9" cy="7" r="4" />
-                                       </svg>
-                                       <span className="ml-0.5 text-[10px] font-medium">{config.capacity}</span>
-                                     </div>
-                                   </div>
-                                   <span className="text-[10px] text-black/40 mt-[-3px] leading-none">
-                                      {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                                      {arrivalTimeStr ? ` • ${arrivalTimeStr}` : ''}
-                                    </span>
-                                 </div>
+                            <div className="flex items-center space-x-3 ml-[0.2cm]">
+                              <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
+                                <img 
+                                  src={config.icon} 
+                                  alt={config.label} 
+                                  className="w-full h-full object-contain contrast-[1.1] brightness-[1.03] saturate-[1.02] antialiased" 
+                                />
+                              </div>
+                              <div className="flex flex-col items-start leading-none justify-center mt-[-1px]">
+                                  <div className="flex items-center space-x-2">
+                                    <h3 className="text-[13px] font-light text-black leading-none tracking-tight">
+                                      {config.label}
+                                    </h3>
+                                    <div className="flex items-center text-black/60">
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                      </svg>
+                                      <span className="ml-0.5 text-[10px] font-bold tracking-tight">{config.capacity}</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] text-black/60 mt-[-3px] font-light leading-none tracking-tight">
+                                     {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                     {arrivalTimeStr ? (
+                                       <>
+                                         {' • '}
+                                         <span className="font-light">{arrivalTimeStr}</span>
+                                       </>
+                                     ) : ''}
+                                   </span>
+                                </div>
                             </div>
                             
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-end mr-[0.2cm]">
                               {isLoadingEstimate ? (
                                 <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
                               ) : (() => {
                                 const base = getClassPrice(key as RideClass);
-                                if (base == null) return <span className="text-[13px] font-normal text-black/5">—</span>;
+                                if (base == null) return <span className="text-[13px] font-medium text-black/5 tracking-tight">—</span>;
                                 const discounted = isAIBooking ? base * 0.9 : base;
                                 return (
                                   <div className="flex flex-col items-end">
                                     {isAIBooking && (
-                                      <span className="text-[9px] line-through text-black/20">
+                                      <span className="text-[9px] line-through text-black/20 tracking-tight">
                                         €{base.toFixed(2)}
                                       </span>
                                     )}
-                                    <span className="text-[15px] font-medium text-black">
+                                    <span className="text-[15px] font-light text-black tracking-tight">
                                       €{discounted.toFixed(2)}
                                     </span>
                                   </div>
@@ -1667,8 +1718,8 @@ export default function RideHailingWidget() {
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className="-mx-4 h-px bg-black/10 mb-2" />
-              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
+              <div className={`w-full h-px bg-black/10 ${sheetSnap === 'collapsed' ? 'mt-[12px] mb-1' : 'mb-1'}`} />
+              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-1">
                 <button 
                   onClick={() => {
                     const params = new URLSearchParams(window.location.search);
@@ -1716,7 +1767,7 @@ export default function RideHailingWidget() {
                     onClick={() => router.push('/calendar' as any)}
                     className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
                   >
-                    <svg className="w-4 h-4 text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="w-[18px] h-[18px] text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
                     </svg>
                     <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
@@ -1728,7 +1779,7 @@ export default function RideHailingWidget() {
                   onClick={handleConfirmRide}
                   className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none"
                 >
-                  <span className="text-[15px] font-bold">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
+                  <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                 </button>
             </div>
           )}
@@ -1745,7 +1796,7 @@ export default function RideHailingWidget() {
                   </div>
                 </div>
                 <div className="w-14 h-14 bg-black rounded-[1.2rem] flex items-center justify-center shadow-xl overflow-hidden p-2 rotate-3 hover:rotate-0 transition-transform duration-500">
-                  <img src={RIDE_CLASSES[selectedClass].icon} alt="Car Icon" className="w-full h-full object-contain" />
+                  <img src={RIDE_CLASSES[selectedClass].icon} alt="Car Icon" className="w-full h-full object-contain contrast-[1.15] brightness-[1.06] saturate-[1.08] antialiased" />
                 </div>
               </div>
 
@@ -1762,7 +1813,7 @@ export default function RideHailingWidget() {
                 </div>
                 <div className="flex-1 relative z-10 min-w-0">
                   <h3 className="text-[14px] font-black text-black tracking-tight mb-0.5 truncate">{trackingDriver?.name || 'Marko Jurić'}</h3>
-                  <p className="text-black/50 text-[10px] font-bold mb-1 truncate">{trackingDriver?.car || 'Škoda Octavia • ZG-1234-PQ'}</p>
+                  <p className="text-black/50 text-[10px] font-bold mb-1 truncate tracking-tight">{trackingDriver?.car || 'Škoda Octavia • ZG-1234-PQ'}</p>
                   <div className="flex items-center space-x-1.5">
                     <div className="px-1.5 py-0.5 bg-black text-white rounded-md text-[7px] font-black uppercase tracking-widest whitespace-nowrap">Verified Partner</div>
                   </div>
@@ -1784,10 +1835,10 @@ export default function RideHailingWidget() {
               {/* Price & Payment Summary */}
               <div className="bg-black text-white rounded-[1.5rem] p-4 flex items-center justify-between mb-4 shadow-xl border-2 border-black group/price hover:scale-[1.02] transition-all">
                 <div className="flex flex-col">
-                  <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Ukupna cijena</span>
+                  <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-0.5">Ukupna cijena</span>
                   <div className="flex items-baseline space-x-1.5">
-                    <span className="text-[18px] font-black">€{getClassPrice(selectedClass)?.toFixed(2)}</span>
-                    <span className="text-[10px] font-bold text-white/40">Fixed</span>
+                    <span className="text-[18px] font-bold">€{getClassPrice(selectedClass)?.toFixed(2)}</span>
+                    <span className="text-[10px] font-medium text-white/40">Fixed</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
