@@ -650,9 +650,9 @@ export default function RideHailingWidget() {
   useEffect(() => {
     const computeHeights = () => {
       const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-      // 256px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
-    const collapsed = 256; 
-    const expanded = vh; // Covers the whole screen including top widget
+      // 228px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
+     const collapsed = 228; 
+     const expanded = vh; // Covers the whole screen including top widget
       setSheetHeight(sheetSnap === 'collapsed' ? collapsed : expanded);
     };
     computeHeights();
@@ -1718,8 +1718,8 @@ export default function RideHailingWidget() {
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className={`w-full h-px bg-black/10 ${sheetSnap === 'collapsed' ? 'mt-[12px] mb-1' : 'mb-1'}`} />
-              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-1">
+              <div className={`w-full h-px bg-black/10 ${sheetSnap === 'collapsed' ? 'mt-[12px] mb-2' : 'mb-2'}`} />
+              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
                 <button 
                   onClick={() => {
                     const params = new URLSearchParams(window.location.search);
@@ -1777,7 +1777,7 @@ export default function RideHailingWidget() {
 
                 <button 
                   onClick={handleConfirmRide}
-                  className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none"
+                  className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mb-1"
                 >
                   <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                 </button>
