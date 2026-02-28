@@ -19,7 +19,8 @@ import { getSupabase } from "../lib/supabase";
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
 
-type FlowStep = 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm';
+type FlowStep = 'search' | 'destination' | 'payment' | 'tracking' | 'reservation' | 'confirm' | 'pickup';
+type RideStatus = 'idle' | 'searching' | 'matched' | 'arrived' | 'en_route' | 'completed' | 'no_drivers';
 
 type RideClass = 'parq_go' | 'parq_taxi' | 'smart_arrival' | 'comfort' | 'van' | 'delivery';
 
@@ -293,8 +294,12 @@ export default function RideHailingWidget() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<FlowStep>('search');
+  const stepRef = useRef<FlowStep>(step);
+  useEffect(() => { stepRef.current = step; }, [step]);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>({ lat: 43.5204, lng: 16.4316 });
   const [destination, setDestination] = useState<{ lat: number; lng: number } | null>(null);
+  const destinationRef = useRef<{ lat: number; lng: number } | null>(destination);
+  useEffect(() => { destinationRef.current = destination; }, [destination]);
   const [pickupAddress, setPickupAddress] = useState("Poljud, Split");
   const [destinationAddress, setDestinationAddress] = useState("");
   const [extraDestinations, setExtraDestinations] = useState<any[]>([]);
@@ -360,7 +365,7 @@ export default function RideHailingWidget() {
     }
     
     const stepParam = params.get('step') as FlowStep | null;
-    if (stepParam && ['search', 'destination', 'payment', 'tracking', 'reservation', 'confirm'].includes(stepParam)) {
+    if (stepParam && ['search', 'destination', 'payment', 'tracking', 'reservation', 'confirm', 'pickup'].includes(stepParam)) {
       setStep(stepParam);
     }
   }, []);
@@ -384,6 +389,8 @@ export default function RideHailingWidget() {
   const [isSearching, setIsSearching] = useState(false);
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [rideStatus, setRideStatus] = useState<RideStatus>('idle');
+  const [waitingTimer, setWaitingTimer] = useState<number>(0);
   const [searchType, setSearchType] = useState<'pickup' | 'destination'>('destination');
   const initialParamsHandled = useRef(false);
   const [isPaymentSelectorOpen, setIsPaymentSelectorOpen] = useState(false);
@@ -393,6 +400,115 @@ export default function RideHailingWidget() {
   const [activeCategory, setActiveCategory] = useState<'parking' | 'rides' | 'delivery'>('rides');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAIBooking, setIsAIBooking] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const bookingGuardRef = useRef(false);
+  const rideStatusRef = useRef<RideStatus>('idle');
+  const [waitingMs, setWaitingMs] = useState(0);
+  const [driverNote, setDriverNote] = useState('');
+  const [isMapMoving, setIsMapMoving] = useState(false);
+  const lastThrottledFetchRef = useRef<number>(0);
+  const [currentPickupAddress, setCurrentPickupAddress] = useState('');
+  const [waitingFeeActive, setWaitingFeeActive] = useState(false);
+  const [waitingFeeEuro, setWaitingFeeEuro] = useState(0);
+  const [finalFareEuro, setFinalFareEuro] = useState<number | null>(null);
+  const [tipEuro, setTipEuro] = useState(0);
+  const [lockedFareEuro, setLockedFareEuro] = useState<number | null>(null);
+  const lockedClassRef = useRef<RideClass | null>(null);
+  const [rideStartTs, setRideStartTs] = useState<number | null>(null);
+  const [pendingSurchargeEuro, setPendingSurchargeEuro] = useState<number>(0);
+  const [notifyScheduledId, setNotifyScheduledId] = useState<number | null>(null);
+  const lastDriverPosRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastMoveTsRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    rideStatusRef.current = rideStatus;
+  }, [rideStatus]);
+
+  useEffect(() => {
+    const update = () => setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+
+  const getAdaptiveSearchTimeoutMs = () => {
+    const h = new Date().getHours();
+    return h >= 0 && h < 6 ? 90000 : 60000;
+  };
+
+  const scheduleNoDriversNotification = async () => {
+    try {
+      const perm: any = await LocalNotifications.requestPermissions();
+      const granted = perm?.display === 'granted' || perm?.receive === 'granted';
+      if (!granted) return;
+      const id = Math.floor(Math.random() * 1000000);
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id,
+            title: 'Trenutno nema vozača',
+            body: 'Javit ćemo kad vozači postanu dostupni.',
+            schedule: { at: new Date(Date.now() + 5 * 60 * 1000) }
+          }
+        ]
+      });
+      setNotifyScheduledId(id);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (rideStatus !== 'arrived') return;
+    setWaitingMs(0);
+    setWaitingFeeActive(false);
+    setWaitingFeeEuro(0);
+    const start = Date.now();
+    const graceMs = 3 * 60 * 1000;
+    const ratePerMin = 0.5;
+    const noShowMs = 7 * 60 * 1000;
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - start;
+      setWaitingMs(elapsed);
+      if (elapsed > graceMs) {
+        const overMin = Math.max(0, Math.ceil((elapsed - graceMs) / 60000));
+        const fee = overMin * ratePerMin;
+        setWaitingFeeActive(true);
+        setWaitingFeeEuro(parseFloat(fee.toFixed(2)));
+      }
+      if (elapsed >= noShowMs) {
+        clearInterval(timer);
+        const base = getClassPrice(selectedClass) || 0;
+        const total = (typeof base === 'number' ? base : parseFloat(String(base) || '0')) + (waitingFeeEuro || 0);
+        setFinalFareEuro(parseFloat(total.toFixed(2)));
+        setRideStatus('completed');
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rideStatus, selectedClass, waitingFeeEuro]);
+
+  useEffect(() => {
+    if (rideStatus !== 'matched') return;
+    const d = nearbyDrivers?.[0];
+    if (!d) return;
+    if (!lastDriverPosRef.current) {
+      lastDriverPosRef.current = { lat: d.lat, lng: d.lng };
+      lastMoveTsRef.current = Date.now();
+      return;
+    }
+    const prev = lastDriverPosRef.current;
+    const dist = Math.hypot(d.lat - prev.lat, d.lng - prev.lng);
+    if (dist > 0.00005) {
+      lastDriverPosRef.current = { lat: d.lat, lng: d.lng };
+      lastMoveTsRef.current = Date.now();
+    } else {
+      if (Date.now() - lastMoveTsRef.current > 120000) {
+        setRideStatus('searching');
+      }
+    }
+  }, [nearbyDrivers, rideStatus]);
 
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -418,6 +534,12 @@ export default function RideHailingWidget() {
       const savedAcct = localStorage.getItem('pp_accountType') as ('osobno' | 'posao' | null);
       if (savedMethod) setPaymentMethod(savedMethod);
       if (savedAcct) setAccountType(savedAcct);
+      const lf = localStorage.getItem('pp_lockedFare');
+      if (lf) setLockedFareEuro(parseFloat(lf));
+      const lc = localStorage.getItem('pp_lockedClass') as RideClass | null;
+      if (lc) lockedClassRef.current = lc;
+      const dn = localStorage.getItem('pp_driverNote');
+      if (dn) setDriverNote(dn);
     }
     const onVis = () => {
       if (document.visibilityState === 'visible' && typeof window !== 'undefined') {
@@ -425,6 +547,12 @@ export default function RideHailingWidget() {
         const savedAcct = localStorage.getItem('pp_accountType') as ('osobno' | 'posao' | null);
         if (savedMethod) setPaymentMethod(savedMethod);
         if (savedAcct) setAccountType(savedAcct);
+        const lf = localStorage.getItem('pp_lockedFare');
+        if (lf) setLockedFareEuro(parseFloat(lf));
+        const lc = localStorage.getItem('pp_lockedClass') as RideClass | null;
+        if (lc) lockedClassRef.current = lc;
+        const dn = localStorage.getItem('pp_driverNote');
+        if (dn) setDriverNote(dn);
       }
     };
     document.addEventListener('visibilitychange', onVis);
@@ -657,7 +785,7 @@ export default function RideHailingWidget() {
       const BAR_H = 128; // Raised by 0.5cm (20px) from previous 109px to match expected 128px
       
       const minimized = WIDGET_H + BAR_H;
-      const collapsed = currentVh * 0.75 - 38; // Lowered by 1cm (~38px) per user request
+      const collapsed = currentVh * 0.75; 
       const expanded = currentVh; 
       
       let targetHeight = minimized;
@@ -717,6 +845,49 @@ export default function RideHailingWidget() {
       setIsDragging(false);
     };
 
+  useEffect(() => {
+    if (step === 'pickup' && map.current) {
+      // Remove the pickup marker when in pickup step to avoid double pins
+      if (driverMarkers.current['self']) {
+        driverMarkers.current['self'].remove();
+      }
+
+      // Small delay to ensure everything is initialized
+      setTimeout(() => {
+        // COORDINATES MUST BE [lng, lat] for Mapbox
+        const coords = pickSafeCenter(
+          routeData?.geometry?.coordinates?.[0],
+          location ? [location.lng, location.lat] : null
+        );
+        
+        // Ensure we are not zooming to 0,0
+        if (coords[0] !== 0 && coords[1] !== 0) {
+          console.log("Zooming to pickup location:", coords);
+          if (map.current) {
+            map.current.flyTo({
+              center: [coords[0], coords[1]],
+              zoom: 18.5,
+              duration: 1000,
+              essential: true
+            });
+            
+            // After flying, update the address based on the final center
+            setTimeout(async () => {
+              if (map.current) {
+                const center = map.current.getCenter();
+                const addr = await reverseGeocode(center.lng, center.lat);
+                setCurrentPickupAddress(addr);
+              }
+            }, 1100);
+          }
+        }
+      }, 200);
+      
+      // Set sheet to minimized/collapsed to show the map and pin
+      setSheetSnap('minimized');
+    }
+  }, [step]); // Only trigger when entering the step
+
   // Reset snap state when entering destination step
   useEffect(() => {
     if (step === 'destination' && !isConfirmed) {
@@ -745,6 +916,13 @@ export default function RideHailingWidget() {
     };
   }, [step, isConfirmed]);
 
+  // Ensure we have a pickup address text when entering pickup step
+  useEffect(() => {
+    if (step === 'pickup' && !currentPickupAddress && location) {
+      reverseGeocode(location.lng, location.lat).then(setCurrentPickupAddress);
+    }
+  }, [step]);
+
   const getClassPrice = (cls: RideClass) => {
     const item = Array.isArray(estimate) ? (estimate as any[]).find((e: any) => e.class === cls) : null;
     if (!item) return null;
@@ -754,6 +932,15 @@ export default function RideHailingWidget() {
   };
 
   const distanceKm = routeData ? (routeData.distance / 1000) : null;
+  const DEFAULT_PICKUP: [number, number] = [16.4316, 43.5204];
+  const isValidLngLat = (lng?: any, lat?: any) => Number.isFinite(lng) && Number.isFinite(lat) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lng === 0 && lat === 0);
+  const pickSafeCenter = (...pairs: Array<[number, number] | null | undefined>) => {
+    for (const p of pairs) {
+      if (p && isValidLngLat(p[0], p[1])) return p as [number, number];
+    }
+    return DEFAULT_PICKUP;
+  };
+  const lastGoodCenterRef = useRef<[number, number]>(DEFAULT_PICKUP);
 
   // 0. Initialize Map
   useEffect(() => {
@@ -779,6 +966,57 @@ export default function RideHailingWidget() {
           map.current?.resize();
         });
 
+        map.current.on('move', () => {
+          setIsMapMoving(true);
+        });
+
+        map.current.on('moveend', async () => {
+          setIsMapMoving(false);
+          if (map.current) {
+            const center = map.current.getCenter();
+            if (isValidLngLat(center.lng, center.lat)) lastGoodCenterRef.current = [center.lng, center.lat];
+            if (stepRef.current === 'pickup') {
+              const addr = await reverseGeocode(center.lng, center.lat);
+              setCurrentPickupAddress(addr);
+              if (destinationRef.current) {
+                await fetchRoute([center.lng, center.lat], [destinationRef.current.lng, destinationRef.current.lat]);
+                if (lockedFareEuro != null && lockedClassRef.current) {
+                  try {
+                    let region = 'zagreb';
+                    const da = (destinationAddress || '').toLowerCase();
+                    if (da.includes('split')) region = 'split';
+                    else if (da.includes('dubrovnik')) region = 'dubrovnik';
+                    else if (da.includes('zadar')) region = 'zadar';
+                    else if (da.includes('rijeka')) region = 'rijeka';
+                    else if (da.includes('istra') || da.includes('pula') || da.includes('poreč') || da.includes('rovinj')) region = 'istria';
+                    const dist = routeData?.distance || 0;
+                    const dur = routeData?.duration || 0;
+                    if (dist > 0 && dur > 0) {
+                      const res = await fetch('/api/rides/estimate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          dist_meters: dist,
+                          time_seconds: dur,
+                          h3_zone_id: region,
+                          is_payparq_lot: false
+                        })
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        const item = Array.isArray(data.estimates) ? data.estimates.find((e: any) => e.id === lockedClassRef.current) : null;
+                        const actual = item && typeof item.fare === 'number' ? item.fare : lockedFareEuro;
+                        const delta = actual - lockedFareEuro;
+                        setPendingSurchargeEuro(delta > 0 ? parseFloat(delta.toFixed(2)) : 0);
+                      }
+                    }
+                  } catch {}
+                }
+              }
+            }
+          }
+        });
+
         // Update map state
         map.current.on('error', (e) => {
           const err: any = e as any;
@@ -796,8 +1034,8 @@ export default function RideHailingWidget() {
       console.error("Critical map initialization error:", err);
     }
 
-    // Geolocation detection
-    detectLocation();
+    // Geolocation detection removed from mount to prevent overwriting user selection
+    // detectLocation();
 
     return () => {
       // Cleanup markers on unmount
@@ -817,7 +1055,7 @@ export default function RideHailingWidget() {
         map.current?.resize();
         
         // After resize, ensure the route is still visible in the new viewport
-        if (location && destination && step !== 'search') {
+        if (location && destination && step !== 'search' && step !== 'pickup') {
           const bounds = new mapboxgl.LngLatBounds()
             .extend([location.lng, location.lat])
             .extend([destination.lng, destination.lat]);
@@ -860,33 +1098,73 @@ export default function RideHailingWidget() {
     return () => {};
   }, []);
 
+  useEffect(() => {
+    if (!map.current) return;
+    const m = map.current;
+    try { m.dragPan.enable(); } catch {}
+    try { m.scrollZoom.enable(); } catch {}
+    try { m.boxZoom.enable(); } catch {}
+    try { m.doubleClickZoom.enable(); } catch {}
+    try { m.touchZoomRotate.enable(); } catch {}
+    try { m.keyboard.enable(); } catch {}
+  }, [step]);
+
   const detectLocation = () => {
+    if (!window.isSecureContext) {
+      alert("Za dohvat lokacije otvorite aplikaciju preko HTTPS veze.");
+      return;
+    }
     if (navigator.geolocation) {
-      // Don't overwrite the initial default unless we're actually searching
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
           setLocation({ lat: latitude, lng: longitude });
           const addr = await reverseGeocode(longitude, latitude);
           setPickupAddress(addr);
-          
+          setCurrentPickupAddress(addr);
           if (map.current) {
-            map.current.flyTo({ center: [longitude, latitude], zoom: 14 });
-            updateMarker("self", [longitude, latitude], "pickup", addr);
+            map.current.flyTo({ center: [longitude, latitude], zoom: 16, essential: true });
+            updateMarker("pickup", [longitude, latitude], "pickup", addr);
+            if (destination) {
+              fetchRoute([longitude, latitude], [destination.lng, destination.lat]);
+            }
           }
         },
-        (err) => {
-          console.warn("Geolocation error:", err);
-          // Keep the default that's already set in state
+        async (err) => {
+          console.error("Geolocation error:", err);
+          try {
+            const r = await fetch("https://ipapi.co/json/");
+            if (r.ok) {
+              const j = await r.json();
+              if (j && typeof j.latitude === "number" && typeof j.longitude === "number") {
+                const latitude = j.latitude;
+                const longitude = j.longitude;
+                setLocation({ lat: latitude, lng: longitude });
+                const addr = await reverseGeocode(longitude, latitude);
+                setPickupAddress(addr);
+                setCurrentPickupAddress(addr);
+                if (map.current) {
+                  map.current.flyTo({ center: [longitude, latitude], zoom: 14, essential: true });
+                  updateMarker("pickup", [longitude, latitude], "pickup", addr);
+                }
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("IP fallback failed:", e);
+          }
+          alert("Nije moguće dohvatiti lokaciju. Provjerite dozvole u pregledniku.");
         },
-        { enableHighAccuracy: true, timeout: 5000 }
+        { enableHighAccuracy: true, timeout: 8000 }
       );
+    } else {
+      alert("Vaš preglednik ne podržava geolokaciju.");
     }
   };
 
   const reverseGeocode = async (lng: number, lat: number) => {
     try {
-      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`);
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&language=hr`);
       if (!res.ok) {
         console.warn("Geocoding API error:", res.statusText);
         return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -916,20 +1194,14 @@ export default function RideHailingWidget() {
     const displayTime = arrivalTimeStr || '23:04';
 
     if (type === 'pickup') {
-      // Pickup ONLY has the bullseye, NO cloud label (removed "Poljud" cloud)
       el.innerHTML = `
         <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#7C3AED] bg-white flex items-center justify-center shadow-sm">
           <div class="w-1 h-1 rounded-full bg-[#7C3AED]"></div>
         </div>
       `;
     } else {
-      // Destination has the "Arrive [time]" cloud label
+      // Destination marker without any cloud/bubble label; route računamo u pozadini
       el.innerHTML = `
-        <!-- Cloud Label - Positioned absolutely above the marker -->
-        <div class="absolute bottom-full mb-3 px-3 py-1.5 rounded-full bg-white shadow-xl border border-black/5 flex items-center justify-center transform transition-transform group-hover:scale-105 whitespace-nowrap pointer-events-none">
-          <span class="text-[13px] font-light text-black">Arrive ${displayTime}</span>
-        </div>
-        <!-- Bullseye Marker -->
         <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#7C3AED] bg-[#7C3AED] flex items-center justify-center shadow-sm">
           <div class="w-[7px] h-[7px] rounded-full border-[1.5px] border-[#7C3AED] bg-white flex items-center justify-center">
             <div class="w-0.5 h-0.5 rounded-full bg-[#7C3AED]"></div>
@@ -1001,73 +1273,85 @@ export default function RideHailingWidget() {
         setArrivalTimeStr(arrivalStr);
         
         // Update markers to be exactly on the route endpoints
-        updateMarker("pickup", snappedPickup, "pickup", pickupAddress);
+        // But for pickup, we only snap if not in 'pickup' step to prevent jumping
+        if (String(stepRef.current) !== 'pickup') {
+          updateMarker("pickup", snappedPickup, "pickup", pickupAddress);
+          setLocation({ lat: snappedPickup[1], lng: snappedPickup[0] });
+        }
+        
         updateMarker("destination", snappedDestination, "destination", destinationAddress);
         
-        if (map.current && map.current.isStyleLoaded()) {
+        if (String(stepRef.current) !== 'pickup' && map.current && map.current.isStyleLoaded()) {
           const mapInstance = map.current;
           
           try {
-            // Clean up existing route layers and source
-            const glowId = `${routeLayerId}-glow`;
-            if (mapInstance.getLayer(glowId)) mapInstance.removeLayer(glowId);
-            if (mapInstance.getLayer(routeLayerId)) mapInstance.removeLayer(routeLayerId);
-            if (mapInstance.getSource('route')) mapInstance.removeSource('route');
+            const routeSource = mapInstance.getSource('route') as mapboxgl.GeoJSONSource;
+            if (routeSource) {
+              routeSource.setData({
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: route
+                }
+              });
+            } else {
+              mapInstance.addSource('route', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: route
+                  }
+                }
+              });
+              
+              mapInstance.addLayer({
+                id: `${routeLayerId}-glow`,
+                type: 'line',
+                source: 'route',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': ACCENT_PURPLE,
+                  'line-width': 9,
+                  'line-opacity': 0.2,
+                  'line-blur': 6
+                }
+              });
+
+              mapInstance.addLayer({
+                id: routeLayerId,
+                type: 'line',
+                source: 'route',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': ACCENT_PURPLE,
+                  'line-width': 4.5,
+                  'line-opacity': 1,
+                  'line-blur': 0
+                }
+              });
+            }
           } catch (e) {
-            console.warn("Error cleaning up old route:", e);
+            console.warn("Error updating route source/layers:", e);
           }
 
-          mapInstance.addSource('route', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: {
-                type: 'LineString',
-                coordinates: route
-              }
-            }
-          });
-          
-          mapInstance.addLayer({
-            id: `${routeLayerId}-glow`,
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': ACCENT_PURPLE,
-              'line-width': 9,
-              'line-opacity': 0.2,
-              'line-blur': 6
-            }
-          });
-
-          mapInstance.addLayer({
-            id: routeLayerId,
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': ACCENT_PURPLE,
-              'line-width': 4.5,
-              'line-opacity': 1,
-              'line-blur': 0
-            }
-          });
-          
-          // Fit map to route bounds
-          const bounds = new mapboxgl.LngLatBounds();
-          route.forEach((coord: [number, number]) => bounds.extend(coord));
-          mapInstance.fitBounds(bounds, { 
-            padding: { top: 100, bottom: 40, left: 60, right: 60 },
-            duration: 1000
-          });
+          if (String(stepRef.current) !== 'pickup') {
+            const bounds = new mapboxgl.LngLatBounds();
+            route.forEach((coord: [number, number]) => bounds.extend(coord));
+            mapInstance.fitBounds(bounds, { 
+              padding: { top: 100, bottom: 40, left: 60, right: 60 },
+              duration: 1000
+            });
+          }
         }
       } else {
         console.error("No routes found in Mapbox response:", json);
@@ -1166,11 +1450,17 @@ export default function RideHailingWidget() {
   }, [router, searchParams]);
 
   const getFareEstimate = async () => {
-    if (!routeData || !destinationAddress) {
-      console.log("Missing routeData or destinationAddress for estimate", { routeData, destinationAddress });
+    if (!routeData || !destinationAddress || !routeData.distance || !routeData.duration) {
+      console.log("Missing routeData metrics or destinationAddress for estimate", { 
+        dist: routeData?.distance, 
+        dur: routeData?.duration, 
+        addr: !!destinationAddress 
+      });
       return;
     }
-    setIsLoadingEstimate(true);
+    if (!estimate || estimate.length === 0) {
+      setIsLoadingEstimate(true);
+    }
     try {
       // Detekcija regije iz adrese odredišta
       let region = 'zagreb';
@@ -1293,12 +1583,38 @@ export default function RideHailingWidget() {
   };
 
   const handleConfirmRide = () => {
+    if (bookingGuardRef.current || loading || !isOnline) return;
+    bookingGuardRef.current = true;
+    const base = getClassPrice(selectedClass);
+    const baseNum = typeof base === 'number' ? base : parseFloat(String(base) || '0');
+    setLockedFareEuro(baseNum);
+    lockedClassRef.current = selectedClass;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pp_lockedFare', String(baseNum));
+      localStorage.setItem('pp_lockedClass', selectedClass);
+    }
     setLoading(true);
+    setRideStatus('searching');
+    const timeoutMs = getAdaptiveSearchTimeoutMs();
+    const searchTimeout = setTimeout(() => {
+      if (rideStatusRef.current === 'searching') {
+        setRideStatus('no_drivers');
+        setIsConfirmed(true);
+        setLoading(false);
+        bookingGuardRef.current = false;
+      }
+    }, timeoutMs);
     setTimeout(() => {
       setLoading(false);
       setIsConfirmed(true);
       setStep('tracking');
-      // Simulate finding a driver after 1.5 seconds
+      setRideStatus('matched');
+      clearTimeout(searchTimeout);
+      const cancelTimer = setTimeout(() => {
+        if (rideStatusRef.current === 'matched' && Math.random() < 0.3) {
+          setRideStatus('searching');
+        }
+      }, 4000);
       setTimeout(() => {
         setTrackingDriver({
           name: 'Marko Jurić',
@@ -1307,7 +1623,6 @@ export default function RideHailingWidget() {
           trips: 1250,
           image: 'https://i.pravatar.cc/150?u=marko'
         });
-        // Move map to simulation location or follow driver
         if (map.current && location) {
           map.current.flyTo({
             center: [location.lng + 0.005, location.lat + 0.005],
@@ -1315,10 +1630,34 @@ export default function RideHailingWidget() {
             pitch: 45
           });
         }
+        setTimeout(() => setRideStatus('arrived'), 5000);
+        setTimeout(() => setRideStatus('en_route'), 10000);
+        setTimeout(() => {
+          setRideStatus('completed');
+        }, 15000);
+        bookingGuardRef.current = false;
+        clearTimeout(cancelTimer);
       }, 1500);
     }, 1500);
   };
 
+  useEffect(() => {
+    if (rideStatus === 'en_route') {
+      setRideStartTs(Date.now());
+    }
+  }, [rideStatus]);
+
+  useEffect(() => {
+    if (rideStatus !== 'completed') return;
+    const cls = lockedClassRef.current || selectedClass;
+    const lockVal = lockedFareEuro ?? (typeof getClassPrice(cls) === 'number' ? (getClassPrice(cls) as number) : parseFloat(String(getClassPrice(cls) || '0')));
+    const extra = pendingSurchargeEuro > 0.5 ? pendingSurchargeEuro : 0;
+    const withWaiting = lockVal + extra + (waitingFeeEuro || 0);
+    setFinalFareEuro(parseFloat(withWaiting.toFixed(2)));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pp_finalFare', String(withWaiting.toFixed(2)));
+    }
+  }, [rideStatus, pendingSurchargeEuro, waitingFeeEuro]);
 
    const selectSearchResult = (feature: any) => {
      const [lng, lat] = feature.center;
@@ -1348,25 +1687,96 @@ export default function RideHailingWidget() {
 
   return (
     <div className="relative w-full h-[100vh] bg-white font-sans text-black overflow-hidden flex flex-col scroll-smooth">
-      {/* Loading Overlay */}
+      {/* Searching for Driver Overlay (Uber/Bolt Style) */}
       {loading && (
-        <div className="absolute inset-0 z-[10000] bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center border border-black/5 scale-90 md:scale-100">
-            <div className="relative w-12 h-12 mb-4">
-              <div className="absolute inset-0 border-2 border-black/5 rounded-full"></div>
-              <div className="absolute inset-0 border-2 border-black rounded-full border-t-transparent animate-spin"></div>
+        <div className="absolute inset-0 z-[10000] bg-black/40 backdrop-blur-[4px] flex flex-col justify-end animate-in fade-in duration-500">
+          <div className="bg-white w-full rounded-t-[2rem] p-6 pb-12 shadow-[0_-20px_50px_rgba(0,0,0,0.3)] flex flex-col items-center animate-in slide-in-from-bottom duration-500 ease-out">
+            {/* Animated Pulsing Ring */}
+            <div className="relative w-24 h-24 mb-6">
+              <div className="absolute inset-0 bg-[#7C3AED]/20 rounded-full animate-ping duration-[2000ms]"></div>
+              <div className="absolute inset-2 bg-[#7C3AED]/30 rounded-full animate-pulse"></div>
+              <div className="absolute inset-4 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#7C3AED]/10">
+                <svg className="w-10 h-10 text-[#7C3AED] animate-bounce duration-[1500ms]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2v20M2 12h20" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>
             </div>
-            <h3 className="text-black text-[15px] font-normal tracking-tight">Tražimo vozača...</h3>
+
+            <h3 className="text-[22px] font-black tracking-tight text-black mb-1">Tražimo vozača...</h3>
+            
+            {/* Meet at pickup spot info */}
+            <div className="flex items-center space-x-2 mb-1">
+              <div className="w-1.5 h-1.5 bg-[#7C3AED] rounded-full animate-pulse" />
+              <p className="text-[13px] text-black/60 font-medium">
+                Meet at your pickup spot on <span className="text-black font-bold">{pickupAddress.split(',')[0]}</span>
+              </p>
+            </div>
+
+            {/* Buffering/Loading Line */}
+            <div className="w-48 h-1 bg-black/5 rounded-full overflow-hidden mb-6 relative">
+              <div className="absolute inset-0 bg-[#7C3AED] w-1/3 rounded-full animate-[loading-line_1.5s_infinite_ease-in-out]" />
+            </div>
+
+            <p className="text-[14px] text-black/40 font-medium mb-8">Ovo može potrajati nekoliko trenutaka</p>
+
+            {/* Class Details Card */}
+            <div className="w-full bg-black/5 rounded-2xl p-4 flex items-center justify-between mb-8 border border-black/5">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                  <img src={birdViewCarSVG('#7C3AED')} className="w-10 h-10 object-contain" alt="Car" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[16px] font-bold text-black">{RIDE_CLASSES[selectedClass].label}</span>
+                  <span className="text-[12px] text-black/40 font-medium">Standardni prijevoz</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[18px] font-black text-[#7C3AED]">
+                  €{(isAIBooking ? (getClassPrice(selectedClass) || 0) * 0.9 : (getClassPrice(selectedClass) || 0)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Cancel Button */}
+            <button 
+              onClick={() => {
+                setLoading(false);
+                setRideStatus('idle');
+                bookingGuardRef.current = false;
+                // Clear any search timeout if it existed
+              }}
+              className="w-full h-[56px] bg-black text-white rounded-2xl font-bold text-[16px] active:scale-[0.98] transition-all shadow-lg shadow-black/10"
+            >
+              Odustani
+            </button>
           </div>
         </div>
       )}
 
-      {/* Routing overlay */}
-      {isRouting && (
-        <div className="absolute inset-0 z-[9999] bg-white/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
-          <div className="bg-white text-black px-5 py-2.5 rounded-2xl flex items-center space-x-3 shadow-lg border border-black/5">
-            <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
-            <span className="font-normal text-[12px] tracking-tight">Računamo rutu...</span>
+      {/* step === 'pickup' && ( ... */}
+      {step === 'pickup' && (
+        <div className="absolute inset-0 z-[400] pointer-events-none">
+          {/* Industry standard "Set Pickup" Pin */}
+          <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 transition-all duration-300 ease-out ${isMapMoving ? '-translate-y-[calc(100%+15px)]' : '-translate-y-full'}`}>
+            <div className="relative flex flex-col items-center">
+              {/* Main Pin Body: White circle with violet dot - REDUCED SIZE */}
+              <div className="w-6 h-6 bg-white rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] flex items-center justify-center border-[3px] border-[#6D28D9] relative z-10">
+                <div className="w-2.5 h-2.5 bg-[#6D28D9] rounded-full" />
+              </div>
+              
+              {/* Vertical Connector Line (approx 1cm) */}
+              <div className={`w-[3px] bg-[#6D28D9] transition-all duration-300 ${isMapMoving ? 'h-[20px]' : 'h-[15px]'}`} />
+              
+              {/* 1mm gap and bottom dot */}
+              <div className="flex flex-col items-center space-y-[1px]">
+                <div className="h-[2px]" /> {/* Gap */}
+                <div className="w-[3.5px] h-[3.5px] bg-[#6D28D9] rounded-full shadow-[0_0_5px_rgba(109,40,217,0.5)]" />
+              </div>
+
+              {/* Dynamic shadow that responds to pin "height" */}
+              <div className={`absolute bottom-[-2px] left-1/2 -translate-x-1/2 w-6 h-1.5 bg-black/10 rounded-full blur-[2px] transition-all duration-300 ${isMapMoving ? 'opacity-40 scale-50' : 'opacity-100 scale-100'}`} />
+            </div>
           </div>
         </div>
       )}
@@ -1377,6 +1787,10 @@ export default function RideHailingWidget() {
       <style jsx global>{`
         .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib {
           display: none !important;
+        }
+        @keyframes loading-line {
+          0% { left: -33%; }
+          100% { left: 100%; }
         }
       `}</style>
 
@@ -1393,25 +1807,51 @@ export default function RideHailingWidget() {
           top: 0,
           left: 0,
           right: 0,
-          bottom: sheetSnap === 'expanded' ? 0 : `${sheetHeight}px`,
+          bottom: (sheetSnap === 'expanded' || step === 'pickup') ? 0 : `${sheetHeight}px`,
           position: 'fixed'
         }}
       />
+      
+      <button
+        onClick={detectLocation}
+        aria-label="Locate Me"
+        className="fixed z-[1006] w-10 h-10 rounded-full bg-white border border-black/10 shadow-lg hover:bg-black/5 active:scale-95 transition flex items-center justify-center pointer-events-auto"
+        style={{
+          right: '0.4cm',
+          bottom: `calc(${sheetHeight}px + 0.2cm)`
+        }}
+      >
+        <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="3" strokeWidth="2"></circle>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeWidth="2" strokeLinecap="round"></path>
+          <circle cx="12" cy="12" r="9" strokeWidth="1"></circle>
+        </svg>
+      </button>
 
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'w-full bg-white' : 'w-[calc(100%-0.5cm)] ml-[0.1cm] mr-[0.4cm] mt-0 bg-white rounded-2xl border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.08)] px-1'}`}>
+        <div className={`z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${
+          step === 'search' 
+            ? 'w-full bg-white' 
+            : step === 'pickup'
+              ? 'w-full bg-transparent border-none shadow-none px-4 pt-4'
+              : 'w-[calc(100%-0.5cm)] ml-[0.1cm] mr-[0.4cm] mt-0 bg-white rounded-2xl border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.08)] px-1'
+        }`}>
           <div className={`relative transition-all duration-300 ${
             step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
-              : 'w-full px-1 h-[1.3cm] flex items-center justify-between'
+              : step === 'pickup'
+                ? 'w-full h-10 flex items-center justify-start'
+                : 'w-full px-1 h-[1.3cm] flex items-center justify-between'
           }`}>
 
             {step !== 'search' && (
               <button
                   onClick={() => {
-                    if (isConfirmed) {
+                    if (step === 'pickup') {
+                      setStep('destination');
+                    } else if (isConfirmed) {
                       setIsConfirmed(false);
                       setTrackingDriver(null);
                       setStep('destination');
@@ -1430,7 +1870,7 @@ export default function RideHailingWidget() {
                       router.push(`/map?${params.toString()}` as any);
                     }
                   }}
-                  className="w-7 h-7 rounded-full bg-white hover:bg-black/5 active:scale-95 transition flex items-center justify-center shrink-0 border border-black/10"
+                  className="w-7 h-7 border border-black/10 rounded-full bg-white hover:bg-black/5 active:scale-95 transition flex items-center justify-center shrink-0"
                   aria-label="Back"
                 >
                 <svg className="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1439,7 +1879,7 @@ export default function RideHailingWidget() {
               </button>
             )}
             
-            {step !== 'search' && (
+            {step !== 'search' && step !== 'pickup' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
                 <span className="text-[14px] font-medium text-[#6D28D9] truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
@@ -1468,7 +1908,7 @@ export default function RideHailingWidget() {
               </div>
             )}
 
-            {step !== 'search' && (
+            {step !== 'search' && step !== 'pickup' && (
               <button
                 onClick={() => {
                   const params = new URLSearchParams();
@@ -1620,10 +2060,132 @@ export default function RideHailingWidget() {
                 contain: 'layout paint'
               }}
             >
-              <div className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/40 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/60 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+              {step !== 'pickup' && (
+                <div
+                  className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/40 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/60 transition-colors shrink-0 z-10"
+                  onPointerDown={onSheetPointerDown}
+                  onPointerMove={onSheetPointerMove}
+                  onPointerUp={onSheetPointerUp}
+                />
+              )}
               
               <div className="h-[12px] shrink-0"></div>
           
+          {/* Pickup Step Content */}
+          {step === 'pickup' && (
+            <div className="flex flex-col h-full relative">
+              <div className="flex-1 p-4 space-y-6">
+                <div className="flex flex-col space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[20px] font-black tracking-tight text-black leading-none">
+                      {(() => {
+                        const base = getClassPrice(selectedClass);
+                        if (base == null) return "Parq";
+                        const discounted = isAIBooking ? base * 0.9 : base;
+                        return `Parq • €${discounted.toFixed(2)}`;
+                      })()}
+                    </h2>
+                  </div>
+                  <div className="flex items-center space-x-2 text-[#6D28D9]">
+                    <div className="w-2 h-2 bg-[#6D28D9] rounded-full animate-pulse" />
+                    <span className="text-[14px] font-normal truncate">
+                      {isMapMoving ? "Tražim adresu..." : `U blizini ${currentPickupAddress.split(',')[0]}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams(window.location.search);
+                      router.push(`/rides/note?${params.toString()}` as any);
+                    }}
+                    className="flex items-center space-x-2 text-[#6D28D9] bg-transparent hover:bg-transparent active:opacity-70 transition-all pointer-events-auto border-0 shadow-none outline-none ring-0 focus:ring-0"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="text-[14px] font-medium">Dodaj napomenu vozaču</span>
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (!map.current) return;
+                      const c = map.current.getCenter();
+                      setLocation({ lat: c.lat, lng: c.lng });
+                      const addr = currentPickupAddress || await reverseGeocode(c.lng, c.lat);
+                      setPickupAddress(addr);
+                      updateMarker("self", [c.lng, c.lat], "pickup", addr);
+                      handleConfirmRide();
+                    }}
+                    className="w-full h-[44px] bg-[#6D28D9] text-white rounded-full flex items-center justify-center font-bold text-[15px] transition-all active:scale-[0.98] hover:bg-[#5B21B6]"
+                  >
+                    Potvrdi Preuzimanje
+                  </button>
+                </div>
+              </div>
+
+              {/* World-Class Payment & Action Bar (Matching Style) */}
+              <div className="absolute bottom-0 left-0 right-0 bg-white z-20 pb-[calc(env(safe-area-inset-bottom)+30px)] px-2">
+                <div className="h-[42px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-[0.1cm]">
+                  <button 
+                    onClick={() => {
+                      const params = new URLSearchParams(window.location.search);
+                      router.push(`/payment?${params.toString()}` as any);
+                    }}
+                    className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      {paymentMethod === 'card' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="5" width="20" height="14" rx="2" />
+                          <line x1="2" y1="10" x2="22" y2="10" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'cash' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="6" width="20" height="12" rx="2" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
+                      {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
+                      {paymentMethod === 'payparq' && (
+                        <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
+                          <span className="text-[7px] font-medium text-white leading-none">PQ</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
+                      {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                    </span>
+                    <svg className="w-3.5 h-3.5 text-black group-hover:text-black/70 transition-colors ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center space-x-4">
+                    {isAIBooking && (
+                      <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
+                        <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                        <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => router.push('/calendar' as any)}
+                      className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                    >
+                      <svg className="w-[18px] h-[18px] text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
+                      </svg>
+                      <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
             <div className="flex flex-col h-full relative">
@@ -1843,8 +2405,11 @@ export default function RideHailingWidget() {
 
                 <div className="w-full px-[0.5cm] mb-0">
                   <button 
-                    onClick={handleConfirmRide}
-                    className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mt-0"
+                    onClick={() => {
+                      setStep('pickup');
+                    }}
+                    disabled={loading || !isOnline}
+                    className={`w-full h-[44px] rounded-full flex items-center justify-center space-x-2 transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mt-0 ${loading || !isOnline ? 'bg-[#6D28D9]/50 text-white cursor-not-allowed' : 'bg-[#6D28D9] text-white hover:bg-[#5B21B6]'}`}
                   >
                     <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                   </button>
@@ -1856,90 +2421,312 @@ export default function RideHailingWidget() {
           {/* Tracking Step Content */}
           {isConfirmed && (
             <div className="flex flex-col h-full p-1">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-[20px] font-black text-black tracking-tight leading-none mb-1">Stiže za 3 min</h2>
-                  <div className="flex items-center space-x-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></div>
-                    <p className="text-black/40 uppercase text-[9px] font-black tracking-[0.2em]">Vozač je u blizini</p>
-                  </div>
-                </div>
-                <div className="w-14 h-14 bg-black rounded-[1.2rem] flex items-center justify-center shadow-xl overflow-hidden p-2 rotate-3 hover:rotate-0 transition-transform duration-500">
-                  <img src={RIDE_CLASSES[selectedClass].icon} alt="Car Icon" className="w-full h-full object-contain contrast-[1.15] brightness-[1.06] saturate-[1.08] antialiased" />
-                </div>
-              </div>
-
-              {/* Driver Card */}
-              <div className="bg-white rounded-[1.5rem] p-3 flex items-center space-x-3 mb-3 shadow-[0_15px_35px_rgba(0,0,0,0.1)] border-2 border-black relative overflow-hidden group">
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity"></div>
-                <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 bg-black rounded-xl overflow-hidden border-2 border-black shadow-lg group-hover:scale-105 transition-transform duration-500">
-                    <img src={trackingDriver?.image || "https://i.pravatar.cc/150?u=1"} alt="Driver" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="absolute -bottom-1.5 -right-1.5 bg-black text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
-                    {trackingDriver?.rating || '4.9'} ★
-                  </div>
-                </div>
-                <div className="flex-1 relative z-10 min-w-0">
-                  <h3 className="text-[14px] font-black text-black tracking-tight mb-0.5 truncate">{trackingDriver?.name || 'Marko Jurić'}</h3>
-                  <p className="text-black/50 text-[10px] font-bold mb-1 truncate tracking-tight">{trackingDriver?.car || 'Škoda Octavia • ZG-1234-PQ'}</p>
-                  <div className="flex items-center space-x-1.5">
-                    <div className="px-1.5 py-0.5 bg-black text-white rounded-md text-[7px] font-black uppercase tracking-widest whitespace-nowrap">Verified Partner</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* High-Fidelity Action Row (Share & Safety) */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button className="flex items-center justify-center space-x-2 py-2.5 bg-white border-2 border-black hover:bg-black hover:text-white rounded-xl transition-all group active:scale-95">
-                  <svg className="w-3.5 h-3.5 text-black group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                  <span className="text-[9px] font-black uppercase tracking-widest">Podijeli</span>
-                </button>
-                <button className="flex items-center justify-center space-x-2 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all group active:scale-95">
-                  <svg className="w-3.5 h-3.5 text-red-600 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-red-600">Sigurnost</span>
-                </button>
-              </div>
-
-              {/* Price & Payment Summary */}
-              <div className="bg-black text-white rounded-[1.5rem] p-4 flex items-center justify-between mb-4 shadow-xl border-2 border-black group/price hover:scale-[1.02] transition-all">
-                <div className="flex flex-col">
-                  <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-0.5">Ukupna cijena</span>
-                  <div className="flex items-baseline space-x-1.5">
-                    <span className="text-[18px] font-bold">€{getClassPrice(selectedClass)?.toFixed(2)}</span>
-                    <span className="text-[10px] font-medium text-white/40">Fixed</span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[8px] font-black text-white/40 uppercase tracking-widest mb-0.5">Plaćanje</span>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-[11px] font-black uppercase">
-                      {paymentMethod === 'payparq' ? 'PAYPARQ' : paymentMethod === 'card' ? 'KARTICA' : paymentMethod === 'cash' ? 'GOTOVINA' : paymentMethod === 'gpay' ? 'GOOGLE PAY' : 'APPLE PAY'}
-                    </span>
-                    <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
-                      <svg className="w-3.5 h-3.5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+              {/* 1. SEARCHING STATE */}
+              {rideStatus === 'searching' && (
+                <div className="flex flex-col h-full items-center justify-center space-y-8 py-10 animate-in fade-in zoom-in duration-500">
+                  <div className="relative">
+                    <div className="w-24 h-24 bg-[#6D28D9]/10 rounded-full animate-ping absolute inset-0"></div>
+                    <div className="w-24 h-24 bg-[#6D28D9]/20 rounded-full animate-pulse relative flex items-center justify-center border-4 border-[#6D28D9]">
+                      <img src={RIDE_CLASSES[selectedClass].icon} alt="Searching" className="w-16 h-16 object-contain" />
                     </div>
                   </div>
-                </div>
-              </div>
+                  
+                  <div className="text-center space-y-2">
+                    <h2 className="text-[22px] font-black text-black tracking-tight leading-none">Tražimo vozača...</h2>
+                    <p className="text-black/40 text-[13px] font-medium tracking-tight px-10">Šaljemo vaš zahtjev najbližim {RIDE_CLASSES[selectedClass].label} partnerima.</p>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-auto">
-                <button 
-                  onClick={() => {
-                    setIsConfirmed(false);
-                    setTrackingDriver(null);
-                    setStep('search');
-                  }}
-                  className="bg-white hover:bg-black hover:text-white py-3 rounded-[1.5rem] text-black font-black flex items-center justify-center space-x-2 border-2 border-black transition-all active:scale-[0.98] group"
-                >
-                  <svg className="w-4 h-4 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                  <span className="text-[10px] uppercase tracking-widest">Otkaži</span>
-                </button>
-                <button className="bg-black hover:bg-black/90 text-white font-black py-3 rounded-[1.5rem] flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-xl group">
-                  <svg className="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                  <span className="text-[10px] uppercase tracking-widest">Nazovi</span>
-                </button>
-              </div>
+                  <div className="w-full px-6 pt-10">
+                    <button 
+                      onClick={() => {
+                        setIsConfirmed(false);
+                        setRideStatus('idle');
+                        setStep('destination');
+                      }}
+                      className="w-full bg-black text-white py-4 rounded-[1.5rem] font-black text-[14px] uppercase tracking-widest hover:bg-black/90 active:scale-95 transition-all shadow-xl"
+                    >
+                      Otkaži potragu
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* NO DRIVERS STATE */}
+              {rideStatus === 'no_drivers' && (
+                <div className="flex flex-col h-full items-center justify-center space-y-8 py-10 animate-in fade-in zoom-in duration-500">
+                  <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center border-4 border-red-500">
+                    <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </div>
+                  
+                  <div className="text-center space-y-2">
+                    <h2 className="text-[22px] font-black text-black tracking-tight leading-none">Nema slobodnih vozača</h2>
+                    <p className="text-black/40 text-[13px] font-medium tracking-tight px-10">Nažalost, trenutno nitko od naših {RIDE_CLASSES[selectedClass].label} partnera nije slobodan u vašoj blizini.</p>
+                  </div>
+
+                  <div className="w-full px-6 pt-10 flex flex-col space-y-3">
+                    <button 
+                      onClick={handleConfirmRide}
+                      className="w-full bg-[#6D28D9] text-white py-4 rounded-[1.5rem] font-black text-[14px] uppercase tracking-widest hover:bg-[#5B21B6] active:scale-95 transition-all shadow-xl"
+                    >
+                      Pokušaj ponovno
+                    </button>
+                    <button
+                      onClick={scheduleNoDriversNotification}
+                      className="w-full bg-black text-white py-4 rounded-[1.5rem] font-black text-[14px] uppercase tracking-widest hover:bg-black/90 active:scale-95 transition-all"
+                    >
+                      Obavijesti me
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIsConfirmed(false);
+                        setRideStatus('idle');
+                        setStep('destination');
+                      }}
+                      className="w-full bg-white text-black border-2 border-black py-4 rounded-[1.5rem] font-black text-[14px] uppercase tracking-widest hover:bg-black hover:text-white active:scale-95 transition-all"
+                    >
+                      Zatvori
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. MATCHED STATE (Driver Confirmed) */}
+              {rideStatus === 'matched' && (
+                <div className="flex flex-col h-full animate-in slide-in-from-bottom duration-500">
+                  <div className="flex items-center justify-between mb-4 px-2 pt-2">
+                    <div>
+                      <h2 className="text-[20px] font-black text-black tracking-tight leading-none mb-1">Stiže za 3 min</h2>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></div>
+                        <p className="text-black/40 uppercase text-[9px] font-black tracking-[0.2em]">Vozač je u blizini</p>
+                      </div>
+                    </div>
+                    <div className="w-14 h-14 bg-black rounded-[1.2rem] flex items-center justify-center shadow-xl overflow-hidden p-2 rotate-3 hover:rotate-0 transition-transform duration-500">
+                      <img src={RIDE_CLASSES[selectedClass].icon} alt="Car Icon" className="w-full h-full object-contain contrast-[1.15] brightness-[1.06] saturate-[1.08] antialiased" />
+                    </div>
+                  </div>
+
+                  {/* Driver Card */}
+                  <div className="bg-white rounded-[1.5rem] p-3 flex items-center space-x-3 mb-3 shadow-[0_15px_35px_rgba(0,0,0,0.1)] border-2 border-black relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity"></div>
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 bg-black rounded-xl overflow-hidden border-2 border-black shadow-lg group-hover:scale-105 transition-transform duration-500">
+                        <img src={trackingDriver?.image || "https://i.pravatar.cc/150?u=1"} alt="Driver" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="absolute -bottom-1.5 -right-1.5 bg-black text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
+                        {trackingDriver?.rating || '4.9'} ★
+                      </div>
+                    </div>
+                    <div className="flex-1 relative z-10 min-w-0">
+                      <h3 className="text-[14px] font-black text-black tracking-tight mb-0.5 truncate">{trackingDriver?.name || 'Marko Jurić'}</h3>
+                      <p className="text-black/50 text-[10px] font-bold mb-1 truncate tracking-tight">{trackingDriver?.car || 'Škoda Octavia • ZG-1234-PQ'}</p>
+                      <div className="flex items-center space-x-1.5">
+                        <div className="px-1.5 py-0.5 bg-black text-white rounded-md text-[7px] font-black uppercase tracking-widest whitespace-nowrap">Verified Partner</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* High-Fidelity Action Row (Chat & Call) */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <button className="flex items-center justify-center space-x-2 py-2.5 bg-white border-2 border-black hover:bg-black hover:text-white rounded-xl transition-all group active:scale-95">
+                      <svg className="w-3.5 h-3.5 text-black group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                      <span className="text-[9px] font-black uppercase tracking-widest">Chat</span>
+                    </button>
+                    <button className="flex items-center justify-center space-x-2 py-2.5 bg-black text-white rounded-xl transition-all group active:scale-95">
+                      <svg className="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                      <span className="text-[9px] font-black uppercase tracking-widest">Nazovi</span>
+                    </button>
+                  </div>
+
+                  {/* Cancel Button at bottom */}
+                  <div className="mt-auto pt-4">
+                    <button 
+                      onClick={() => {
+                        setIsConfirmed(false);
+                        setRideStatus('idle');
+                        setStep('destination');
+                      }}
+                      className="w-full bg-white hover:bg-red-50 text-red-600 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest border-2 border-red-600 transition-all active:scale-[0.98]"
+                    >
+                      Otkaži vožnju
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. ARRIVED STATE */}
+              {rideStatus === 'arrived' && (
+                <div className="flex flex-col h-full animate-in zoom-in duration-500">
+                  <div className="bg-[#6D28D9] rounded-[2rem] p-6 text-white mb-4 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                    <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg animate-bounce">
+                        <svg className="w-8 h-8 text-[#6D28D9]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <h2 className="text-[24px] font-black tracking-tight leading-none uppercase">Vozač je stigao!</h2>
+                      <p className="text-white/80 text-[13px] font-medium leading-tight">Vaš vozač {trackingDriver?.name} vas čeka na lokaciji preuzimanja.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/5 rounded-[1.5rem] p-4 flex items-center justify-between border-2 border-dashed border-black/20 mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-black/40 uppercase tracking-widest">Vrijeme čekanja</span>
+                        <span className="text-[16px] font-black text-black">{`${String(Math.floor(waitingMs/60000)).padStart(2,'0')}:${String(Math.floor((waitingMs%60000)/1000)).padStart(2,'0')}`}</span>
+                        {waitingFeeActive && (
+                          <span className="text-[10px] font-bold text-red-600">+€{waitingFeeEuro.toFixed(2)} naknada</span>
+                        )}
+                      </div>
+                    </div>
+                    <button className="bg-white px-4 py-2 rounded-xl border-2 border-black text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                      Podijeli lokaciju
+                    </button>
+                  </div>
+
+                  <div className="mt-auto grid grid-cols-2 gap-2">
+                    <button className="bg-white border-2 border-black py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest">Pomoć</button>
+                    <button className="bg-black text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest">Nazovi</button>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. EN_ROUTE STATE */}
+              {rideStatus === 'en_route' && (
+                <div className="flex flex-col h-full animate-in slide-in-from-right duration-500">
+                  <div className="flex items-center justify-between mb-4 px-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-[#6D28D9] uppercase tracking-widest mb-1">Na putu do cilja</span>
+                      <h2 className="text-[20px] font-black text-black tracking-tight leading-none">Stižete u 14:45</h2>
+                    </div>
+                    <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center border-2 border-black/10">
+                      <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 20l-5.447-2.724A2 2 0 013 15.487V5.487a2 2 0 011.138-1.789L9 1m0 19l6-3m-6 3V1m6 16l5.447 2.724A2 2 0 0021 17.913V7.913a2 2 0 00-1.138-1.789L15 3m0 14V3m0 0L9 1" /></svg>
+                    </div>
+                  </div>
+
+                  <div className="bg-black rounded-[1.8rem] p-4 text-white mb-4 shadow-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white/20">
+                          <img src={trackingDriver?.image} alt="Driver" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-black">{trackingDriver?.name}</span>
+                          <span className="text-[9px] text-white/40 font-bold uppercase tracking-widest">Vaš vozač</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-[2px] bg-white/10 w-full mb-4"></div>
+                    <button className="w-full flex items-center justify-center space-x-2 py-3 bg-white text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/90 active:scale-95 transition-all">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                      <span>Podijeli status vožnje</span>
+                    </button>
+                  </div>
+
+                  <div className="mt-auto grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        params.set('action', 'change_route');
+                        if (location) {
+                          params.set('pickup_lat', location.lat.toString());
+                          params.set('pickup_lng', location.lng.toString());
+                          params.set('pickup_name', pickupAddress);
+                        }
+                        if (destination) {
+                          params.set('dest_lat', destination.lat.toString());
+                          params.set('dest_lng', destination.lng.toString());
+                          params.set('dest_name', destinationAddress);
+                        }
+                        router.push(`/map?${params.toString()}` as any);
+                      }}
+                      className="bg-white border-2 border-black py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest"
+                    >
+                      Promijeni rutu
+                    </button>
+                    <button className="bg-red-500 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/30">SOS</button>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. COMPLETED STATE */}
+              {rideStatus === 'completed' && (
+                <div className="flex flex-col h-full animate-in slide-in-from-bottom duration-700">
+                  <div className="text-center py-4">
+                    <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
+                      <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h2 className="text-[24px] font-black text-black tracking-tight mb-1">Hvala na vožnji!</h2>
+                    <p className="text-black/40 text-[14px] font-medium">Uspješno ste stigli na odredište.</p>
+                  </div>
+
+                  <div className="bg-black text-white rounded-[2rem] p-6 mb-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16.5c0 .38-.21.71-.53.88l-7.97 4.44c-.31.17-.69.17-1 0l-7.97-4.44c-.32-.17-.53-.5-.53-.88v-9c0-.38.21-.71.53-.88l7.97-4.44c.31-.17.69-.17 1 0l7.97 4.44c.32.17.53.5.53.88v9z"/></svg>
+                    </div>
+                    <div className="relative z-10 flex flex-col items-center">
+                      <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.3em] mb-2">Ukupni iznos</span>
+                      <span className="text-[42px] font-black mb-1">€{(((finalFareEuro ?? (getClassPrice(selectedClass) ?? 0)) + tipEuro)).toFixed(2)}</span>
+                      <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">Plaćeno putem {paymentMethod}</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex flex-col items-center space-y-3">
+                      <span className="text-[12px] font-black text-black/30 uppercase tracking-widest">Ocijenite vozača</span>
+                      <div className="flex space-x-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} className="w-10 h-10 rounded-xl bg-black/5 hover:bg-[#6D28D9]/10 hover:text-[#6D28D9] transition-all flex items-center justify-center text-black/20">
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      {[0, 1, 2, 5].map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() => setTipEuro(amt)}
+                          className={`px-4 py-2 rounded-xl border-2 text-[12px] font-black ${tipEuro === amt ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20'}`}
+                        >
+                          {amt === 0 ? 'Bez napojnice' : `+€${amt}`}
+                        </button>
+                      ))}
+                    </div>
+                    {tipEuro > 0 && (
+                      <div className="text-center text-[11px] text-black/50 font-medium">Napojnica €{tipEuro.toFixed(2)}</div>
+                    )}
+                    
+                    <button className="w-full py-4 rounded-2xl border-2 border-black/5 text-[12px] font-bold text-black/40 hover:text-black hover:border-black/10 transition-all">
+                      Izgubljena stvar? Kontaktiraj podršku
+                    </button>
+                    <button className="w-full py-4 rounded-2xl border-2 border-black/5 text-[12px] font-bold text-black/40 hover:text-black hover:border-black/10 transition-all">
+                      Prijavi problem s vožnjom
+                    </button>
+                  </div>
+
+                  <div className="mt-auto pt-6">
+                    <button 
+                      onClick={() => {
+                        setIsConfirmed(false);
+                        setRideStatus('idle');
+                        setStep('search');
+                        setTrackingDriver(null);
+                      }}
+                      className="w-full bg-[#6D28D9] text-white py-4 rounded-[1.5rem] font-black text-[14px] uppercase tracking-widest shadow-xl shadow-[#6D28D9]/20"
+                    >
+                      Završi
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {isPaymentSelectorOpen && (

@@ -217,43 +217,43 @@ function MapContent() {
     const [lng, lat] = feat.center;
     const placeName = feat.place_name.split(",")[0];
     
-    setDestinations((prev: any[]) => {
-      const updatedDestinations = prev.map((d: any) => d.id === destId ? { ...d, query: placeName, coords: { lat, lng }, suggestions: [] } : d);
-      
-      if (mapRef.current) {
-        mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
-        new mapboxgl.Marker().setLngLat([lng, lat]).addTo(mapRef.current);
+    const updatedDestinations = destinations.map((d: any) =>
+      d.id === destId ? { ...d, query: placeName, coords: { lat, lng }, suggestions: [] } : d
+    );
+    setDestinations(updatedDestinations);
+    
+    if (mapRef.current) {
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 15 });
+      new mapboxgl.Marker().setLngLat([lng, lat]).addTo(mapRef.current);
+    }
+
+    // Prebaci na rides stranicu s parametrima
+    const params = new URLSearchParams();
+    
+    // Uvijek šalji polazište ako postoji
+    if (origin) {
+      params.set('pickup_lat', origin.lat.toString());
+      params.set('pickup_lng', origin.lng.toString());
+      params.set('pickup_name', originLabel);
+    }
+
+    // Šalji sve odabrane destinacije
+    updatedDestinations.forEach((d: any, index: number) => {
+      if (d.coords) {
+        params.set(`dest${index + 1}_lat`, d.coords.lat.toString());
+        params.set(`dest${index + 1}_lng`, d.coords.lng.toString());
+        params.set(`dest${index + 1}_name`, d.query);
       }
-
-      // Prebaci na rides stranicu s parametrima
-      const params = new URLSearchParams();
-      
-      // Uvijek šalji polazište ako postoji
-      if (origin) {
-        params.set('pickup_lat', origin.lat.toString());
-        params.set('pickup_lng', origin.lng.toString());
-        params.set('pickup_name', originLabel);
-      }
-
-      // Šalji sve odabrane destinacije
-      updatedDestinations.forEach((d, index) => {
-        if (d.coords) {
-          params.set(`dest${index + 1}_lat`, d.coords.lat.toString());
-          params.set(`dest${index + 1}_lng`, d.coords.lng.toString());
-          params.set(`dest${index + 1}_name`, d.query);
-        }
-      });
-
-      // Backward compatibility for single destination
-      if (lat && lng) {
-        params.set('dest_lat', lat.toString());
-        params.set('dest_lng', lng.toString());
-        params.set('dest_name', placeName);
-      }
-
-      router.push(`/rides?${params.toString()}`);
-      return updatedDestinations;
     });
+
+    // Backward compatibility for single destination
+    if (lat && lng) {
+      params.set('dest_lat', lat.toString());
+      params.set('dest_lng', lng.toString());
+      params.set('dest_name', placeName);
+    }
+
+    router.push(`/rides?${params.toString()}`);
   };
 
   return (
