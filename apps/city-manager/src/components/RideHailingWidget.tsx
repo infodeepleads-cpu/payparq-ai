@@ -654,10 +654,10 @@ export default function RideHailingWidget() {
       setVh(currentVh);
       
       const WIDGET_H = 113.385; // 3.0cm
-      const BAR_H = 150; 
+      const BAR_H = 155; // Reduced to 155px per user request to show only one car in minimized state 
       
       const minimized = WIDGET_H + BAR_H;
-      const collapsed = currentVh * 0.75;
+      const collapsed = currentVh * 0.75 - 38; // Lowered by 1cm (~38px) per user request
       const expanded = currentVh; 
       
       let targetHeight = minimized;
@@ -692,17 +692,20 @@ export default function RideHailingWidget() {
       const currentVh = typeof window !== 'undefined' ? window.innerHeight : 800;
       
       const WIDGET_H = 113.385;
-      const BAR_H = 150;
+      const BAR_H = 155;
       
       const minimized = WIDGET_H + BAR_H;
-      const collapsed = currentVh * 0.75;
-      const expanded = currentVh;
+      const collapsed = currentVh * 0.75 - 38;
+      const expanded = currentVh; 
       
       let snap: 'minimized' | 'collapsed' | 'expanded' = 'minimized';
       
-      if (sheetHeight > (collapsed + expanded) / 2) {
+      const threshold1 = (minimized + collapsed) / 2;
+      const threshold2 = (collapsed + expanded) / 2;
+      
+      if (sheetHeight > threshold2) {
         snap = 'expanded';
-      } else if (sheetHeight > (minimized + collapsed) / 2) {
+      } else if (sheetHeight > threshold1) {
         snap = 'collapsed';
       } else {
         snap = 'minimized';
@@ -717,7 +720,7 @@ export default function RideHailingWidget() {
   // Reset snap state when entering destination step
   useEffect(() => {
     if (step === 'destination' && !isConfirmed) {
-      setSheetSnap('minimized');
+      setSheetSnap('collapsed');
     }
   }, [step, isConfirmed]);
 
@@ -823,8 +826,8 @@ export default function RideHailingWidget() {
           // but fitBounds already works with the container size.
           // Since the container is now smaller, we just need to re-fit.
           map.current?.fitBounds(bounds, { 
-             padding: { top: 40, bottom: 40, left: 40, right: 40 }, 
-             duration: 1000,
+             padding: { top: 100, bottom: 40, left: 60, right: 60 }, 
+             duration: 600,
              essential: true
            });
         }
@@ -851,39 +854,11 @@ export default function RideHailingWidget() {
     }
   }, [step, sheetSnap, isDragging, location, destination]);
 
-  // 1. Handle Map Clicks (Update as state changes)
+  // 1. Map Click Interaction Disabled (User requested to prevent route change via map clicks)
   useEffect(() => {
-    if (!map.current) return;
-
-    const onClick = async (e: mapboxgl.MapMouseEvent) => {
-      const { lng, lat } = e.lngLat;
-      const addr = await reverseGeocode(lng, lat);
-      
-      if (step === 'search' || step === 'destination') {
-        if (searchType === 'pickup') {
-          setPickupAddress(addr);
-          setLocation({ lat, lng });
-          updateMarker("self", [lng, lat], "pickup", addr);
-          if (destination) {
-            fetchRoute([lng, lat], [destination.lng, destination.lat]);
-          }
-        } else {
-          setDestinationAddress(addr);
-          setDestination({ lat, lng });
-          updateMarker("destination", [lng, lat], "destination", addr);
-          if (location) {
-            fetchRoute([location.lng, location.lat], [lng, lat]);
-            setStep('destination');
-          }
-        }
-      }
-    };
-
-    map.current.on('click', onClick);
-    return () => {
-      map.current?.off('click', onClick);
-    };
-  }, [step, location, destination, searchType]);
+    // Click listener removed to prevent map clicks from changing the route
+    return () => {};
+  }, []);
 
   const detectLocation = () => {
     if (navigator.geolocation) {
@@ -1090,8 +1065,8 @@ export default function RideHailingWidget() {
           const bounds = new mapboxgl.LngLatBounds();
           route.forEach((coord: [number, number]) => bounds.extend(coord));
           mapInstance.fitBounds(bounds, { 
-            padding: { top: 80, bottom: 440, left: 40, right: 40 },
-            duration: 1500
+            padding: { top: 100, bottom: 40, left: 60, right: 60 },
+            duration: 1000
           });
         }
       } else {
@@ -1426,11 +1401,11 @@ export default function RideHailingWidget() {
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 bg-white ${step === 'search' ? '' : 'border-b border-black/10 shadow-[0_15px_50px_rgba(0,0,0,0.08)] px-2'}`}>
+        <div className={`z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'w-full bg-white' : 'w-[calc(100%-0.5cm)] ml-[0.1cm] mr-[0.4cm] mt-0 bg-white rounded-2xl border border-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.08)] px-1'}`}>
           <div className={`relative transition-all duration-300 ${
             step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
-              : 'w-full px-2 h-[1.3cm] flex items-center justify-between'
+              : 'w-full px-1 h-[1.3cm] flex items-center justify-between'
           }`}>
 
             {step !== 'search' && (
@@ -1683,8 +1658,8 @@ export default function RideHailingWidget() {
                       >
                         {isSelected ? (
                           // Expanded State (Selected)
-                          <div className="flex items-center w-full justify-between">
-                            <div className="w-32 h-16 flex items-center justify-center ml-[0.3cm]">
+                          <div className="flex items-center w-full justify-start">
+                            <div className="w-32 h-16 flex items-center justify-center ml-[0.3cm] flex-shrink-0">
                               <img 
                                 src={config.icon} 
                                 alt={config.label} 
@@ -1693,50 +1668,49 @@ export default function RideHailingWidget() {
                               />
                             </div>
                             
-                              <div className="flex flex-col items-end space-y-0.5 mr-[0.2cm]">
-                               <div className="flex items-center space-x-2 leading-none">
-                                  <h3 className="text-[14px] font-light text-black leading-none tracking-tight">
-                                  {config.label}
-                                </h3>
-                                  <div className="flex items-center text-black/60 leading-none">
-                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                      <circle cx="9" cy="7" r="4" />
-                                    </svg>
-                                    <span className="ml-0.5 text-[11px] font-bold tracking-tight leading-none">{config.capacity}</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex flex-col items-end leading-none mt-[-0.1cm]">
-                                  {isLoadingEstimate ? (
-                                    <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
-                                  ) : (() => {
-                                    const base = getClassPrice(key as RideClass);
-                                    if (base == null) return <span className="text-[13px] font-medium text-black/5 tracking-tight leading-none">—</span>;
-                                    const discounted = isAIBooking ? base * 0.9 : base;
-                                    return (
-                                      <span className="text-[14px] font-light text-black leading-none tracking-tight">
-                                      €{discounted.toFixed(2)}
-                                    </span>
-                                    );
-                                  })()}
-                                </div>
-  
-                                <span className="text-[11px] text-black/60 font-light leading-none tracking-tight mt-[-0.1cm]">
-                                  {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                                  {arrivalTimeStr ? (
-                                    <>
-                                      {' • '}
-                                      <span className="font-light">{arrivalTimeStr}</span>
-                                    </>
-                                  ) : ''}
-                                </span>
-                              </div>
+                            <div className="flex flex-col items-end space-y-0.5 ml-[0.01cm] flex-grow pr-[0.1cm]">
+                               <div className="flex items-center space-x-[2px] leading-none">
+                                 <h3 className="text-[14px] font-light text-black leading-none tracking-tight">
+                                   {config.label}
+                                 </h3>
+                                 <div className="flex items-center text-black/60 leading-none">
+                                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                     <circle cx="9" cy="7" r="4" />
+                                   </svg>
+                                   <span className="ml-0.5 text-[11px] font-bold tracking-tight leading-none">{config.capacity}</span>
+                                 </div>
+                                 <div className="flex items-center">
+                                   {isLoadingEstimate ? (
+                                     <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
+                                   ) : (() => {
+                                     const base = getClassPrice(key as RideClass);
+                                     if (base == null) return <span className="text-[13px] font-medium text-black/5 tracking-tight leading-none">—</span>;
+                                     const discounted = isAIBooking ? base * 0.9 : base;
+                                     return (
+                                       <span className="text-[14px] font-light text-black leading-none tracking-tight">
+                                         €{discounted.toFixed(2)}
+                                       </span>
+                                     );
+                                   })()}
+                                 </div>
+                               </div>
+
+                               <span className="text-[11px] text-black/60 font-light leading-none tracking-tight mt-[-0.2cm]">
+                                 {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                 {arrivalTimeStr ? (
+                                   <>
+                                     {' • '}
+                                     <span className="font-light">{arrivalTimeStr}</span>
+                                   </>
+                                 ) : ''}
+                               </span>
+                             </div>
                           </div>
                         ) : (
                           // Normal State (Not Selected)
-                          <>
-                            <div className="flex items-center space-x-3 ml-[0.2cm]">
+                          <div className="flex items-center w-full justify-start">
+                            <div className="flex items-center space-x-3 ml-[0.2cm] flex-shrink-0">
                               <div className="w-16 h-8 flex items-center justify-center overflow-hidden">
                                 <img 
                                   src={config.icon} 
@@ -1758,19 +1732,19 @@ export default function RideHailingWidget() {
                                     </div>
                                   </div>
                                   <span className="text-[10px] text-black/60 mt-[-0.1cm] font-light leading-none tracking-tight">
-                                     {etaMinutes != null ? `${etaMinutes} min` : '— min'}
-                                     {arrivalTimeStr ? (
-                                       <>
-                                         {' • '}
-                                         <span className="font-light">{arrivalTimeStr}</span>
-                                       </>
-                                     ) : ''}
-                                   </span>
-                                </div>
-                            </div>
-                            
-                            <div className="flex flex-col items-end mr-[0.2cm] mt-[-0.1cm]">
-                              {isLoadingEstimate ? (
+                                       {etaMinutes != null ? `${etaMinutes} min` : '— min'}
+                                       {arrivalTimeStr ? (
+                                         <>
+                                           {' • '}
+                                           <span className="font-light">{arrivalTimeStr}</span>
+                                         </>
+                                       ) : ''}
+                                     </span>
+                                  </div>
+                              </div>
+                              
+                              <div className="flex flex-col items-end ml-[0.01cm] mt-[-0.1cm] flex-grow pr-[0.1cm]">
+                                {isLoadingEstimate ? (
                                 <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
                               ) : (() => {
                                 const base = getClassPrice(key as RideClass);
@@ -1790,7 +1764,7 @@ export default function RideHailingWidget() {
                                 );
                               })()}
                             </div>
-                          </>
+                          </div>
                         )}
                       </button>
                       {index === 2 && (
@@ -1803,15 +1777,15 @@ export default function RideHailingWidget() {
 
               {/* World-Class Payment & Action Bar */}
               <div 
-                 className={`absolute bottom-0 left-0 right-0 bg-white z-20 pb-[env(safe-area-inset-bottom)] px-2 transition-transform ${isDragging ? 'duration-0' : 'duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]'}`}
+                 className={`absolute bottom-0 left-0 right-0 bg-white z-20 pb-[calc(env(safe-area-inset-bottom)+30px)] px-2 transition-transform ${isDragging ? 'duration-0' : 'duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]'}`}
                 style={{ 
                    transform: `translateY(calc(${sheetHeight}px - ${vh}px)) translateZ(0)`,
                    backfaceVisibility: 'hidden',
                    willChange: 'transform'
                  }}
                >
-                <div className="w-full h-px bg-black/10 mb-2" />
-                <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
+                <div className="w-full h-px bg-black/10 mt-[0.1cm] mb-[0.1cm]" />
+                <div className="h-[42px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-[0.1cm]">
                   <button 
                     onClick={() => {
                       const params = new URLSearchParams(window.location.search);
@@ -1867,10 +1841,10 @@ export default function RideHailingWidget() {
                   </div>
                 </div>
 
-                <div className="w-full px-[0.5cm] mb-1">
+                <div className="w-full px-[0.5cm] mb-0">
                   <button 
                     onClick={handleConfirmRide}
-                    className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mt-[0.3cm]"
+                    className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mt-0"
                   >
                     <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                   </button>
