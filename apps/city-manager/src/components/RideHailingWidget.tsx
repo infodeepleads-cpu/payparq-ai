@@ -650,9 +650,9 @@ export default function RideHailingWidget() {
   useEffect(() => {
     const computeHeights = () => {
       const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-      // 228px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
-     const collapsed = 228; 
-     const expanded = vh; // Covers the whole screen including top widget
+      // 256px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
+      const collapsed = 256; 
+      const expanded = vh; // Covers the whole screen including top widget
       setSheetHeight(sheetSnap === 'collapsed' ? collapsed : expanded);
     };
     computeHeights();
@@ -736,7 +736,7 @@ export default function RideHailingWidget() {
         console.log("Initializing map...");
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/mapbox/light-v11",
+          style: "mapbox://styles/mapbox/streets-v12",
           center: [16.4401, 43.5186],
           zoom: 16,
           pitch: 60,
@@ -759,7 +759,7 @@ export default function RideHailingWidget() {
           if (!fallbackStyleTried.current && typeof msg === 'string' && /style/i.test(msg)) {
             fallbackStyleTried.current = true;
             try {
-              map.current?.setStyle("mapbox://styles/mapbox/light-v11");
+              map.current?.setStyle("mapbox://styles/mapbox/streets-v12");
             } catch {}
           }
         });
@@ -1349,7 +1349,7 @@ export default function RideHailingWidget() {
         className={`fixed inset-0 z-0 bg-white transition-all duration-300 ${
           step === 'search' ? 'invisible opacity-0' : 'visible opacity-100'
         }`}
-        style={{ backfaceVisibility: 'hidden', willChange: 'transform', filter: 'brightness(1.08) saturate(0.85) contrast(1.02)' }}
+        style={{ backfaceVisibility: 'hidden', willChange: 'transform', filter: 'brightness(1.1) contrast(1.02) saturate(0.95)' }}
       />
 
       {/* UI Content Layer */}
