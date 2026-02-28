@@ -166,6 +166,48 @@ const modernRealisticCar3D = (accent: string, isVan?: boolean) =>
     </svg>`
   );
 
+const birdViewCarSVG = (accent: string = '#7C3AED') =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg width="40" height="80" viewBox="0 0 40 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Shadow -->
+      <rect x="4" y="10" width="32" height="64" rx="10" fill="black" fill-opacity="0.15" filter="blur(3px)"/>
+      
+      <!-- Main Body -->
+      <rect x="4" y="6" width="32" height="68" rx="10" fill="white" stroke="#D1D5DB" stroke-width="0.5"/>
+      
+      <!-- Roof -->
+      <rect x="9" y="28" width="22" height="26" rx="4" fill="white" stroke="#F3F4F6" stroke-width="1"/>
+      
+      <!-- Windshield (Front) -->
+      <path d="M9 22 C9 22 20 18 31 22 L31 28 C31 28 20 24 9 28 Z" fill="${accent}" fill-opacity="0.85"/>
+      
+      <!-- Rear Window -->
+      <path d="M9 54 C9 54 20 58 31 54 L31 60 C31 60 20 64 9 60 Z" fill="${accent}" fill-opacity="0.85"/>
+      
+      <!-- Side Windows -->
+      <rect x="7" y="30" width="2" height="22" rx="1" fill="#1F2937" fill-opacity="0.7"/>
+      <rect x="31" y="30" width="2" height="22" rx="1" fill="#1F2937" fill-opacity="0.7"/>
+
+      <!-- Hood Details -->
+      <path d="M12 12 Q20 9 28 12" stroke="#E5E7EB" stroke-width="1" fill="none"/>
+      
+      <!-- Trunk Details -->
+      <path d="M12 68 Q20 71 28 68" stroke="#E5E7EB" stroke-width="1" fill="none"/>
+
+      <!-- Headlights -->
+      <rect x="6" y="8" width="7" height="4" rx="1.5" fill="#FFFBEB" fill-opacity="0.9"/>
+      <rect x="27" y="8" width="7" height="4" rx="1.5" fill="#FFFBEB" fill-opacity="0.9"/>
+      
+      <!-- Taillights -->
+      <rect x="6" y="70" width="7" height="3" rx="1" fill="#F87171" fill-opacity="0.8"/>
+      <rect x="27" y="70" width="7" height="3" rx="1" fill="#F87171" fill-opacity="0.8"/>
+      
+      <!-- Accent Line (Brand Color) -->
+      <rect x="18" y="38" width="4" height="6" rx="1" fill="${accent}" fill-opacity="0.8"/>
+    </svg>`
+  );
+
 const RIDE_CLASSES: Record<RideClass, { label: string; description: string; basePrice: number; multiplier: number; icon: string; capacity: number }> = {
   parq_go: { 
     label: 'Parq Standard', 
@@ -277,6 +319,18 @@ export default function RideHailingWidget() {
     // Hide layout when in rides widget (since it's full screen)
     window.dispatchEvent(new CustomEvent('toggle-layout', { detail: true }));
 
+    // Handle back from /map artifact
+    const params = new URLSearchParams(window.location.search);
+    const hasDest = !!params.get('dest_lat') || !!params.get('dest1_lat');
+    if (!hasDest && step === 'search') {
+      // If we are in search step but have no destination, 
+      // check if we should be redirecting back to /map
+      const isMapRoute = window.location.pathname === '/map';
+      if (!isMapRoute) {
+        // router.replace('/map');
+      }
+    }
+
     // Listen for visibility change or focus to update state when coming back from calendar page
     const handleFocus = () => loadScheduled();
     window.addEventListener('focus', handleFocus);
@@ -306,7 +360,14 @@ export default function RideHailingWidget() {
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isRouting, setIsRouting] = useState(false);
-  const [routeData, setRouteData] = useState<{ distance: number; duration: number } | null>(null);
+  const [routeData, setRouteData] = useState<{ 
+    distance: number; 
+    duration: number;
+    geometry?: {
+      type: string;
+      coordinates: [number, number][];
+    };
+  } | null>(null);
   const [trackingDriver, setTrackingDriver] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -332,7 +393,7 @@ export default function RideHailingWidget() {
   const otherDriversMarkers = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const routeLayerId = "route-line";
   const DARK_BG = "#000000";
-  const ACCENT_PURPLE = "#8B5CF6"; // Vibrant Violet
+  const ACCENT_PURPLE = "#6D28D9"; // Match CTA color #6D28D9
   const CARD_BG = "#FFFFFF";
   const prevDriverState = useRef<{ [key: string]: { lat: number; lng: number; rotation: number } }>({});
   const fallbackStyleTried = useRef(false);
@@ -380,8 +441,8 @@ export default function RideHailingWidget() {
 
   const getMarkerScale = () => {
     const z = map.current?.getZoom() ?? 16;
-    const s = 0.65 + Math.max(0, z - 14) * 0.10;
-    return Math.min(1.3, Math.max(0.8, s));
+    const s = 0.42 + Math.max(0, z - 14) * 0.06;
+    return Math.min(1.1, Math.max(0.35, s));
   };
 
   // Handle click outside suggestions
@@ -432,13 +493,37 @@ export default function RideHailingWidget() {
 
         // Show only a single static car on the map
         if (drivers.length === 0) {
-          // One static mock driver near the user's location (no movement)
-          const radius = 0.0009;
-          const angle = Math.PI / 6;
+          // Simulation of a moving driver near the user
+          // Move car ONLY along the road path if routeData is available
+          let driverPos = { lat: location.lat, lng: location.lng };
+          
+          if (routeData?.geometry?.coordinates && routeData.geometry.coordinates.length > 1) {
+            const coords = routeData.geometry.coordinates;
+            // Cycle through the actual road path
+            const t = (Date.now() / 20000) % 1; // Slow down to 20s for more realism
+            const exactIndex = t * (coords.length - 1);
+            const index = Math.floor(exactIndex);
+            const nextIndex = (index + 1) % coords.length;
+            const ratio = exactIndex % 1;
+            
+            const [lng1, lat1] = coords[index];
+            const [lng2, lat2] = coords[nextIndex];
+            
+            driverPos = {
+              lng: lng1 + (lng2 - lng1) * ratio,
+              lat: lat1 + (lat2 - lat1) * ratio
+            };
+          } else {
+            // Stay static near user if no road path - NEVER drive on grass/Poljud
+            driverPos = {
+              lat: location.lat + 0.0001,
+              lng: location.lng + 0.0001
+            };
+          }
+
           const oneMock = [{
             id: 'mock-driver-0',
-            lat: location.lat + Math.sin(angle) * radius,
-            lng: location.lng + Math.cos(angle) * radius,
+            ...driverPos
           }];
           setNearbyDrivers(oneMock as any);
         } else {
@@ -450,9 +535,9 @@ export default function RideHailingWidget() {
     };
 
     fetchDrivers();
-    // Do not poll; keep marker fixed/static
-    return () => {};
-  }, [location]);
+    const interval = setInterval(fetchDrivers, 5000); // 5 seconds instead of 50ms to avoid rate limits and ERR_ABORTED
+    return () => clearInterval(interval);
+  }, [location, routeData]);
 
   // Update other drivers markers on map
   useEffect(() => {
@@ -474,9 +559,8 @@ export default function RideHailingWidget() {
       if (!otherDriversMarkers.current[driver.id]) {
         const el = document.createElement("div");
         el.className = "marker-driver";
-        el.style.width = "34px";
-        el.style.height = "34px";
-        el.style.transition = "none";
+        el.style.width = "30px";
+        el.style.height = "30px";
         el.style.zIndex = "10";
         el.style.pointerEvents = "none";
         el.style.willChange = "transform";
@@ -486,27 +570,28 @@ export default function RideHailingWidget() {
         inner.style.width = "100%";
         inner.style.height = "100%";
         inner.style.position = "relative";
+        inner.style.transformOrigin = "center center";
         inner.style.transform = "none";
-        inner.style.transition = "none";
+        inner.style.transition = "none"; // REMOVED transform transition to fix zoom lag
         inner.style.willChange = "auto";
         
         const img = document.createElement("img");
-        img.src = RIDE_CLASSES[selectedClass].icon;
+        img.src = birdViewCarSVG('#6D28D9'); // Match darkened CTA color
         img.style.width = "100%";
         img.style.height = "100%";
         img.style.objectFit = "contain";
-        img.style.transform = "scale(0.8)";
+        img.style.transform = "scale(1.2)";
         img.style.willChange = "auto";
         
         // Robust fallback if image fails - looks like a silver car body
         img.onerror = () => {
           img.style.display = "none";
           inner.style.background = "#ffffff";
-          inner.style.borderRadius = "8px";
-          inner.style.width = "24px";
-          inner.style.height = "40px";
+          inner.style.borderRadius = "4px";
+          inner.style.width = "12px";
+          inner.style.height = "22px";
           inner.style.margin = "auto";
-          inner.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+          inner.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
           inner.style.border = "1px solid #D1D5DB";
         };
         
@@ -515,9 +600,12 @@ export default function RideHailingWidget() {
 
         otherDriversMarkers.current[driver.id] = new mapboxgl.Marker({
           element: el,
-          anchor: 'center'
+          anchor: 'center',
+          rotationAlignment: 'map',
+          pitchAlignment: 'viewport'
         })
           .setLngLat([driver.lng, driver.lat])
+          .setRotation(0)
           .addTo(map.current!);
         
         prevDriverState.current[driver.id] = { lat: driver.lat, lng: driver.lng, rotation: 0 };
@@ -525,17 +613,28 @@ export default function RideHailingWidget() {
         const marker = otherDriversMarkers.current[driver.id];
         const el = marker.getElement();
         const inner = el.querySelector('.marker-inner') as HTMLDivElement;
-        // Keep the marker icon in sync with the selected class
         const img = el.querySelector('img') as HTMLImageElement | null;
+        
         if (img) {
-          img.src = RIDE_CLASSES[selectedClass].icon;
+          img.src = birdViewCarSVG('#6D28D9');
         }
-        // Keep the marker static: no movement, no rotation updates
-        if (inner) {
-          const scale = getMarkerScale();
-          inner.style.transform = `scale(${scale})`;
+
+        const prevState = prevDriverState.current[driver.id];
+        let rotation = prevState?.rotation || 0;
+
+        if (prevState && (prevState.lat !== driver.lat || prevState.lng !== driver.lng)) {
+          // Calculate bearing based on movement
+          rotation = geoBearing(prevState.lat, prevState.lng, driver.lat, driver.lng);
         }
-        prevDriverState.current[driver.id] = { lat: driver.lat, lng: driver.lng, rotation: 0 };
+
+        if (inner && map.current) {
+          marker.setRotation(rotation);
+        }
+
+        // SMOOTHLY update marker position WITHOUT CSS transitions
+        // Set position directly to stay "glued" to map during scroll/zoom
+        marker.setLngLat([driver.lng, driver.lat]);
+        prevDriverState.current[driver.id] = { lat: driver.lat, lng: driver.lng, rotation };
       }
     });
   }, [nearbyDrivers, selectedClass]);
@@ -634,6 +733,7 @@ export default function RideHailingWidget() {
           map.current?.resize();
         });
 
+        // Update map state
         map.current.on('error', (e) => {
           const err: any = e as any;
           const msg = err?.error?.message || err?.message || err;
@@ -769,8 +869,8 @@ export default function RideHailingWidget() {
     if (type === 'pickup') {
       // Pickup ONLY has the bullseye, NO cloud label (removed "Poljud" cloud)
       el.innerHTML = `
-        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#A855F7] bg-white flex items-center justify-center shadow-sm">
-          <div class="w-1 h-1 rounded-full bg-[#A855F7]"></div>
+        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#7C3AED] bg-white flex items-center justify-center shadow-sm">
+          <div class="w-1 h-1 rounded-full bg-[#7C3AED]"></div>
         </div>
       `;
     } else {
@@ -781,9 +881,9 @@ export default function RideHailingWidget() {
           <span class="text-[13px] font-light text-black">Arrive ${displayTime}</span>
         </div>
         <!-- Bullseye Marker -->
-        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#A855F7] bg-[#A855F7] flex items-center justify-center shadow-sm">
-          <div class="w-[7px] h-[7px] rounded-full border-[1.5px] border-[#A855F7] bg-white flex items-center justify-center">
-            <div class="w-0.5 h-0.5 rounded-full bg-[#A855F7]"></div>
+        <div class="absolute w-2.5 h-2.5 rounded-full border-[1.5px] border-[#7C3AED] bg-[#7C3AED] flex items-center justify-center shadow-sm">
+          <div class="w-[7px] h-[7px] rounded-full border-[1.5px] border-[#7C3AED] bg-white flex items-center justify-center">
+            <div class="w-0.5 h-0.5 rounded-full bg-[#7C3AED]"></div>
           </div>
         </div>
       `;
@@ -840,7 +940,11 @@ export default function RideHailingWidget() {
         const snappedDestination = route[route.length - 1];
 
         console.log(`Route fetched: ${distance}km, ${duration}min`);
-        setRouteData({ distance: data.distance, duration: data.duration });
+        setRouteData({ 
+          distance: data.distance, 
+          duration: data.duration,
+          geometry: data.geometry
+        });
         
         setEtaMinutes(duration);
         const arrival = new Date(Date.now() + data.duration * 1000);
@@ -1006,7 +1110,7 @@ export default function RideHailingWidget() {
         params.set("pickup_lng", pLng);
       }
       if (pName) params.set("pickup_name", pName);
-      if (typeof window !== "undefined" && window.location.pathname !== "/map") {
+      if (typeof window !== "undefined" && window.location.pathname === "/rides") {
         router.replace(params.toString() ? `/map?${params.toString()}` : "/map");
       }
     }
@@ -1224,16 +1328,16 @@ export default function RideHailingWidget() {
       {/* Map Section - background */}
       <div 
         ref={mapContainer} 
-        className={`absolute inset-0 z-0 bg-white transition-all duration-300 rounded-none border-0 ${
-          step === 'search' ? 'invisible opacity-0' : 'visible opacity-100 h-full'
+        className={`fixed inset-0 z-0 bg-white transition-all duration-300 ${
+          step === 'search' ? 'invisible opacity-0' : 'visible opacity-100'
         }`}
-        style={{ backfaceVisibility: 'hidden' }}
+        style={{ backfaceVisibility: 'hidden', willChange: 'transform' }}
       />
 
       {/* UI Content Layer */}
       <div className={`relative z-10 w-full h-full pointer-events-none flex flex-col ${step === 'search' ? 'bg-white' : 'bg-transparent'}`}>
         {/* Global Header */}
-        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'px-4 pt-4 -mx-px'}`}>
+        <div className={`w-full z-[1003] pointer-events-auto flex-shrink-0 transition-all duration-300 ${step === 'search' ? 'bg-white' : 'pl-1 pr-4 pt-4 -mx-px -mt-px'}`}>
           <div className={`relative transition-all duration-300 ${
             step === 'search' 
               ? 'w-full h-auto flex flex-col items-center justify-center' 
@@ -1273,7 +1377,7 @@ export default function RideHailingWidget() {
             
             {step !== 'search' && (
               <div className="flex-1 flex items-center justify-center space-x-1.5 px-2 overflow-hidden">
-                <span className="text-[13px] font-medium text-[#A855F7] truncate min-w-0 shrink">
+                <span className="text-[13px] font-medium text-[#6D28D9] truncate min-w-0 shrink">
                   {pickupAddress.split(',')[0]}
                 </span>
                 
@@ -1342,7 +1446,6 @@ export default function RideHailingWidget() {
               </button>
               <div className="flex items-center flex-1 bg-black/[0.03] rounded-xl px-3 py-1.5">
                 <input
-                  autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Kamo?"
@@ -1359,10 +1462,10 @@ export default function RideHailingWidget() {
                     <button
                       key={item.id}
                       onClick={() => selectSearchResult(item)}
-                      className="w-full flex items-center p-3 rounded-2xl hover:bg-black/[0.01] transition-all border border-transparent hover:border-black/5 group"
+                      className="w-full flex items-center p-3 rounded-2xl hover:bg-[#7C3AED]/[0.02] transition-all border border-transparent hover:border-[#7C3AED]/10 group"
                     >
-                      <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
-                        <svg className="w-4 h-4 text-black/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 bg-[#7C3AED]/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-[#7C3AED]/10 transition-colors">
+                        <svg className="w-4 h-4 text-[#7C3AED]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -1398,10 +1501,10 @@ export default function RideHailingWidget() {
                             fetchRoute([location.lng, location.lat], [item.lng, item.lat]);
                           }
                         }}
-                        className="w-full flex items-center p-3 rounded-2xl hover:bg-black/[0.01] transition-all border border-transparent hover:border-black/5 group"
+                        className="w-full flex items-center p-3 rounded-2xl hover:bg-[#7C3AED]/[0.02] transition-all border border-transparent hover:border-[#7C3AED]/10 group"
                       >
-                        <div className="w-10 h-10 bg-black/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-black/10 transition-colors">
-                          <svg className="w-4 h-4 text-black/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-10 h-10 bg-[#7C3AED]/5 rounded-xl flex items-center justify-center mr-4 group-hover:bg-[#7C3AED]/10 transition-colors">
+                          <svg className="w-4 h-4 text-[#7C3AED]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           </svg>
                         </div>
@@ -1434,7 +1537,7 @@ export default function RideHailingWidget() {
 
           <div
             ref={sheetRef}
-            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/5 px-4 pt-0 pb-6 flex flex-col"
+            className="relative bg-white pointer-events-auto transition-all duration-700 shadow-[0_-15px_50px_rgba(0,0,0,0.08)] rounded-t-[1.5rem] border-t border-black/10 px-4 pt-0 pb-6 flex flex-col"
             style={{ height: 'calc(45vh + 1.5cm)', paddingBottom: 'calc(max(20px, env(safe-area-inset-bottom)) + 0.5cm)', transform: 'translateZ(0)' }}
           >
           <div className="absolute top-[0.2cm] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/20 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/30 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
@@ -1458,14 +1561,14 @@ export default function RideHailingWidget() {
                         }}
                         className={`w-full flex items-center justify-between transition-all duration-300 rounded-2xl group relative overflow-hidden ${
                           isSelected 
-                            ? 'h-[2.6cm] bg-white border-2 border-[#A855F7] shadow-lg px-6' 
-                            : 'h-[1.3cm] px-3 bg-white border-2 border-transparent hover:bg-black/[0.02]'
+                            ? 'h-[2.6cm] bg-white border-[3px] border-[#6D28D9] shadow-lg px-2' 
+                            : 'h-[1.3cm] px-2 bg-white border-2 border-transparent hover:bg-black/[0.02]'
                         }`}
                       >
                         {isSelected ? (
                           // Expanded State (Selected)
                           <div className="flex items-center w-full justify-between">
-                            <div className="w-28 h-14 flex items-center justify-center -ml-2">
+                            <div className="w-32 h-16 flex items-center justify-center ml-1">
                               <img src={config.icon} alt={config.label} className="w-full h-full object-contain scale-125" />
                             </div>
                             
@@ -1564,67 +1667,69 @@ export default function RideHailingWidget() {
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className="mt-auto pt-2 space-y-4">
-                <div className="flex items-center justify-between px-0">
-                  <button 
-                    onClick={() => {
-                      const params = new URLSearchParams(window.location.search);
-                      router.push(`/payment?${params.toString()}` as any);
-                    }}
-                    className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
-                  >
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      {paymentMethod === 'card' && (
-                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <rect x="2" y="5" width="20" height="14" rx="2" />
-                          <line x1="2" y1="10" x2="22" y2="10" />
-                        </svg>
-                      )}
-                      {paymentMethod === 'cash' && (
-                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <rect x="2" y="6" width="20" height="12" rx="2" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
-                      {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
-                      {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
-                      {paymentMethod === 'payparq' && (
-                        <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
-                          <span className="text-[7px] font-medium text-white leading-none">PQ</span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
-                      {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
-                    </span>
-                  </button>
-
-                  <div className="flex items-center space-x-4">
-                    {isAIBooking && (
-                      <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
-                        <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
-                        <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
+              <div className="-mx-4 h-px bg-black/10 mb-2" />
+              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
+                <button 
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search);
+                    router.push(`/payment?${params.toString()}` as any);
+                  }}
+                  className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                >
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    {paymentMethod === 'card' && (
+                      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                      </svg>
+                    )}
+                    {paymentMethod === 'cash' && (
+                      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <rect x="2" y="6" width="20" height="12" rx="2" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                    {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
+                    {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
+                    {paymentMethod === 'payparq' && (
+                      <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
+                        <span className="text-[7px] font-medium text-white leading-none">PQ</span>
                       </div>
                     )}
-                    <button 
-                      onClick={() => router.push('/calendar' as any)}
-                      className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
-                    >
-                      <svg className="w-4 h-4 text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
-                      </svg>
-                      <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
-                    </button>
                   </div>
+                  <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
+                    {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                  </span>
+                  <svg className="w-3.5 h-3.5 text-black group-hover:text-black/70 transition-colors ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m6 9 6 6 6-6"/>
+                  </svg>
+                </button>
+
+                <div className="flex items-center space-x-4">
+                  {isAIBooking && (
+                    <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
+                      <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                      <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => router.push('/calendar' as any)}
+                    className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                  >
+                    <svg className="w-4 h-4 text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
+                    </svg>
+                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
+                  </button>
                 </div>
+              </div>
 
                 <button 
                   onClick={handleConfirmRide}
-                  className="w-full bg-[#A855F7] text-white h-[46px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#9333EA] transition-all active:scale-[0.98] shadow-none border-0 ring-0 focus:ring-0"
+                  className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none"
                 >
-                  <span className="text-[15px] font-bold">Naruči {RIDE_CLASSES[selectedClass].label}</span>
+                  <span className="text-[15px] font-bold">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                 </button>
-              </div>
             </div>
           )}
 
@@ -1645,10 +1750,10 @@ export default function RideHailingWidget() {
               </div>
 
               {/* Driver Card */}
-              <div className="bg-white rounded-[1.5rem] p-3 flex items-center space-x-3 mb-3 shadow-[0_15px_35px_rgba(0,0,0,0.1)] border-2 border-black relative overflow-hidden group/driver">
-                <div className="absolute inset-0 bg-black opacity-0 group-hover/driver:opacity-5 transition-opacity"></div>
+              <div className="bg-white rounded-[1.5rem] p-3 flex items-center space-x-3 mb-3 shadow-[0_15px_35px_rgba(0,0,0,0.1)] border-2 border-black relative overflow-hidden group">
+                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity"></div>
                 <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 bg-black rounded-xl overflow-hidden border-2 border-black shadow-lg group-hover/driver:scale-105 transition-transform duration-500">
+                  <div className="w-12 h-12 bg-black rounded-xl overflow-hidden border-2 border-black shadow-lg group-hover:scale-105 transition-transform duration-500">
                     <img src={trackingDriver?.image || "https://i.pravatar.cc/150?u=1"} alt="Driver" className="w-full h-full object-cover" />
                   </div>
                   <div className="absolute -bottom-1.5 -right-1.5 bg-black text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-white shadow-md">
@@ -1666,12 +1771,12 @@ export default function RideHailingWidget() {
 
               {/* High-Fidelity Action Row (Share & Safety) */}
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <button className="flex items-center justify-center space-x-2 py-2.5 bg-white border-2 border-black hover:bg-black hover:text-white rounded-xl transition-all group/share active:scale-95">
-                  <svg className="w-3.5 h-3.5 text-black group-hover/share:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                <button className="flex items-center justify-center space-x-2 py-2.5 bg-white border-2 border-black hover:bg-black hover:text-white rounded-xl transition-all group active:scale-95">
+                  <svg className="w-3.5 h-3.5 text-black group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                   <span className="text-[9px] font-black uppercase tracking-widest">Podijeli</span>
                 </button>
-                <button className="flex items-center justify-center space-x-2 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all group/safety active:scale-95">
-                  <svg className="w-3.5 h-3.5 text-red-600 group-hover/safety:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <button className="flex items-center justify-center space-x-2 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all group active:scale-95">
+                  <svg className="w-3.5 h-3.5 text-red-600 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   <span className="text-[9px] font-black uppercase tracking-widest text-red-600">Sigurnost</span>
                 </button>
               </div>
@@ -1705,13 +1810,13 @@ export default function RideHailingWidget() {
                     setTrackingDriver(null);
                     setStep('search');
                   }}
-                  className="bg-white hover:bg-black hover:text-white py-3 rounded-[1.5rem] text-black font-black flex items-center justify-center space-x-2 border-2 border-black transition-all active:scale-[0.98] group/cancel"
+                  className="bg-white hover:bg-black hover:text-white py-3 rounded-[1.5rem] text-black font-black flex items-center justify-center space-x-2 border-2 border-black transition-all active:scale-[0.98] group"
                 >
-                  <svg className="w-4 h-4 group-hover/cancel:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                  <svg className="w-4 h-4 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                   <span className="text-[10px] uppercase tracking-widest">Otkaži</span>
                 </button>
-                <button className="bg-black hover:bg-black/90 text-white font-black py-3 rounded-[1.5rem] flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-xl group/call">
-                  <svg className="w-4 h-4 group-hover/call:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                <button className="bg-black hover:bg-black/90 text-white font-black py-3 rounded-[1.5rem] flex items-center justify-center space-x-2 transition-all active:scale-[0.98] shadow-xl group">
+                  <svg className="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                   <span className="text-[10px] uppercase tracking-widest">Nazovi</span>
                 </button>
               </div>
