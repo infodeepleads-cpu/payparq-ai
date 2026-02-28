@@ -654,7 +654,7 @@ export default function RideHailingWidget() {
       setVh(currentVh);
       
       const WIDGET_H = 113.385; // 3.0cm
-      const BAR_H = 155; // Reduced to 155px per user request to show only one car in minimized state 
+      const BAR_H = 128; // Raised by 0.5cm (20px) from previous 109px to match expected 128px
       
       const minimized = WIDGET_H + BAR_H;
       const collapsed = currentVh * 0.75 - 38; // Lowered by 1cm (~38px) per user request
@@ -692,7 +692,7 @@ export default function RideHailingWidget() {
       const currentVh = typeof window !== 'undefined' ? window.innerHeight : 800;
       
       const WIDGET_H = 113.385;
-      const BAR_H = 155;
+      const BAR_H = 128; // Matches computeHeights for consistent snapping
       
       const minimized = WIDGET_H + BAR_H;
       const collapsed = currentVh * 0.75 - 38;
@@ -1634,10 +1634,14 @@ export default function RideHailingWidget() {
                 onPointerUp={onSheetPointerUp}
               >
                 {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[])
+                  .slice()
                   .sort((a, b) => {
-                    if (a === selectedClass) return -1;
-                    if (b === selectedClass) return 1;
-                    return 0;
+                    // In minimized state (bottom scroll), selected class must be at the top
+                    if (sheetSnap === 'minimized') {
+                      if (a === selectedClass) return -1;
+                      if (b === selectedClass) return 1;
+                    }
+                    return 0; // Keep fixed order otherwise
                   })
                   .map((key, index) => {
                   const config = RIDE_CLASSES[key];
@@ -1767,9 +1771,6 @@ export default function RideHailingWidget() {
                           </div>
                         )}
                       </button>
-                      {index === 2 && (
-                        <div className="w-[38px] h-1 bg-black/10 rounded-full mx-auto my-1" />
-                      )}
                     </React.Fragment>
                   );
                 })}
@@ -1784,7 +1785,6 @@ export default function RideHailingWidget() {
                    willChange: 'transform'
                  }}
                >
-                <div className="w-full h-px bg-black/10 mt-[0.1cm] mb-[0.1cm]" />
                 <div className="h-[42px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-[0.1cm]">
                   <button 
                     onClick={() => {
