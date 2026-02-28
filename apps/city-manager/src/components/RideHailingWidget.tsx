@@ -406,8 +406,9 @@ export default function RideHailingWidget() {
   const fallbackStyleTried = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const [sheetSnap, setSheetSnap] = useState<'collapsed' | 'expanded'>('collapsed');
+  const [sheetSnap, setSheetSnap] = useState<'minimized' | 'collapsed' | 'expanded'>('minimized');
   const [sheetHeight, setSheetHeight] = useState<number>(0);
+  const [vh, setVh] = useState<number>(800);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ y: number; height: number } | null>(null);
 
@@ -649,11 +650,21 @@ export default function RideHailingWidget() {
 
   useEffect(() => {
     const computeHeights = () => {
-      const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-      // 256px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
-      const collapsed = 256; 
-      const expanded = vh; // Covers the whole screen including top widget
-      setSheetHeight(sheetSnap === 'collapsed' ? collapsed : expanded);
+      const currentVh = typeof window !== 'undefined' ? window.innerHeight : 800;
+      setVh(currentVh);
+      
+      const WIDGET_H = 113.385; // 3.0cm
+      const BAR_H = 150; 
+      
+      const minimized = WIDGET_H + BAR_H;
+      const collapsed = currentVh * 0.75;
+      const expanded = currentVh; 
+      
+      let targetHeight = minimized;
+      if (sheetSnap === 'collapsed') targetHeight = collapsed;
+      else if (sheetSnap === 'expanded') targetHeight = expanded;
+      
+      setSheetHeight(targetHeight);
     };
     computeHeights();
     const onResize = () => computeHeights();
@@ -671,30 +682,44 @@ export default function RideHailingWidget() {
   const onSheetPointerMove = (e: React.PointerEvent) => {
     if (!dragStart.current) return;
     const dy = dragStart.current.y - e.clientY;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const next = Math.max(120, Math.min(vh * 0.95, dragStart.current.height + dy));
+    const currentVh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const next = Math.max(80, Math.min(currentVh, dragStart.current.height + dy));
     setSheetHeight(next);
-    
-    // Dynamically switch snap state during drag for better visual feedback
-    const collapsed = 228;
-    const expanded = vh; // Covers the whole screen including top widget
-    const mid = (collapsed + expanded) / 2;
-    if (next > mid && sheetSnap !== 'expanded') setSheetSnap('expanded');
-    if (next <= mid && sheetSnap !== 'collapsed') setSheetSnap('collapsed');
   };
 
   const onSheetPointerUp = (e: React.PointerEvent) => {
-    if (!dragStart.current) return;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const collapsed = 228;
-    const expanded = vh; // Covers the whole screen including top widget
-    const mid = (collapsed + expanded) / 2;
-    const snap = sheetHeight > mid ? 'expanded' : 'collapsed';
-    setSheetSnap(snap);
-    setSheetHeight(snap === 'collapsed' ? collapsed : expanded);
-    dragStart.current = null;
-    setIsDragging(false);
-  };
+      if (!dragStart.current) return;
+      const currentVh = typeof window !== 'undefined' ? window.innerHeight : 800;
+      
+      const WIDGET_H = 113.385;
+      const BAR_H = 150;
+      
+      const minimized = WIDGET_H + BAR_H;
+      const collapsed = currentVh * 0.75;
+      const expanded = currentVh;
+      
+      let snap: 'minimized' | 'collapsed' | 'expanded' = 'minimized';
+      
+      if (sheetHeight > (collapsed + expanded) / 2) {
+        snap = 'expanded';
+      } else if (sheetHeight > (minimized + collapsed) / 2) {
+        snap = 'collapsed';
+      } else {
+        snap = 'minimized';
+      }
+      
+      setSheetSnap(snap);
+      setSheetHeight(snap === 'minimized' ? minimized : snap === 'collapsed' ? collapsed : expanded);
+      dragStart.current = null;
+      setIsDragging(false);
+    };
+
+  // Reset snap state when entering destination step
+  useEffect(() => {
+    if (step === 'destination' && !isConfirmed) {
+      setSheetSnap('minimized');
+    }
+  }, [step, isConfirmed]);
 
   // Handle step transitions and layout visibility
   useEffect(() => {
@@ -782,18 +807,49 @@ export default function RideHailingWidget() {
     };
   }, []);
 
-  // Handle Map Resize when step changes
+  // Handle Map Resize when step or sheet layout changes
   useEffect(() => {
     if (map.current) {
-      setTimeout(() => {
+      const triggerResize = () => {
         map.current?.resize();
+        
+        // After resize, ensure the route is still visible in the new viewport
         if (location && destination && step !== 'search') {
-          const bounds = new mapboxgl.LngLatBounds().extend([location.lng, location.lat]).extend([destination.lng, destination.lat]);
-          map.current?.fitBounds(bounds, { padding: 50, duration: 1000 });
+          const bounds = new mapboxgl.LngLatBounds()
+            .extend([location.lng, location.lat])
+            .extend([destination.lng, destination.lat]);
+            
+          // Add significant padding to the bottom to account for the sheet
+          // but fitBounds already works with the container size.
+          // Since the container is now smaller, we just need to re-fit.
+          map.current?.fitBounds(bounds, { 
+             padding: { top: 40, bottom: 40, left: 40, right: 40 }, 
+             duration: 1000,
+             essential: true
+           });
         }
-      }, 700); // Wait for transition to finish
+      };
+
+      if (isDragging) {
+        // Continuous resize during dragging to avoid grey areas
+        const interval = setInterval(() => map.current?.resize(), 16); // 60fps
+        return () => clearInterval(interval);
+      } else {
+        // Immediate resize when snap starts
+        map.current?.resize();
+        
+        // Multiple checks during the transition
+        const timer1 = setTimeout(triggerResize, 100);
+        const timer2 = setTimeout(triggerResize, 300);
+        const timer3 = setTimeout(triggerResize, 600);
+        return () => {
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+          clearTimeout(timer3);
+        };
+      }
     }
-  }, [step]);
+  }, [step, sheetSnap, isDragging, location, destination]);
 
   // 1. Handle Map Clicks (Update as state changes)
   useEffect(() => {
@@ -1316,7 +1372,7 @@ export default function RideHailingWidget() {
    };
 
   return (
-    <div className="relative w-full h-[100dvh] bg-white font-sans text-black overflow-hidden flex flex-col scroll-smooth">
+    <div className="relative w-full h-[100vh] bg-white font-sans text-black overflow-hidden flex flex-col scroll-smooth">
       {/* Loading Overlay */}
       {loading && (
         <div className="absolute inset-0 z-[10000] bg-black/20 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
@@ -1343,13 +1399,28 @@ export default function RideHailingWidget() {
       {/* Hidden helper for Tailwind classes used in markers */}
       <div className="hidden bg-white" />
 
+      <style jsx global>{`
+        .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib {
+          display: none !important;
+        }
+      `}</style>
+
       {/* Map Section - background */}
       <div 
         ref={mapContainer} 
-        className={`fixed inset-0 z-0 bg-white transition-all duration-300 ${
+        className={`z-0 bg-white ${
           step === 'search' ? 'invisible opacity-0' : 'visible opacity-100'
         }`}
-        style={{ backfaceVisibility: 'hidden', willChange: 'transform', filter: 'brightness(1.1) contrast(1.02) saturate(0.95)' }}
+        style={{ 
+          backfaceVisibility: 'hidden', 
+          willChange: 'bottom', 
+          filter: 'brightness(1.1) contrast(1.02) saturate(0.95)',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: sheetSnap === 'expanded' ? 0 : `${sheetHeight}px`,
+          position: 'fixed'
+        }}
       />
 
       {/* UI Content Layer */}
@@ -1561,25 +1632,38 @@ export default function RideHailingWidget() {
         )}
 
           <div
-            ref={sheetRef}
-            className={`fixed bottom-0 left-0 right-0 bg-white pointer-events-auto transition-all shadow-[0_-15px_50px_rgba(0,0,0,0.1)] rounded-t-[1.5rem] border-t border-black/10 px-2 pt-0 flex flex-col antialiased z-[1005] ${isDragging ? 'duration-0' : 'duration-700'}`}
-            style={{ height: `${sheetHeight}px`, paddingBottom: 'calc(max(4px, env(safe-area-inset-bottom)))', transform: 'translateZ(0)' }}
+            className="fixed inset-0 pointer-events-none z-[1005]"
           >
-          <div className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/40 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/60 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
-          
-          <div className="h-[12px] shrink-0"></div>
+            <div
+              ref={sheetRef}
+              className={`absolute bottom-0 left-0 right-0 bg-white pointer-events-auto transition-transform shadow-[0_-15px_50px_rgba(0,0,0,0.1)] rounded-t-[1.5rem] border-t border-black/10 px-2 pt-0 flex flex-col antialiased overflow-hidden ${isDragging ? 'duration-0' : 'duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]'}`}
+              style={{ 
+                height: `${vh}px`,
+                maxHeight: '100vh',
+                transform: `translateY(calc(${vh}px - ${sheetHeight}px)) translateZ(0)`,
+                willChange: 'transform',
+                contain: 'layout paint'
+              }}
+            >
+              <div className="absolute top-[4px] left-1/2 -translate-x-1/2 w-[40px] h-[4px] bg-black/40 rounded-full cursor-grab active:cursor-grabbing hover:bg-black/60 transition-colors shrink-0 z-10" onPointerDown={onSheetPointerDown} onPointerMove={onSheetPointerMove} onPointerUp={onSheetPointerUp} />
+              
+              <div className="h-[12px] shrink-0"></div>
           
           {/* Destination Step Content */}
           {step === 'destination' && !isConfirmed && (
-            <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <div className="flex flex-col h-full relative">
               <div 
-                className={`flex-1 overflow-y-auto custom-scrollbar ${sheetSnap === 'collapsed' ? 'overflow-hidden pt-1' : 'space-y-2'}`}
+                className={`flex-1 custom-scrollbar pb-[160px] pt-1 space-y-2 ${sheetSnap === 'minimized' ? 'overflow-hidden' : 'overflow-y-auto'}`}
                 onPointerDown={onSheetPointerDown} 
                 onPointerMove={onSheetPointerMove} 
                 onPointerUp={onSheetPointerUp}
               >
                 {(['parq_go', 'parq_taxi', 'comfort', 'van', 'smart_arrival', 'delivery'] as RideClass[])
-                  .filter(key => sheetSnap === 'expanded' || key === selectedClass)
+                  .sort((a, b) => {
+                    if (a === selectedClass) return -1;
+                    if (b === selectedClass) return 1;
+                    return 0;
+                  })
                   .map((key, index) => {
                   const config = RIDE_CLASSES[key];
                   const isSelected = selectedClass === key;
@@ -1623,7 +1707,7 @@ export default function RideHailingWidget() {
                                   </div>
                                 </div>
                                 
-                                <div className="flex flex-col items-end leading-none">
+                                <div className="flex flex-col items-end leading-none mt-[-0.1cm]">
                                   {isLoadingEstimate ? (
                                     <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
                                   ) : (() => {
@@ -1638,7 +1722,7 @@ export default function RideHailingWidget() {
                                   })()}
                                 </div>
   
-                                <span className="text-[11px] text-black/60 font-light leading-none tracking-tight">
+                                <span className="text-[11px] text-black/60 font-light leading-none tracking-tight mt-[-0.1cm]">
                                   {etaMinutes != null ? `${etaMinutes} min` : '— min'}
                                   {arrivalTimeStr ? (
                                     <>
@@ -1673,7 +1757,7 @@ export default function RideHailingWidget() {
                                       <span className="ml-0.5 text-[10px] font-bold tracking-tight">{config.capacity}</span>
                                     </div>
                                   </div>
-                                  <span className="text-[10px] text-black/60 mt-[-3px] font-light leading-none tracking-tight">
+                                  <span className="text-[10px] text-black/60 mt-[-0.1cm] font-light leading-none tracking-tight">
                                      {etaMinutes != null ? `${etaMinutes} min` : '— min'}
                                      {arrivalTimeStr ? (
                                        <>
@@ -1685,7 +1769,7 @@ export default function RideHailingWidget() {
                                 </div>
                             </div>
                             
-                            <div className="flex flex-col items-end mr-[0.2cm]">
+                            <div className="flex flex-col items-end mr-[0.2cm] mt-[-0.1cm]">
                               {isLoadingEstimate ? (
                                 <div className="w-3 h-3 border-2 border-black/10 border-t-black rounded-full animate-spin" />
                               ) : (() => {
@@ -1718,75 +1802,86 @@ export default function RideHailingWidget() {
               </div>
 
               {/* World-Class Payment & Action Bar */}
-              <div className={`w-full h-px bg-black/10 ${sheetSnap === 'collapsed' ? 'mt-[12px] mb-2' : 'mb-2'}`} />
-              <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
-                <button 
-                  onClick={() => {
-                    const params = new URLSearchParams(window.location.search);
-                    router.push(`/payment?${params.toString()}` as any);
-                  }}
-                  className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
-                >
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    {paymentMethod === 'card' && (
-                      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                        <line x1="2" y1="10" x2="22" y2="10" />
-                      </svg>
-                    )}
-                    {paymentMethod === 'cash' && (
-                      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <rect x="2" y="6" width="20" height="12" rx="2" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
-                    {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
-                    {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
-                    {paymentMethod === 'payparq' && (
-                      <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
-                        <span className="text-[7px] font-medium text-white leading-none">PQ</span>
+              <div 
+                 className={`absolute bottom-0 left-0 right-0 bg-white z-20 pb-[env(safe-area-inset-bottom)] px-2 transition-transform ${isDragging ? 'duration-0' : 'duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]'}`}
+                style={{ 
+                   transform: `translateY(calc(${sheetHeight}px - ${vh}px)) translateZ(0)`,
+                   backfaceVisibility: 'hidden',
+                   willChange: 'transform'
+                 }}
+               >
+                <div className="w-full h-px bg-black/10 mb-2" />
+                <div className="h-[38px] flex items-center justify-between px-4 border-2 border-black/10 rounded-2xl bg-white mb-2">
+                  <button 
+                    onClick={() => {
+                      const params = new URLSearchParams(window.location.search);
+                      router.push(`/payment?${params.toString()}` as any);
+                    }}
+                    className="flex items-center space-x-2 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      {paymentMethod === 'card' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="5" width="20" height="14" rx="2" />
+                          <line x1="2" y1="10" x2="22" y2="10" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'cash' && (
+                        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <rect x="2" y="6" width="20" height="12" rx="2" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                      {paymentMethod === 'gpay' && <span className="text-[8px] font-medium">GPay</span>}
+                      {paymentMethod === 'apay' && <span className="text-[8px] font-medium">Pay</span>}
+                      {paymentMethod === 'payparq' && (
+                        <div className="w-4 h-4 bg-black rounded-sm flex items-center justify-center">
+                          <span className="text-[7px] font-medium text-white leading-none">PQ</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
+                      {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
+                    </span>
+                    <svg className="w-3.5 h-3.5 text-black group-hover:text-black/70 transition-colors ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center space-x-4">
+                    {isAIBooking && (
+                      <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
+                        <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
+                        <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
                       </div>
                     )}
+                    <button 
+                      onClick={() => router.push('/calendar' as any)}
+                      className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                    >
+                      <svg className="w-[18px] h-[18px] text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
+                      </svg>
+                      <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
+                    </button>
                   </div>
-                  <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">
-                    {paymentMethod === 'payparq' ? 'Payparq' : paymentMethod === 'card' ? 'Visa •••• 4242' : paymentMethod === 'cash' ? 'Gotovina' : paymentMethod === 'gpay' ? 'Google Pay' : 'Apple Pay'}
-                  </span>
-                  <svg className="w-3.5 h-3.5 text-black group-hover:text-black/70 transition-colors ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m6 9 6 6 6-6"/>
-                  </svg>
-                </button>
+                </div>
 
-                <div className="flex items-center space-x-4">
-                  {isAIBooking && (
-                    <div className="flex items-center space-x-1.5 bg-black text-white px-2 py-0.5 rounded-full">
-                      <div className="w-1 h-1 rounded-full bg-white animate-pulse"></div>
-                      <span className="text-[9px] font-medium uppercase tracking-wider">-10% AI</span>
-                    </div>
-                  )}
+                <div className="w-full px-[0.5cm] mb-1">
                   <button 
-                    onClick={() => router.push('/calendar' as any)}
-                    className="flex items-center space-x-1.5 active:scale-95 transition-all group bg-transparent border-0 shadow-none outline-none ring-0 focus:ring-0"
+                    onClick={handleConfirmRide}
+                    className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mt-[0.3cm]"
                   >
-                    <svg className="w-[18px] h-[18px] text-black group-hover:text-black/70 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /><path d="M8 2v4" /><path d="M16 2v4" />
-                    </svg>
-                    <span className="text-[13px] font-medium text-black group-hover:text-black/70 transition-colors">Schedule</span>
+                    <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
                   </button>
                 </div>
               </div>
-
-                <button 
-                  onClick={handleConfirmRide}
-                  className="w-full bg-[#6D28D9] text-white h-[44px] rounded-full flex items-center justify-center space-x-2 hover:bg-[#5B21B6] transition-all active:scale-[0.98] relative overflow-hidden group ring-0 focus:ring-0 shadow-none border-none mb-1"
-                >
-                  <span className="text-[15px] font-bold tracking-tight">Odaberi {RIDE_CLASSES[selectedClass].label}</span>
-                </button>
             </div>
           )}
 
           {/* Tracking Step Content */}
           {isConfirmed && (
-            <div className="flex flex-col h-full animate-in slide-in-from-bottom duration-700 p-1">
+            <div className="flex flex-col h-full p-1">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-[20px] font-black text-black tracking-tight leading-none mb-1">Stiže za 3 min</h2>
@@ -1981,5 +2076,6 @@ export default function RideHailingWidget() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

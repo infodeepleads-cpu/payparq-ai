@@ -48,17 +48,21 @@ Application Structure & Pages:
       let resultText = "";
       const modelName = requestedModel || env.GEMINI_MODEL || "gemini-2.0-flash";
 
+      // Safety check: if model name looks like gemini-2.5-flash (which doesn't exist yet),
+      // or if it's explicitly set to it, fallback to 2.0-flash.
+      const normalizedModelName = modelName.includes("gemini-2.5") ? "gemini-2.0-flash" : modelName;
+
       const isGroqModel =
-        modelName.startsWith("groq/") ||
-        modelName.startsWith("openai/") ||
-        modelName.startsWith("moonshotai/") ||
-        modelName.startsWith("qwen/") ||
-        modelName.startsWith("whisper") ||
-        modelName.includes("llama") ||
-        modelName.includes("gemma");
+        normalizedModelName.startsWith("groq/") ||
+        normalizedModelName.startsWith("openai/") ||
+        normalizedModelName.startsWith("moonshotai/") ||
+        normalizedModelName.startsWith("qwen/") ||
+        normalizedModelName.startsWith("whisper") ||
+        normalizedModelName.includes("llama") ||
+        normalizedModelName.includes("gemma");
       if (isGroqModel) {
         if (!groq) throw new Error("GROQ_API_KEY is missing");
-        if (modelName.startsWith("whisper")) {
+        if (normalizedModelName.startsWith("whisper")) {
           const payload = JSON.stringify({
             nextStep: "Transcription models are not supported in chat. Please switch to a chat model.",
             urgent: false
@@ -142,10 +146,10 @@ Application Structure & Pages:
           ? messages.slice(-8).map((m: any) => ({ role: m.role, content: String(m.content || "").slice(0, 1500) }))
           : [];
         const supportsJson = !(
-          modelName.includes("guard") ||
-          modelName.includes("prompt-guard") ||
-          modelName.includes("maverick") ||
-          modelName.includes("scout")
+          normalizedModelName.includes("guard") ||
+          normalizedModelName.includes("prompt-guard") ||
+          normalizedModelName.includes("maverick") ||
+          normalizedModelName.includes("scout")
         );
         let chatCompletion;
         try {
@@ -155,7 +159,7 @@ Application Structure & Pages:
               ...limitedMsgs,
               ...(note ? [{ role: "user", content: String(note).slice(0, 1000) }] : [])
             ],
-            model: modelName,
+            model: normalizedModelName,
             temperature: 0.7,
             ...(supportsJson ? { response_format: { type: "json_object" } } : {})
           });
@@ -173,7 +177,7 @@ Application Structure & Pages:
                 ...limitedMsgs,
                 ...(note ? [{ role: "user", content: String(note).slice(0, 1000) }] : [])
               ],
-              model: modelName,
+              model: normalizedModelName,
               temperature: 0.7
             });
           } else {
@@ -199,7 +203,7 @@ Application Structure & Pages:
         
         // Use gemini-1.5-flash which should work. If not, maybe the API key doesn't have access to it or needs paid plan?
          // Trying gemini-1.5-flash-8b as it is often free tier friendly.
-         let targetModel = modelName;
+         let targetModel = normalizedModelName;
          if (targetModel === "gemini-1.5-flash") {
             targetModel = "gemini-1.5-flash"; // Keep it simple first
          }

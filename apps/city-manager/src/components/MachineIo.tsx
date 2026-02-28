@@ -757,7 +757,7 @@ export default function MachineIo() {
       if (selectedModel === "auto") {
         // Auto mode: Try models in sequence with timeout
         // Priority: Groq Llama 70B (High Quality) -> Gemini Flash (Fast/Reliable) -> Groq Llama 8B (Fastest)
-        const autoModels = ["llama-3.3-70b-versatile", "gemini-2.5-flash", "llama-3.1-8b-instant"];
+        const autoModels = ["llama-3.3-70b-versatile", "gemini-2.0-flash", "llama-3.1-8b-instant"];
         let lastError = null;
         let success = false;
 
