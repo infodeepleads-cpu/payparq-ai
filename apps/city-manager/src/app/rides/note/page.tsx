@@ -79,7 +79,7 @@ export default function DriverNotePage() {
         </div>
 
         <div className="flex items-center justify-end">
-          <button onClick={save} className="px-4 h-[40px] bg-[#6D28D9] text-white rounded-full text-[14px] font-bold">
+          <button onClick={save} className="px-4 h-[40px] bg-[#7C3AED] text-white rounded-full text-[14px] font-bold">
             Pošalji
           </button>
         </div>
