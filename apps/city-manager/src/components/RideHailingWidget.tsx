@@ -650,8 +650,8 @@ export default function RideHailingWidget() {
   useEffect(() => {
     const computeHeights = () => {
       const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-      // 248px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
-    const collapsed = 248; 
+      // 256px for collapsed to fully show selected widget + payment bar + confirm button with equal 12px gaps
+    const collapsed = 256; 
     const expanded = vh; // Covers the whole screen including top widget
       setSheetHeight(sheetSnap === 'collapsed' ? collapsed : expanded);
     };
