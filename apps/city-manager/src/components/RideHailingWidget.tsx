@@ -415,6 +415,7 @@ export default function RideHailingWidget() {
   const [lockedFareEuro, setLockedFareEuro] = useState<number | null>(null);
   const lockedClassRef = useRef<RideClass | null>(null);
   const [rideStartTs, setRideStartTs] = useState<number | null>(null);
+  const [rating, setRating] = useState<number>(0);
   const [pendingSurchargeEuro, setPendingSurchargeEuro] = useState<number>(0);
   const [notifyScheduledId, setNotifyScheduledId] = useState<number | null>(null);
   const lastDriverPosRef = useRef<{ lat: number; lng: number } | null>(null);
