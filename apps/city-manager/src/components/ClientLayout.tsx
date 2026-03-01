@@ -3,26 +3,68 @@
 import { useEffect, useState, Suspense } from "react";
 import { Capacitor } from "@capacitor/core";
 import { StatusBar } from "@capacitor/status-bar";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import DailyRecap from "./DailyRecap";
+import { getSupabase } from "../lib/supabase";
 
 const MachineIo = dynamic(() => import("./MachineIo"), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [hideLayout, setHideLayout] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const isAuthPage = pathname?.startsWith("/auth");
   const isHomePage = pathname === "/";
   const isNewNotePage = pathname === "/resources/notes/new";
   const isMapPage = pathname?.startsWith("/map");
-  const isPaymentPage = pathname?.startsWith("/payment");
+  const isPaymentPage = pathname?.startsWith("/payment") || pathname === "/pay";
   const isCalendarPage = pathname?.startsWith("/calendar");
   const isRidesPage = pathname?.startsWith("/rides");
-  const showChat = (searchParams?.get("show_chat") === "1" || searchParams?.get("show_chat") === "true");
+  const isMachineIoOpen = searchParams?.get("show_chat") === "1" || searchParams?.get("show_chat") === "true";
+  const actionParam = searchParams?.get("action");
+  const isLocateAction = actionParam === "locate";
+  const showChat = isMachineIoOpen;
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = getSupabase();
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUser(currentUser);
+        
+        // If not authenticated, check if the page/action is allowed for guests
+        // Allowed: Home (/), Auth (/auth), Map, and Rides (/rides)
+        const isGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
+
+        if (!currentUser && !isGuestAllowed) {
+          router.replace("/");
+        }
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          setUser(session?.user ?? null);
+          const currentIsGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
+          if (!session?.user && !currentIsGuestAllowed) {
+            router.replace("/");
+          }
+        });
+
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [pathname, isHomePage, isAuthPage, isMapPage, isLocateAction, showChat, router]);
 
   useEffect(() => {
     const handleToggle = (e: any) => setHideLayout(e.detail);
@@ -47,9 +89,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const shouldHideLayout = hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage;
+  const shouldHideLayout = (hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || !user || (isHomePage && !isMachineIoOpen)) && !isMachineIoOpen;
 
-  if (isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage) {
+  if (isLoading && !isHomePage && !isAuthPage && !isMapPage) {
+    return <div className="h-full w-full flex items-center justify-center bg-white">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#7C3AED]"></div>
+    </div>;
+  }
+
+  if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage) && !showChat) {
     return <main className="h-full w-full bg-white">{children}</main>;
   }
 
@@ -67,8 +115,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   </div>
               </div>
             </div>
-            {showChat && !shouldHideLayout && (
-              <div className="absolute top-0 right-0 bottom-0 left-[40px] z-50 pointer-events-none flex flex-col justify-end">
+            {showChat && (
+              <div className={`absolute top-0 right-0 bottom-0 ${!shouldHideLayout ? 'left-[40px]' : 'left-0'} z-[100] pointer-events-none flex flex-col justify-end`}>
                 <div className="w-full pointer-events-auto max-h-full flex flex-col h-full">
                   <MachineIo />
                 </div>
@@ -76,7 +124,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </main>
         </div>
-        <DailyRecap />
+        {!shouldHideLayout && <DailyRecap />}
       </div>
     </Suspense>
   );

@@ -2,21 +2,38 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+:root {
+  /* PayParq Tactical Theme - User Facing */
+  --color-primary: #6D28D9;
+  --color-primary-hover: #5B21B6;
+  --color-background: #000000;
+  --color-surface: #0B0819;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #E0E7FF;
+  
+  --background: var(--color-background);
+  --foreground: var(--color-text-primary);
+}
+
 @layer utilities {
   .safe-area-inset-top {
     padding-top: env(safe-area-inset-top);
   }
 }
 
-html, body, #__next {
-  height: 100%;
+html, body {
+  min-height: 100vh;
+  background: #000000 !important;
 }
 
 body {
-  background-color: #ffffff;
-  color: #000000;
-  font-family: Arial, sans-serif !important;
+  background: #000000 !important;
+  color: var(--foreground);
   -webkit-text-size-adjust: 100%; /* Prevent font boosting on mobile */
+}
+
+.font-apple-ui {
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, -system-ui, "SF Pro Text", "SF Pro Display", sans-serif;
 }
 
 * {

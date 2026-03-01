@@ -1,9 +1,14 @@
 import "../styles/globals.css";
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { PwaProvider } from "../components/PwaProvider";
 import ClientLayout from "../components/ClientLayout";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -29,7 +34,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="h-[100dvh] w-screen fixed inset-0 overflow-hidden overscroll-none touch-none antialiased font-sans bg-background text-text-primary">
+      <body className={`${plusJakarta.className} antialiased`}>
         <LanguageProvider>
           <PwaProvider />
           <Suspense fallback={null}>

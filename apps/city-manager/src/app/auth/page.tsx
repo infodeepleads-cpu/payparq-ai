@@ -1,24 +1,54 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function Auth() {
+function AuthContent() {
+  const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState<string>("0"); // 0. Član, 1. Agent, 2. Vlasnik zemljišta, 3. Ovlašteni zastupnik, 4. Referal
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+
+  const roles = [
+    { id: "0", label: "Član" },
+    { id: "1", label: "Agent" },
+    { id: "2", label: "Vlasnik zemljišta partner" },
+    { id: "3", label: "Ovlašteni zastupnik" },
+    { id: "4", label: "Referal" }
+  ];
+
+  const getRoleTerms = (roleId: string) => {
+    switch (roleId) {
+      case "0": return "Kao Član, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
+      case "1": return "Kao Agent, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
+      case "2": return "Kao Vlasnik zemljišta, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
+      case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
+      case "4": return "Kao Referal, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
+      default: return t('auth_terms_agreement');
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const modeParam = searchParams.get("mode");
+    if (modeParam === "signup") setMode("signup");
+    else if (modeParam === "signin") setMode("signin");
+  }, [searchParams]);
 
   const signIn = async () => {
     try {
@@ -29,9 +59,8 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
-        setLoading(false);
       } else {
-        window.location.href = "/";
+        window.location.href = "/map";
       }
     } catch (err: any) {
       setError(err.message || t('auth_error_generic'));
@@ -50,19 +79,25 @@ export default function Auth() {
         password,
         options: { 
           emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined,
-          data: { full_name: name }
+          data: { 
+            full_name: name,
+            role: role,
+            phone: phone,
+            address: address
+          }
         },
       });
 
       if (error) {
         setError(error.message);
       } else if (data.session) {
-        window.location.href = "/";
+        window.location.href = "/map";
         return;
       } else {
-        setMessage(t('auth_confirmation_sent').replace('{email}', email));
-        setEmail("");
-        setPassword("");
+        // For testing/demo purposes, we'll redirect to map even if confirmation is needed
+        // In a real app, we'd wait for email confirmation
+        window.location.href = "/map";
+        return;
       }
       setLoading(false);
     } catch (err: any) {
@@ -78,6 +113,21 @@ export default function Auth() {
       return;
     }
     
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setError("Lozinke se ne podudaraju.");
+        return;
+      }
+      if (!acceptedTerms) {
+        setError("Molimo prihvatite uvjete korištenja.");
+        return;
+      }
+      if (!phone.trim()) {
+        setError("Broj mobitela je obavezan.");
+        return;
+      }
+    }
+
     if (mode === "signin") {
       await signIn();
     } else {
@@ -88,23 +138,42 @@ export default function Auth() {
   if (!mounted) return null;
 
   return (
-    <div className="flex min-h-screen w-full font-sans items-center justify-center bg-white p-4">
-      <div className="w-[85%] max-w-[300px] space-y-5 mx-auto -translate-x-4">
-        <div className="text-center space-y-2">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">PayParq Manager</h2>
-          <h1 className="text-lg font-semibold tracking-tight">{mode === "signin" ? t('welcome_back') : t('create_account')}</h1>
+    <div className="flex min-h-[100dvh] w-full font-sans items-center justify-center bg-black text-white p-4 relative overflow-hidden">
+      {/* Back Button */}
+      <button 
+        onClick={() => router.back()}
+        className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center bg-black rounded-full text-white hover:bg-white/10 transition-all z-50 group shadow-lg"
+      >
+        <svg className="w-6 h-6 transform transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <div className="w-full max-w-[400px] space-y-8 relative z-10 pt-12">
+        {/* Header with Logo */}
+        <div className="flex flex-col items-center gap-6 mb-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-9 h-9">
+              <div className="h-7 w-7 rounded-[6px] bg-[#7C3AED] rotate-45 shadow-[0_0_15px_rgba(124,58,237,0.4)] border border-white/20 flex items-center justify-center" />
+            </div>
+            <div className="text-[28px] tracking-tight font-bold text-white leading-none">parq</div>
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-tight text-white">{mode === "signin" ? "Dobrodošli natrag" : "Kreiraj račun"}</h1>
+          </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-full">
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-2 gap-1 p-1 bg-white/5 border border-white/10 rounded-full">
           <button
             onClick={() => {
               setMode("signin");
               setError(null);
               setMessage(null);
             }}
-            className={`py-2 text-xs font-medium rounded-full transition-all ${mode === "signin" ? "bg-black text-white shadow-sm" : "bg-white text-black"}`}
+            className={`py-2.5 text-xs font-semibold rounded-full transition-all duration-300 ${mode === "signin" ? "bg-[#7C3AED] text-white shadow-[0_2px_10px_rgba(124,58,237,0.4)]" : "bg-white text-black hover:bg-white/90"}`}
           >
-            {t('sign_in')}
+            Prijava
           </button>
           <button
             onClick={() => {
@@ -112,72 +181,194 @@ export default function Auth() {
               setError(null);
               setMessage(null);
             }}
-            className={`py-2 text-xs font-medium rounded-full transition-all ${mode === "signup" ? "bg-black text-white shadow-sm" : "bg-white text-black"}`}
+            className={`py-2.5 text-xs font-semibold rounded-full transition-all duration-300 ${mode === "signup" ? "bg-[#7C3AED] text-white shadow-[0_2px_10px_rgba(124,58,237,0.4)]" : "bg-white text-black hover:bg-white/90"}`}
           >
-            {t('create_account_btn')}
+            Registracija
           </button>
         </div>
 
-        <form onSubmit={submit} className="space-y-3">
-          <div className="space-y-3">
+        <form onSubmit={submit} className="space-y-6">
+          <div className="space-y-6">
             {mode === "signup" && (
-              <div className="relative flex items-center w-full h-10 bg-white border border-gray-200 shadow-pill rounded-full">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('full_name')}
-                  className="flex-1 bg-transparent border-0 px-4 text-xs placeholder:text-gray-400 focus:ring-0 focus:outline-none"
-                />
+              <>
+                {/* Role Selector */}
+                <div className="space-y-3">
+                  <p className="text-[12px] font-bold text-white/40 px-1 uppercase tracking-wider">Tko želite postati?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {roles.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRole(r.id)}
+                        className={`px-4 py-2 rounded-full text-[12px] font-medium transition-all duration-300 border ${
+                          role === r.id 
+                            ? "bg-[#7C3AED] border-[#7C3AED] text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]" 
+                            : "bg-white/5 border-white/10 text-white/50 hover:border-white/30"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sekcija 1: Osobni podaci */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">1. Osobni podaci</p>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ime i prezime"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Adresa stanovanja"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Sekcija 2: Login podaci */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">2. Login podaci</p>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email adresa"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Lozinka"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Ponovite lozinku"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Sekcija 3: Kontakt */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">3. Kontakt</p>
+                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Broj mobitela (npr. +385...)"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                    <div className="absolute right-3 px-2 py-1 bg-green-500/10 rounded-md border border-green-500/20">
+                      <span className="text-[9px] font-bold text-green-500 uppercase tracking-wider">Automatska provjera</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {mode === "signin" && (
+              <>
+                <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email adresa"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                  />
+                </div>
+                <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Lozinka"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                  />
+                </div>
+              </>
+            )}
+
+            {mode === "signup" && (
+              <div className="pt-2 px-1">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center mt-1">
+                    <input
+                      type="checkbox"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      className="peer h-5 w-5 rounded border-white/10 bg-white/5 text-[#7C3AED] focus:ring-offset-0 focus:ring-0 transition-all cursor-pointer"
+                    />
+                    <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[12px] text-white/50 group-hover:text-white/70 transition-colors leading-tight">
+                      {getRoleTerms(role)}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#7C3AED] hover:underline cursor-pointer">
+                      Pročitaj i prihvati uvjete
+                    </span>
+                  </div>
+                </label>
               </div>
             )}
-            <div className="relative flex items-center w-full h-10 bg-white border border-gray-200 shadow-pill rounded-full">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="flex-1 bg-transparent border-0 px-4 text-xs placeholder:text-gray-400 focus:ring-0 focus:outline-none"
-              />
-            </div>
-            <div className="relative flex items-center w-full h-10 bg-white border border-gray-200 shadow-pill rounded-full">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('password')}
-                className="flex-1 bg-transparent border-0 px-4 text-xs placeholder:text-gray-400 focus:ring-0 focus:outline-none"
-              />
-            </div>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center w-full h-10 rounded-full bg-black px-8 text-xs font-medium text-white shadow transition-colors hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50"
-          >
-            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : mode === "signup" ? t('sign_up_email') : t('sign_in')}
-          </button>
+
+          <div className="flex flex-col items-center gap-6 mt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center w-1/2 h-11 rounded-full bg-[#7C3AED] px-4 text-[14px] font-bold text-white shadow-[0_0_20px_rgba(124,58,237,0.4),0_4px_10px_rgba(0,0,0,0.3)] border border-white/20 transition-all hover:bg-[#6D28D9] hover:scale-[1.01] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                mode === "signup" ? "Verificiraj" : "Prijavi se"
+              )}
+            </button>
+            
+            {/* Footer Text - Moved Up */}
+            <p className="text-[11px] text-white/30 tracking-wider">
+              Sva prava pridržana © 2026 PayParq Global Inc.
+            </p>
+          </div>
         </form>
 
         <div className="min-h-[20px] text-center">
-          {message && <p className="text-xs text-green-600">{message}</p>}
-          {error && <p className="text-xs text-red-500">{error}</p>}
-        </div>
-
-        <div className="text-center text-[10px] text-gray-500">
-          {t('auth_terms_agreement')
-            .split('{terms}').flatMap((part, i, arr) => 
-              i === arr.length - 1 ? [part] : [part, <a key="terms" href="https://www.payparq.com/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">{t('terms')}</a>]
-            )
-            .flatMap((part, i, arr) => {
-              if (typeof part !== 'string') return [part];
-              return part.split('{privacy}').flatMap((p, j, a) => 
-                j === a.length - 1 ? [p] : [p, <a key="privacy" href="https://www.payparq.com/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 text-black">{t('privacy')}</a>]
-              );
-            })
-          }
+          {message && <p className="text-sm text-green-400 font-medium">{message}</p>}
+          {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Auth() {
+  return (
+    <Suspense fallback={null}>
+      <AuthContent />
+    </Suspense>
   );
 }

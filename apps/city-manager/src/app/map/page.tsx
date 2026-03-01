@@ -21,6 +21,7 @@ function MapContent() {
   ]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [category, setCategory] = useState<"all" | "hospital" | "sport" | "landmark" | "shopping" | "beach">("all");
+  const [showAgentCard, setShowAgentCard] = useState(false);
 
   useEffect(() => {
     const action = searchParams.get('action');
@@ -30,6 +31,11 @@ function MapContent() {
     const dLat = searchParams.get('dest_lat');
     const dLng = searchParams.get('dest_lng');
     const dName = searchParams.get('dest_name');
+
+    // Provjeri je li korisnik tek došao s auth stranice
+    if (typeof window !== "undefined" && document.referrer.includes('/auth')) {
+      setShowAgentCard(true);
+    }
 
     if (pLat && pLng) {
       setOrigin({ lat: parseFloat(pLat), lng: parseFloat(pLng) });
@@ -257,8 +263,82 @@ function MapContent() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-white">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div className="relative w-full h-[100dvh] overflow-hidden bg-white">
+      <div ref={mapContainer} className="absolute inset-0 z-0" />
+
+      {showAgentCard && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[2000] animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border border-black/5">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#7C3AED]/20">
+                    <img 
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop" 
+                      alt="Agent" 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-black leading-tight">Ivan Horvat</h3>
+                    <p className="text-sm font-medium text-black/40">Ovlašteni zastupnik</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="flex text-yellow-400">
+                        {"★".repeat(5)}
+                      </div>
+                      <span className="text-[11px] font-bold text-black/30">4.9 (124)</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="bg-[#7C3AED]/10 text-[#7C3AED] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                    Dostupan
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <a 
+                  href="tel:+385912345678"
+                  className="flex items-center justify-center gap-2 h-14 bg-black text-white rounded-2xl font-bold text-sm hover:bg-black/90 transition-all active:scale-95 shadow-lg"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  Nazovi
+                </a>
+                <button 
+                  onClick={() => setShowAgentCard(false)}
+                  className="flex items-center justify-center gap-2 h-14 bg-[#7C3AED] text-white rounded-2xl font-bold text-sm hover:bg-[#6D28D9] transition-all active:scale-95 shadow-lg shadow-[#7C3AED]/20"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Poruka
+                </button>
+              </div>
+            </div>
+            <div className="bg-gray-50/50 p-4 border-t border-black/5">
+              <div className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 bg-[#7C3AED] rounded-full animate-pulse" />
+                <p className="text-[11px] font-medium text-black/50">
+                  Ivan je u blizini vaše lokacije i spreman je za pomoć oko dokumentacije.
+                </p>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowAgentCard(false)}
+            className="absolute -top-3 -right-3 w-8 h-8 bg-white text-black rounded-full shadow-lg border border-black/5 flex items-center justify-center hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="absolute inset-0 z-[1000] flex flex-col bg-white shadow-none">
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
           <div className="flex items-center gap-2 sticky top-0 bg-white z-10 pt-4 pb-2">

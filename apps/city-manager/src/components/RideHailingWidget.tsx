@@ -387,6 +387,21 @@ export default function RideHailingWidget() {
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const [nearbyDrivers, setNearbyDrivers] = useState<any[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [rideStatus, setRideStatus] = useState<RideStatus>('idle');
@@ -608,28 +623,33 @@ export default function RideHailingWidget() {
       if (!location) return;
 
       try {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from('drivers')
-          .select('id, last_location, is_online')
-          .eq('is_online', true);
+        let drivers: any[] = [];
+        
+        if (user) {
+          const supabase = getSupabase();
+          const { data, error } = await supabase
+            .from('drivers')
+            .select('id, last_location, is_online')
+            .eq('is_online', true);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        const drivers = (data || []).map(d => {
-          // Parse POINT(lng lat) string
-          const match = d.last_location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
-          if (match) {
-            return {
-              id: d.id,
-              lng: parseFloat(match[1]),
-              lat: parseFloat(match[2]),
-            };
-          }
-          return null;
-        }).filter(Boolean);
+          drivers = (data || []).map(d => {
+            if (!d.last_location) return null;
+            // Parse POINT(lng lat) string
+            const match = d.last_location.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+            if (match) {
+              return {
+                id: d.id,
+                lng: parseFloat(match[1]),
+                lat: parseFloat(match[2]),
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        }
 
-        // Show only a single static car on the map
+        // Show mock drivers if no real drivers found or if guest user
         if (drivers.length === 0) {
           // Simulation of a moving driver near the user
           // Move car ONLY along the road path if routeData is available
@@ -675,7 +695,7 @@ export default function RideHailingWidget() {
     fetchDrivers();
     const interval = setInterval(fetchDrivers, 5000); // 5 seconds instead of 50ms to avoid rate limits and ERR_ABORTED
     return () => clearInterval(interval);
-  }, [location, routeData]);
+  }, [location, routeData, user]);
 
   // Update other drivers markers on map
   useEffect(() => {

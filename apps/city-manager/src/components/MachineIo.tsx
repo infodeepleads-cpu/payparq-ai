@@ -287,6 +287,7 @@ export default function MachineIo() {
   const loadingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const { t } = useLanguage();
 
   const AI_MODELS = [
@@ -389,6 +390,14 @@ export default function MachineIo() {
   const CRM_KEY = "pp_crm_contacts";
   const TASKS_KEY = "pp_tasks";
   const readCRM = async () => {
+    if (!user) {
+      try {
+        const raw = localStorage.getItem(CRM_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
     try {
       const supabase = getSupabase();
       const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
@@ -399,6 +408,17 @@ export default function MachineIo() {
   };
   
   const addCRMContact = async (contact: any) => {
+    if (!user) {
+      const current = await readCRM();
+      const newContact = {
+        ...contact,
+        id: Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString()
+      };
+      localStorage.setItem(CRM_KEY, JSON.stringify([newContact, ...current]));
+      window.dispatchEvent(new Event("crm_storage"));
+      return newContact;
+    }
     const supabase = getSupabase();
     // Convert to snake_case for DB
     const dbContact = {
@@ -429,6 +449,31 @@ export default function MachineIo() {
   };
 
   const updateCRMContact = async (contact: any) => {
+    if (!user) {
+      const contacts = await readCRM();
+      let matchIdx = -1;
+      
+      if (contact.id) {
+        matchIdx = contacts.findIndex((c: any) => c.id === contact.id);
+      }
+      
+      if (matchIdx === -1 && typeof contact.index === 'number') {
+        matchIdx = contact.index - 1;
+      }
+      
+      if (matchIdx === -1 && contact.decisionMaker) {
+        matchIdx = contacts.findIndex((c: any) => c.decisionMaker?.toLowerCase() === contact.decisionMaker.toLowerCase());
+      }
+      
+      if (matchIdx >= 0 && matchIdx < contacts.length) {
+        const updated = { ...contacts[matchIdx], ...contact };
+        contacts[matchIdx] = updated;
+        localStorage.setItem(CRM_KEY, JSON.stringify(contacts));
+        window.dispatchEvent(new Event("crm_storage"));
+        return updated;
+      }
+      return null;
+    }
     const supabase = getSupabase();
     const { data: contacts } = await supabase.from("crm_contacts").select("*");
     if (!contacts) return null;
@@ -677,6 +722,7 @@ export default function MachineIo() {
       const supabase = getSupabase();
       supabase.auth.getUser().then(({ data }) => {
         const u = data?.user;
+        setUser(u || null);
         const name =
           (u?.user_metadata as any)?.name ||
           (u?.user_metadata as any)?.full_name ||
@@ -684,6 +730,22 @@ export default function MachineIo() {
           null;
         setUserName(name);
       });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const u = session?.user;
+        setUser(u || null);
+        const name =
+          (u?.user_metadata as any)?.name ||
+          (u?.user_metadata as any)?.full_name ||
+          u?.email ||
+          null;
+        setUserName(name);
+      });
+
+      return () => {
+        window.removeEventListener("pp-current-thread", handler);
+        subscription.unsubscribe();
+      };
     } catch {
       // ignore if supabase not configured
     }
