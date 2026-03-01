@@ -1,10 +1,23 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import Link from "next/link";
+
+const autofillStyles = `
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+    border-radius: 12px !important;
+  }
+`;
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +28,13 @@ function AuthContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<string>("0"); // 0. Član, 1. Agent, 2. Vlasnik zemljišta, 3. Ovlašteni zastupnik, 4. Referal
+  const [role, setRole] = useState<string>("0"); // 0. Član, 1. Agent, 2. Partner Parking Vlasnik, 3. Ovlašteni zastupnik, 4. Referal
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [parkingCapacity, setParkingCapacity] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
+  const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -29,7 +46,7 @@ function AuthContent() {
   const roles = [
     { id: "0", label: "Član" },
     { id: "1", label: "Agent" },
-    { id: "2", label: "Vlasnik parkinga partner" },
+    { id: "2", label: "Partner Parking Vlasnik" },
     { id: "3", label: "Ovlašteni zastupnik" },
     { id: "4", label: "Referal" }
   ];
@@ -38,12 +55,39 @@ function AuthContent() {
     switch (roleId) {
       case "0": return "Kao Član, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
       case "1": return "Kao Agent, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
-      case "2": return "Kao Vlasnik parkinga, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
+      case "2": return "Kao Partner Parking Vlasnik, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
       case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
       case "4": return "Kao Referal, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
       default: return t('auth_terms_agreement');
     }
   };
+
+  const validatePhone = (value: string) => {
+    // Basic regex for mobile numbers (e.g. +38591234567 or 091234567)
+    const phoneRegex = /^(\+385|0)9[0-9]{7,8}$/;
+    setIsPhoneValid(phoneRegex.test(value.replace(/\s/g, "")));
+  };
+
+  const validateEmail = (value: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setIsEmailValid(emailRegex.test(value));
+  };
+
+  useEffect(() => {
+    if (phone) {
+      validatePhone(phone);
+    } else {
+      setIsPhoneValid(null);
+    }
+  }, [phone]);
+
+  useEffect(() => {
+    if (email) {
+      validateEmail(email);
+    } else {
+      setIsEmailValid(null);
+    }
+  }, [email]);
 
   useEffect(() => {
     setMounted(true);
@@ -76,6 +120,8 @@ function AuthContent() {
       setError(null);
       setMessage(null);
       const supabase = getSupabase();
+      
+      // 1. Sign up user with password (this creates user in auth.users)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -85,21 +131,37 @@ function AuthContent() {
             full_name: name,
             role: role,
             phone: phone,
-            address: address
+            address: address,
+            parking_capacity: role === "2" ? parkingCapacity : null
           }
         },
       });
 
       if (error) {
         setError(error.message);
-      } else if (data.session) {
-        window.location.href = "/map?show_chat=true";
-        return;
       } else {
-        // For testing/demo purposes, we'll redirect to map even if confirmation is needed
-        // In a real app, we'd wait for email confirmation
-        window.location.href = "/map?show_chat=true";
-        return;
+        // 2. Send custom branded email via Resend
+        try {
+          const res = await fetch("/api/auth/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email,
+              name,
+              role,
+            }),
+          });
+          
+          if (!res.ok) {
+            console.error("Failed to send custom verification email via Resend");
+          }
+        } catch (emailErr) {
+          console.error("Error calling Resend API:", emailErr);
+        }
+
+        // Show success message and wait for confirmation
+        setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac.");
+        // We don't redirect here, we want them to see the message
       }
       setLoading(false);
     } catch (err: any) {
@@ -128,6 +190,19 @@ function AuthContent() {
         setError("Broj mobitela je obavezan.");
         return;
       }
+      if (role === "2" && !parkingCapacity.trim()) {
+        setError("Kapacitet parkinga je obavezan za partnere.");
+        return;
+      }
+      if (!isEmailValid) {
+      setError("Molimo unesite ispravnu email adresu.");
+      return;
+    }
+
+    if (!isPhoneValid) {
+        setError("Molimo unesite ispravan broj mobitela.");
+        return;
+      }
     }
 
     if (mode === "signin") {
@@ -141,6 +216,7 @@ function AuthContent() {
 
   return (
     <div className={`min-h-[100dvh] w-full flex flex-col items-center ${mode === 'signin' ? 'overflow-hidden' : 'overflow-y-auto'} bg-black text-white overscroll-none selection:bg-[#7C3AED]/30 relative`}>
+      <style>{autofillStyles}</style>
       {/* Absolute Full Screen Black Background */}
       <div className="fixed inset-0 bg-black z-0 pointer-events-none" />
 
@@ -162,7 +238,7 @@ function AuthContent() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-8 mb-10 text-[22px] font-semibold relative pointer-events-auto">
+        <div className="flex items-center gap-8 mb-6 text-[22px] font-semibold relative pointer-events-auto">
           {[
             { id: "signin", label: "Prijava" },
             { id: "signup", label: "Registracija" }
@@ -184,6 +260,31 @@ function AuthContent() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Dynamic Image based on mode */}
+        <div className="w-full max-w-[360px] flex justify-center mb-8 relative z-10">
+          {mode === "signin" ? (
+            <div className="relative w-full h-[180px] rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+              <Image 
+                src="/images/parking-lot.jfif" 
+                alt="Smiling woman with a purple car" 
+                fill
+                className="object-cover opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
+          ) : (
+            <div className="relative w-full h-[180px] rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+              <Image 
+                src="/images/app-preview.jfif" 
+                alt="Smartphone app preview" 
+                fill
+                className="object-cover opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
+          )}
         </div>
 
         <div className="w-full max-w-[360px] space-y-8 relative z-10">
@@ -233,44 +334,104 @@ function AuthContent() {
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>
+
+                  {role === "2" && (
+                    <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={parkingCapacity}
+                        onChange={(e) => setParkingCapacity(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Kapacitet parkinga (broj mjesta)"
+                        className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Sekcija 2: Login podaci */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">2. Login podaci</p>
-                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className={`relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border rounded-[12px] transition-all ${isEmailValid === true ? 'border-green-500/50' : isEmailValid === false ? 'border-red-500/50' : 'border-white/10 focus-within:border-[#7C3AED]/50'}`}>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Email adresa"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                      required
                     />
                   </div>
                   <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Lozinka"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
+                    <button
+                      type="button"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
+                      onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
+                      className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
+                    >
+                      {showPassword ? (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
                   </div>
                   <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Ponovite lozinku"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
+                    <button
+                      type="button"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
+                      onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
+                      className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
+                    >
+                      {showPassword ? (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                          <line x1="1" y1="1" x2="23" y2="23"></line>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
 
                 {/* Sekcija 3: Kontakt */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">3. Kontakt</p>
-                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className={`relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border rounded-[12px] transition-all ${
+                    isPhoneValid === true ? 'border-green-500/50' : 
+                    isPhoneValid === false ? 'border-red-500/50' : 'border-white/10 focus-within:border-[#7C3AED]/50'
+                  }`}>
                     <input
                       type="tel"
                       value={phone}
@@ -278,8 +439,17 @@ function AuthContent() {
                       placeholder="Broj mobitela (npr. +385...)"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
-                    <div className="absolute right-3 px-2 py-1 bg-green-500/10 rounded-md border border-green-500/20">
-                      <span className="text-[9px] font-bold text-green-500 uppercase tracking-wider">Automatska provjera</span>
+                    <div className={`absolute right-3 px-2 py-1 rounded-md border transition-colors ${
+                      isPhoneValid === true ? 'bg-green-500/10 border-green-500/20' : 
+                      isPhoneValid === false ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10'
+                    }`}>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                        isPhoneValid === true ? 'text-green-500' : 
+                        isPhoneValid === false ? 'text-red-500' : 'text-white/40'
+                      }`}>
+                        {isPhoneValid === true ? 'Broj ispravan' : 
+                         isPhoneValid === false ? 'Neispravan broj' : 'Provjera broja'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -288,23 +458,45 @@ function AuthContent() {
 
             {mode === "signin" && (
               <>
-                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                <div className={`relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border rounded-[12px] transition-all ${isEmailValid === true ? 'border-green-500/50' : isEmailValid === false ? 'border-red-500/50' : 'border-white/10 focus-within:border-[#7C3AED]/50'}`}>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email adresa"
                     className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    required
                   />
                 </div>
                 <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Lozinka"
                     className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                   />
+                  <button
+                    type="button"
+                    onMouseDown={() => setShowPassword(true)}
+                    onMouseUp={() => setShowPassword(false)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
+                    onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
+                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
+                  >
+                    {showPassword ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </>
             )}
@@ -351,7 +543,7 @@ function AuthContent() {
             
             {/* Footer Text - Moved Up */}
             <p className="text-[11px] text-white/30 tracking-wider">
-              Sva prava pridržana © 2026 PayParq Global Inc.
+              Sva prava pridžana © 2026 PayParq Global Inc.
             </p>
           </div>
         </form>
