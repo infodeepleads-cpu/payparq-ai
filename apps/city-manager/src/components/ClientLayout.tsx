@@ -98,7 +98,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage) && !showChat) {
-    return <main className="h-full w-full bg-white">{children}</main>;
+    return <main className={`h-full w-full bg-white ${isAuthPage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
   }
 
   return (
@@ -116,8 +116,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
             </div>
             {showChat && (
-              <div className={`absolute top-0 right-0 bottom-0 ${!shouldHideLayout ? 'left-[40px]' : 'left-0'} z-[100] pointer-events-none flex flex-col justify-end`}>
-                <div className="w-full pointer-events-auto max-h-full flex flex-col h-full">
+              <div className="fixed inset-0 z-[2000] pointer-events-none flex flex-col">
+                <div className="w-full pointer-events-auto flex-1 flex flex-col h-full bg-white">
                   <MachineIo />
                 </div>
               </div>

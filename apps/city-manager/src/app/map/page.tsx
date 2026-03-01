@@ -262,12 +262,14 @@ function MapContent() {
     router.push(`/rides?${params.toString()}`);
   };
 
+  const isChatOpen = searchParams.get("show_chat") === "true" || searchParams.get("show_chat") === "1";
+
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-white">
-      <div ref={mapContainer} className="absolute inset-0 z-0" />
+    <div className={`relative w-full h-[100dvh] overflow-hidden ${isChatOpen ? 'bg-transparent' : 'bg-white'}`}>
+      <div ref={mapContainer} className="absolute inset-0 z-0 opacity-100" />
 
       {showAgentCard && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[2000] animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[5000] animate-in fade-in slide-in-from-bottom-8 duration-500">
           <div className="bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] overflow-hidden border border-black/5">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -322,8 +324,8 @@ function MapContent() {
             <div className="bg-gray-50/50 p-4 border-t border-black/5">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-1.5 bg-[#7C3AED] rounded-full animate-pulse" />
-                <p className="text-[11px] font-medium text-black/50">
-                  Ivan je u blizini vaše lokacije i spreman je za pomoć oko dokumentacije.
+                <p className="text-[11px] font-medium text-black/50 leading-relaxed">
+                  Ivan stiže do Vas obaviti potvrdu prijave u roku 24h, pošaljite mu poruku ili sačekajte da Vam se javi.
                 </p>
               </div>
             </div>
@@ -339,7 +341,7 @@ function MapContent() {
         </div>
       )}
 
-      <div className="absolute inset-0 z-[1000] flex flex-col bg-white shadow-none">
+      <div className={`absolute inset-0 z-[1000] flex flex-col bg-white shadow-none transition-opacity duration-300 ${showAgentCard || isChatOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
           <div className="flex items-center gap-2 sticky top-0 bg-white z-10 pt-4 pb-2">
             <button

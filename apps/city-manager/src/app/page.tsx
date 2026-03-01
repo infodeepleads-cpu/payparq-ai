@@ -39,7 +39,7 @@ export default function Home() {
             <div className="flex items-center justify-center w-9 h-9">
               <div className="h-7 w-7 rounded-[6px] bg-[#7C3AED] rotate-45 shadow-[0_0_15px_rgba(124,58,237,0.4)] border border-white/20 flex items-center justify-center" />
             </div>
-            <div className="text-[28px] tracking-tight font-bold text-white leading-none flex items-center h-full ml-1">parq</div>
+            <div className="text-[28px] tracking-tight font-bold text-white leading-none flex items-center h-full ml-1.5">parq</div>
           </div>
 
           {/* Minimalist Auth Widget */}
@@ -54,16 +54,16 @@ export default function Home() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-8 mb-10 text-[20px] font-semibold relative pointer-events-auto">
+        <div className="flex items-center gap-8 mb-10 text-[22px] font-semibold relative pointer-events-auto">
           {["Parking", "Vožnje", "Dostava"].map((tab) => (
             <div 
               key={tab}
               onClick={() => setActiveTab(tab)}
               className="relative cursor-pointer transition-colors"
             >
-              <span className={activeTab === tab ? "text-white" : "text-white/30 hover:text-white transition-colors"}>
+              <div className={activeTab === tab ? "text-white" : "text-white/30 hover:text-white transition-colors"}>
                 {tab}
-              </span>
+              </div>
               {activeTab === tab && (
                 <div className="absolute -bottom-1.5 left-0 right-0 h-[2px] bg-[#7C3AED] rounded-full" />
               )}
@@ -123,12 +123,12 @@ export default function Home() {
             <div className="absolute top-5 left-8 right-8">
               <div className="flex flex-col gap-1">
                 <span className="text-[22px] font-bold text-white tracking-tight leading-tight">Postani Partner</span>
-                <span className="text-[14px] font-medium text-white/70 tracking-wide">2 klika, Live u 24h</span>
+                <span className="text-[14px] font-medium text-white/90 tracking-wide">2 klika, Live u 24h</span>
               </div>
             </div>
             <div className="absolute bottom-6 right-8">
               <Link 
-                href="/auth"
+                href="/auth?mode=signup"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#7C3AED] rounded-full text-[14px] font-bold shadow-lg no-underline text-white active:scale-95 transition-transform"
               >
                 Saznaj više
@@ -150,7 +150,7 @@ export default function Home() {
             <div className="absolute bottom-6 left-8 right-8">
               <div className="flex flex-col gap-1">
                 <span className="text-[22px] font-bold text-white tracking-tight leading-tight">Upravljaj svime</span>
-                <span className="text-[14px] font-medium text-white/70 tracking-wide">Iz dlana tvoje ruke</span>
+                <span className="text-[14px] font-medium text-white/90 tracking-wide">Iz dlana tvoje ruke</span>
               </div>
             </div>
           </div>
@@ -167,9 +167,6 @@ export default function Home() {
             <div className="space-y-1">
               <p className="text-[11px] font-bold text-white uppercase tracking-[0.16em]">
                 Payparq Global Inc.
-              </p>
-              <p className="text-[10px] text-white/30 tracking-[0.08em] leading-relaxed">
-                Parq is a core part of Payparq Global Inc. All rights reserved
               </p>
             </div>
           </div>

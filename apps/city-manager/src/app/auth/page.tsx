@@ -4,6 +4,8 @@ import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
 
+import Link from "next/link";
+
 export const dynamic = "force-dynamic";
 
 function AuthContent() {
@@ -27,7 +29,7 @@ function AuthContent() {
   const roles = [
     { id: "0", label: "Član" },
     { id: "1", label: "Agent" },
-    { id: "2", label: "Vlasnik zemljišta partner" },
+    { id: "2", label: "Vlasnik parkinga partner" },
     { id: "3", label: "Ovlašteni zastupnik" },
     { id: "4", label: "Referal" }
   ];
@@ -36,7 +38,7 @@ function AuthContent() {
     switch (roleId) {
       case "0": return "Kao Član, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
       case "1": return "Kao Agent, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
-      case "2": return "Kao Vlasnik zemljišta, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
+      case "2": return "Kao Vlasnik parkinga, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
       case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
       case "4": return "Kao Referal, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
       default: return t('auth_terms_agreement');
@@ -60,7 +62,7 @@ function AuthContent() {
       if (error) {
         setError(error.message);
       } else {
-        window.location.href = "/map";
+        window.location.href = "/map?show_chat=true";
       }
     } catch (err: any) {
       setError(err.message || t('auth_error_generic'));
@@ -91,12 +93,12 @@ function AuthContent() {
       if (error) {
         setError(error.message);
       } else if (data.session) {
-        window.location.href = "/map";
+        window.location.href = "/map?show_chat=true";
         return;
       } else {
         // For testing/demo purposes, we'll redirect to map even if confirmation is needed
         // In a real app, we'd wait for email confirmation
-        window.location.href = "/map";
+        window.location.href = "/map?show_chat=true";
         return;
       }
       setLoading(false);
@@ -138,56 +140,54 @@ function AuthContent() {
   if (!mounted) return null;
 
   return (
-    <div className="flex min-h-[100dvh] w-full font-sans items-center justify-center bg-black text-white p-4 relative overflow-hidden">
-      {/* Back Button */}
-      <button 
-        onClick={() => router.back()}
-        className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center bg-black rounded-full text-white hover:bg-white/10 transition-all z-50 group shadow-lg"
-      >
-        <svg className="w-6 h-6 transform transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+    <div className={`min-h-[100dvh] w-full flex flex-col items-center ${mode === 'signin' ? 'overflow-hidden' : 'overflow-y-auto'} bg-black text-white overscroll-none selection:bg-[#7C3AED]/30 relative`}>
+      {/* Absolute Full Screen Black Background */}
+      <div className="fixed inset-0 bg-black z-0 pointer-events-none" />
 
-      <div className="w-full max-w-[400px] space-y-8 relative z-10 pt-12">
-        {/* Header with Logo */}
-        <div className="flex flex-col items-center gap-6 mb-2">
-          <div className="flex items-center gap-4">
+      {/* Sticky Header Background Container */}
+      <div className="sticky top-0 left-0 right-0 z-50 pointer-events-none">
+        <div className="h-20 bg-black w-full" />
+        <div className="h-32 bg-gradient-to-b from-black via-black/95 to-transparent w-full" />
+      </div>
+
+      {/* Header Area */}
+      <div className="w-full max-w-[430px] px-6 pb-2 -mt-[180px] relative z-[60] flex flex-col">
+        <div className="flex items-center justify-between mb-10 h-11 relative">
+          <Link href="/" className="flex items-center gap-4 h-full no-underline active:scale-[0.98] transition-transform">
             <div className="flex items-center justify-center w-9 h-9">
               <div className="h-7 w-7 rounded-[6px] bg-[#7C3AED] rotate-45 shadow-[0_0_15px_rgba(124,58,237,0.4)] border border-white/20 flex items-center justify-center" />
             </div>
-            <div className="text-[28px] tracking-tight font-bold text-white leading-none">parq</div>
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-white">{mode === "signin" ? "Dobrodošli natrag" : "Kreiraj račun"}</h1>
-          </div>
-        </div>
-        
-        {/* Tab Switcher */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-white/5 border border-white/10 rounded-full">
-          <button
-            onClick={() => {
-              setMode("signin");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`py-2.5 text-xs font-semibold rounded-full transition-all duration-300 ${mode === "signin" ? "bg-[#7C3AED] text-white shadow-[0_2px_10px_rgba(124,58,237,0.4)]" : "bg-white text-black hover:bg-white/90"}`}
-          >
-            Prijava
-          </button>
-          <button
-            onClick={() => {
-              setMode("signup");
-              setError(null);
-              setMessage(null);
-            }}
-            className={`py-2.5 text-xs font-semibold rounded-full transition-all duration-300 ${mode === "signup" ? "bg-[#7C3AED] text-white shadow-[0_2px_10px_rgba(124,58,237,0.4)]" : "bg-white text-black hover:bg-white/90"}`}
-          >
-            Registracija
-          </button>
+            <div className="text-[28px] tracking-tight font-bold text-white leading-none flex items-center h-full ml-1.5">parq</div>
+          </Link>
         </div>
 
-        <form onSubmit={submit} className="space-y-6">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-8 mb-10 text-[22px] font-semibold relative pointer-events-auto">
+          {[
+            { id: "signin", label: "Prijava" },
+            { id: "signup", label: "Registracija" }
+          ].map((tab) => (
+            <div
+              key={tab.id}
+              onClick={() => {
+                setMode(tab.id as "signin" | "signup");
+                setError(null);
+                setMessage(null);
+              }}
+              className="relative cursor-pointer transition-colors"
+            >
+              <div className={mode === tab.id ? "text-white" : "text-white/30 hover:text-white transition-colors"}>
+                {tab.label}
+              </div>
+              {mode === tab.id && (
+                <div className="absolute -bottom-1.5 left-0 right-0 h-[2px] bg-[#7C3AED] rounded-full" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="w-full max-w-[360px] space-y-8 relative z-10">
+          <form onSubmit={submit} className="space-y-6">
           <div className="space-y-6">
             {mode === "signup" && (
               <>
@@ -215,7 +215,7 @@ function AuthContent() {
                 {/* Sekcija 1: Osobni podaci */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">1. Osobni podaci</p>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="text"
                       value={name}
@@ -224,7 +224,7 @@ function AuthContent() {
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="text"
                       value={address}
@@ -238,7 +238,7 @@ function AuthContent() {
                 {/* Sekcija 2: Login podaci */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">2. Login podaci</p>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="email"
                       value={email}
@@ -247,7 +247,7 @@ function AuthContent() {
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="password"
                       value={password}
@@ -256,7 +256,7 @@ function AuthContent() {
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="password"
                       value={confirmPassword}
@@ -270,7 +270,7 @@ function AuthContent() {
                 {/* Sekcija 3: Kontakt */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">3. Kontakt</p>
-                  <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                     <input
                       type="tel"
                       value={phone}
@@ -288,7 +288,7 @@ function AuthContent() {
 
             {mode === "signin" && (
               <>
-                <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                   <input
                     type="email"
                     value={email}
@@ -297,7 +297,7 @@ function AuthContent() {
                     className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                   />
                 </div>
-                <div className="relative flex items-center w-full h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                   <input
                     type="password"
                     value={password}
@@ -360,6 +360,7 @@ function AuthContent() {
           {message && <p className="text-sm text-green-400 font-medium">{message}</p>}
           {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
         </div>
+      </div>
       </div>
     </div>
   );
