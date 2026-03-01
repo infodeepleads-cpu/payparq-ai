@@ -32,6 +32,7 @@ function AuthContent() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [parkingCapacity, setParkingCapacity] = useState("");
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
   const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null);
@@ -519,7 +520,10 @@ function AuthContent() {
                     <span className="text-[12px] text-white/50 group-hover:text-white/70 transition-colors leading-tight">
                       {getRoleTerms(role)}
                     </span>
-                    <span className="text-[11px] font-semibold text-[#7C3AED] hover:underline cursor-pointer">
+                    <span 
+                      onClick={() => setShowTermsModal(true)}
+                      className="text-[11px] font-semibold text-[#7C3AED] hover:underline cursor-pointer"
+                    >
                       Pročitaj i prihvati uvjete
                     </span>
                   </div>
@@ -554,6 +558,147 @@ function AuthContent() {
         </div>
       </div>
       </div>
+
+      {/* Terms Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-[#1A1A1A] border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#242424] rounded-t-2xl">
+              <h2 className="text-xl font-bold text-white">Uvjeti suradnje i NDA</h2>
+              <button 
+                onClick={() => setShowTermsModal(false)}
+                className="text-white/50 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto text-white/80 space-y-8 text-sm leading-relaxed">
+              {/* Section 1: Terms Sažetak */}
+              <section className="space-y-3">
+                <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">Terms Sažetak:</h3>
+                <div className="space-y-4">
+                  <div>
+                    <p className="font-bold text-white">1. Nagrada:</p>
+                    <p>Provizija 50% Net Prihoda njegov teren (Nakon odbitka financijskih naknada i poreza)</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">2. Obveze i Trošak</p>
+                    <ul className="list-decimal pl-5 space-y-1">
+                      <li>Označavanje terena (sprej, naljepnice, manji znakovi i pričvrščivanje)</li>
+                      <li>Obilazak terena i odlazak na sastanke (trošak prijevoza)</li>
+                      <li>Verifikacija Partnera</li>
+                      <li>Korisnička podrška za prioritetne partnere / uspostava terenske podrške</li>
+                      <li>Svakodnevno logiranje u parq chatbot i izvršavanje svih dnevnih zadataka i promptni unos povratnih informacija te pomoć pri usavršavanju chatbota</li>
+                    </ul>
+                    <p className="mt-2 text-white/60 italic">(Slikanje terena, Videozapis, Feedback, Sastanci, Ispunjavanje dokumenata, Obilazak terena)</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 2: Uvjeti suradnje (Terms) */}
+              <section className="space-y-3">
+                <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">1. Uvjeti suradnje (Terms)</h3>
+                <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerima u RH.</p>
+                
+                <div className="space-y-3">
+                  <p className="font-bold text-white">1. Nagrada</p>
+                  <p>Suradnik ostvaruje proviziju u iznosu 50% neto prihoda koji generira njegov teren, pri čemu se neto prihod definira kao prihod nakon odbitka svih financijskih naknada i poreza.</p>
+                  
+                  <p className="font-bold text-white">2. Obveze i troškovi Suradnika</p>
+                  <p>Suradnik snosi organizaciju i trošak sljedećeg:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Označavanje terena (sprej, naljepnice, manji znakovi i njihovo pričvršćivanje)</li>
+                    <li>Obilazak terena i odlasci na sastanke (uključujući trošak prijevoza)</li>
+                    <li>Verifikacija partnera</li>
+                    <li>Korisnička podrška za prioritetne partnere i uspostava terenske podrške</li>
+                    <li>Svakodnevno logiranje u Parq chatbot, izvršavanje dnevnih zadataka, pravovremeni unos povratnih informacija te aktivno sudjelovanje u usavršavanju sustava, uključujući:
+                      <ul className="list-none pl-4 mt-1 space-y-0.5 text-white/70">
+                        <li>• Slikanje terena</li>
+                        <li>• Videozapise</li>
+                        <li>• Feedback</li>
+                        <li>• Sastanke</li>
+                        <li>• Ispunjavanje dokumenata</li>
+                        <li>• Redoviti obilazak terena</li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <p className="font-bold text-white pt-2 italic">Potvrđujem da razumijem i u cijelosti prihvaćam navedene uvjete.</p>
+                </div>
+              </section>
+
+              {/* Section 3: NDA */}
+              <section className="space-y-3">
+                <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">2. NDA</h3>
+                <p className="italic">Izjava o prihvaćanju uvjeta suradnje</p>
+                <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerskim entitetima u RH.:</p>
+                
+                <div className="space-y-3">
+                  <p className="font-bold text-white">1. Povjerljivost</p>
+                  <p>Obvezujem se čuvati kao strogo povjerljive sve informacije vezane uz poslovni model, podjelu prihoda (50% net prihoda nakon financijskih naknada i poreza), partnere i lokacije, cijene, financije, operativne procese, Parq chatbot, interne sustave, strategiju i razvoj.</p>
+                  <p>Informacije neću koristiti niti otkrivati izvan svrhe suradnje.</p>
+                  
+                  <p className="font-bold text-white">2. Zabrana konkurencije</p>
+                  <p>Obvezujem se da tijekom trajanja suradnje i 24 mjeseca nakon njenog prestanka neću samostalno niti putem trećih osoba sudjelovati u konkurentskom projektu u području digitalnog upravljanja i monetizacije parking terena na teritoriju Republike Hrvatske.</p>
+                  
+                  <p className="font-bold text-white">3. Trajanje</p>
+                  <p>Obveza povjerljivosti vrijedi tijekom suradnje i 5 godina nakon prestanka suradnje.</p>
+                  <p className="font-bold text-white pt-2 italic">Potvrđujem da sam upoznat s uvjetima i da ih u cijelosti prihvaćam.</p>
+                </div>
+              </section>
+
+              {/* Section 4: Brain */}
+              <section className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                <h3 className="text-white font-bold text-base tracking-tight italic">Brain</h3>
+                <p>Sukladno Viziji i Misije postavlja najefikasnije dnevne zadatke City Manageru, Scrapea sve Leadove.</p>
+                <p>Na Manageru ostaje održavanje sastanaka pregled poruka i mailova i send, telefonski pozivi i sastanci, te obilazak terena i terenska/ prioritetna podrška.</p>
+              </section>
+
+              {/* Section 5: Klauzula o raskidu */}
+              <section className="space-y-3">
+                <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">3. Klauzula o jednostranom raskidu i ograničenju odgovornosti</h3>
+                <div className="space-y-3">
+                  <p>Leadvex Group LLC i njegovi partneri u Republici Hrvatskoj zadržavaju pravo jednostrano raskinuti suradnju u bilo kojem trenutku, bez obrazloženja i bez otkaznog roka.</p>
+                  <p>Suradnik nema pravo na naknadu štete, izgubljenu dobit, buduće provizije niti bilo kakvu drugu kompenzaciju temeljem raskida ili izmjene uvjeta suradnje.</p>
+                  <p>Suradnik se odriče svih sadašnjih i budućih potraživanja, tužbi i zahtjeva prema Leadvex Group LLC, njegovim vlasnicima, povezanim društvima i partnerima, osim za nesporne i dospjele iznose koji su već obračunati do dana raskida.</p>
+                  <p>Ukupna eventualna odgovornost Leadvex Group LLC i partnera, ako bi postojala, ograničena je maksimalno na iznos zadnje isplaćene provizije Suradniku.</p>
+                </div>
+              </section>
+
+              {/* Section 6: Završne odredbe */}
+              <section className="space-y-3 pb-4">
+                <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">4. Završne odredbe</h3>
+                <div className="space-y-3">
+                  <p>Završne odredbe čine sastavni dio Uvjeta suradnje, NDA-a i svih povezanih odredbi između Suradnika i Leadvex Group LLC te njegovih partnera u Republici Hrvatskoj.</p>
+                  <p>U slučaju bilo kakve nejasnoće, tumačenje odredbi ide u korist Društva.</p>
+                  <p>Ako se bilo koja odredba pokaže ništavnom ili neprovedivom, ostale odredbe ostaju u punoj pravnoj snazi.</p>
+                  <p>Ovaj dokument predstavlja cjelokupni sporazum između strana i zamjenjuje sve prethodne usmene ili pisane dogovore.</p>
+                  <p className="font-bold text-white pt-2 italic underline decoration-[#7C3AED] underline-offset-4">
+                    Suradnik potvrđuje da Uvjete prihvaća svjesno, dobrovoljno i bez prisile.
+                  </p>
+                  <p className="text-white/60 text-[12px]">
+                    Leadvex Group LLC zadržava pravo izmjene operativnih procesa, poslovnog modela, sustava obračuna i strukture suradnje u bilo kojem trenutku.
+                  </p>
+                </div>
+              </section>
+            </div>
+
+            <div className="p-6 border-t border-white/10 bg-[#242424] rounded-b-2xl">
+              <button 
+                onClick={() => {
+                  setAcceptedTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="w-full py-3 bg-[#7C3AED] text-white font-bold rounded-xl hover:bg-[#6D28D9] transition-all shadow-lg"
+              >
+                Prihvaćam i zatvori
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
