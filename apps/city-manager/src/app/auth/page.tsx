@@ -216,19 +216,13 @@ function AuthContent() {
   if (!mounted) return null;
 
   return (
-    <div className={`min-h-[100dvh] w-full flex flex-col items-center ${mode === 'signin' ? 'overflow-hidden' : 'overflow-y-auto'} bg-black text-white overscroll-none selection:bg-[#7C3AED]/30 relative`}>
+    <div className={`min-h-[100dvh] w-full flex flex-col items-center bg-black text-white selection:bg-[#7C3AED]/30 relative`}>
       <style>{autofillStyles}</style>
       {/* Absolute Full Screen Black Background */}
       <div className="fixed inset-0 bg-black z-0 pointer-events-none" />
 
-      {/* Sticky Header Background Container */}
-      <div className="sticky top-0 left-0 right-0 z-50 pointer-events-none">
-        <div className="h-20 bg-black w-full" />
-        <div className="h-32 bg-gradient-to-b from-black via-black/95 to-transparent w-full" />
-      </div>
-
       {/* Header Area */}
-      <div className="w-full max-w-[430px] px-6 pb-2 -mt-[180px] relative z-[60] flex flex-col">
+      <div className="w-full max-w-[430px] px-6 pt-10 pb-10 relative z-[60] flex flex-col">
         <div className="flex items-center justify-between mb-10 h-11 relative">
           <Link href="/" className="flex items-center gap-4 h-full no-underline active:scale-[0.98] transition-transform">
             <div className="flex items-center justify-center w-9 h-9">
@@ -271,6 +265,8 @@ function AuthContent() {
                 src="/images/parking-lot.jfif" 
                 alt="Smiling woman with a purple car" 
                 fill
+                priority
+                unoptimized
                 className="object-cover opacity-90"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -281,6 +277,8 @@ function AuthContent() {
                 src="/images/app-preview.jfif" 
                 alt="Smartphone app preview" 
                 fill
+                priority
+                unoptimized
                 className="object-cover opacity-90"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
