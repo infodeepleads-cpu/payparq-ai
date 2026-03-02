@@ -133,9 +133,14 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && mode !== "update" && (hasSiteKey || !isDev)) {
-        // Silent retry or generic error instead of "ugly" captcha message
-        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
-        return;
+        console.log("No captcha token for signin, retrying in 1s...");
+        setLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!captchaToken) {
+          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
+          setLoading(false);
+          return;
+        }
       }
       setLoading(true);
       setError(null);
@@ -166,9 +171,19 @@ function AuthContent() {
       const isDev = process.env.NODE_ENV === "development";
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
+      // If we don't have a token, we should NOT fail silently with an error message
+      // instead, we should wait a bit or try to trigger it.
+      // But since Turnstile is in the background, it should have a token by now.
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
-        return;
+        console.log("No captcha token for reset, retrying in 1s...");
+        setLoading(true);
+        // Wait 1 second and try again once
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!captchaToken) {
+          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
+          setLoading(false);
+          return;
+        }
       }
       setLoading(true);
       setError(null);
@@ -220,8 +235,14 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
-        return;
+        console.log("No captcha token for signup, retrying in 1s...");
+        setLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!captchaToken) {
+          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
+          setLoading(false);
+          return;
+        }
       }
       setLoading(true);
       setError(null);
