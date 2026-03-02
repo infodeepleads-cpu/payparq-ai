@@ -17,9 +17,10 @@ export function getSupabase() {
 
   supabaseInstance = createClient(supabaseUrl, supabaseKey, {
     auth: {
-      persistSession: false, // Disable persistence to avoid Navigator LockManager timeout issues in dev
+      persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      storage: typeof window !== "undefined" ? window.localStorage : undefined
     }
   });
   return supabaseInstance;

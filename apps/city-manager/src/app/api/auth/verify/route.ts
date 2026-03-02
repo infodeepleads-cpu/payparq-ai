@@ -51,11 +51,12 @@ export async function POST(req: NextRequest) {
 
 function getRoleLabel(role: string) {
   switch (role) {
-    case "0": return "Član";
-    case "1": return "Agent";
-    case "2": return "Partner Parking Vlasnik";
+    case "0": return "Korisnik";
+    case "1": return "Vozač";
+    case "2": return "Partner";
     case "3": return "Ovlašteni zastupnik";
-    case "4": return "Referal";
+    case "4": return "Dostavljač";
+    case "5": return "Referal";
     default: return "Korisnik";
   }
 }

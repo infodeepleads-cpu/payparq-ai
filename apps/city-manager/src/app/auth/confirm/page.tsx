@@ -27,7 +27,7 @@ export default function Confirm() {
           setStatus("ok");
           setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas...");
           setTimeout(() => {
-            window.location.href = "/map?show_chat=true";
+            window.location.href = "/profile";
           }, 2000);
         }
       });
@@ -46,7 +46,7 @@ export default function Confirm() {
           setStatus("ok");
           setMessage("Uspješno potvrđeno! Dobrodošli natrag.");
           setTimeout(() => {
-            window.location.href = "/map?show_chat=true";
+            window.location.href = "/profile";
           }, 2000);
         } else {
           // If no session, they might need to use the actual Supabase link

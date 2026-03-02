@@ -19,6 +19,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [hideLayout, setHideLayout] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const isAuthPage = pathname?.startsWith("/auth");
   const isHomePage = pathname === "/";
   const isNewNotePage = pathname === "/resources/notes/new";
@@ -26,6 +27,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isPaymentPage = pathname?.startsWith("/payment") || pathname === "/pay";
   const isCalendarPage = pathname?.startsWith("/calendar");
   const isRidesPage = pathname?.startsWith("/rides");
+  const isProfilePage = pathname === "/profile";
   const isMachineIoOpen = searchParams?.get("show_chat") === "1" || searchParams?.get("show_chat") === "true";
   const actionParam = searchParams?.get("action");
   const isLocateAction = actionParam === "locate";
@@ -37,6 +39,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const supabase = getSupabase();
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
+        setUserRole(currentUser?.user_metadata?.role || null);
         
         // If not authenticated, check if the page/action is allowed for guests
         // Allowed: Home (/), Auth (/auth), Map, and Rides (/rides)
@@ -48,9 +51,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          setUser(session?.user ?? null);
+          const newUser = session?.user ?? null;
+          setUser(newUser);
+          setUserRole(newUser?.user_metadata?.role || null);
           const currentIsGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
-          if (!session?.user && !currentIsGuestAllowed) {
+          if (!newUser && !currentIsGuestAllowed) {
             router.replace("/");
           }
         });
@@ -89,7 +94,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const shouldHideLayout = (hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || !user || (isHomePage && !isMachineIoOpen)) && !isMachineIoOpen;
+  const isSuperAdmin = user?.email === "payparq@outlook.com";
+  const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
+  const isZastupnik = userRole === "3" || isDeepleads;
+  const isAdmin = isSuperAdmin || isZastupnik;
+  const isLimitedRole = (userRole === "0" || userRole === "1" || userRole === "2" || userRole === "4") && !isDeepleads;
+
+  const shouldHideLayout = (isLimitedRole || hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || isProfilePage || !user || (isHomePage && !isMachineIoOpen)) && (!isMachineIoOpen || isLimitedRole);
 
   if (isLoading && !isHomePage && !isAuthPage && !isMapPage) {
     return <div className="h-full w-full flex items-center justify-center bg-white">
@@ -97,8 +108,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     </div>;
   }
 
-  if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage) && !showChat) {
-    return <main className={`h-full w-full bg-white ${isAuthPage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
+  if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage || isProfilePage) && !showChat) {
+    return <main className={`h-full w-full bg-white ${isAuthPage || isProfilePage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
   }
 
   return (
@@ -116,8 +127,23 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
             </div>
             {showChat && (
-              <div className="fixed inset-0 z-[2000] pointer-events-none flex flex-col">
-                <div className="w-full pointer-events-auto flex-1 flex flex-col h-full bg-white">
+              <div className={`fixed inset-0 z-[2000] pointer-events-none flex flex-col ${isAdmin && !shouldHideLayout ? 'pt-[40px] pl-[40px]' : ''}`}>
+                <div className="w-full pointer-events-auto flex-1 flex flex-col h-full bg-white relative">
+                  {/* Close/Back Button */}
+                  <button 
+                    onClick={() => {
+                      const params = new URLSearchParams(searchParams?.toString());
+                      params.delete("show_chat");
+                      const targetUrl = pathname + (params.toString() ? "?" + params.toString() : "");
+                      router.replace(targetUrl as any);
+                    }}
+                    className="absolute top-4 left-4 z-[2001] h-10 w-10 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors group"
+                    title="Zatvori chat"
+                  >
+                    <svg className="w-5 h-5 text-black/40 group-hover:text-black/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
                   <MachineIo />
                 </div>
               </div>

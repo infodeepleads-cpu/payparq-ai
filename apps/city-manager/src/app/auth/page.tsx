@@ -31,6 +31,7 @@ function AuthContent() {
   const [role, setRole] = useState<string>("0"); // 0. Član, 1. Agent, 2. Partner Parking Vlasnik, 3. Ovlašteni zastupnik, 4. Referal
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
   const [parkingCapacity, setParkingCapacity] = useState("");
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,20 +46,22 @@ function AuthContent() {
   const searchParams = useSearchParams();
 
   const roles = [
-    { id: "0", label: "Član" },
-    { id: "1", label: "Agent" },
-    { id: "2", label: "Partner Parking Vlasnik" },
+    { id: "0", label: "Korisnik" },
+    { id: "1", label: "Vozač" },
+    { id: "2", label: "Partner" },
     { id: "3", label: "Ovlašteni zastupnik" },
-    { id: "4", label: "Referal" }
+    { id: "4", label: "Dostavljač" },
+    { id: "5", label: "Referal" }
   ];
 
   const getRoleTerms = (roleId: string) => {
     switch (roleId) {
-      case "0": return "Kao Član, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
-      case "1": return "Kao Agent, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
-      case "2": return "Kao Partner Parking Vlasnik, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
+      case "0": return "Kao Korisnik, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
+      case "1": return "Kao Vozač, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
+      case "2": return "Kao Partner, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
       case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
-      case "4": return "Kao Referal, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
+      case "4": return "Kao Dostavljač, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
+      case "5": return "Kao Referal, prihvaćate uvjete programa preporuka i pravila o bonusima.";
       default: return t('auth_terms_agreement');
     }
   };
@@ -95,7 +98,17 @@ function AuthContent() {
     const modeParam = searchParams.get("mode");
     if (modeParam === "signup") setMode("signup");
     else if (modeParam === "signin") setMode("signin");
-  }, [searchParams]);
+
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        router.push("/profile");
+      }
+    };
+    checkUser();
+  }, [searchParams, router]);
 
   const signIn = async () => {
     try {
@@ -106,8 +119,10 @@ function AuthContent() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
+        setLoading(false);
       } else {
-        window.location.href = "/map?show_chat=true";
+        router.push("/profile");
+        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || t('auth_error_generic'));
@@ -122,6 +137,21 @@ function AuthContent() {
       setMessage(null);
       const supabase = getSupabase();
       
+      // Special handling for roles and defaults for info.deepleads
+      let finalRole = role;
+      let finalName = name;
+      let finalPhone = phone;
+      let finalAddress = address;
+      
+      if (email.toLowerCase().startsWith('info.deepleads')) {
+        finalRole = "3";
+        if (!name) finalName = "Karlo Žamić";
+        if (!phone) finalPhone = "+385915963139";
+        if (!address) finalAddress = "Obala Kneza Domagoja 52";
+      } else if (role === "1" || role === "4") {
+        finalRole = "1"; // Vozač and Dostavljač are stored as Agent (1)
+      }
+      
       // 1. Sign up user with password (this creates user in auth.users)
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -129,11 +159,13 @@ function AuthContent() {
         options: { 
           emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined,
           data: { 
-            full_name: name,
-            role: role,
-            phone: phone,
-            address: address,
-            parking_capacity: role === "2" ? parkingCapacity : null
+            full_name: finalName,
+            role: finalRole,
+            original_role: role, // Keep original role for UI if needed
+            phone: finalPhone,
+            address: finalAddress,
+            license_plate: licensePlate,
+            parking_capacity: finalRole === "2" ? parkingCapacity : null
           }
         },
       });
@@ -295,7 +327,7 @@ function AuthContent() {
                 <div className="space-y-3">
                   <p className="text-[12px] font-bold text-white/40 px-1 uppercase tracking-wider">Tko želite postati?</p>
                   <div className="flex flex-wrap gap-2">
-                    {roles.map((r) => (
+                    {roles.filter(r => r.id !== "3").map((r) => (
                       <button
                         key={r.id}
                         type="button"
@@ -330,6 +362,15 @@ function AuthContent() {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Adresa stanovanja"
+                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                    <input
+                      type="text"
+                      value={licensePlate}
+                      onChange={(e) => setLicensePlate(e.target.value)}
+                      placeholder="Broj registracijskih tablica"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>

@@ -42,6 +42,13 @@ export default function Header() {
           parq
         </Link>
 
+        {/* User Profile - Right aligned */}
+        <div className="absolute right-4 flex items-center gap-3 z-20">
+          <Link href="/profile" className="text-[13px] font-semibold text-black/60 hover:text-black transition-colors no-underline truncate max-w-[120px]">
+            {userName}
+          </Link>
+        </div>
+
         {/* Icons - Centered relative to screen and shifted right by ~1.0cm (38px) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="flex items-center justify-center gap-[14px] md:gap-[22px] pointer-events-auto translate-x-[38px]">

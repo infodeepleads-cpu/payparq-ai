@@ -198,10 +198,17 @@ export default function CrmPage() {
   const [expandedTier, setExpandedTier] = useState<Tier | null>(null);
 
   const addNewContactToTier = async (tierId: Tier) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      alert("Morate biti prijavljeni da biste dodali kontakt.");
+      return;
+    }
+
     const supabase = getSupabase();
     
     // Default values for new contact
     const newContact = {
+      user_id: user.id,
       tier: tierId,
       decision_maker: "New Contact",
       location: "",
