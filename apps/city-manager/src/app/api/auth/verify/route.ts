@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const confirmUrl = `${new URL(req.url).origin}/auth/confirm?email=${encodeURIComponent(email)}`;
 
     // Use verified domain info.payparq.com
-    const fromAddress = env.NODE_ENV === "development" 
+    const fromAddress = process.env.NODE_ENV === "development" 
       ? "onboarding@resend.dev" 
       : "PayParq <team@info.payparq.com>";
 
