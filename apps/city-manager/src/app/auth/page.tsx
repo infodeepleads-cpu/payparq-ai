@@ -48,7 +48,7 @@ function AuthContent() {
   const roles = [
     { id: "0", label: "Korisnik" },
     { id: "1", label: "Vozač" },
-    { id: "2", label: "Partner" },
+    { id: "2", label: "Partner Parking Vlasnik" },
     { id: "3", label: "Ovlašteni zastupnik" },
     { id: "4", label: "Dostavljač" },
     { id: "5", label: "Referal" },
@@ -59,7 +59,7 @@ function AuthContent() {
     switch (roleId) {
       case "0": return "Kao Korisnik, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.";
       case "1": return "Kao Vozač, prihvaćate uvjete o posredovanju i povjerljivosti podataka.";
-      case "2": return "Kao Partner, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
+      case "2": return "Kao Partner Parking Vlasnik, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.";
       case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
       case "4": return "Kao Dostavljač, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
       case "5": return "Kao Referal, prihvaćate uvjete programa preporuka i pravila o bonusima.";
@@ -329,7 +329,7 @@ function AuthContent() {
                 <div className="space-y-3">
                   <p className="text-[12px] font-bold text-white/40 px-1 uppercase tracking-wider">Tko želite postati?</p>
                   <div className="flex flex-wrap gap-2">
-                    {roles.filter(r => r.id !== "3").map((r) => (
+                    {roles.map((r) => (
                       <button
                         key={r.id}
                         type="button"
