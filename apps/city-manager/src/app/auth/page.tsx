@@ -4,6 +4,7 @@ import Image from "next/image";
 import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
+import Turnstile from "@/components/Turnstile";
 
 import Link from "next/link";
 
@@ -38,6 +39,7 @@ function AuthContent() {
   const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
   const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +113,11 @@ function AuthContent() {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       
+      // If in update mode and email is missing, try to get it from session
+      if (modeParam === "update" && !emailParam && session?.user?.email) {
+        setEmail(session.user.email);
+      }
+
       // Only redirect if NOT in update mode
       if (session?.user && modeParam !== "update") {
         router.push("/profile");
@@ -121,11 +128,21 @@ function AuthContent() {
 
   const signIn = async () => {
     try {
+      if (!captchaToken && mode !== "update") {
+        setError("Molimo potvrdite da niste robot.");
+        return;
+      }
       setLoading(true);
       setError(null);
       setMessage(null);
       const supabase = getSupabase();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: {
+          captchaToken: captchaToken || undefined
+        }
+      });
       if (error) {
         setError(error.message);
         setLoading(false);
@@ -141,6 +158,10 @@ function AuthContent() {
 
   const resetPassword = async () => {
     try {
+      if (!captchaToken) {
+        setError("Molimo potvrdite da niste robot.");
+        return;
+      }
       setLoading(true);
       setError(null);
       setMessage(null);
@@ -148,7 +169,7 @@ function AuthContent() {
       const response = await fetch("/api/auth/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, captchaToken }),
       });
 
       const data = await response.json();
@@ -187,6 +208,10 @@ function AuthContent() {
 
   const signUp = async () => {
     try {
+      if (!captchaToken) {
+        setError("Molimo potvrdite da niste robot.");
+        return;
+      }
       setLoading(true);
       setError(null);
       setMessage(null);
@@ -213,6 +238,7 @@ function AuthContent() {
         password,
         options: { 
           emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm?email=${encodeURIComponent(email)}` : undefined,
+          captchaToken: captchaToken,
           data: { 
             full_name: finalName,
             role: finalRole,
@@ -237,6 +263,7 @@ function AuthContent() {
               email,
               name: finalName,
               role: finalRole,
+              captchaToken, // Pass token for server-side verification
             }),
           });
         } catch (emailErr) {
@@ -256,6 +283,7 @@ function AuthContent() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submit triggered for mode:", mode, { email, password, confirmPassword });
     
     if (mode === "forgot") {
       if (!email.trim()) {
@@ -279,12 +307,20 @@ function AuthContent() {
       return;
     }
 
-    if (!email.trim() || !password.trim()) {
-      setError(t('auth_missing_fields'));
+    if (mode === "signin") {
+      if (!email.trim() || !password.trim()) {
+        setError(t('auth_missing_fields'));
+        return;
+      }
+      await signIn();
       return;
     }
     
     if (mode === "signup") {
+      if (!email.trim() || !password.trim()) {
+        setError(t('auth_missing_fields'));
+        return;
+      }
       if (password !== confirmPassword) {
         setError("Lozinke se ne podudaraju.");
         return;
@@ -302,26 +338,15 @@ function AuthContent() {
         return;
       }
       if (!isEmailValid) {
-      setError("Molimo unesite ispravnu email adresu.");
-      return;
-    }
-
-    if (!isPhoneValid) {
+        setError("Molimo unesite ispravnu email adresu.");
+        return;
+      }
+      if (!isPhoneValid) {
         setError("Molimo unesite ispravan broj mobitela.");
         return;
       }
-    }
-
-    if (mode === "signin") {
-      await signIn();
-    } else if (mode === "update") {
-      if (password !== confirmPassword) {
-        setError("Lozinke se ne podudaraju.");
-        return;
-      }
-      await updatePassword();
-    } else if (mode === "signup") {
       await signUp();
+      return;
     }
   };
 
@@ -359,10 +384,10 @@ function AuthContent() {
               }}
               className="relative cursor-pointer transition-colors"
             >
-              <div className={mode === tab.id ? "text-white" : "text-white/30 hover:text-white transition-colors"}>
+              <div className={(mode === tab.id || (mode === "forgot" && tab.id === "signin") || (mode === "update" && tab.id === "signin")) ? "text-white" : "text-white/30 hover:text-white transition-colors"}>
                 {tab.label}
               </div>
-              {mode === tab.id && (
+              {(mode === tab.id || (mode === "forgot" && tab.id === "signin") || (mode === "update" && tab.id === "signin")) && (
                 <div className="absolute -bottom-1.5 left-0 right-0 h-[2px] bg-[#7C3AED] rounded-full" />
               )}
             </div>
@@ -379,9 +404,9 @@ function AuthContent() {
                 fill
                 priority
                 unoptimized
-                className="object-cover opacity-90"
+                className="object-cover opacity-100 brightness-[1.1] contrast-[0.95]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
             </div>
           ) : (
             <div className="relative w-full h-[180px] rounded-2xl overflow-hidden shadow-2xl border border-white/5">
@@ -391,9 +416,9 @@ function AuthContent() {
                 fill
                 priority
                 unoptimized
-                className="object-cover opacity-90"
+                className="object-cover opacity-100 brightness-[1.1] contrast-[0.95]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
             </div>
           )}
         </div>
@@ -463,7 +488,7 @@ function AuthContent() {
                       onClick={() => setMode("signin")}
                       className="text-[11px] text-white/40 hover:text-white transition-colors font-medium bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                     >
-                      Natrag na prijavu
+                      Odustani i vrati se na prijavu
                     </button>
                   </div>
                 )}
@@ -475,14 +500,20 @@ function AuthContent() {
                 <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">
                   Promjena lozinke za {email || "vaš račun"}
                 </p>
-                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] opacity-60 cursor-not-allowed">
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/20 rounded-[12px] opacity-80 cursor-not-allowed shadow-inner">
                   <input
                     type="email"
                     value={email}
                     disabled
                     placeholder="Email adresa"
-                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none cursor-not-allowed"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white/50 placeholder:text-white/20 focus:ring-0 focus:outline-none cursor-not-allowed font-medium"
                   />
+                  <div className="absolute right-4 text-white/20">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </div>
                 </div>
                 <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                   <input
@@ -495,8 +526,12 @@ function AuthContent() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
+                    onMouseDown={() => setShowPassword(true)}
+                    onMouseUp={() => setShowPassword(false)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
+                    onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
+                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -520,6 +555,27 @@ function AuthContent() {
                     className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     required
                   />
+                  <button
+                    type="button"
+                    onMouseDown={() => setShowPassword(true)}
+                    onMouseUp={() => setShowPassword(false)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
+                    onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
+                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
+                  >
+                    {showPassword ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 <div className="flex justify-start px-1 bg-transparent">
                   <button 
@@ -737,6 +793,16 @@ function AuthContent() {
               </div>
             )}
           </div>
+
+          {/* Turnstile Captcha */}
+          {(mode === "signin" || mode === "signup" || mode === "forgot") && (
+            <div className="flex justify-center pt-2">
+              <Turnstile 
+                onVerify={(token) => setCaptchaToken(token)} 
+                className="scale-[0.85] origin-center"
+              />
+            </div>
+          )}
 
           {/* Submit Button */}
             <div className="flex flex-col items-center gap-6 mt-4">

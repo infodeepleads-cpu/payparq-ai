@@ -19,6 +19,10 @@ export default function ProfilePage() {
   const [isFinanceExpanded, setIsFinanceExpanded] = useState(false);
   const [isStripeConnectExpanded, setIsStripeConnectExpanded] = useState(false);
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isApplePayConnected, setIsApplePayConnected] = useState(false);
   const [isGooglePayConnected, setIsGooglePayConnected] = useState(false);
   const [isCardConnected, setIsCardConnected] = useState(false);
@@ -94,6 +98,47 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.toLowerCase() !== "obriši") {
+      alert("Molimo upišite 'OBRIŠI' za potvrdu.");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.replace("/auth");
+        return;
+      }
+
+      const response = await fetch("/api/auth/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Vaš račun je uspješno obrisan.");
+        await supabase.auth.signOut();
+        router.replace("/auth");
+      } else {
+        alert(`Greška pri brisanju: ${data.error || "Nepoznata greška"}`);
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error("Delete account error:", error);
+      alert("Došlo je do pogreške prilikom brisanja računa.");
+      setIsDeleting(false);
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -116,29 +161,30 @@ export default function ProfilePage() {
 
   const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
   const isPayparqSuperadmin = user?.email?.toLowerCase() === 'payparq@outlook.com';
-  const isAdmin = isDeepleads || isPayparqSuperadmin || metadata.is_admin === true || (Array.isArray(metadata.roles) && metadata.roles.includes("10"));
+  const isPension = user?.email?.toLowerCase() === 'pension.zamic@gmail.com';
+  const isAdmin = isDeepleads || isPayparqSuperadmin || isPension || metadata.is_admin === true || (Array.isArray(metadata.roles) && metadata.roles.includes("10"));
   
   const deepleadsName = "Karlo Žamić";
   const deepleadsPhone = "+385915963139";
   const deepleadsAddress = "Obala Kneza Domagoja 52";
   
   const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
-  const allRoles = (isDeepleads || isPayparqSuperadmin)
+  const allRoles = (isDeepleads || isPayparqSuperadmin || isPension)
     ? ["3", "10", ...metadataRoles.filter((r: string | undefined) => r && r !== "3" && r !== "10")]
     : metadataRoles.filter(Boolean) as string[];
   
   const displayRoles = allRoles.length > 0 
     ? allRoles.map((r: string) => roleLabels[r] || "Korisnik")
     : ["Korisnik"];
-
-  // Deepleads and Payparq Superadmin are always verified
-  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || metadata.is_verified === true);
+  
+  // Deepleads, Payparq Superadmin, and Pension are always verified
+  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || metadata.is_verified === true);
 
   const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
     { label: "Email Adresa", value: user?.email },
-    { label: "Ime i Prezime", value: metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : null) },
-    { label: "Broj Mobitela", value: metadata.phone || ((isDeepleads || isPayparqSuperadmin) ? deepleadsPhone : null) },
-    { label: "Adresa", value: metadata.address || ((isDeepleads || isPayparqSuperadmin) ? deepleadsAddress : null) },
+    { label: "Ime i Prezime", value: metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : null) },
+    { label: "Broj Mobitela", value: metadata.phone || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsPhone : null) },
+    { label: "Adresa", value: metadata.address || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsAddress : null) },
     ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: metadata.parking_capacity ? `${metadata.parking_capacity} mjesta` : null }] : []),
     { label: "Uloge", value: displayRoles }
   ];
@@ -974,7 +1020,101 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          <div className="flex flex-col gap-4 mt-4">
+            <div 
+              className="flex items-center justify-between px-6 cursor-pointer group"
+              onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Postavke računa</h2>
+                <svg 
+                  className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isSettingsExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isSettingsExpanded ? 'max-h-[500px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
+              <div className="bg-white/[0.03] rounded-[32px] p-6 border border-white/10 flex flex-col gap-4">
+                <div className="p-4 rounded-2xl bg-red-500/[0.03] border border-red-500/10 flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
+                    <span className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Danger Zone</span>
+                  </div>
+                  <p className="text-[11px] text-red-500/60 leading-relaxed font-medium">
+                    Brisanjem računa trajno gubite pristup svim podacima i uslugama unutar PayParq platforme.
+                  </p>
+                  <button 
+                    onClick={() => setShowDeleteModal(true)}
+                    className="h-10 w-full rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-[11px] font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
+                  >
+                    Obriši moj račun
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+            <div 
+              className="absolute inset-0 bg-black/80 backdrop-blur-md animate-in fade-in duration-300"
+              onClick={() => !isDeleting && setShowDeleteModal(false)}
+            />
+            <div className="relative w-full max-w-[400px] bg-black border border-white/10 rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-xl font-bold text-white tracking-tight">Potvrda brisanja</h3>
+                  <p className="text-sm text-white/40 leading-relaxed">
+                    Jeste li sigurni da želite obrisati svoj račun? Ova radnja je <span className="text-red-500 font-bold">nepovratna</span>.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <label className="text-[11px] font-bold text-white/30 uppercase tracking-[0.1em]">
+                    Upišite "OBRIŠI" za potvrdu
+                  </label>
+                  <input 
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="OBRIŠI"
+                    className="h-14 w-full bg-white/[0.03] border border-white/10 rounded-2xl px-5 text-white text-base font-bold focus:outline-none focus:border-red-500/50 transition-colors placeholder:text-white/10"
+                    disabled={isDeleting}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 h-14 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-[13px] transition-all active:scale-[0.98]"
+                    disabled={isDeleting}
+                  >
+                    Odustani
+                  </button>
+                  <button 
+                    onClick={handleDeleteAccount}
+                    className="flex-[2] h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold text-[13px] transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(239,68,68,0.4)] flex items-center justify-center"
+                    disabled={isDeleting || deleteConfirmText.toLowerCase() !== "obriši"}
+                  >
+                    {isDeleting ? (
+                      <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      'Potvrdi brisanje'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer info */}
         <div className="mt-2 mb-1 pt-4 border-t border-white/10 w-full max-w-[430px] px-6">

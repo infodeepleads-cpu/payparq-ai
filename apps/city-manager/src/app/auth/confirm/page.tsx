@@ -40,10 +40,26 @@ export default function Confirm() {
       // If it's a recovery flow, redirect to update password
       if (type === "recovery" || window.location.hash.includes("recovery") || searchParams.get("type") === "recovery") {
         setMessage("Link potvrđen. Molimo postavite novu lozinku...");
-        setTimeout(() => {
-          const finalEmail = email || searchParams.get("email") || hashParams.get("email") || "";
-          window.location.href = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
-        }, 1000);
+        
+        // Try to get email from session if not in URL
+        const handleRecoveryRedirect = async () => {
+          let finalEmail = email;
+          
+          // Force a small delay to ensure session is fully loaded
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          if (!finalEmail) {
+            const { data: { user } } = await supabase.auth.getUser();
+            finalEmail = user?.email;
+            console.log("Fetched email from session:", finalEmail);
+          }
+          
+          const redirectUrl = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
+          console.log("Redirecting to:", redirectUrl);
+          window.location.href = redirectUrl;
+        };
+        
+        handleRecoveryRedirect();
       } else {
         setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
         setTimeout(() => {
@@ -74,7 +90,8 @@ export default function Confirm() {
           if (type === "recovery") {
             setMessage("Lozinka je spremna za promjenu. Preusmjeravamo vas...");
             setTimeout(() => {
-              window.location.href = "/auth?mode=update";
+              const finalEmail = email || searchParams.get("email") || hashParams.get("email") || "";
+              window.location.href = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
             }, 2000);
           } else {
             setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");

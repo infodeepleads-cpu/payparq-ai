@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name, role } = await req.json();
+    const { email, name, role, captchaToken } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Verify Turnstile token
+    const isHuman = await verifyTurnstileToken(captchaToken, req.headers.get("x-forwarded-for") || undefined);
+    if (!isHuman) {
+      return NextResponse.json({ error: "Captcha verification failed. Please try again." }, { status: 403 });
     }
 
     if (env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {

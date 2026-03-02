@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const { email, captchaToken } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Verify Turnstile token
+    const isHuman = await verifyTurnstileToken(captchaToken, req.headers.get("x-forwarded-for") || undefined);
+    if (!isHuman) {
+      return NextResponse.json({ error: "Captcha verification failed. Please try again." }, { status: 403 });
     }
 
     if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
     
     console.log(`Generating recovery link for ${email} with redirectTo: ${redirectTo}`);
     
-    const { data, error: linkError } = await supabase.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email: email,
       options: {
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest) {
       ? "onboarding@resend.dev" 
       : "PayParq <team@info.payparq.com>";
 
-    const { data, error } = await resend.emails.send({
+    const { data: resendData, error: resendError } = await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: "Ponovno postavljanje lozinke - PayParq",
@@ -83,11 +90,11 @@ export async function POST(req: NextRequest) {
       `,
     });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (resendError) {
+      return NextResponse.json({ error: resendError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, id: data?.id });
+    return NextResponse.json({ success: true, id: resendData?.id });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
