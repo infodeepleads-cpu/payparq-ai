@@ -16,7 +16,7 @@ export default function Turnstile({ onVerify, className }: TurnstileProps) {
   if (!siteKey) return null;
 
   return (
-    <div className={`${className} hidden`}>
+    <div className="fixed -left-[5000px] -top-[5000px] opacity-0 pointer-events-none">
       <TurnstileWidget
         sitekey={siteKey}
         onVerify={onVerify}

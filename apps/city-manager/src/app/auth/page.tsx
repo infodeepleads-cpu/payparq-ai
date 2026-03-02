@@ -132,7 +132,8 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && mode !== "update" && (hasSiteKey || !isDev)) {
-        setError("Molimo potvrdite da niste robot.");
+        // Silent retry or generic error instead of "ugly" captcha message
+        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
         return;
       }
       setLoading(true);
@@ -165,7 +166,7 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        setError("Molimo potvrdite da niste robot.");
+        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
         return;
       }
       setLoading(true);
@@ -218,7 +219,7 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        setError("Molimo potvrdite da niste robot.");
+        setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu.");
         return;
       }
       setLoading(true);
