@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 function AuthContent() {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "update">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -100,6 +100,8 @@ function AuthContent() {
     const modeParam = searchParams.get("mode");
     if (modeParam === "signup") setMode("signup");
     else if (modeParam === "signin") setMode("signin");
+    else if (modeParam === "forgot") setMode("forgot");
+    else if (modeParam === "update") setMode("update");
 
     // Check if user is already logged in
     const checkUser = async () => {
@@ -129,6 +131,52 @@ function AuthContent() {
         router.push("/profile");
         router.refresh();
       }
+    } catch (err: any) {
+      setError(err.message || t('auth_error_generic'));
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setMessage(null);
+      
+      const response = await fetch("/api/auth/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Greška pri slanju emaila.");
+      } else {
+        setMessage("Link za ponovno postavljanje lozinke je poslan na vaš email.");
+      }
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || t('auth_error_generic'));
+      setLoading(false);
+    }
+  };
+
+  const updatePassword = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setMessage(null);
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setError(error.message);
+      } else {
+        setMessage("Lozinka je uspješno promijenjena. Preusmjeravamo vas na prijavu...");
+        setTimeout(() => setMode("signin"), 3000);
+      }
+      setLoading(false);
     } catch (err: any) {
       setError(err.message || t('auth_error_generic'));
       setLoading(false);
@@ -206,6 +254,16 @@ function AuthContent() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (mode === "forgot") {
+      if (!email.trim()) {
+        setError(t('auth_missing_fields'));
+        return;
+      }
+      await resetPassword();
+      return;
+    }
+
     if (!email.trim() || !password.trim()) {
       setError(t('auth_missing_fields'));
       return;
@@ -241,7 +299,13 @@ function AuthContent() {
 
     if (mode === "signin") {
       await signIn();
-    } else {
+    } else if (mode === "update") {
+      if (password !== confirmPassword) {
+        setError("Lozinke se ne podudaraju.");
+        return;
+      }
+      await updatePassword();
+    } else if (mode === "signup") {
       await signUp();
     }
   };
@@ -292,7 +356,7 @@ function AuthContent() {
 
         {/* Dynamic Image based on mode */}
         <div className="w-full max-w-[360px] flex justify-center mb-8 relative z-10">
-          {mode === "signin" ? (
+          {mode === "signin" || mode === "forgot" || mode === "update" ? (
             <div className="relative w-full h-[180px] rounded-2xl overflow-hidden shadow-2xl border border-white/5">
               <Image 
                 src="/images/parking-lot.jfif" 
@@ -322,6 +386,127 @@ function AuthContent() {
         <div className="w-full max-w-[360px] space-y-8 relative z-10">
           <form onSubmit={submit} className="space-y-6">
           <div className="space-y-6">
+            {(mode === "signin" || mode === "forgot") && (
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">
+                  {mode === "signin" ? "Prijava u sustav" : "Zaboravljena lozinka"}
+                </p>
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email adresa"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    required
+                  />
+                </div>
+                {mode === "signin" && (
+                  <>
+                    <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Lozinka"
+                        className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none"
+                      >
+                        {showPassword ? (
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <div className="flex justify-end px-1">
+                      <button 
+                        type="button"
+                        onClick={() => setMode("forgot")}
+                        className="text-[11px] text-[#7C3AED] hover:underline font-medium"
+                      >
+                        Zaboravili ste lozinku?
+                      </button>
+                    </div>
+                  </>
+                )}
+                {mode === "forgot" && (
+                  <div className="flex justify-start px-1">
+                    <button 
+                      type="button"
+                      onClick={() => setMode("signin")}
+                      className="text-[11px] text-white/40 hover:text-white transition-colors font-medium"
+                    >
+                      Natrag na prijavu
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mode === "update" && (
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">Nova lozinka</p>
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Nova lozinka"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none"
+                  >
+                    {showPassword ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ponovite novu lozinku"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div className="flex justify-start px-1">
+                  <button 
+                    type="button"
+                    onClick={() => setMode("signin")}
+                    className="text-[11px] text-white/40 hover:text-white transition-colors font-medium"
+                  >
+                    Natrag na prijavu
+                  </button>
+                </div>
+              </div>
+            )}
+
             {mode === "signup" && (
               <>
                 {/* Role Selector */}
@@ -497,51 +682,6 @@ function AuthContent() {
               </>
             )}
 
-            {mode === "signin" && (
-              <>
-                <div className={`relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border rounded-[12px] transition-all ${isEmailValid === true ? 'border-green-500/50' : isEmailValid === false ? 'border-red-500/50' : 'border-white/10 focus-within:border-[#7C3AED]/50'}`}>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email adresa"
-                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Lozinka"
-                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onMouseDown={() => setShowPassword(true)}
-                    onMouseUp={() => setShowPassword(false)}
-                    onMouseLeave={() => setShowPassword(false)}
-                    onTouchStart={(e) => { e.preventDefault(); setShowPassword(true); }}
-                    onTouchEnd={(e) => { e.preventDefault(); setShowPassword(false); }}
-                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent rounded-full p-1 focus:outline-none focus:ring-0 border-none outline-none"
-                  >
-                    {showPassword ? (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-
             {mode === "signup" && (
               <div className="pt-2 px-1">
                 <label className="flex items-start gap-3 cursor-pointer group">
@@ -582,9 +722,16 @@ function AuthContent() {
                 {loading ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 ) : (
-                  mode === "signup" ? "Verificiraj" : "Prijavi se"
+                  mode === "signup" ? "Verificiraj" : 
+                  mode === "forgot" ? "Pošalji link" :
+                  mode === "update" ? "Promijeni lozinku" : "Prijavi se"
                 )}
               </button>
+
+              <div className="min-h-[20px] text-center">
+                {message && <p className="text-sm text-green-400 font-medium">{message}</p>}
+                {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
+              </div>
             </div>
 
             <div className="flex flex-col items-center gap-6 mt-8 mb-4 border-t border-white/10 pt-8 w-full">
@@ -600,11 +747,6 @@ function AuthContent() {
             </div>
           </div>
         </form>
-
-        <div className="min-h-[20px] text-center">
-          {message && <p className="text-sm text-green-400 font-medium">{message}</p>}
-          {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
-        </div>
       </div>
       </div>
 

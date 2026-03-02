@@ -26,10 +26,17 @@ export default function Confirm() {
           setMessage(`Greška pri potvrdi: ${error.message}`);
         } else {
           setStatus("ok");
-          setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");
-          setTimeout(() => {
-            window.location.href = "/profile";
-          }, 2000);
+          if (type === "recovery") {
+            setMessage("Lozinka je spremna za promjenu. Preusmjeravamo vas...");
+            setTimeout(() => {
+              window.location.href = "/auth?mode=update";
+            }, 2000);
+          } else {
+            setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");
+            setTimeout(() => {
+              window.location.href = "/profile";
+            }, 2000);
+          }
         }
       });
       return;
