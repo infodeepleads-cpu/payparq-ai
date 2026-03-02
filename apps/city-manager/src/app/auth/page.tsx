@@ -434,7 +434,7 @@ function AuthContent() {
                       <button 
                         type="button"
                         onClick={() => setMode("forgot")}
-                        className="text-[11px] text-[#7C3AED] hover:underline font-medium"
+                        className="text-[11px] text-[#7C3AED] hover:text-[#7C3AED]/80 hover:underline font-medium transition-colors"
                       >
                         Zaboravili ste lozinku?
                       </button>

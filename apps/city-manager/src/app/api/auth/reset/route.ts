@@ -29,11 +29,12 @@ export async function POST(req: NextRequest) {
     );
 
     // Generate recovery link
+    const origin = req.headers.get("origin") || new URL(req.url).origin;
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
-      options: {
-        redirectTo: `${new URL(req.url).origin}/auth/confirm?type=recovery`,
+      options: { 
+        redirectTo: `${origin}/auth/confirm?type=recovery` 
       }
     });
 
