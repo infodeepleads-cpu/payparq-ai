@@ -430,11 +430,11 @@ function AuthContent() {
                         )}
                       </button>
                     </div>
-                    <div className="flex justify-end px-1">
+                    <div className="flex justify-end px-1 bg-transparent">
                       <button 
                         type="button"
                         onClick={() => setMode("forgot")}
-                        className="text-[11px] text-[#7C3AED] hover:text-[#7C3AED]/80 hover:underline font-medium transition-colors"
+                        className="text-[11px] text-[#7C3AED] hover:text-[#7C3AED]/80 hover:underline font-medium transition-colors bg-transparent border-none p-0"
                       >
                         Zaboravili ste lozinku?
                       </button>

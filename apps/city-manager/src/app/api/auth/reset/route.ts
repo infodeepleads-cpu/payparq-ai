@@ -29,7 +29,11 @@ export async function POST(req: NextRequest) {
     );
 
     // Generate recovery link
-    const origin = req.headers.get("origin") || new URL(req.url).origin;
+    // Prisilno koristimo produkcijsku domenu za redirect na Vercelu
+    const origin = process.env.NODE_ENV === "production" 
+      ? "https://city-manager-xi.vercel.app" 
+      : (req.headers.get("origin") || new URL(req.url).origin);
+    
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
