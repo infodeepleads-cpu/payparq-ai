@@ -23,38 +23,43 @@ export default function Confirm() {
 
     const token_hash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
     const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
     const error = searchParams.get("error") || hashParams.get("error");
     const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
     
     const email = searchParams.get("email") || hashParams.get("email") || undefined;
-    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || "signup";
+    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || (window.location.hash.includes("type=recovery") ? "recovery" : "signup");
     
     const supabase = getSupabase();
 
-    // If there is an error from Supabase redirect
-    if (error || errorDescription) {
-      setStatus("error");
-      setMessage(`Greška: ${errorDescription || error}`);
-      setTimeout(() => {
-        window.location.href = "/auth?mode=forgot";
-      }, 3000);
-      return;
-    }
-
     // If we have an access token, it means Supabase already verified the link and signed us in
-    if (accessToken) {
+    if (accessToken || refreshToken) {
+      console.log("Detected active session tokens, checking if recovery...");
       setStatus("ok");
-      if (type === "recovery" || window.location.hash.includes("type=recovery")) {
+      
+      // If it's a recovery flow, redirect to update password
+      if (type === "recovery" || window.location.hash.includes("recovery") || searchParams.get("type") === "recovery") {
         setMessage("Link potvrđen. Molimo postavite novu lozinku...");
         setTimeout(() => {
           window.location.href = "/auth?mode=update";
-        }, 1500);
+        }, 1000);
       } else {
         setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
         setTimeout(() => {
           window.location.href = "/profile";
-        }, 1500);
+        }, 1000);
       }
+      return;
+    }
+
+    // If there is an error from Supabase redirect
+    if (error || errorDescription) {
+      console.error("Auth error detected:", { error, errorDescription });
+      setStatus("error");
+      setMessage(`Greška: ${errorDescription || error || "Link je nevažeći ili je već iskorišten."}`);
+      setTimeout(() => {
+        window.location.href = "/auth?mode=forgot";
+      }, 4000);
       return;
     }
 

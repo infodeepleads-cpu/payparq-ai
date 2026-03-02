@@ -36,14 +36,17 @@ export async function POST(req: NextRequest) {
     
     // Provjeravamo i localhost:3000 i localhost:80 ako je korisnik to naveo
     const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
-
-    console.log(`Generating recovery link for ${email} with redirectTo: ${finalOrigin}/auth/confirm?type=recovery`);
-
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: 'recovery',
+    
+    // Explicitly add type=recovery to the redirect URL to ensure it's picked up
+    const redirectTo = `${finalOrigin}/auth/confirm?type=recovery`;
+    
+    console.log(`Generating recovery link for ${email} with redirectTo: ${redirectTo}`);
+    
+    const { data, error: linkError } = await supabase.auth.admin.generateLink({
+      type: "recovery",
       email: email,
-      options: { 
-        redirectTo: `${finalOrigin}/auth/confirm?type=recovery` 
+      options: {
+        redirectTo: redirectTo
       }
     });
 
