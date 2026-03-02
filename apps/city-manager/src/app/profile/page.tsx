@@ -106,7 +106,7 @@ export default function ProfilePage() {
   const roleLabels: Record<string, string> = {
     "0": "Korisnik",
     "1": "Vozač",
-    "2": "Partner",
+    "2": "Partner Parking Vlasnik",
     "3": "Ovlašteni zastupnik",
     "4": "Dostavljač",
     "5": "Referal",

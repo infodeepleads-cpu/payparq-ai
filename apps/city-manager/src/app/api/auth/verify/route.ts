@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -10,6 +11,38 @@ export async function POST(req: NextRequest) {
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    if (env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const adminClient = createClient(
+          env.NEXT_PUBLIC_SUPABASE_URL,
+          env.SUPABASE_SERVICE_ROLE_KEY,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+            },
+          }
+        );
+
+        const { data: usersData, error: listError } =
+          await adminClient.auth.admin.listUsers();
+
+        if (!listError && usersData?.users?.length) {
+          const targetUser = usersData.users.find(
+            (u) => u.email?.toLowerCase() === String(email).toLowerCase()
+          );
+
+          if (targetUser) {
+            await adminClient.auth.admin.updateUserById(targetUser.id, {
+              email_confirm: true,
+            });
+          }
+        }
+      } catch (adminError) {
+        console.error("Supabase admin email confirm error:", adminError);
+      }
     }
 
     // Magic Link URL - Supabase handles the actual verification
