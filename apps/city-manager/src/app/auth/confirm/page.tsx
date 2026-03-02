@@ -11,10 +11,12 @@ export default function Confirm() {
   const [message, setMessage] = useState<string>(t('confirming_email'));
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token_hash = params.get("token_hash") || params.get("token");
-    const email = params.get("email") || undefined;
-    const type = (params.get("type") as any) || "signup";
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashRaw = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+    const hashParams = new URLSearchParams(hashRaw);
+    const token_hash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
+    const email = searchParams.get("email") || hashParams.get("email") || undefined;
+    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || "signup";
     
     const supabase = getSupabase();
 
@@ -60,6 +62,23 @@ export default function Confirm() {
           }, 3000);
         }
       });
+      return;
+    }
+    
+    if (!token_hash) {
+      if (type === "recovery") {
+        setStatus("error");
+        setMessage("Link za promjenu lozinke je nevažeći ili je istekao. Zatražite novi email.");
+        setTimeout(() => {
+          window.location.href = "/auth?mode=forgot";
+        }, 2500);
+      } else {
+        setStatus("error");
+        setMessage("Link je nevažeći. Vraćamo vas na prijavu.");
+        setTimeout(() => {
+          window.location.href = "/auth?mode=signin";
+        }, 2000);
+      }
     }
   }, [t]);
    return (
