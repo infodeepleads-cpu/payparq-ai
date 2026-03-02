@@ -129,20 +129,6 @@ function AuthContent() {
 
   const signIn = async () => {
     try {
-      const isDev = process.env.NODE_ENV === "development";
-      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-      
-      if (!captchaToken && mode !== "update" && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for signin, waiting up to 3s...");
-        setLoading(true);
-        // Wait up to 3 seconds, checking every 500ms
-        for (let i = 0; i < 6; i++) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (captchaToken) break;
-        }
-        // If still no token, we proceed anyway and let server handle it
-        // This prevents the "stuck" feeling
-      }
       setLoading(true);
       setError(null);
       setMessage(null);
@@ -169,18 +155,6 @@ function AuthContent() {
 
   const resetPassword = async () => {
     try {
-      const isDev = process.env.NODE_ENV === "development";
-      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-      
-      // Smart wait for Turnstile token
-      if (!captchaToken && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for reset, waiting up to 3s...");
-        setLoading(true);
-        for (let i = 0; i < 6; i++) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (captchaToken) break;
-        }
-      }
       setLoading(true);
       setError(null);
       setMessage(null);
@@ -240,18 +214,6 @@ function AuthContent() {
 
   const signUp = async () => {
     try {
-      const isDev = process.env.NODE_ENV === "development";
-      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-      
-      // Smart wait for Turnstile token
-      if (!captchaToken && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for signup, waiting up to 3s...");
-        setLoading(true);
-        for (let i = 0; i < 6; i++) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (captchaToken) break;
-        }
-      }
       setLoading(true);
       setError(null);
       setMessage(null);
@@ -838,11 +800,6 @@ function AuthContent() {
               </div>
             )}
           </div>
-
-          {/* Turnstile Captcha */}
-          {(mode === "signin" || mode === "signup" || mode === "forgot") && (
-            <Turnstile onVerify={(token) => setCaptchaToken(token)} />
-          )}
 
           {/* Submit Button */}
             <div className="flex flex-col items-center gap-6 mt-4">

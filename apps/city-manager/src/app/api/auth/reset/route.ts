@@ -14,10 +14,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Verify Turnstile token
+    // Verify Turnstile token - SOFT FAIL
+    // We only log if it fails, but we DON'T block the user.
+    // This ensures real users are never blocked by Cloudflare issues.
     const isHuman = await verifyTurnstileToken(captchaToken, req.headers.get("x-forwarded-for") || undefined);
-    if (!isHuman) {
-      return NextResponse.json({ error: "Captcha verification failed. Please try again." }, { status: 403 });
+    if (!isHuman && captchaToken) {
+      console.warn(`Captcha verification failed for ${email}, but proceeding anyway to avoid blocking real user.`);
     }
 
     if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
