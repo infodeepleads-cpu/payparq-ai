@@ -110,7 +110,9 @@ function AuthContent() {
 
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      
+      // Only redirect if NOT in update mode
+      if (session?.user && modeParam !== "update") {
         router.push("/profile");
       }
     };
