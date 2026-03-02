@@ -976,11 +976,18 @@ export default function ProfilePage() {
         </div>
 
         {/* Footer info */}
-        <div className="w-full max-w-[430px] px-6 mt-4 pt-10 pb-6 border-t border-white/10 flex flex-col items-center gap-6 relative z-[60]">
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-[11px] text-white/20 tracking-wider font-medium">
-              Sva prava pridržana © 2026 PayParq Global Inc.
-            </p>
+        <div className="mt-6 mb-2 pt-8 border-t border-white/10 w-full max-w-[430px] px-6">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <div className="h-6 w-6 rounded-[5px] bg-[#7C3AED] rotate-45 shadow-[0_0_10px_rgba(124,58,237,0.3)] border border-white/20" />
+              <div className="text-[20px] tracking-tight font-bold text-white leading-none">parq</div>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-[11px] text-white/30 tracking-wider">
+                Sva prava pridržana © 2026 PayParq Global Inc.
+              </p>
+            </div>
           </div>
         </div>
       </div>
