@@ -133,14 +133,15 @@ function AuthContent() {
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
       if (!captchaToken && mode !== "update" && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for signin, retrying in 1s...");
+        console.log("No captcha token for signin, waiting up to 3s...");
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (!captchaToken) {
-          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
-          setLoading(false);
-          return;
+        // Wait up to 3 seconds, checking every 500ms
+        for (let i = 0; i < 6; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (captchaToken) break;
         }
+        // If still no token, we proceed anyway and let server handle it
+        // This prevents the "stuck" feeling
       }
       setLoading(true);
       setError(null);
@@ -171,36 +172,44 @@ function AuthContent() {
       const isDev = process.env.NODE_ENV === "development";
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
-      // If we don't have a token, we should NOT fail silently with an error message
-      // instead, we should wait a bit or try to trigger it.
-      // But since Turnstile is in the background, it should have a token by now.
+      // Smart wait for Turnstile token
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for reset, retrying in 1s...");
+        console.log("No captcha token for reset, waiting up to 3s...");
         setLoading(true);
-        // Wait 1 second and try again once
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (!captchaToken) {
-          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
-          setLoading(false);
-          return;
+        for (let i = 0; i < 6; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (captchaToken) break;
         }
       }
       setLoading(true);
       setError(null);
       setMessage(null);
       
-      const response = await fetch("/api/auth/reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, captchaToken }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-      const data = await response.json();
+      try {
+        const response = await fetch("/api/auth/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, captchaToken }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        setError(data.error || "Greška pri slanju emaila.");
-      } else {
-        setMessage("Link za ponovno postavljanje lozinke je poslan na vaš email.");
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "Greška pri slanju emaila.");
+        } else {
+          setMessage("Link za ponovno postavljanje lozinke je poslan na vaš email.");
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          setError("Zahtjev je trajao predugo. Molimo provjerite internetsku vezu i pokušajte ponovno.");
+        } else {
+          throw err;
+        }
       }
       setLoading(false);
     } catch (err: any) {
@@ -234,14 +243,13 @@ function AuthContent() {
       const isDev = process.env.NODE_ENV === "development";
       const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
       
+      // Smart wait for Turnstile token
       if (!captchaToken && (hasSiteKey || !isDev)) {
-        console.log("No captcha token for signup, retrying in 1s...");
+        console.log("No captcha token for signup, waiting up to 3s...");
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (!captchaToken) {
-          setError("Došlo je do sigurnosne pogreške. Molimo osvježite stranicu i pokušajte ponovno.");
-          setLoading(false);
-          return;
+        for (let i = 0; i < 6; i++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (captchaToken) break;
         }
       }
       setLoading(true);
@@ -288,6 +296,9 @@ function AuthContent() {
       } else {
         // 2. Send custom branded email via Resend
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for email
+
           await fetch("/api/auth/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -297,7 +308,9 @@ function AuthContent() {
               role: finalRole,
               captchaToken, // Pass token for server-side verification
             }),
+            signal: controller.signal
           });
+          clearTimeout(timeoutId);
         } catch (emailErr) {
           console.error("Error calling Resend API:", emailErr);
         }
@@ -828,12 +841,7 @@ function AuthContent() {
 
           {/* Turnstile Captcha */}
           {(mode === "signin" || mode === "signup" || mode === "forgot") && (
-            <div className="flex justify-center pt-2">
-              <Turnstile 
-                onVerify={(token) => setCaptchaToken(token)} 
-                className="scale-[0.85] origin-center"
-              />
-            </div>
+            <Turnstile onVerify={(token) => setCaptchaToken(token)} />
           )}
 
           {/* Submit Button */}

@@ -16,10 +16,12 @@ export default function Turnstile({ onVerify, className }: TurnstileProps) {
   if (!siteKey) return null;
 
   return (
-    <div className="fixed -left-[5000px] -top-[5000px] opacity-0 pointer-events-none">
+    <div className="fixed top-0 left-0 w-[1px] h-[1px] opacity-[0.01] pointer-events-none z-[-1] overflow-hidden">
       <TurnstileWidget
         sitekey={siteKey}
         onVerify={onVerify}
+        onError={() => onVerify("")} // Fallback to empty token on error
+        onExpire={() => onVerify("")} // Fallback to empty token on expire
         theme="dark"
         appearance="always"
       />
