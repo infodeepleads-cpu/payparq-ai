@@ -165,8 +165,8 @@ export default function Home() {
             </div>
             
             <div className="space-y-1">
-              <p className="text-[11px] font-bold text-white uppercase tracking-[0.16em]">
-                Payparq Global Inc.
+              <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.16em]">
+                © 2026 Sva prava pridržana. Payparq Global Inc.
               </p>
             </div>
           </div>

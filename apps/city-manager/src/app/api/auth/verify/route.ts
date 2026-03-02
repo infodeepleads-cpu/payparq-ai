@@ -16,8 +16,13 @@ export async function POST(req: NextRequest) {
     // We point to our confirm route which will handle the session
     const confirmUrl = `${new URL(req.url).origin}/auth/confirm?email=${encodeURIComponent(email)}`;
 
+    // Use verified domain info.payparq.com
+    const fromAddress = env.NODE_ENV === "development" 
+      ? "onboarding@resend.dev" 
+      : "PayParq <team@info.payparq.com>";
+
     const { data, error } = await resend.emails.send({
-      from: "PayParq <team@mail.payparq.com>",
+      from: fromAddress,
       to: email,
       subject: "Potvrdite vaš PayParq račun",
       html: `
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
           </div>
           <p style="font-size: 12px; color: #666;">Ako niste zatražili ovaj email, možete ga slobodno zanemariti.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="font-size: 11px; color: #999;">© 2026 PayParq Global Inc.</p>
+          <p style="font-size: 11px; color: #999;">© 2026 Sva prava pridržana. Payparq Global Inc.</p>
         </div>
       `,
     });
