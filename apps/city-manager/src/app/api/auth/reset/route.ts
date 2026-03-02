@@ -34,11 +34,14 @@ export async function POST(req: NextRequest) {
       ? "https://city-manager-xi.vercel.app" 
       : (req.headers.get("origin") || new URL(req.url).origin);
     
+    // Provjeravamo i localhost:3000 i localhost:80 ako je korisnik to naveo
+    const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
+
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: { 
-        redirectTo: `${origin}/auth/confirm?type=recovery` 
+        redirectTo: `${finalOrigin}/auth/confirm?type=recovery` 
       }
     });
 
