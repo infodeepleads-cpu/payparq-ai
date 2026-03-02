@@ -128,7 +128,10 @@ function AuthContent() {
 
   const signIn = async () => {
     try {
-      if (!captchaToken && mode !== "update") {
+      const isDev = process.env.NODE_ENV === "development";
+      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+      
+      if (!captchaToken && mode !== "update" && (hasSiteKey || !isDev)) {
         setError("Molimo potvrdite da niste robot.");
         return;
       }
@@ -158,7 +161,10 @@ function AuthContent() {
 
   const resetPassword = async () => {
     try {
-      if (!captchaToken) {
+      const isDev = process.env.NODE_ENV === "development";
+      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+      
+      if (!captchaToken && (hasSiteKey || !isDev)) {
         setError("Molimo potvrdite da niste robot.");
         return;
       }
@@ -208,7 +214,10 @@ function AuthContent() {
 
   const signUp = async () => {
     try {
-      if (!captchaToken) {
+      const isDev = process.env.NODE_ENV === "development";
+      const hasSiteKey = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+      
+      if (!captchaToken && (hasSiteKey || !isDev)) {
         setError("Molimo potvrdite da niste robot.");
         return;
       }
