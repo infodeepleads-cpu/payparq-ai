@@ -4,7 +4,6 @@ import Image from "next/image";
 import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
-import Turnstile from "@/components/Turnstile";
 import { env } from "@/lib/env";
 
 import Link from "next/link";
@@ -14,10 +13,9 @@ const autofillStyles = `
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus, 
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #000000 inset !important;
+    -webkit-box-shadow: 0 0 0 30px #0d0d0d inset !important;
     -webkit-text-fill-color: white !important;
     transition: background-color 5000s ease-in-out 0s;
-    border-radius: 12px !important;
   }
 `;
 
@@ -39,7 +37,6 @@ function AuthContent() {
   const [isPhoneValid, setIsPhoneValid] = useState<boolean | null>(null);
   const [isEmailValid, setIsEmailValid] = useState<boolean | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,10 +97,16 @@ function AuthContent() {
   useEffect(() => {
     setMounted(true);
     const modeParam = searchParams.get("mode");
+    const deletedParam = searchParams.get("deleted");
     if (modeParam === "signup") setMode("signup");
     else if (modeParam === "signin") setMode("signin");
     else if (modeParam === "forgot") setMode("forgot");
     else if (modeParam === "update") setMode("update");
+
+    if (deletedParam === "1") {
+      setMessage("Vaš račun je uspješno obrisan.");
+      setError(null);
+    }
 
     // Check if user is already logged in
     const checkUser = async () => {
@@ -134,10 +137,7 @@ function AuthContent() {
       const supabase = getSupabase();
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
-        password,
-        options: {
-          captchaToken: captchaToken || undefined
-        }
+        password
       });
       if (error) {
         setError(error.message);
@@ -165,7 +165,7 @@ function AuthContent() {
         const response = await fetch("/api/auth/reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, captchaToken }),
+          body: JSON.stringify({ email }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -239,7 +239,6 @@ function AuthContent() {
         password,
         options: { 
           emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm?email=${encodeURIComponent(email)}` : undefined,
-          captchaToken: captchaToken || undefined,
           data: { 
             full_name: finalName,
             role: finalRole,
@@ -257,23 +256,34 @@ function AuthContent() {
         // 2. Send custom branded email via Resend
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for email
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s for email
 
-          await fetch("/api/auth/verify", {
+          const response = await fetch("/api/auth/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               email,
               name: finalName,
-              role: finalRole,
-              captchaToken, // Pass token for server-side verification
+              role: finalRole
             }),
             signal: controller.signal
           });
+          
           clearTimeout(timeoutId);
-        } catch (emailErr) {
-          console.error("Error calling Resend API:", emailErr);
-        }
+
+          if (!response.ok) {
+             const errorData = await response.json();
+             console.error("Resend API error:", errorData);
+             setError(errorData.error || "Problem sa slanjem emaila za potvrdu.");
+             setLoading(false);
+             return;
+           }
+         } catch (emailErr: any) {
+           console.error("Error calling Resend API:", emailErr);
+           setError("Problem sa slanjem emaila za potvrdu: " + (emailErr.message || "Nepoznata greška"));
+           setLoading(false);
+           return;
+         }
 
         // Show success message and wait for confirmation
         setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac.");
@@ -761,31 +771,33 @@ function AuthContent() {
             )}
 
             {mode === "signup" && (
-              <div className="pt-2 px-1">
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <div className="relative flex items-center justify-center mt-1">
-                    <input
-                      type="checkbox"
-                      checked={acceptedTerms}
-                      onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      className="peer h-5 w-5 rounded border-white/10 bg-white/5 text-[#7C3AED] focus:ring-offset-0 focus:ring-0 transition-all cursor-pointer"
-                    />
-                    <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[12px] text-white/50 group-hover:text-white/70 transition-colors leading-tight">
-                      {getRoleTerms(role)}
-                    </span>
-                    <span 
-                      onClick={() => setShowTermsModal(true)}
-                      className="text-[11px] font-semibold text-[#7C3AED] hover:underline cursor-pointer"
-                    >
-                      Pročitaj i prihvati uvjete
-                    </span>
-                  </div>
-                </label>
+              <div className="space-y-4">
+                <div className="pt-2 px-1">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center mt-1">
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        className="peer h-5 w-5 rounded border-white/10 bg-white/5 text-[#7C3AED] focus:ring-offset-0 focus:ring-0 transition-all cursor-pointer"
+                      />
+                      <svg className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[12px] text-white/50 group-hover:text-white/70 transition-colors leading-tight">
+                        {getRoleTerms(role)}
+                      </span>
+                      <span 
+                        onClick={() => setShowTermsModal(true)}
+                        className="text-[11px] font-semibold text-[#7C3AED] hover:underline cursor-pointer"
+                      >
+                        Pročitaj i prihvati uvjete
+                      </span>
+                    </div>
+                  </label>
+                </div>
               </div>
             )}
           </div>
@@ -806,9 +818,20 @@ function AuthContent() {
                 )}
               </button>
 
-              <div className="min-h-[20px] text-center">
-                {message && <p className="text-sm text-green-400 font-medium">{message}</p>}
-                {error && <p className="text-sm text-red-400 font-medium">{error}</p>}
+              <div className="min-h-[28px] flex items-center justify-center">
+                {message && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/40 text-green-300 text-[12px] font-medium">
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707l-4 4a1 1 0 01-1.414 0l-2-2A1 1 0 017.707 9.293L9 10.586l3.293-3.293a1 1 0 111.414 1.414z" />
+                    </svg>
+                    <span>{message}</span>
+                  </div>
+                )}
+                {error && (
+                  <p className="text-sm text-red-400 font-medium text-center">
+                    {error}
+                  </p>
+                )}
               </div>
             </div>
 

@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
     // Provjeravamo i localhost:3000 i localhost:80 ako je korisnik to naveo
     const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
     
-    // Explicitly add type=recovery to the redirect URL to ensure it's picked up
-    const redirectTo = `${finalOrigin}/auth/confirm?type=recovery`;
+    // Explicitly add type=recovery and email to the redirect URL to ensure it's picked up
+    const redirectTo = `${finalOrigin}/auth/confirm?type=recovery&email=${encodeURIComponent(email)}`;
     
     console.log(`Generating recovery link for ${email} with redirectTo: ${redirectTo}`);
     
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     console.log("Generated Link:", recoveryLink);
 
     // Use verified domain info.payparq.com
-    const fromAddress = process.env.NODE_ENV === "development" 
+    const fromAddress = (process.env.NODE_ENV === "development" || !env.RESEND_API_KEY.startsWith("re_"))
       ? "onboarding@resend.dev" 
       : "PayParq <team@info.payparq.com>";
 

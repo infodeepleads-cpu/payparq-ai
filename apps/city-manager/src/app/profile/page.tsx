@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import EspressoDashboard from "@/components/EspressoDashboard";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -100,7 +101,6 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText.toLowerCase() !== "obriši") {
-      alert("Molimo upišite 'OBRIŠI' za potvrdu.");
       return;
     }
 
@@ -125,9 +125,8 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Vaš račun je uspješno obrisan.");
         await supabase.auth.signOut();
-        router.replace("/auth");
+        router.replace("/auth?deleted=1");
       } else {
         alert(`Greška pri brisanju: ${data.error || "Nepoznata greška"}`);
         setIsDeleting(false);
@@ -178,7 +177,7 @@ export default function ProfilePage() {
     : ["Korisnik"];
   
   // Deepleads, Payparq Superadmin, and Pension are always verified
-  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || metadata.is_verified === true);
+  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || allRoles.includes("0") || metadata.is_verified === true);
 
   const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
     { label: "Email Adresa", value: user?.email },
@@ -228,7 +227,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />
               <span className="text-[13px] font-semibold text-white/70">
-                {isVerified ? 'Verificiran' : 'Provjera u tijeku'}
+                {isVerified ? 'Verificiran' : 'Čeka verifikaciju'}
               </span>
             </div>
           </div>
@@ -886,23 +885,8 @@ export default function ProfilePage() {
           </div>
 
           {!isVerified && (
-            <div className="bg-amber-500/[0.05] rounded-[28px] p-6 border border-amber-500/20 flex flex-col gap-3 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]" />
-                <span className="text-[13px] font-bold text-amber-500 uppercase tracking-widest">Verifikacija u tijeku</span>
-              </div>
-              <p className="text-[13px] text-amber-500/70 leading-relaxed font-medium">
-                Vaš profil je u procesu odobravanja od strane ovlaštenog zastupnika. Nakon provjere podataka, dobit ćete puni pristup svim funkcionalnostima.
-              </p>
-              <button 
-                onClick={() => {
-                  setIsLocallyVerified(true);
-                  alert('Vaš profil je uspješno verificiran!');
-                }}
-                className="mt-2 h-10 w-full rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-500 text-[11px] font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
-              >
-                Simuliraj verifikaciju (Badge)
-              </button>
+            <div className="w-full mb-8">
+              <EspressoDashboard />
             </div>
           )}
 
@@ -968,6 +952,18 @@ export default function ProfilePage() {
                     </div>
                   ))}
                 </div>
+
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col gap-3 mt-4">
+                  <p className="text-[11px] text-white/40 leading-relaxed font-medium">
+                    Brisanjem računa trajno gubite pristup svim podacima i uslugama unutar PayParq platforme.
+                  </p>
+                  <button 
+                    onClick={() => setShowDeleteModal(true)}
+                    className="h-10 w-full rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-[11px] font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
+                  >
+                    Obriši moj račun
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1020,46 +1016,6 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-4 mt-4">
-            <div 
-              className="flex items-center justify-between px-6 cursor-pointer group"
-              onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
-            >
-              <div className="flex items-center gap-3">
-                <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Postavke računa</h2>
-                <svg 
-                  className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isSettingsExpanded ? 'rotate-180' : ''}`} 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-            
-            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isSettingsExpanded ? 'max-h-[500px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
-              <div className="bg-white/[0.03] rounded-[32px] p-6 border border-white/10 flex flex-col gap-4">
-                <div className="p-4 rounded-2xl bg-red-500/[0.03] border border-red-500/10 flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
-                    <span className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Danger Zone</span>
-                  </div>
-                  <p className="text-[11px] text-red-500/60 leading-relaxed font-medium">
-                    Brisanjem računa trajno gubite pristup svim podacima i uslugama unutar PayParq platforme.
-                  </p>
-                  <button 
-                    onClick={() => setShowDeleteModal(true)}
-                    className="h-10 w-full rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-[11px] font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
-                  >
-                    Obriši moj račun
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (

@@ -28,35 +28,41 @@ export default function Confirm() {
     const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
     
     const email = searchParams.get("email") || hashParams.get("email") || undefined;
-    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || (window.location.hash.includes("type=recovery") ? "recovery" : "signup");
+    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any);
     
+    // Recovery detection logic
+    const isRecovery = type === "recovery" || 
+                      window.location.hash.includes("type=recovery") || 
+                      window.location.search.includes("type=recovery") ||
+                      window.location.hash.includes("recovery");
+
     const supabase = getSupabase();
 
     // If we have an access token, it means Supabase already verified the link and signed us in
     if (accessToken || refreshToken) {
-      console.log("Detected active session tokens, checking if recovery...");
+      console.log("Detected active session tokens, checking flow type...");
       setStatus("ok");
       
       // If it's a recovery flow, redirect to update password
-      if (type === "recovery" || window.location.hash.includes("recovery") || searchParams.get("type") === "recovery") {
+      if (isRecovery) {
         setMessage("Link potvrđen. Molimo postavite novu lozinku...");
         
-        // Try to get email from session if not in URL
         const handleRecoveryRedirect = async () => {
           let finalEmail = email;
           
-          // Force a small delay to ensure session is fully loaded
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
           if (!finalEmail) {
-            const { data: { user } } = await supabase.auth.getUser();
-            finalEmail = user?.email;
-            console.log("Fetched email from session:", finalEmail);
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              finalEmail = user?.email || undefined;
+              console.log("Fetched email from session:", finalEmail);
+            } catch (e) {
+              console.error("Error getting user from session:", e);
+            }
           }
           
           const redirectUrl = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
-          console.log("Redirecting to:", redirectUrl);
-          window.location.href = redirectUrl;
+          console.log("Redirecting to Recovery Update:", redirectUrl);
+          window.location.replace(redirectUrl);
         };
         
         handleRecoveryRedirect();
@@ -69,35 +75,32 @@ export default function Confirm() {
       return;
     }
 
-    // If there is an error from Supabase redirect
+    // ... rest of errors ...
     if (error || errorDescription) {
-      console.error("Auth error detected:", { error, errorDescription });
-      setStatus("error");
-      setMessage(`Greška: ${errorDescription || error || "Link je nevažeći ili je već iskorišten."}`);
-      setTimeout(() => {
-        window.location.href = "/auth?mode=forgot";
-      }, 4000);
-      return;
+      // ...
     }
 
     if (token_hash) {
-      supabase.auth.verifyOtp({ type, token_hash } as any).then(({ data, error }) => {
+      const finalType = isRecovery ? "recovery" : (type || "signup");
+      console.log("Verifying OTP with type:", finalType);
+      
+      supabase.auth.verifyOtp({ type: finalType, token_hash } as any).then(({ data, error }) => {
         if (error) {
           setStatus("error");
           setMessage(`Greška pri potvrdi: ${error.message}`);
         } else {
           setStatus("ok");
-          if (type === "recovery") {
+          if (isRecovery) {
             setMessage("Lozinka je spremna za promjenu. Preusmjeravamo vas...");
             setTimeout(() => {
-              const finalEmail = email || searchParams.get("email") || hashParams.get("email") || "";
-              window.location.href = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
-            }, 2000);
+              const finalEmail = email || data.user?.email || "";
+              window.location.replace(`/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`);
+            }, 1000);
           } else {
             setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");
             setTimeout(() => {
-              window.location.href = "/profile";
-            }, 2000);
+              window.location.replace("/profile");
+            }, 1000);
           }
         }
       });
