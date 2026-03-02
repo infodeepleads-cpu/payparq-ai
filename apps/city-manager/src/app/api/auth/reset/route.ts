@@ -71,7 +71,9 @@ export async function POST(req: NextRequest) {
           <div style="margin: 30px 0;">
             <a href="${recoveryLink}" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Postavi novu lozinku</a>
           </div>
-          <p style="font-size: 12px; color: #666;">Ako niste zatražili ovaj email, možete ga slobodno zanemariti. Link će biti aktivan 60 minuta.</p>
+          <p>Ako gumb iznad ne radi, kopirajte ovaj link u vaš preglednik:</p>
+          <p style="word-break: break-all; color: #7C3AED; font-size: 12px;">${recoveryLink}</p>
+          <p style="font-size: 12px; color: #666; margin-top: 30px;">Ako niste zatražili ovaj email, možete ga slobodno zanemariti. Link će biti aktivan 60 minuta.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
           <p style="font-size: 11px; color: #999;">Sva prava pridržana © 2026 PayParq Global Inc.</p>
         </div>

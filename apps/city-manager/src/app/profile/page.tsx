@@ -115,14 +115,15 @@ export default function ProfilePage() {
   };
 
   const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
-  const isAdmin = isDeepleads || metadata.is_admin === true || (Array.isArray(metadata.roles) && metadata.roles.includes("10"));
+  const isPayparqSuperadmin = user?.email?.toLowerCase() === 'payparq@outlook.com';
+  const isAdmin = isDeepleads || isPayparqSuperadmin || metadata.is_admin === true || (Array.isArray(metadata.roles) && metadata.roles.includes("10"));
   
   const deepleadsName = "Karlo Žamić";
   const deepleadsPhone = "+385915963139";
   const deepleadsAddress = "Obala Kneza Domagoja 52";
   
   const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
-  const allRoles = isDeepleads
+  const allRoles = (isDeepleads || isPayparqSuperadmin)
     ? ["3", "10", ...metadataRoles.filter((r: string | undefined) => r && r !== "3" && r !== "10")]
     : metadataRoles.filter(Boolean) as string[];
   
@@ -130,14 +131,14 @@ export default function ProfilePage() {
     ? allRoles.map((r: string) => roleLabels[r] || "Korisnik")
     : ["Korisnik"];
 
-  // Deepleads users are always verified, otherwise check local state then metadata
-  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || metadata.is_verified === true);
+  // Deepleads and Payparq Superadmin are always verified
+  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || metadata.is_verified === true);
 
   const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
     { label: "Email Adresa", value: user?.email },
-    { label: "Ime i Prezime", value: metadata.full_name || metadata.name || (isDeepleads ? deepleadsName : null) },
-    { label: "Broj Mobitela", value: metadata.phone || (isDeepleads ? deepleadsPhone : null) },
-    { label: "Adresa", value: metadata.address || (isDeepleads ? deepleadsAddress : null) },
+    { label: "Ime i Prezime", value: metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : null) },
+    { label: "Broj Mobitela", value: metadata.phone || ((isDeepleads || isPayparqSuperadmin) ? deepleadsPhone : null) },
+    { label: "Adresa", value: metadata.address || ((isDeepleads || isPayparqSuperadmin) ? deepleadsAddress : null) },
     ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: metadata.parking_capacity ? `${metadata.parking_capacity} mjesta` : null }] : []),
     { label: "Uloge", value: displayRoles }
   ];
@@ -172,11 +173,11 @@ export default function ProfilePage() {
 
         <div className="flex flex-col items-center gap-4 mb-10 w-full text-center">
           <div className="h-20 w-20 rounded-3xl bg-[#7C3AED] flex items-center justify-center text-3xl font-bold shadow-[0_0_30px_rgba(124,58,237,0.4)] border border-white/20">
-            {(metadata.full_name || metadata.name || (isDeepleads ? deepleadsName : user?.email))?.[0]?.toUpperCase()}
+            {(metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : user?.email))?.[0]?.toUpperCase()}
           </div>
           <div className="flex flex-col items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              {metadata.full_name || metadata.name || (isDeepleads ? deepleadsName : "Korisnik")}
+              {metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : "Korisnik")}
             </h1>
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />
