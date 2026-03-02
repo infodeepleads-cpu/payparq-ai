@@ -978,10 +978,10 @@ export default function ProfilePage() {
         {/* Footer info */}
         <div className="mt-2 mb-1 pt-4 border-t border-white/10 w-full max-w-[430px] px-6">
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-6 w-6 rounded-[5px] bg-[#7C3AED] rotate-45 shadow-[0_0_10px_rgba(124,58,237,0.3)] border border-white/20" />
-              <div className="text-[20px] tracking-tight font-bold text-white leading-none">parq</div>
-            </div>
+            <Link href="/" className="flex items-center gap-3 group no-underline">
+              <div className="h-6 w-6 rounded-[5px] bg-[#7C3AED] rotate-45 shadow-[0_0_10px_rgba(124,58,237,0.3)] border border-white/20 group-hover:scale-110 transition-transform" />
+              <div className="text-[20px] tracking-tight font-bold text-white leading-none group-hover:text-white/90 transition-colors">parq</div>
+            </Link>
             
             <div className="space-y-1">
               <p className="text-[11px] text-white/30 tracking-wider">

@@ -51,7 +51,8 @@ function AuthContent() {
     { id: "2", label: "Partner" },
     { id: "3", label: "Ovlašteni zastupnik" },
     { id: "4", label: "Dostavljač" },
-    { id: "5", label: "Referal" }
+    { id: "5", label: "Referal" },
+    { id: "6", label: "Agent" }
   ];
 
   const getRoleTerms = (roleId: string) => {
@@ -62,6 +63,7 @@ function AuthContent() {
       case "3": return "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.";
       case "4": return "Kao Dostavljač, prihvaćate uvjete partnerskog programa i pravila o provizijama.";
       case "5": return "Kao Referal, prihvaćate uvjete programa preporuka i pravila o bonusima.";
+      case "6": return "Kao Agent, prihvaćate uvjete suradnje, NDA i pravila o terenskom radu.";
       default: return t('auth_terms_agreement');
     }
   };
@@ -571,23 +573,32 @@ function AuthContent() {
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-6 mt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center justify-center w-1/2 h-11 rounded-full bg-[#7C3AED] px-4 text-[14px] font-bold text-white shadow-[0_0_20px_rgba(124,58,237,0.4),0_4px_10px_rgba(0,0,0,0.3)] border border-white/20 transition-all hover:bg-[#6D28D9] hover:scale-[1.01] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
-            >
-              {loading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : (
-                mode === "signup" ? "Verificiraj" : "Prijavi se"
-              )}
-            </button>
+          {/* Submit Button */}
+            <div className="flex flex-col items-center gap-6 mt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center justify-center w-1/2 h-11 rounded-full bg-[#7C3AED] px-4 text-[14px] font-bold text-white shadow-[0_0_20px_rgba(124,58,237,0.4),0_4px_10px_rgba(0,0,0,0.3)] border border-white/20 transition-all hover:bg-[#6D28D9] hover:scale-[1.01] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  mode === "signup" ? "Verificiraj" : "Prijavi se"
+                )}
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center gap-6 mt-8 mb-4 border-t border-white/10 pt-8 w-full">
+            <Link href="/" className="flex items-center gap-3 group no-underline self-start">
+              <div className="h-6 w-6 rounded-[5px] bg-[#7C3AED] rotate-45 shadow-[0_0_10px_rgba(124,58,237,0.3)] border border-white/20 group-hover:scale-110 transition-transform" />
+              <div className="text-[20px] tracking-tight font-bold text-white leading-none group-hover:text-white/90 transition-colors">parq</div>
+            </Link>
             
-            {/* Footer Text - Moved Up */}
-            <p className="text-[11px] text-white/30 tracking-wider">
-              Sva prava pridržana © 2026 PayParq Global Inc.
-            </p>
+            <div className="space-y-1 self-start">
+              <p className="text-[11px] text-white/30 tracking-wider">
+                Sva prava pridržana © 2026 PayParq Global Inc.
+              </p>
+            </div>
           </div>
         </form>
 
