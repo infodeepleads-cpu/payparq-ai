@@ -33,7 +33,6 @@ function AuthContent() {
   const [role, setRole] = useState<string>("0"); // 0. Član, 1. Agent, 2. Partner Parking Vlasnik, 3. Ovlašteni zastupnik, 4. Referal
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
   const [parkingCapacity, setParkingCapacity] = useState("");
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -247,7 +246,6 @@ function AuthContent() {
             original_role: role, // Keep original role for UI if needed
             phone: finalPhone,
             address: finalAddress,
-            license_plate: licensePlate,
             parking_capacity: finalRole === "2" ? parkingCapacity : null
           }
         },
@@ -637,15 +635,6 @@ function AuthContent() {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Adresa stanovanja"
-                      className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
-                    />
-                  </div>
-                  <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
-                    <input
-                      type="text"
-                      value={licensePlate}
-                      onChange={(e) => setLicensePlate(e.target.value)}
-                      placeholder="Broj registracijskih tablica"
                       className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none"
                     />
                   </div>
