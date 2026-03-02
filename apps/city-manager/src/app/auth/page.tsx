@@ -159,7 +159,7 @@ function AuthContent() {
         email,
         password,
         options: { 
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm` : undefined,
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm?email=${encodeURIComponent(email)}` : undefined,
           data: { 
             full_name: finalName,
             role: finalRole,
@@ -175,27 +175,8 @@ function AuthContent() {
       if (error) {
         setError(error.message);
       } else {
-        // 2. Send custom branded email via Resend
-        try {
-          const res = await fetch("/api/auth/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email,
-              name,
-              role,
-            }),
-          });
-          
-          if (!res.ok) {
-            console.error("Failed to send custom verification email via Resend");
-          }
-        } catch (emailErr) {
-          console.error("Error calling Resend API:", emailErr);
-        }
-
         // Show success message and wait for confirmation
-        setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac.");
+        setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac (i spam).");
         // We don't redirect here, we want them to see the message
       }
       setLoading(false);

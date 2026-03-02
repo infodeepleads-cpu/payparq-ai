@@ -14,18 +14,19 @@ export default function Confirm() {
     const params = new URLSearchParams(window.location.search);
     const token_hash = params.get("token_hash");
     const email = params.get("email");
+    const type = (params.get("type") as any) || "signup";
     
     const supabase = getSupabase();
 
     // 1. If we have token_hash (Magic Link clicked), verify it
     if (token_hash && email) {
-      supabase.auth.verifyOtp({ type: "email", token_hash, email }).then(({ data, error }) => {
+      supabase.auth.verifyOtp({ type, token_hash, email }).then(({ data, error }) => {
         if (error) {
           setStatus("error");
-          setMessage(error.message);
+          setMessage(`Greška pri potvrdi: ${error.message}`);
         } else {
           setStatus("ok");
-          setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas...");
+          setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");
           setTimeout(() => {
             window.location.href = "/profile";
           }, 2000);
@@ -42,20 +43,19 @@ export default function Confirm() {
       
       // We check if session exists (Supabase sometimes auto-confirms if link is direct)
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
+        if (session && session.user.email_confirmed_at) {
           setStatus("ok");
           setMessage("Uspješno potvrđeno! Dobrodošli natrag.");
           setTimeout(() => {
             window.location.href = "/profile";
           }, 2000);
         } else {
-          // If no session, they might need to use the actual Supabase link
-          // but for this flow, we'll assume they just need to sign in
-          setStatus("ok");
-          setMessage("Molimo prijavite se sada sa svojom lozinkom.");
+          // If no session or not confirmed, they need to use the actual Supabase link
+          setStatus("error");
+          setMessage("Vaš email još nije potvrđen. Molimo kliknite na link u emailu koji vam je poslao Supabase.");
           setTimeout(() => {
             window.location.href = "/auth?mode=signin";
-          }, 2000);
+          }, 4000);
         }
       });
     }
