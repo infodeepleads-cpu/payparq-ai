@@ -22,10 +22,41 @@ export default function Confirm() {
     });
 
     const token_hash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
+    const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+    const error = searchParams.get("error") || hashParams.get("error");
+    const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
+    
     const email = searchParams.get("email") || hashParams.get("email") || undefined;
     const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || "signup";
     
     const supabase = getSupabase();
+
+    // If there is an error from Supabase redirect
+    if (error || errorDescription) {
+      setStatus("error");
+      setMessage(`Greška: ${errorDescription || error}`);
+      setTimeout(() => {
+        window.location.href = "/auth?mode=forgot";
+      }, 3000);
+      return;
+    }
+
+    // If we have an access token, it means Supabase already verified the link and signed us in
+    if (accessToken) {
+      setStatus("ok");
+      if (type === "recovery" || window.location.hash.includes("type=recovery")) {
+        setMessage("Link potvrđen. Molimo postavite novu lozinku...");
+        setTimeout(() => {
+          window.location.href = "/auth?mode=update";
+        }, 1500);
+      } else {
+        setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
+        setTimeout(() => {
+          window.location.href = "/profile";
+        }, 1500);
+      }
+      return;
+    }
 
     if (token_hash) {
       supabase.auth.verifyOtp({ type, token_hash } as any).then(({ data, error }) => {
