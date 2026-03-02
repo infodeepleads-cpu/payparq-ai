@@ -266,6 +266,19 @@ function AuthContent() {
       return;
     }
 
+    if (mode === "update") {
+      if (!password.trim() || !confirmPassword.trim()) {
+        setError("Molimo unesite novu lozinku u oba polja.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Lozinke se ne podudaraju.");
+        return;
+      }
+      await updatePassword();
+      return;
+    }
+
     if (!email.trim() || !password.trim()) {
       setError(t('auth_missing_fields'));
       return;
@@ -459,7 +472,18 @@ function AuthContent() {
 
             {mode === "update" && (
               <div className="space-y-3">
-                <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">Nova lozinka</p>
+                <p className="text-[11px] font-bold text-[#7C3AED] px-1 uppercase tracking-[0.1em]">
+                  Promjena lozinke za {email || "vaš račun"}
+                </p>
+                <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] opacity-60 cursor-not-allowed">
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    placeholder="Email adresa"
+                    className="flex-1 bg-transparent border-0 px-4 text-sm text-white placeholder:text-white/20 focus:ring-0 focus:outline-none cursor-not-allowed"
+                  />
+                </div>
                 <div className="relative flex items-center w-full max-w-[360px] h-12 bg-white/5 border border-white/10 rounded-[12px] focus-within:border-[#7C3AED]/50 transition-all">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -503,7 +527,7 @@ function AuthContent() {
                     onClick={() => setMode("signin")}
                     className="text-[11px] text-white/40 hover:text-white transition-colors font-medium bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                   >
-                    Natrag na prijavu
+                    Odustani i vrati se na prijavu
                   </button>
                 </div>
               </div>

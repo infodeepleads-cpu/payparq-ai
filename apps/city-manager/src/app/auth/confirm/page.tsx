@@ -41,7 +41,8 @@ export default function Confirm() {
       if (type === "recovery" || window.location.hash.includes("recovery") || searchParams.get("type") === "recovery") {
         setMessage("Link potvrđen. Molimo postavite novu lozinku...");
         setTimeout(() => {
-          window.location.href = "/auth?mode=update";
+          const finalEmail = email || searchParams.get("email") || hashParams.get("email") || "";
+          window.location.href = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
         }, 1000);
       } else {
         setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
