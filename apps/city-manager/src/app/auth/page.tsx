@@ -545,7 +545,7 @@ function AuthContent() {
             
             {/* Footer Text - Moved Up */}
             <p className="text-[11px] text-white/30 tracking-wider">
-              Sva prava pridžana © 2026 PayParq Global Inc.
+              Sva prava pridržana © 2026 PayParq Global Inc.
             </p>
           </div>
         </form>
