@@ -249,7 +249,7 @@ function AuthContent() {
         password,
         options: { 
           emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm?email=${encodeURIComponent(email)}` : undefined,
-          captchaToken: captchaToken,
+          captchaToken: captchaToken || undefined,
           data: { 
             full_name: finalName,
             role: finalRole,
