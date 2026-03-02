@@ -14,6 +14,13 @@ export default function Confirm() {
     const searchParams = new URLSearchParams(window.location.search);
     const hashRaw = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
     const hashParams = new URLSearchParams(hashRaw);
+    
+    // Log parameters for debugging
+    console.log("Confirm Page Params:", {
+      search: Object.fromEntries(searchParams.entries()),
+      hash: Object.fromEntries(hashParams.entries())
+    });
+
     const token_hash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
     const email = searchParams.get("email") || hashParams.get("email") || undefined;
     const type = (searchParams.get("type") as any) || (hashParams.get("type") as any) || "signup";

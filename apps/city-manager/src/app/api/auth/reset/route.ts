@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
     // Provjeravamo i localhost:3000 i localhost:80 ako je korisnik to naveo
     const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
 
+    console.log(`Generating recovery link for ${email} with redirectTo: ${finalOrigin}/auth/confirm?type=recovery`);
+
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
@@ -46,10 +48,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (linkError) {
+      console.error("Link Generation Error:", linkError);
       return NextResponse.json({ error: linkError.message }, { status: 500 });
     }
 
     const recoveryLink = linkData.properties.action_link as string;
+    console.log("Generated Link:", recoveryLink);
 
     // Use verified domain info.payparq.com
     const fromAddress = process.env.NODE_ENV === "development" 
