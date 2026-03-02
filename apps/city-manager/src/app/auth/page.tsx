@@ -5,6 +5,7 @@ import { getSupabase } from "../../lib/supabase";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
 import Turnstile from "@/components/Turnstile";
+import { env } from "@/lib/env";
 
 import Link from "next/link";
 
