@@ -415,7 +415,7 @@ function AuthContent() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none"
+                        className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                       >
                         {showPassword ? (
                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -442,11 +442,11 @@ function AuthContent() {
                   </>
                 )}
                 {mode === "forgot" && (
-                  <div className="flex justify-start px-1">
+                  <div className="flex justify-start px-1 bg-transparent">
                     <button 
                       type="button"
                       onClick={() => setMode("signin")}
-                      className="text-[11px] text-white/40 hover:text-white transition-colors font-medium"
+                      className="text-[11px] text-white/40 hover:text-white transition-colors font-medium bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                     >
                       Natrag na prijavu
                     </button>
@@ -470,7 +470,7 @@ function AuthContent() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none"
+                    className="absolute right-4 z-10 text-white/20 hover:text-white transition-colors select-none bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -495,11 +495,11 @@ function AuthContent() {
                     required
                   />
                 </div>
-                <div className="flex justify-start px-1">
+                <div className="flex justify-start px-1 bg-transparent">
                   <button 
                     type="button"
                     onClick={() => setMode("signin")}
-                    className="text-[11px] text-white/40 hover:text-white transition-colors font-medium"
+                    className="text-[11px] text-white/40 hover:text-white transition-colors font-medium bg-transparent border-none p-0 outline-none focus:outline-none focus:ring-0"
                   >
                     Natrag na prijavu
                   </button>

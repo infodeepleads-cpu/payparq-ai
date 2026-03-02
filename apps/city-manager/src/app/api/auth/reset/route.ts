@@ -46,7 +46,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: linkError.message }, { status: 500 });
     }
 
-    const recoveryLink = linkData.properties.action_link;
+    const recoveryLink = linkData.properties.action_link as string;
+
+    const finalRecoveryLink =
+      process.env.NODE_ENV === "production"
+        ? (() => {
+            try {
+              const url = new URL(recoveryLink);
+              url.protocol = "https:";
+              url.host = "city-manager-xi.vercel.app";
+              url.port = "";
+              return url.toString();
+            } catch {
+              return recoveryLink;
+            }
+          })()
+        : recoveryLink;
 
     // Use verified domain info.payparq.com
     const fromAddress = process.env.NODE_ENV === "development" 
@@ -62,7 +77,7 @@ export async function POST(req: NextRequest) {
           <h2 style="color: #7C3AED;">Zaboravili ste lozinku?</h2>
           <p>Zaprimili smo zahtjev za ponovnim postavljanjem lozinke za vaš PayParq račun. Kliknite na gumb ispod kako biste postavili novu lozinku:</p>
           <div style="margin: 30px 0;">
-            <a href="${recoveryLink}" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Postavi novu lozinku</a>
+            <a href="${finalRecoveryLink}" style="background-color: #7C3AED; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Postavi novu lozinku</a>
           </div>
           <p style="font-size: 12px; color: #666;">Ako niste zatražili ovaj email, možete ga slobodno zanemariti. Link će biti aktivan 60 minuta.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
