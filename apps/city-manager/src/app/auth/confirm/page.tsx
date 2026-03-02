@@ -50,14 +50,16 @@ export default function Confirm() {
         const handleRecoveryRedirect = async () => {
           let finalEmail = email;
           
-          if (!finalEmail) {
-            try {
-              const { data: { user } } = await supabase.auth.getUser();
-              finalEmail = user?.email || undefined;
-              console.log("Fetched email from session:", finalEmail);
-            } catch (e) {
-              console.error("Error getting user from session:", e);
-            }
+          try {
+            // Give it a small timeout to fetch user, then proceed anyway
+            const userPromise = supabase.auth.getUser();
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
+            
+            const { data: { user } } = await Promise.race([userPromise, timeoutPromise]) as any;
+            if (user?.email) finalEmail = user.email;
+            console.log("Email from session or params:", finalEmail);
+          } catch (e) {
+            console.warn("Could not fetch user from session in time, using params email:", finalEmail);
           }
           
           const redirectUrl = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
@@ -68,9 +70,7 @@ export default function Confirm() {
         handleRecoveryRedirect();
       } else {
         setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
-        setTimeout(() => {
-          window.location.href = "/profile";
-        }, 1000);
+        window.location.replace("/profile");
       }
       return;
     }
