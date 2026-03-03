@@ -24,6 +24,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isHomePage = pathname === "/";
   const isNewNotePage = pathname === "/resources/notes/new";
   const isMapPage = pathname?.startsWith("/map");
+  const isDostavaPage = pathname?.startsWith("/dostava");
   const isPaymentPage = pathname?.startsWith("/payment") || pathname === "/pay";
   const isCalendarPage = pathname?.startsWith("/calendar");
   const isRidesPage = pathname?.startsWith("/rides");
@@ -31,7 +32,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isMachineIoOpen = searchParams?.get("show_chat") === "1" || searchParams?.get("show_chat") === "true";
   const actionParam = searchParams?.get("action");
   const isLocateAction = actionParam === "locate";
-  const showChat = isMachineIoOpen;
+  const showChat = !isDostavaPage && isMachineIoOpen;
   const hasRepresentativeRole = (currentUser: any) => {
     const metadata = currentUser?.user_metadata || {};
     const roles = Array.isArray(metadata.roles)
@@ -58,7 +59,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         
         // If not authenticated, check if the page/action is allowed for guests
         // Allowed: Home (/), Auth (/auth), Map, and Rides (/rides)
-        const isGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
+        const isGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage || isDostavaPage;
 
         if (!currentUser && !isGuestAllowed) {
           router.replace("/");
@@ -69,7 +70,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           const newUser = session?.user ?? null;
           setUser(newUser);
           setUserRole(hasRepresentativeRole(newUser) ? "3" : getPrimaryRole(newUser));
-          const currentIsGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
+          const currentIsGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage || isDostavaPage;
           if (!newUser && !currentIsGuestAllowed) {
             router.replace("/");
           }
@@ -112,11 +113,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isSuperAdmin = user?.email?.toLowerCase() === "payparq@outlook.com";
   const isZastupnik = userRole === "3";
   const canUseFullLayout = isSuperAdmin || isZastupnik;
-  const isLimitedRole = !canUseFullLayout;
-
-  const shouldHideLayout = showChat
-    ? false
-    : (!canUseFullLayout || hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || isProfilePage || !user || (isHomePage && !isMachineIoOpen));
+  const shouldShowHeader = showChat
+    ? true
+    : (!hideLayout && !isMapPage && !isDostavaPage && !isPaymentPage && !isCalendarPage && !isRidesPage && !isProfilePage && !!user && !(isHomePage && !isMachineIoOpen));
+  const shouldShowSidebar = shouldShowHeader && canUseFullLayout;
 
   if (isLoading && !isHomePage && !isAuthPage && !isMapPage) {
     return <div className="h-full w-full flex items-center justify-center bg-white">
@@ -124,26 +124,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     </div>;
   }
 
-  if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage || isProfilePage) && !showChat) {
-    return <main className={`h-full w-full ${isProfilePage ? 'bg-black' : 'bg-white'} ${isAuthPage || isProfilePage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
+  if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage || isProfilePage || isDostavaPage) && !showChat) {
+    return <main className={`h-full w-full ${isProfilePage || isDostavaPage ? 'bg-black' : 'bg-white'} ${isAuthPage || isProfilePage || isDostavaPage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
   }
 
   return (
     <Suspense fallback={null}>
-      <div className="flex flex-col h-[100dvh] w-screen overflow-hidden overscroll-none bg-background">
-        {!shouldHideLayout && <Header />}
-        <div className={`flex-1 flex overflow-hidden ${!shouldHideLayout ? 'pt-[40px]' : ''} relative`}>
-          {!shouldHideLayout && <Sidebar />}
-          <main className={`flex-1 flex flex-col ${!shouldHideLayout ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
+      <div className="flex flex-col h-[100dvh] w-full overflow-hidden overscroll-none bg-background">
+        {shouldShowHeader && <Header />}
+        <div className={`flex-1 flex overflow-hidden ${shouldShowHeader ? 'pt-[40px]' : ''} relative`}>
+          {shouldShowSidebar && <Sidebar />}
+          <main className={`flex-1 flex flex-col ${shouldShowSidebar && !showChat ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
             <div className="flex-1 overflow-hidden relative">
               <div className="h-full w-full overflow-y-auto scrollbar-hide">
-                <div className={`max-w-3xl w-full mx-auto h-full ${shouldHideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'} ${showChat ? 'hidden' : ''}`}>
+                <div className={`max-w-3xl w-full mx-auto h-full ${!shouldShowHeader ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'} ${showChat ? 'hidden' : ''}`}>
                     {children}
                   </div>
               </div>
             </div>
             {showChat && (
-              <div className={`absolute top-0 right-0 bottom-0 ${!shouldHideLayout ? "left-[40px]" : "left-0"} z-[2000] pointer-events-none flex flex-col overflow-hidden overscroll-none`}>
+              <div className={`absolute top-0 bottom-0 ${shouldShowSidebar ? "left-[40px] right-0" : "-left-px -right-px"} z-[2000] pointer-events-none flex flex-col overflow-hidden overscroll-none bg-white`}>
                 <div className="w-full pointer-events-auto flex-1 flex flex-col h-full overflow-hidden overscroll-none bg-white relative">
                   <MachineIo />
                 </div>
@@ -151,7 +151,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </main>
         </div>
-        {!shouldHideLayout && <DailyRecap />}
+        {shouldShowSidebar && <DailyRecap />}
       </div>
     </Suspense>
   );

@@ -556,13 +556,13 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />
               <span className="text-[13px] font-semibold text-white/70">
-                {isVerified ? 'Verifici' : 'Čeka verifikaciju'}
+                {isVerified ? 'Verificiran' : 'Čeka verifikaciju'}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-8 w-full">
+        <div className="flex flex-col gap-6 w-full">
           {/* Inbox Section */}
           <div className="flex flex-col gap-4">
             <div 
@@ -718,34 +718,27 @@ export default function ProfilePage() {
               {canApproveVerifications && (
                 <div className="flex flex-col gap-2">
                   <div 
-                    className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
+                    className="flex items-center justify-between px-6 cursor-pointer group"
                     onClick={() => setIsRequestsExpanded(!isRequestsExpanded)}
                   >
-                    <div className="flex items-center gap-5">
-                      <div className="h-12 w-12 rounded-2xl bg-transparent flex items-center justify-center border border-[#7C3AED]/30 group-hover:bg-[#7C3AED]/10 transition-colors">
-                        <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base font-bold text-white">
-                            {isPayparqSuperadmin ? "Zahtjevi za verifikaciju (ADMIN)" : "Zahtjevi za verifikaciju (OVLAŠTENI ZASTUPNIK)"}
-                          </span>
-                          {counts.requests > 0 && (
-                            <div className="px-2 py-0.5 rounded-full bg-[#7C3AED] text-[10px] font-bold text-white">
-                              {counts.requests}
-                            </div>
-                          )}
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">
+                        {isPayparqSuperadmin ? "Zahtjevi za verifikaciju (ADMIN)" : "Zahtjevi za verifikaciju (OVLAŠTENI ZASTUPNIK)"}
+                      </h2>
+                      {counts.requests > 0 && (
+                        <div className="px-2 py-0.5 rounded-full bg-[#7C3AED] text-[10px] font-bold text-white">
+                          {counts.requests}
                         </div>
-                        <span className="text-sm text-white/40">Odobrenje u 24h: kontakt telefonski ili uživo i onboarding</span>
-                      </div>
+                      )}
                     </div>
-                    <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isRequestsExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
-                      <svg className={`w-4 h-4 ${isRequestsExpanded ? 'text-[#7C3AED]' : 'text-white/30 group-hover:text-white/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </div>
+                    <svg 
+                      className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isRequestsExpanded ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
 
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isRequestsExpanded ? 'max-h-[600px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
@@ -753,6 +746,7 @@ export default function ProfilePage() {
                       {verificationRequests.length > 0 ? (
                         verificationRequests.map((request, i) => {
                           const canApproveRequest = request.canApprove;
+                          const requestPhone = request.phone || (request as any).phoneNumber || (request as any).phone_number || (request as any).mobile || "";
                           return (
                           <div key={i} className="flex flex-col gap-2">
                             <div 
@@ -763,7 +757,7 @@ export default function ProfilePage() {
                                 <div className="flex flex-col gap-1">
                                   <span className="text-[13px] font-bold text-white/90">Zahtjev #{request.id}</span>
                                   <span className="text-[11px] text-white/40">Korisnik: {request.fullName || request.email}</span>
-                                  <span className="text-[11px] text-white/40">Kontakt: {request.email || "Email nije dostupan"}{request.phone ? ` • ${request.phone}` : ""}</span>
+                                  <span className="text-[11px] text-white/40">Kontakt: {request.email || "Email nije dostupan"}{requestPhone ? ` • ${requestPhone}` : ""}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-[#7C3AED]" />
@@ -781,7 +775,7 @@ export default function ProfilePage() {
                                     <li>Tip: {request.roleLabel || "Korisnik"}</li>
                                     <li>Status: Na čekanju</li>
                                     <li>Email: {request.email || "Nije dostupan"}</li>
-                                    <li>Mobitel: {request.phone || "Nije dostupan"}</li>
+                                    <li>Mobitel: {requestPhone || "Nije dostupan"}</li>
                                   </ul>
                                 </div>
                                 <div className="flex gap-2">
@@ -792,8 +786,8 @@ export default function ProfilePage() {
                                     Email
                                   </a>
                                   <a
-                                    href={request.phone ? `tel:${request.phone}` : "#"}
-                                    className={`flex-1 h-9 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center ${request.phone ? "bg-violet-500/20 hover:bg-violet-500/30 border-violet-500/30 text-violet-300" : "bg-white/5 border-white/10 text-white/30 pointer-events-none"}`}
+                                    href={requestPhone ? `tel:${requestPhone}` : "#"}
+                                    className={`flex-1 h-9 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center ${requestPhone ? "bg-violet-500/20 hover:bg-violet-500/30 border-violet-500/30 text-violet-300" : "bg-white/5 border-white/10 text-white/30 pointer-events-none"}`}
                                   >
                                     Nazovi
                                   </a>
@@ -918,7 +912,7 @@ export default function ProfilePage() {
             )}
 
             <div 
-              className="flex items-center justify-between px-6 cursor-pointer group mt-4"
+              className="flex items-center justify-between px-6 cursor-pointer group"
               onClick={() => setIsFinanceExpanded(!isFinanceExpanded)}
             >
               <div className="flex items-center gap-3">
@@ -1125,23 +1119,18 @@ export default function ProfilePage() {
               {(allRoles.includes("2") || allRoles.includes("3") || allRoles.includes("5") || allRoles.includes("6")) && (
                 <div className="flex flex-col gap-2">
                   <div 
-                    className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
+                    className="flex items-center justify-between px-6 cursor-pointer group"
                     onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
                   >
-                    <div className="flex items-center gap-5">
-                      <div className="h-12 w-12 rounded-2xl bg-transparent flex items-center justify-center border border-[#7C3AED]/30 group-hover:bg-[#7C3AED]/10 transition-colors">
-                        <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-base font-bold text-white">Račun za uplate</span>
-                        <span className="text-sm text-white/40">Upravljajte vašim isplatama</span>
-                      </div>
-                    </div>
-                    <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isStripeConnectExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
-                      <svg className={`w-4 h-4 ${isStripeConnectExpanded ? 'text-[#7C3AED]' : 'text-white/30 group-hover:text-white/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Račun za uplate</h2>
+                      <svg 
+                        className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isStripeConnectExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
@@ -1349,7 +1338,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 mt-4">
+          <div className="flex flex-col gap-4 mb-8">
             <div 
               className="flex items-center justify-between px-6 cursor-pointer group"
               onClick={() => setIsTermsExpanded(!isTermsExpanded)}

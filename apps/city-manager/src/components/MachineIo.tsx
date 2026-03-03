@@ -1187,7 +1187,7 @@ export default function MachineIo() {
   }, []);
 
   return (
-    <div className="flex flex-col relative w-full h-full min-h-0 overflow-hidden overscroll-none bg-white">
+    <div className="flex flex-col relative w-full h-full min-h-0 overflow-x-hidden overflow-y-hidden overscroll-none bg-white">
          {/* Mobile AI Dropdown - Rendered at root level to avoid clipping */}
          {showModelSelector && (
             <>

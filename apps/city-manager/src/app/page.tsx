@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabase";
 
@@ -9,7 +8,6 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Parking");
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -18,7 +16,10 @@ export default function Home() {
         const { data } = await supabase.auth.getUser();
         const user = data?.user || null;
         setUser(user);
-        setUserRole(user?.user_metadata?.role || null);
+        const metadata = user?.user_metadata || {};
+        const roles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
+        const primaryRole = roles.find((role: any) => role !== null && role !== undefined && role !== "");
+        setUserRole(primaryRole !== undefined ? String(primaryRole) : null);
       } catch (e) {
         setUser(null);
         setUserRole(null);
@@ -28,7 +29,8 @@ export default function Home() {
   }, []);
 
   const isSuperAdmin = user?.email?.toLowerCase() === "payparq@outlook.com";
-  const isLimitedRole = !!user && !isSuperAdmin && userRole !== "3";
+  const isKzamicMember = user?.email?.toLowerCase().includes("zamic");
+  const isLimitedRole = !!user && !isSuperAdmin && userRole !== "3" && !isKzamicMember;
 
   return (
     <main className="min-h-[100dvh] w-full bg-black text-white selection:bg-[#7C3AED]/30 overflow-x-hidden relative flex flex-col items-center">
@@ -83,7 +85,10 @@ export default function Home() {
 
         {/* Search Widget Text */}
         {!isLimitedRole && (
-          <Link href={{ pathname: "/map" }} className="mb-8 relative pointer-events-auto block no-underline">
+          <Link 
+            href={activeTab === "Parking" ? "https://www.payparq.com/pay" : (activeTab === "Dostava" ? "/dostava" : { pathname: "/map" })} 
+            className="mb-8 relative pointer-events-auto block no-underline"
+          >
             <div className="bg-black border-2 border-[#7C3AED] rounded-[24px] px-6 py-4 flex items-center justify-between shadow-[0_0_20px_rgba(124,58,237,0.2)] active:scale-[0.98] transition-transform">
               <span className="text-[24px] font-bold text-white">Kamo?</span>
               <span className="text-[24px] font-medium text-white">Kasnije</span>

@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
           userId: u.id,
           fullName: metadata.full_name || metadata.name || "",
           email: u.email || "",
-          phone: metadata.phone || "",
+          phone: metadata.phone || metadata.phone_number || metadata.phoneNumber || metadata.mobile || "",
           role,
           roleLabel: ROLE_LABELS[role] || "Korisnik",
           createdAt: u.created_at || new Date().toISOString(),
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
 
     await adminClient.from("emails").insert({
       user_id: targetUserId,
-      subject: "Verifici",
+      subject: "Verificiran",
       text_body: "Vaša verifikacija je odobrena. U roku 24 sata slijedi telefonski ili uživo kontakt te onboarding.",
       from_address: "PayParq"
     });
