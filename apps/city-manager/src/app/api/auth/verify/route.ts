@@ -3,8 +3,6 @@ import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 
-const resend = new Resend(env.RESEND_API_KEY);
-
 export async function POST(req: NextRequest) {
   try {
     const { email: rawEmail, name, role, password, metadata } = await req.json();
@@ -17,11 +15,8 @@ export async function POST(req: NextRequest) {
     console.log(`[VerifyAPI] Request for email: ${email}, role: ${role}`);
 
     // 1. Generate a real Supabase verification link
-    const origin = process.env.NODE_ENV === "production" 
-      ? "https://city-manager-xi.vercel.app" 
-      : (req.headers.get("origin") || new URL(req.url).origin);
-    
-    const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
+    const requestOrigin = req.headers.get("origin") || new URL(req.url).origin;
+    const finalOrigin = requestOrigin;
     
     // Default fallback link
     let confirmUrl = `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=signup`;
@@ -43,38 +38,32 @@ export async function POST(req: NextRequest) {
         // Explicitly create user first if they don't exist
         // admin.generateLink with type: 'signup' sometimes doesn't work as expected for creation
         // depending on Supabase version and config.
-        let userId = "";
-        
-        // 1. Try to fetch user by email first
-        // Note: listUsers requires service_role and is not efficient for large dbs, but fine for single lookup
-        // Ideally we would use admin.getUserByEmail() but that's not available in all client versions
-        // So we just try to create and catch error.
-        
+        const generatedPassword = password && password.length >= 6
+          ? password
+          : `Tmp!${Math.random().toString(36).slice(2)}A1`;
+
         const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
           email: email,
-          password: password || 'TemporaryPassword123!',
-          email_confirm: false, // We want them to confirm via email
+          password: generatedPassword,
+          email_confirm: false,
           user_metadata: metadata || { full_name: name, role: role }
         });
 
         if (createError) {
           console.log(`[VerifyAPI] User creation notice: ${createError.message}`);
           if (createError.message.includes("already registered") || createError.message.includes("already exists")) {
-            // User exists, so we will just generate a link for them
+          } else if (createError.message.toLowerCase().includes("duplicate")) {
           } else {
-             console.error("[VerifyAPI] Failed to create user:", createError);
-             return NextResponse.json({ error: createError.message }, { status: 500 });
+             console.warn("[VerifyAPI] Continuing after user creation error:", createError.message);
           }
         } else {
           console.log(`[VerifyAPI] User created successfully: ${createdUser.user.id}`);
-          userId = createdUser.user.id;
         }
 
-        // 2. Generate the link (signup type usually works for unconfirmed users)
         const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
           type: 'signup',
           email: email,
-          password: password || 'TemporaryPassword123!', 
+          password: generatedPassword,
           options: {
             redirectTo: `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=signup`
           }
@@ -100,11 +89,14 @@ export async function POST(req: NextRequest) {
             linkGenerated = true;
             console.log(`[VerifyAPI] Generated magiclink for ${email}`);
           } else {
-            console.error("[VerifyAPI] All link generation methods failed:", magicError?.message);
+            const message = magicError?.message || linkError.message || "Unable to generate verification link";
+            console.error("[VerifyAPI] All link generation methods failed:", message);
+            return NextResponse.json({ error: message }, { status: 500 });
           }
         }
       } catch (adminError: any) {
         console.error("[VerifyAPI] Supabase admin error:", adminError.message);
+        return NextResponse.json({ error: adminError.message || "Supabase verification setup failed" }, { status: 500 });
       }
     }
 
@@ -112,6 +104,7 @@ export async function POST(req: NextRequest) {
       console.error("[VerifyAPI] Missing RESEND_API_KEY");
       return NextResponse.json({ error: "Email service configuration missing" }, { status: 500 });
     }
+    const resend = new Resend(env.RESEND_API_KEY);
 
     // Use exact same logic as reset/route.ts which is working
     const fromAddress = (process.env.NODE_ENV === "development" || !env.RESEND_API_KEY.startsWith("re_"))
@@ -143,7 +136,11 @@ export async function POST(req: NextRequest) {
 
     if (resendError) {
       console.error("[VerifyAPI] Resend send error:", resendError);
-      return NextResponse.json({ error: resendError.message }, { status: 500 });
+      const resendMessage =
+        (resendError as any)?.message ||
+        (resendError as any)?.name ||
+        "Failed to send confirmation email";
+      return NextResponse.json({ error: resendMessage }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, id: resendData?.id });

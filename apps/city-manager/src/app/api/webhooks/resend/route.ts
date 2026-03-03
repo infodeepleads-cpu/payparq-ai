@@ -5,12 +5,21 @@ import { env } from "../../../../lib/env";
 
 export const dynamic = "force-dynamic";
 
-const resend = new Resend(env.RESEND_API_KEY);
-// Use service role key to bypass RLS for webhook insertions
-const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
 export async function POST(req: NextRequest) {
   try {
+    if (!env.RESEND_API_KEY || !env.RESEND_WEBHOOK_SECRET) {
+      return new NextResponse("Webhook email service not configured", { status: 500 });
+    }
+    if (!env.NEXT_PUBLIC_SUPABASE_URL || (!env.SUPABASE_SERVICE_ROLE_KEY && !env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) {
+      return new NextResponse("Webhook database service not configured", { status: 500 });
+    }
+
+    const resend = new Resend(env.RESEND_API_KEY);
+    const supabase = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+
     const payload = await req.text();
 
     const id = req.headers.get("svix-id");

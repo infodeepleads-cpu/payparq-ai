@@ -4,8 +4,6 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
-const resend = new Resend(env.RESEND_API_KEY);
-
 export async function POST(req: NextRequest) {
   try {
     const { email, captchaToken } = await req.json();
@@ -25,6 +23,10 @@ export async function POST(req: NextRequest) {
     if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: "Supabase configuration missing" }, { status: 500 });
     }
+    if (!env.RESEND_API_KEY) {
+      return NextResponse.json({ error: "Email service configuration missing" }, { status: 500 });
+    }
+    const resend = new Resend(env.RESEND_API_KEY);
 
     const adminClient = createClient(
       env.NEXT_PUBLIC_SUPABASE_URL,
@@ -37,14 +39,7 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // Generate recovery link
-    // Prisilno koristimo produkcijsku domenu za redirect na Vercelu
-    const origin = process.env.NODE_ENV === "production" 
-      ? "https://city-manager-xi.vercel.app" 
-      : (req.headers.get("origin") || new URL(req.url).origin);
-    
-    // Provjeravamo i localhost:3000 i localhost:80 ako je korisnik to naveo
-    const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
+    const finalOrigin = req.headers.get("origin") || new URL(req.url).origin;
     
     // Explicitly add type=recovery and email to the redirect URL to ensure it's picked up
     const redirectTo = `${finalOrigin}/auth/confirm?type=recovery&email=${encodeURIComponent(email)}`;

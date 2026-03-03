@@ -11,143 +11,154 @@ export default function Confirm() {
   const [message, setMessage] = useState<string>(t('confirming_email'));
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashRaw = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
-    const hashParams = new URLSearchParams(hashRaw);
-    
-    // Log parameters for debugging
-    console.log("Confirm Page Params:", {
-      search: Object.fromEntries(searchParams.entries()),
-      hash: Object.fromEntries(hashParams.entries())
-    });
+    let isActive = true;
+    const setSafeStatus = (next: "pending" | "ok" | "error") => {
+      if (isActive) setStatus(next);
+    };
+    const setSafeMessage = (next: string) => {
+      if (isActive) setMessage(next);
+    };
 
-    const token_hash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
-    const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
-    const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
-    const error = searchParams.get("error") || hashParams.get("error");
-    const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
-    
-    const email = searchParams.get("email") || hashParams.get("email") || undefined;
-    const type = (searchParams.get("type") as any) || (hashParams.get("type") as any);
-    
-    // Recovery detection logic
-    const isRecovery = type === "recovery" || 
-                      window.location.hash.includes("type=recovery") || 
-                      window.location.search.includes("type=recovery") ||
-                      window.location.hash.includes("recovery");
+    const run = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashRaw = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+      const hashParams = new URLSearchParams(hashRaw);
 
-    const supabase = getSupabase();
+      const tokenHash = searchParams.get("token_hash") || searchParams.get("token") || hashParams.get("token_hash") || hashParams.get("token");
+      const accessToken = hashParams.get("access_token") || searchParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token") || searchParams.get("refresh_token");
+      const authCode = searchParams.get("code") || hashParams.get("code");
+      const error = searchParams.get("error") || hashParams.get("error");
+      const errorDescription = searchParams.get("error_description") || hashParams.get("error_description");
+      const email = searchParams.get("email") || hashParams.get("email") || "";
+      const type = (searchParams.get("type") as any) || (hashParams.get("type") as any);
+      const isRecovery = type === "recovery" || window.location.hash.includes("type=recovery") || window.location.search.includes("type=recovery");
+      const supabase = getSupabase();
 
-    // If we have an access token, it means Supabase already verified the link and signed us in
-    if (accessToken || refreshToken) {
-      console.log("Detected active session tokens, checking flow type...");
-      setStatus("ok");
-      
-      // If it's a recovery flow, redirect to update password
-      if (isRecovery) {
-        setMessage("Link potvrđen. Molimo postavite novu lozinku...");
-        
-        const handleRecoveryRedirect = async () => {
-          let finalEmail = email;
-          
+      const redirectAfterSuccess = async (recovery: boolean, fallbackEmail: string) => {
+        if (recovery) {
+          setSafeStatus("ok");
+          setSafeMessage("Link potvrđen. Molimo postavite novu lozinku...");
+          let finalEmail = fallbackEmail;
           try {
-            // Give it a small timeout to fetch user, then proceed anyway
-            const userPromise = supabase.auth.getUser();
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
-            
-            const { data: { user } } = await Promise.race([userPromise, timeoutPromise]) as any;
-            if (user?.email) finalEmail = user.email;
-            console.log("Email from session or params:", finalEmail);
-          } catch (e) {
-            console.warn("Could not fetch user from session in time, using params email:", finalEmail);
-          }
-          
+            const result = await Promise.race([
+              supabase.auth.getUser(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2500))
+            ]) as any;
+            if (result?.data?.user?.email) {
+              finalEmail = result.data.user.email;
+            }
+          } catch {}
           const redirectUrl = `/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`;
-          console.log("Redirecting to Recovery Update:", redirectUrl);
           window.location.replace(redirectUrl);
-        };
-        
-        handleRecoveryRedirect();
-      } else {
-        setMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
+          return;
+        }
+
+        setSafeStatus("ok");
+        setSafeMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
         window.location.replace("/profile");
+      };
+
+      if (error || errorDescription) {
+        setSafeStatus("error");
+        const detail = errorDescription ? decodeURIComponent(errorDescription) : error;
+        setSafeMessage(`Greška pri potvrdi: ${detail || "Nevažeći link"}`);
+        setTimeout(() => {
+          window.location.replace(isRecovery ? "/auth?mode=forgot" : "/auth?mode=signin");
+        }, 2200);
+        return;
       }
-      return;
-    }
 
-    // ... rest of errors ...
-    if (error || errorDescription) {
-      // ...
-    }
+      if (authCode) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
+        if (exchangeError) {
+          setSafeStatus("error");
+          setSafeMessage(`Greška pri potvrdi: ${exchangeError.message}`);
+          return;
+        }
+        await redirectAfterSuccess(isRecovery, email);
+        return;
+      }
 
-    if (token_hash) {
-      const finalType = isRecovery ? "recovery" : (type || "signup");
-      console.log("Verifying OTP with type:", finalType);
-      
-      supabase.auth.verifyOtp({ type: finalType, token_hash } as any).then(({ data, error }) => {
-        if (error) {
-          setStatus("error");
-          setMessage(`Greška pri potvrdi: ${error.message}`);
-        } else {
-          setStatus("ok");
-          if (isRecovery) {
-            setMessage("Lozinka je spremna za promjenu. Preusmjeravamo vas...");
-            setTimeout(() => {
-              const finalEmail = email || data.user?.email || "";
-              window.location.replace(`/auth?mode=update${finalEmail ? `&email=${encodeURIComponent(finalEmail)}` : ""}`);
-            }, 1000);
-          } else {
-            setMessage("Vaš email je uspješno potvrđen. Preusmjeravamo vas na profil...");
-            setTimeout(() => {
-              window.location.replace("/profile");
-            }, 1000);
+      if (accessToken && refreshToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        if (setSessionError) {
+          setSafeStatus("error");
+          setSafeMessage(`Greška sesije: ${setSessionError.message}`);
+          return;
+        }
+        await redirectAfterSuccess(isRecovery, email);
+        return;
+      }
+
+      if (tokenHash) {
+        const finalType = isRecovery ? "recovery" : (type || "signup");
+        try {
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({ type: finalType, token_hash: tokenHash } as any);
+          if (verifyError) {
+            setSafeStatus("error");
+            setSafeMessage(`Greška pri potvrdi: ${verifyError.message}`);
+            return;
           }
+          await redirectAfterSuccess(isRecovery, email || data?.user?.email || "");
+          return;
+        } catch (err: any) {
+          setSafeStatus("error");
+          setSafeMessage(`Greška sustava: ${err.message || "Nepoznata greška"}`);
+          return;
         }
-      }).catch((err: any) => {
-        console.error("verifyOtp exception:", err);
-        setStatus("error");
-        setMessage(`Greška sustava: ${err.message || "Nepoznata greška"}`);
-      });
-      return;
-    }
-
-    if (email && !token_hash) {
-      setStatus("pending");
-      setMessage("Pripremamo vašu sesiju. Molimo pričekajte...");
-      
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setStatus("ok");
-          setMessage("Uspješno potvrđeno! Dobrodošli natrag.");
-          setTimeout(() => {
-            window.location.href = "/profile";
-          }, 2000);
-        } else {
-          setStatus("ok");
-          setMessage("Email je zaprimljen. Molimo prijavite se sada sa svojom lozinkom.");
-          setTimeout(() => {
-            window.location.href = "/auth?mode=signin&email=" + encodeURIComponent(email);
-          }, 3000);
-        }
-      });
-      return;
-    }
-    
-    if (!token_hash) {
-      if (type === "recovery") {
-        setStatus("error");
-        setMessage("Link za promjenu lozinke je nevažeći ili je istekao. Zatražite novi email.");
-        setTimeout(() => {
-          window.location.href = "/auth?mode=forgot";
-        }, 2500);
-      } else {
-        setStatus("error");
-        setMessage("Link je nevažeći. Vraćamo vas na prijavu.");
-        setTimeout(() => {
-          window.location.href = "/auth?mode=signin";
-        }, 2000);
       }
-    }
+
+      if (email) {
+        setSafeStatus("pending");
+        setSafeMessage("Pripremamo vašu sesiju. Molimo pričekajte...");
+        try {
+          const result = await Promise.race([
+            supabase.auth.getSession(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))
+          ]) as any;
+          const session = result?.data?.session;
+          if (session) {
+            await redirectAfterSuccess(isRecovery, email);
+            return;
+          }
+          setSafeStatus("ok");
+          setSafeMessage("Email je zaprimljen. Molimo prijavite se sada sa svojom lozinkom.");
+          setTimeout(() => {
+            window.location.replace("/auth?mode=signin&email=" + encodeURIComponent(email));
+          }, 2000);
+          return;
+        } catch {
+          setSafeStatus("error");
+          setSafeMessage("Nismo uspjeli potvrditi sesiju. Pokušajte ponovo iz email linka.");
+          setTimeout(() => {
+            window.location.replace(isRecovery ? "/auth?mode=forgot" : "/auth?mode=signin");
+          }, 2200);
+          return;
+        }
+      }
+
+      setSafeStatus("error");
+      if (isRecovery) {
+        setSafeMessage("Link za promjenu lozinke je nevažeći ili je istekao. Zatražite novi email.");
+        setTimeout(() => {
+          window.location.replace("/auth?mode=forgot");
+        }, 2200);
+      } else {
+        setSafeMessage("Link je nevažeći. Vraćamo vas na prijavu.");
+        setTimeout(() => {
+          window.location.replace("/auth?mode=signin");
+        }, 2200);
+      }
+    };
+
+    run();
+    return () => {
+      isActive = false;
+    };
   }, [t]);
    return (
      <div className="flex h-full bg-white">
