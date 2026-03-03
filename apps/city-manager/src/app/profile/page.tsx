@@ -1,5 +1,6 @@
 "use client";
 
+// Deployment trigger: 2026-03-03
 import { useEffect, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
