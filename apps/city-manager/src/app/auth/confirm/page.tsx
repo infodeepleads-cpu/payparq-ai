@@ -103,6 +103,10 @@ export default function Confirm() {
             }, 1000);
           }
         }
+      }).catch((err: any) => {
+        console.error("verifyOtp exception:", err);
+        setStatus("error");
+        setMessage(`Greška sustava: ${err.message || "Nepoznata greška"}`);
       });
       return;
     }
@@ -150,7 +154,7 @@ export default function Confirm() {
        <div className="flex-1 flex items-center justify-center">
          <div className="w-full max-w-md mx-auto px-6 text-center">
            <div className="mb-8">
-             <span className="text-sm font-semibold tracking-tight text-black">machine.io</span>
+             <span className="text-sm font-semibold tracking-tight text-black">PayParq</span>
            </div>
            <div className={`text-sm ${status === "error" ? "text-red-600" : "text-gray-700"}`}>{message}</div>
          </div>

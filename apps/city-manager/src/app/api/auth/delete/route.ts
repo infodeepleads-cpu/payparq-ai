@@ -48,14 +48,42 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    // 4. Optional: Clean up application data
-    // Delete stripe accounts if they exist
-    await adminClient
-      .from("stripe_accounts")
-      .delete()
-      .eq("user_id", userId);
+    // 4. Clean up application data to avoid foreign key violations
+    // Some tables might be missing ON DELETE CASCADE
+    const tablesToCleanup = [
+      { table: "stripe_accounts", column: "user_id" },
+      { table: "profiles", column: "id" },
+      { table: "user_progress", column: "user_id" },
+      { table: "document_submissions", column: "user_id" },
+      { table: "push_subscriptions", column: "user_id" },
+      { table: "reminders", column: "user_id" },
+      { table: "emails", column: "user_id" },
+      { table: "crm_contacts", column: "user_id" },
+      { table: "drivers", column: "id" },
+      { table: "rides", column: "passenger_id" },
+      { table: "crm_organizations", column: "created_by" }
+    ];
 
-    // Add other tables here if needed in the future
+    console.log(`[DeleteAPI] Cleaning up data for user ${userId} in ${tablesToCleanup.length} tables...`);
+
+    for (const { table, column } of tablesToCleanup) {
+      try {
+        const { error: cleanupError } = await adminClient
+          .from(table)
+          .delete()
+          .eq(column, userId);
+        
+        if (cleanupError) {
+          // If the table doesn't exist or we have another issue, log it but continue
+          // Some environments might not have all tables (e.g., ride-hailing tables)
+          if (cleanupError.code !== 'PGRST116' && cleanupError.code !== '42P01') { 
+             console.warn(`[DeleteAPI] Warning cleaning up ${table}:`, cleanupError.message);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[DeleteAPI] Exception cleaning up ${table}:`, err.message);
+      }
+    }
 
     // 5. Delete user from Supabase Auth
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);

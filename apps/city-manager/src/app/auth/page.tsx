@@ -233,62 +233,49 @@ function AuthContent() {
         finalRole = "1"; // Vozač and Dostavljač are stored as Agent (1)
       }
       
-      // 1. Sign up user with password (this creates user in auth.users)
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { 
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/confirm?email=${encodeURIComponent(email)}` : undefined,
-          data: { 
-            full_name: finalName,
+      // 1. Send custom branded email via Resend (and create user via admin generateLink)
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s for email + user creation
+
+        const response = await fetch("/api/auth/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password, // Passing password to be used by admin.generateLink if user doesn't exist
+            name: finalName,
             role: finalRole,
-            original_role: role, // Keep original role for UI if needed
-            phone: finalPhone,
-            address: finalAddress,
-            parking_capacity: finalRole === "2" ? parkingCapacity : null
-          }
-        },
-      });
+            metadata: { 
+              full_name: finalName,
+              role: finalRole,
+              original_role: role,
+              phone: finalPhone,
+              address: finalAddress,
+              parking_capacity: finalRole === "2" ? parkingCapacity : null
+            }
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
-      if (error) {
-        setError(error.message);
-      } else {
-        // 2. Send custom branded email via Resend
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s for email
-
-          const response = await fetch("/api/auth/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email,
-              name: finalName,
-              role: finalRole
-            }),
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-             const errorData = await response.json();
-             console.error("Resend API error:", errorData);
-             setError(errorData.error || "Problem sa slanjem emaila za potvrdu.");
-             setLoading(false);
-             return;
-           }
-         } catch (emailErr: any) {
-           console.error("Error calling Resend API:", emailErr);
-           setError("Problem sa slanjem emaila za potvrdu: " + (emailErr.message || "Nepoznata greška"));
+        if (!response.ok) {
+           const errorData = await response.json();
+           console.error("Resend API error:", errorData);
+           setError(errorData.error || "Problem sa slanjem emaila za potvrdu.");
            setLoading(false);
            return;
          }
+       } catch (emailErr: any) {
+         console.error("Error calling Resend API:", emailErr);
+         setError("Problem sa slanjem emaila za potvrdu: " + (emailErr.message || "Nepoznata greška"));
+         setLoading(false);
+         return;
+       }
 
-        // Show success message and wait for confirmation
-        setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac.");
-        // We don't redirect here, we want them to see the message
-      }
+      // Show success message and wait for confirmation
+      setMessage("Poslali smo vam email s linkom za potvrdu. Molimo provjerite vaš pretinac.");
       setLoading(false);
     } catch (err: any) {
       setError(err.message || t('auth_error_generic'));

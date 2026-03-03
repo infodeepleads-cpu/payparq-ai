@@ -7,7 +7,7 @@ const resend = new Resend(env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { email: rawEmail, name, role } = await req.json();
+    const { email: rawEmail, name, role, password, metadata } = await req.json();
     const email = rawEmail?.trim().toLowerCase();
 
     if (!email) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     
     const finalOrigin = origin.includes("localhost") ? origin : "https://city-manager-xi.vercel.app";
     
-    // Default fallback link (without token, but at least it's a link)
+    // Default fallback link
     let confirmUrl = `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=signup`;
     let linkGenerated = false;
     
@@ -40,12 +40,41 @@ export async function POST(req: NextRequest) {
           }
         );
 
-        // Directly try to generate signup link
-        console.log(`[VerifyAPI] Attempting to generate signup link for ${email}`);
+        // Explicitly create user first if they don't exist
+        // admin.generateLink with type: 'signup' sometimes doesn't work as expected for creation
+        // depending on Supabase version and config.
+        let userId = "";
+        
+        // 1. Try to fetch user by email first
+        // Note: listUsers requires service_role and is not efficient for large dbs, but fine for single lookup
+        // Ideally we would use admin.getUserByEmail() but that's not available in all client versions
+        // So we just try to create and catch error.
+        
+        const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
+          email: email,
+          password: password || 'TemporaryPassword123!',
+          email_confirm: false, // We want them to confirm via email
+          user_metadata: metadata || { full_name: name, role: role }
+        });
+
+        if (createError) {
+          console.log(`[VerifyAPI] User creation notice: ${createError.message}`);
+          if (createError.message.includes("already registered") || createError.message.includes("already exists")) {
+            // User exists, so we will just generate a link for them
+          } else {
+             console.error("[VerifyAPI] Failed to create user:", createError);
+             return NextResponse.json({ error: createError.message }, { status: 500 });
+          }
+        } else {
+          console.log(`[VerifyAPI] User created successfully: ${createdUser.user.id}`);
+          userId = createdUser.user.id;
+        }
+
+        // 2. Generate the link (signup type usually works for unconfirmed users)
         const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
           type: 'signup',
           email: email,
-          password: 'TemporaryPassword123!', // Required by type 'signup', but user already exists
+          password: password || 'TemporaryPassword123!', 
           options: {
             redirectTo: `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=signup`
           }
@@ -54,25 +83,24 @@ export async function POST(req: NextRequest) {
         if (linkData?.properties?.action_link) {
           confirmUrl = linkData.properties.action_link;
           linkGenerated = true;
-          console.log("[VerifyAPI] Successfully generated signup link");
-        } else {
-          console.warn("[VerifyAPI] Signup link generation failed, trying magiclink:", linkError?.message);
-          
-          // Try magiclink as fallback
+          console.log(`[VerifyAPI] Generated signup link for ${email}`);
+        } else if (linkError) {
+          console.warn(`[VerifyAPI] Signup link failed (${linkError.message}), trying magiclink...`);
+          // Fallback to magiclink if signup link fails (e.g. user exists)
           const { data: magicData, error: magicError } = await adminClient.auth.admin.generateLink({
             type: 'magiclink',
             email: email,
             options: {
-              redirectTo: `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=signup`
+              redirectTo: `${finalOrigin}/auth/confirm?email=${encodeURIComponent(email)}&type=magiclink`
             }
           });
 
           if (magicData?.properties?.action_link) {
             confirmUrl = magicData.properties.action_link;
             linkGenerated = true;
-            console.log("[VerifyAPI] Successfully generated magiclink as fallback");
+            console.log(`[VerifyAPI] Generated magiclink for ${email}`);
           } else {
-             console.error("[VerifyAPI] All link generation attempts failed:", magicError?.message);
+            console.error("[VerifyAPI] All link generation methods failed:", magicError?.message);
           }
         }
       } catch (adminError: any) {
@@ -85,13 +113,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email service configuration missing" }, { status: 500 });
     }
 
+    // Use exact same logic as reset/route.ts which is working
     const fromAddress = (process.env.NODE_ENV === "development" || !env.RESEND_API_KEY.startsWith("re_"))
       ? "onboarding@resend.dev" 
       : "PayParq <team@info.payparq.com>";
 
     console.log(`[VerifyAPI] Sending email to ${email} from ${fromAddress}. Link generated: ${linkGenerated}`);
 
-    const { data, error } = await resend.emails.send({
+    const { data: resendData, error: resendError } = await resend.emails.send({
       from: fromAddress,
       to: email,
       subject: "Potvrdite vaš PayParq račun",
@@ -112,13 +141,12 @@ export async function POST(req: NextRequest) {
       `,
     });
 
-    if (error) {
-      console.error("Resend send error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (resendError) {
+      console.error("[VerifyAPI] Resend send error:", resendError);
+      return NextResponse.json({ error: resendError.message }, { status: 500 });
     }
 
-    console.log("Email sent successfully, ID:", data?.id);
-    return NextResponse.json({ success: true, id: data?.id });
+    return NextResponse.json({ success: true, id: resendData?.id });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

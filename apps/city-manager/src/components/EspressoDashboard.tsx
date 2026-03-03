@@ -11,7 +11,6 @@ import CompetitionForm from "./CompetitionForm";
 import LotActivationForm from "./LotActivationForm";
 import DocumentSubmissionModal from "./DocumentSubmissionModal";
 
-// Duplicate Contact type to avoid dependency issues for now
 type Contact = {
   id: string;
   tier: number;
@@ -23,6 +22,35 @@ type Contact = {
   cooldownUntil?: string;
   notes?: string;
   createdAt: number;
+};
+
+type BrainLead = {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lon: number;
+  score: number;
+  source: string;
+};
+
+type BrainTask = {
+  type: string;
+  leadId: string;
+};
+
+type BrainPlan = {
+  date: string;
+  quotas: {
+    calls: number;
+    emails: number;
+    messages: number;
+    walk_in_zones: number;
+    ads: number;
+  };
+  zone: { lat: number; lon: number };
+  leads: BrainLead[];
+  tasks: BrainTask[];
 };
 
 async function loadContacts(): Promise<Contact[]> {
@@ -55,6 +83,10 @@ export default function EspressoDashboard() {
   const [allUserProgress, setAllUserProgress] = useState<any[]>([]);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
   const { t, language } = useLanguage();
+
+  const [brainPlan, setBrainPlan] = useState<BrainPlan | null>(null);
+  const [brainLoading, setBrainLoading] = useState(false);
+  const [brainError, setBrainError] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdmin();
@@ -138,6 +170,113 @@ export default function EspressoDashboard() {
   const currentValue = contacts
     .filter((c) => c.decisionStatus === "Contract Status (Contractual Obligation)")
     .reduce((acc, c) => acc + (c.estimatedCapacity || 0) * 100, 0);
+
+  const buildBrainTaskTitle = (task: BrainTask, lead?: BrainLead) => {
+    const name = lead?.name || "Lead";
+    const type = lead?.type || "poi";
+    if (task.type === "call") {
+      if (type === "parking") {
+        return `Nazovi vlasnika parkinga ${name} o Payparq i Park&Taxi`;
+      }
+      if (type === "hotel") {
+        return `Nazovi hotel ${name} o Park&Taxi i Payparq`;
+      }
+      return `Nazovi ${name} o Payparq rješenju`;
+    }
+    if (task.type === "email") {
+      return `Pošalji email ${name} s Payparq prezentacijom`;
+    }
+    if (task.type === "message") {
+      return `Pošalji WhatsApp poruku ${name} o Park&Taxi`;
+    }
+    return `Follow up s ${name}`;
+  };
+
+  const syncBrainTasksToLocal = (plan: BrainPlan) => {
+    try {
+      const TASKS_KEY = "pp_tasks";
+      const rawTasks = localStorage.getItem(TASKS_KEY);
+      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      const leadsMap: Record<string, BrainLead> = {};
+      plan.leads.forEach((l) => {
+        leadsMap[l.id] = l;
+      });
+      let updated = false;
+      const next = [...tasks];
+
+      plan.tasks.forEach((task) => {
+        const id = `brain-${task.type}-${task.leadId}`;
+        const lead = leadsMap[task.leadId];
+        const title = buildBrainTaskTitle(task, lead);
+        const existingIdx = next.findIndex((t: any) => t.id === id);
+        if (existingIdx >= 0) {
+          if (next[existingIdx].title !== title) {
+            next[existingIdx].title = title;
+            updated = true;
+          }
+        } else {
+          next.push({
+            id,
+            title,
+            completed: false,
+            confirmed: false,
+            createdAt: Date.now()
+          });
+          updated = true;
+        }
+      });
+
+      if (updated) {
+        localStorage.setItem(TASKS_KEY, JSON.stringify(next));
+        window.dispatchEvent(new Event("storage"));
+      }
+    } catch (e) {
+      console.error("Failed to sync brain tasks", e);
+    }
+  };
+
+  const runBrainPlan = async (auto: boolean) => {
+    try {
+      setBrainLoading(true);
+      setBrainError(null);
+      const res = await fetch("/api/planner/daily");
+      if (!res.ok) {
+        throw new Error("Failed to load daily plan");
+      }
+      const json = (await res.json()) as BrainPlan;
+      setBrainPlan(json);
+      syncBrainTasksToLocal(json);
+      const today = json.date || new Date().toISOString().slice(0, 10);
+      localStorage.setItem("pp_brain_last_date", today);
+      localStorage.setItem("pp_brain_plan", JSON.stringify(json));
+    } catch (err) {
+      console.error("Brain plan failed", err);
+      if (!auto) {
+        setBrainError("Ne mogu učitati dnevni plan. Pokušaj ponovno.");
+      }
+    } finally {
+      setBrainLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const last = localStorage.getItem("pp_brain_last_date");
+      if (last === today) {
+        const saved = localStorage.getItem("pp_brain_plan");
+        if (saved) {
+          const parsed = JSON.parse(saved) as BrainPlan;
+          setBrainPlan(parsed);
+          syncBrainTasksToLocal(parsed);
+          return;
+        }
+      }
+      runBrainPlan(true);
+    } catch (e) {
+      console.error("Failed to initialize brain plan", e);
+    }
+  }, []);
 
   const MissionItem = ({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) => (
     <div 
@@ -859,6 +998,66 @@ export default function EspressoDashboard() {
               {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">Brain plan</h2>
+        <div className="border border-gray-100 rounded-lg px-2 py-3 bg-gray-50/50">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-xs text-black">Dnevni plan leadova</p>
+              {brainPlan && (
+                <p className="text-[10px] text-gray-500">
+                  {brainPlan.date} • zona {brainPlan.zone.lat.toFixed(3)}, {brainPlan.zone.lon.toFixed(3)}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => runBrainPlan(false)}
+              disabled={brainLoading}
+              className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50"
+            >
+              {brainLoading ? "Generiram..." : "Regeneriraj"}
+            </button>
+          </div>
+          {brainError && (
+            <p className="text-[10px] text-red-500 mb-1">
+              {brainError}
+            </p>
+          )}
+          {brainPlan ? (
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {brainPlan.tasks.slice(0, 15).map((task, idx) => {
+                const lead = brainPlan.leads.find((l) => l.id === task.leadId);
+                const title = buildBrainTaskTitle(task, lead);
+                return (
+                  <div key={`${task.type}-${task.leadId}-${idx}`} className="flex items-start gap-2">
+                    <div className="w-3 h-3 rounded-full bg-black mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-black">
+                        {title}
+                      </span>
+                      {lead && (
+                        <span className="text-[10px] text-gray-500">
+                          {lead.name} • {lead.type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {brainPlan.tasks.length > 15 && (
+                <p className="text-[10px] text-gray-400">
+                  + još zadataka u taskbaru
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-[10px] text-gray-500">
+              Plan se učitava iz Brain sloja...
+            </p>
+          )}
         </div>
       </section>
 

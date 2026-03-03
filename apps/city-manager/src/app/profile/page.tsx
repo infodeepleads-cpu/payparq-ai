@@ -8,6 +8,7 @@ import EspressoDashboard from "@/components/EspressoDashboard";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isProfileExpanded, setIsProfileExpanded] = useState(false);
   const [isInboxExpanded, setIsInboxExpanded] = useState(false);
@@ -47,6 +48,17 @@ export default function ProfilePage() {
           return;
         }
         setUser(user);
+
+        // Fetch profile data from public.profiles
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (profileData) {
+          setProfile(profileData);
+        }
 
         // Fetch counts (mocked for now, but ready for real data)
         // In a real app, you'd fetch from 'messages' and 'verification_requests' tables
@@ -167,6 +179,8 @@ export default function ProfilePage() {
   const deepleadsPhone = "+385915963139";
   const deepleadsAddress = "Obala Kneza Domagoja 52";
   
+  const displayName = profile?.full_name || metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : "Korisnik");
+
   const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
   const allRoles = (isDeepleads || isPayparqSuperadmin || isPension)
     ? ["3", "10", ...metadataRoles.filter((r: string | undefined) => r && r !== "3" && r !== "10")]
@@ -177,14 +191,14 @@ export default function ProfilePage() {
     : ["Korisnik"];
   
   // Deepleads, Payparq Superadmin, and Pension are always verified
-  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || allRoles.includes("0") || metadata.is_verified === true);
+  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || allRoles.includes("0") || metadata.is_verified === true || user?.email_confirmed_at != null);
 
   const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
     { label: "Email Adresa", value: user?.email },
-    { label: "Ime i Prezime", value: metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : null) },
-    { label: "Broj Mobitela", value: metadata.phone || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsPhone : null) },
-    { label: "Adresa", value: metadata.address || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsAddress : null) },
-    ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: metadata.parking_capacity ? `${metadata.parking_capacity} mjesta` : null }] : []),
+    { label: "Ime i Prezime", value: profile?.full_name || metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : null) },
+    { label: "Broj Mobitela", value: profile?.phone || metadata.phone || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsPhone : null) },
+    { label: "Adresa", value: profile?.address || metadata.address || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsAddress : null) },
+    ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: (profile?.parking_capacity || metadata.parking_capacity) ? `${profile?.parking_capacity || metadata.parking_capacity} mjesta` : null }] : []),
     { label: "Uloge", value: displayRoles }
   ];
 
@@ -218,11 +232,11 @@ export default function ProfilePage() {
 
         <div className="flex flex-col items-center gap-4 mb-10 w-full text-center">
           <div className="h-20 w-20 rounded-3xl bg-[#7C3AED] flex items-center justify-center text-3xl font-bold shadow-[0_0_30px_rgba(124,58,237,0.4)] border border-white/20">
-            {(metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : user?.email))?.[0]?.toUpperCase()}
+            {displayName[0]?.toUpperCase()}
           </div>
           <div className="flex flex-col items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              {metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin) ? deepleadsName : "Korisnik")}
+              {displayName}
             </h1>
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />
