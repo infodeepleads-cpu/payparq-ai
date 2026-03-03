@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const finalOrigin = req.headers.get("origin") || new URL(req.url).origin;
+    const finalOrigin = resolvePublicOrigin(req);
     
     // Explicitly add type=recovery and email to the redirect URL to ensure it's picked up
     const redirectTo = `${finalOrigin}/auth/confirm?type=recovery&email=${encodeURIComponent(email)}`;
@@ -63,9 +63,7 @@ export async function POST(req: NextRequest) {
     console.log("Generated Link:", recoveryLink);
 
     // Use verified domain info.payparq.com
-    const fromAddress = (process.env.NODE_ENV === "development" || !env.RESEND_API_KEY.startsWith("re_"))
-      ? "onboarding@resend.dev" 
-      : "PayParq <team@info.payparq.com>";
+    const fromAddress = resolveFromAddress();
 
     const { data: resendData, error: resendError } = await resend.emails.send({
       from: fromAddress,
@@ -95,4 +93,29 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+function resolvePublicOrigin(req: NextRequest) {
+  const headerOrigin = req.headers.get("origin") || "";
+  const derivedFromVercel = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
+  const configured =
+    env.APP_BASE_URL ||
+    env.NEXT_PUBLIC_APP_URL ||
+    env.NEXT_PUBLIC_SITE_URL ||
+    derivedFromVercel;
+  const normalizedConfigured = normalizeUrl(configured);
+  if (normalizedConfigured) return normalizedConfigured;
+  return normalizeUrl(headerOrigin) || new URL(req.url).origin;
+}
+
+function resolveFromAddress() {
+  const fromEmail = env.RESEND_FROM_EMAIL || "team@info.payparq.com";
+  return `PayParq <${fromEmail}>`;
+}
+
+function normalizeUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const unwrapped = trimmed.replace(/^["'`]+/, "").replace(/["'`]+$/, "");
+  return unwrapped.replace(/\/+$/, "");
 }
