@@ -10,10 +10,7 @@ if ((!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  typedRoutes: false,
-  turbopack: {
-    root: __dirname
-  }
+  typedRoutes: false
 };
 
 export default nextConfig;
