@@ -27,11 +27,8 @@ export default function Home() {
     checkUser();
   }, []);
 
-  const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
-  const isLimitedRole = (userRole === "0" || userRole === "1" || userRole === "2" || userRole === "4") && !isDeepleads;
-  const isSuperAdmin = user?.email === "payparq@outlook.com";
-  const isZastupnik = userRole === "3" || isDeepleads;
-  const isAdmin = isSuperAdmin || isZastupnik;
+  const isSuperAdmin = user?.email?.toLowerCase() === "payparq@outlook.com";
+  const isLimitedRole = !!user && !isSuperAdmin && userRole !== "3";
 
   return (
     <main className="min-h-[100dvh] w-full bg-black text-white selection:bg-[#7C3AED]/30 overflow-x-hidden relative flex flex-col items-center">

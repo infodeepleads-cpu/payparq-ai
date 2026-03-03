@@ -32,6 +32,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const actionParam = searchParams?.get("action");
   const isLocateAction = actionParam === "locate";
   const showChat = isMachineIoOpen;
+  const hasRepresentativeRole = (currentUser: any) => {
+    const metadata = currentUser?.user_metadata || {};
+    const roles = Array.isArray(metadata.roles)
+      ? metadata.roles
+      : [metadata.original_role || metadata.role];
+    return roles.filter(Boolean).map((role: any) => String(role)).includes("3");
+  };
+  const getPrimaryRole = (currentUser: any) => {
+    const metadata = currentUser?.user_metadata || {};
+    const roles = Array.isArray(metadata.roles)
+      ? metadata.roles
+      : [metadata.original_role || metadata.role];
+    const primary = roles.find((role: any) => role !== null && role !== undefined && role !== "");
+    return primary !== undefined ? String(primary) : null;
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -39,7 +54,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const supabase = getSupabase();
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
-        setUserRole(currentUser?.user_metadata?.role || null);
+        setUserRole(hasRepresentativeRole(currentUser) ? "3" : getPrimaryRole(currentUser));
         
         // If not authenticated, check if the page/action is allowed for guests
         // Allowed: Home (/), Auth (/auth), Map, and Rides (/rides)
@@ -53,7 +68,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           const newUser = session?.user ?? null;
           setUser(newUser);
-          setUserRole(newUser?.user_metadata?.role || null);
+          setUserRole(hasRepresentativeRole(newUser) ? "3" : getPrimaryRole(newUser));
           const currentIsGuestAllowed = isHomePage || isAuthPage || isMapPage || isRidesPage;
           if (!newUser && !currentIsGuestAllowed) {
             router.replace("/");
@@ -94,13 +109,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const isSuperAdmin = user?.email === "payparq@outlook.com";
-  const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
-  const isZastupnik = userRole === "3" || isDeepleads;
-  const isAdmin = isSuperAdmin || isZastupnik;
-  const isLimitedRole = (userRole === "0" || userRole === "1" || userRole === "2" || userRole === "4") && !isDeepleads;
+  const isSuperAdmin = user?.email?.toLowerCase() === "payparq@outlook.com";
+  const isZastupnik = userRole === "3";
+  const canUseFullLayout = isSuperAdmin || isZastupnik;
+  const isLimitedRole = !canUseFullLayout;
 
-  const shouldHideLayout = (isLimitedRole || hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || isProfilePage || !user || (isHomePage && !isMachineIoOpen)) && (!isMachineIoOpen || isLimitedRole);
+  const shouldHideLayout = showChat
+    ? false
+    : (!canUseFullLayout || hideLayout || isMapPage || isPaymentPage || isCalendarPage || isRidesPage || isProfilePage || !user || (isHomePage && !isMachineIoOpen));
 
   if (isLoading && !isHomePage && !isAuthPage && !isMapPage) {
     return <div className="h-full w-full flex items-center justify-center bg-white">
@@ -109,41 +125,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   if ((isAuthPage || isNewNotePage || isCalendarPage || isPaymentPage || isRidesPage || isProfilePage) && !showChat) {
-    return <main className={`h-full w-full bg-white ${isAuthPage || isProfilePage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
+    return <main className={`h-full w-full ${isProfilePage ? 'bg-black' : 'bg-white'} ${isAuthPage || isProfilePage ? '' : 'overflow-hidden overscroll-none'}`}>{children}</main>;
   }
 
   return (
     <Suspense fallback={null}>
-      <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-background">
+      <div className="flex flex-col h-[100dvh] w-screen overflow-hidden overscroll-none bg-background">
         {!shouldHideLayout && <Header />}
         <div className={`flex-1 flex overflow-hidden ${!shouldHideLayout ? 'pt-[40px]' : ''} relative`}>
           {!shouldHideLayout && <Sidebar />}
           <main className={`flex-1 flex flex-col ${!shouldHideLayout ? 'pl-[40px]' : ''} h-full overflow-hidden w-full relative`}>
             <div className="flex-1 overflow-hidden relative">
               <div className="h-full w-full overflow-y-auto scrollbar-hide">
-                <div className={`max-w-3xl w-full mx-auto h-full ${shouldHideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'}`}>
+                <div className={`max-w-3xl w-full mx-auto h-full ${shouldHideLayout ? 'max-w-none px-0' : ''} ${isHomePage ? 'pb-8' : 'pb-8'} ${showChat ? 'hidden' : ''}`}>
                     {children}
                   </div>
               </div>
             </div>
             {showChat && (
-              <div className={`fixed inset-0 z-[2000] pointer-events-none flex flex-col ${isAdmin && !shouldHideLayout ? 'pt-[40px] pl-[40px]' : ''}`}>
-                <div className="w-full pointer-events-auto flex-1 flex flex-col h-full bg-white relative">
-                  {/* Close/Back Button */}
-                  <button 
-                    onClick={() => {
-                      const params = new URLSearchParams(searchParams?.toString());
-                      params.delete("show_chat");
-                      const targetUrl = pathname + (params.toString() ? "?" + params.toString() : "");
-                      router.replace(targetUrl as any);
-                    }}
-                    className="absolute top-4 left-4 z-[2001] h-10 w-10 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors group"
-                    title="Zatvori chat"
-                  >
-                    <svg className="w-5 h-5 text-black/40 group-hover:text-black/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
+              <div className={`absolute top-0 right-0 bottom-0 ${!shouldHideLayout ? "left-[40px]" : "left-0"} z-[2000] pointer-events-none flex flex-col overflow-hidden overscroll-none`}>
+                <div className="w-full pointer-events-auto flex-1 flex flex-col h-full overflow-hidden overscroll-none bg-white relative">
                   <MachineIo />
                 </div>
               </div>

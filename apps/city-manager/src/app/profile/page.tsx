@@ -5,7 +5,53 @@ import { useEffect, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import EspressoDashboard from "@/components/EspressoDashboard";
+
+type VerificationRequest = {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+  roleLabel: string;
+  createdAt: string;
+  canApprove: boolean;
+};
+
+const roleTerms: Record<string, { summary: string; details: string[] }> = {
+  "0": {
+    summary: "Kao Korisnik, prihvaćate opće uvjete korištenja platforme i pravila o privatnosti.",
+    details: []
+  },
+  "1": {
+    summary: "Kao Vozač, prihvaćate uvjete o posredovanju i povjerljivosti podataka.",
+    details: []
+  },
+  "2": {
+    summary: "Kao Partner Parking Vlasnik, potvrđujete vlasništvo i prihvaćate uvjete o zakupu prostora.",
+    details: []
+  },
+  "3": {
+    summary: "Kao Ovlašteni zastupnik, potvrđujete pravo na zastupanje i prihvaćate pravnu odgovornost.",
+    details: []
+  },
+  "4": {
+    summary: "Kao Dostavljač, prihvaćate uvjete partnerskog programa i pravila o provizijama.",
+    details: []
+  },
+  "5": {
+    summary: "Kao Referal, prihvaćate uvjete programa preporuka i pravila o bonusima.",
+    details: []
+  },
+  "6": {
+    summary: "Kao Agent, prihvaćate uvjete suradnje, NDA i pravila o terenskom radu.",
+    details: []
+  },
+  "10": {
+    summary: "Kao Administrator, prihvaćate interne sigurnosne i operativne protokole platforme.",
+    details: []
+  }
+};
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -33,6 +79,16 @@ export default function ProfilePage() {
   const [isLocallyVerified, setIsLocallyVerified] = useState<boolean | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
+  const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [approvingRequestId, setApprovingRequestId] = useState<string | null>(null);
+  const [vehiclePlates, setVehiclePlates] = useState<string[]>([]);
+  const [inboxMessages, setInboxMessages] = useState<Array<{
+    id: string;
+    subject: string;
+    body: string;
+    from: string;
+    createdAt: string;
+  }>>([]);
   const [counts, setCounts] = useState({ messages: 0, requests: 0 });
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
@@ -61,9 +117,29 @@ export default function ProfilePage() {
           setProfile(profileData);
         }
 
-        // Fetch counts (mocked for now, but ready for real data)
-        // In a real app, you'd fetch from 'messages' and 'verification_requests' tables
-        setCounts({ messages: 2, requests: 1 });
+        const savedPlatesRaw = localStorage.getItem(`pp_vehicle_plates_${user.id}`);
+        if (savedPlatesRaw) {
+          const parsedPlates = JSON.parse(savedPlatesRaw);
+          if (Array.isArray(parsedPlates)) {
+            setVehiclePlates(parsedPlates.filter((plate) => typeof plate === "string"));
+          }
+        }
+
+        const { data: emailsData } = await supabase
+          .from("emails")
+          .select("id,subject,html_body,text_body,from_address,created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        const mappedEmails = (emailsData || []).map((email: any) => ({
+          id: String(email.id),
+          subject: email.subject || "Dobrodošli u PayParq",
+          body: email.text_body || email.html_body || "",
+          from: email.from_address || "PayParq",
+          createdAt: email.created_at || new Date().toISOString()
+        }));
+
+        setInboxMessages(mappedEmails);
 
         // API Sync with mobile-scanner project
         // If the user has role 2, 3, 5, or 6, we fetch their Stripe account details
@@ -71,6 +147,32 @@ export default function ProfilePage() {
         const metadata = user?.user_metadata || {};
         const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
         const roles = metadataRoles.filter(Boolean);
+        const isPayparqSuperadmin = user?.email?.toLowerCase() === "payparq@outlook.com";
+        const canApproveVerifications = isPayparqSuperadmin || roles.includes("3");
+        let requestCount = 0;
+
+        if (canApproveVerifications) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const verificationRes = await fetch("/api/verification", {
+              headers: {
+                "Authorization": `Bearer ${session.access_token}`
+              }
+            });
+            if (verificationRes.ok) {
+              const verificationData = await verificationRes.json();
+              const requests = Array.isArray(verificationData?.requests) ? verificationData.requests : [];
+              setVerificationRequests(requests);
+              requestCount = requests.length;
+            } else {
+              setVerificationRequests([]);
+            }
+          }
+        } else {
+          setVerificationRequests([]);
+        }
+
+        setCounts({ messages: mappedEmails.length, requests: requestCount });
         
         if (roles.some((r: string) => ["2", "3", "5", "6"].includes(r))) {
           const { data: stripeData } = await supabase
@@ -151,6 +253,68 @@ export default function ProfilePage() {
     }
   };
 
+  const handleApproveVerification = async (request: VerificationRequest) => {
+    try {
+      setApprovingRequestId(request.id);
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert("Sesija je istekla. Prijavite se ponovno.");
+        return;
+      }
+
+      const response = await fetch("/api/verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ targetUserId: request.userId })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data?.error || "Greška pri odobravanju verifikacije.");
+        return;
+      }
+
+      setVerificationRequests((prev) => prev.filter((r) => r.id !== request.id));
+      setCounts((prev) => ({ ...prev, requests: Math.max(0, prev.requests - 1) }));
+
+      if (request.userId === user?.id) {
+        setIsLocallyVerified(true);
+      }
+    } catch (error) {
+      console.error("Approval error:", error);
+      alert("Došlo je do pogreške pri odobravanju.");
+    } finally {
+      setApprovingRequestId(null);
+      setExpandedRequestId(null);
+    }
+  };
+
+  const handleAddVehiclePlate = () => {
+    if (newVehiclePlate.length < 5) {
+      alert('Molimo unesite ispravnu registracijsku oznaku.');
+      return;
+    }
+    const normalized = newVehiclePlate.toUpperCase();
+    if (vehiclePlates.includes(normalized)) {
+      alert("Ova tablica je već dodana.");
+      return;
+    }
+    const next = [...vehiclePlates, normalized];
+    setVehiclePlates(next);
+    localStorage.setItem(`pp_vehicle_plates_${user.id}`, JSON.stringify(next));
+    setNewVehiclePlate("");
+  };
+
+  const handleDeleteVehiclePlate = (plate: string) => {
+    const next = vehiclePlates.filter((p) => p !== plate);
+    setVehiclePlates(next);
+    localStorage.setItem(`pp_vehicle_plates_${user.id}`, JSON.stringify(next));
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -171,63 +335,65 @@ export default function ProfilePage() {
     "10": "Administrator"
   };
 
-  const isDeepleads = user?.email?.toLowerCase()?.startsWith('info.deepleads');
   const isPayparqSuperadmin = user?.email?.toLowerCase() === 'payparq@outlook.com';
-  const isPension = user?.email?.toLowerCase() === 'pension.zamic@gmail.com';
-  const isAdmin = isDeepleads || isPayparqSuperadmin || isPension || metadata.is_admin === true || (Array.isArray(metadata.roles) && metadata.roles.includes("10"));
-  
-  const deepleadsName = "Karlo Žamić";
-  const deepleadsPhone = "+385915963139";
-  const deepleadsAddress = "Obala Kneza Domagoja 52";
-  
-  const displayName = profile?.full_name || metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : "Korisnik");
+  const isRepresentativeByEmail = user?.email?.toLowerCase()?.startsWith("info.deepleads");
+  const displayName = profile?.full_name || metadata.full_name || metadata.name || "Korisnik";
 
   const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
-  const allRoles = (isDeepleads || isPayparqSuperadmin || isPension)
-    ? ["3", "10", ...metadataRoles.filter((r: string | undefined) => r && r !== "3" && r !== "10")]
-    : metadataRoles.filter(Boolean) as string[];
+  const filteredRoles = metadataRoles.filter(Boolean).filter((r: string) => isPayparqSuperadmin || r !== "10") as string[];
+  const allRoles = [
+    ...(isRepresentativeByEmail ? ["3"] : []),
+    ...filteredRoles.filter((r: string) => !(isRepresentativeByEmail && r === "3"))
+  ];
   
   const displayRoles = allRoles.length > 0 
     ? allRoles.map((r: string) => roleLabels[r] || "Korisnik")
     : ["Korisnik"];
+  const registrationRoleId = String(metadata.original_role || metadata.role || allRoles[0] || "0");
+  const registrationRoleLabel = roleLabels[registrationRoleId] || "Korisnik";
+  const selectedTerms = roleTerms[registrationRoleId] || roleTerms["0"];
   
-  // Deepleads, Payparq Superadmin, and Pension are always verified
-  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isDeepleads || isPayparqSuperadmin || isPension || allRoles.includes("0") || metadata.is_verified === true || user?.email_confirmed_at != null);
+  const isVerified = isLocallyVerified !== null ? isLocallyVerified : (isPayparqSuperadmin || metadata.is_verified === true);
+  const canApproveVerifications = isPayparqSuperadmin || allRoles.includes("3");
+  const isRepresentative = allRoles.includes("3");
+  const supportWidget = isRepresentative
+    ? { name: "PayParq Super Admin", phone: "+385915963139", rating: "5.0", reviews: "198 recenzija" }
+    : { name: "Ovlašteni zastupnik", phone: "+385915963139", rating: "4.9", reviews: "268 recenzija" };
 
   const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
     { label: "Email Adresa", value: user?.email },
-    { label: "Ime i Prezime", value: profile?.full_name || metadata.full_name || metadata.name || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsName : null) },
-    { label: "Broj Mobitela", value: profile?.phone || metadata.phone || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsPhone : null) },
-    { label: "Adresa", value: profile?.address || metadata.address || ((isDeepleads || isPayparqSuperadmin || isPension) ? deepleadsAddress : null) },
+    { label: "Ime i Prezime", value: profile?.full_name || metadata.full_name || metadata.name || null },
+    { label: "Broj Mobitela", value: profile?.phone || metadata.phone || null },
+    { label: "Adresa", value: profile?.address || metadata.address || null },
     ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: (profile?.parking_capacity || metadata.parking_capacity) ? `${profile?.parking_capacity || metadata.parking_capacity} mjesta` : null }] : []),
     { label: "Uloge", value: displayRoles }
   ];
 
   return (
-    <div className="min-h-[100dvh] w-full bg-black text-white selection:bg-[#7C3AED]/30 relative flex flex-col items-center overflow-x-hidden">
-      {/* Absolute Full Screen Black Background */}
-      <div className="fixed inset-0 bg-black z-0 pointer-events-none" />
-
-      {/* Sticky Header Background Container - matching home page */}
+    <div className="min-h-full w-full bg-black text-white selection:bg-[#7C3AED]/30 relative flex flex-col items-center overflow-x-hidden">
+      {/* Sticky Header Background Container */}
       <div className="sticky top-0 left-0 right-0 z-50 pointer-events-none">
         <div className="h-20 bg-black w-full" />
         <div className="h-32 bg-gradient-to-b from-black via-black/95 to-transparent w-full" />
       </div>
 
-      <div className="w-full max-w-[430px] px-6 pb-10 -mt-[180px] relative z-[60] flex flex-col items-center">
+      <div className="w-full max-w-[430px] px-6 pb-10 -mt-[180px] relative z-[60] flex flex-col">
         {/* Header Area */}
-        <div className="flex items-center justify-between w-full mb-10 h-11 relative">
-          <Link href="/" className="flex items-center gap-4 h-full no-underline active:scale-[0.98] transition-transform">
+        <div className="w-full flex items-center justify-between mb-10 h-11 relative">
+          <div className="flex items-center gap-4 h-full">
             <div className="flex items-center justify-center w-9 h-9">
               <div className="h-7 w-7 rounded-[6px] bg-[#7C3AED] rotate-45 shadow-[0_0_15px_rgba(124,58,237,0.4)] border border-white/20 flex items-center justify-center" />
             </div>
-            <div className="text-[28px] tracking-tight font-bold text-white leading-none flex items-center h-full ml-1.5">parq</div>
-          </Link>
+            <Link href="/" className="text-[28px] tracking-tight font-bold text-white leading-none flex items-center h-full ml-1.5 no-underline">parq</Link>
+          </div>
+
           <button 
             onClick={handleLogout}
-            className="h-9 px-4 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center text-[13px] font-semibold text-white/70 hover:text-white active:scale-[0.98]"
+            className="pointer-events-auto h-9 px-4 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center group active:scale-[0.98]"
           >
-            Odjava
+            <span className="text-[13px] font-semibold text-white/70 group-hover:text-white transition-colors">
+              Odjava
+            </span>
           </button>
         </div>
 
@@ -236,13 +402,14 @@ export default function ProfilePage() {
             {displayName[0]?.toUpperCase()}
           </div>
           <div className="flex flex-col items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              {displayName}
-            </h1>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-base font-bold text-white">{displayName}</p>
+              <p className="text-[12px] text-white/60">{user?.email || "-"}</p>
+            </div>
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />
               <span className="text-[13px] font-semibold text-white/70">
-                {isVerified ? 'Verificiran' : 'Čeka verifikaciju'}
+                {isVerified ? 'Verifici' : 'Čeka verifikaciju'}
               </span>
             </div>
           </div>
@@ -323,8 +490,8 @@ export default function ProfilePage() {
 
                     <div className="h-[1px] bg-white/5 w-full my-2" />
 
-                    {counts.messages > 0 ? (
-                      Array.from({ length: counts.messages }).map((_, i) => (
+                    {inboxMessages.length > 0 ? (
+                      inboxMessages.map((message, i) => (
                         <div key={i} className="flex flex-col gap-2">
                           <div 
                             onClick={() => {
@@ -335,8 +502,8 @@ export default function ProfilePage() {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex flex-col gap-1">
-                                <span className="text-[13px] font-bold text-white/90">Nova obavijest #{i + 1}</span>
-                                <span className="text-[11px] text-white/40">Sustavna poruka</span>
+                                <span className="text-[13px] font-bold text-white/90">{message.subject || "Dobrodošli u PayParq"}</span>
+                                <span className="text-[11px] text-white/40">{message.from}</span>
                               </div>
                               <svg className={`w-3.5 h-3.5 text-white/20 transition-transform ${expandedMessageId === i ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -345,7 +512,7 @@ export default function ProfilePage() {
                           </div>
                             {expandedMessageId === i && (
                               <div className="px-4 py-3 rounded-xl bg-white/[0.01] border border-white/5 text-[12px] text-white/60 leading-relaxed animate-in fade-in slide-in-from-top-2 duration-300 flex flex-col gap-3">
-                                <p>Ovo je detaljan pregled vaše obavijesti. Ovdje će se nalaziti puni tekst poruke poslane od strane administratora ili sustava.</p>
+                                <p>{message.body || "Dobrodošli u PayParq."}</p>
                                 
                                 {!isReplying ? (
                                   <button 
@@ -418,7 +585,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {isAdmin && (
+              {canApproveVerifications && (
                 <div className="flex flex-col gap-2">
                   <div 
                     className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
@@ -432,14 +599,16 @@ export default function ProfilePage() {
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-base font-bold text-white">Zahtjevi za verifikaciju (ADMIN)</span>
+                          <span className="text-base font-bold text-white">
+                            {isPayparqSuperadmin ? "Zahtjevi za verifikaciju (ADMIN)" : "Zahtjevi za verifikaciju (OVLAŠTENI ZASTUPNIK)"}
+                          </span>
                           {counts.requests > 0 && (
                             <div className="px-2 py-0.5 rounded-full bg-[#7C3AED] text-[10px] font-bold text-white">
                               {counts.requests}
                             </div>
                           )}
                         </div>
-                        <span className="text-sm text-white/40">Svi korisnici koji čekaju potvrdu</span>
+                        <span className="text-sm text-white/40">Odobrenje u 24h: kontakt telefonski ili uživo i onboarding</span>
                       </div>
                     </div>
                     <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isRequestsExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
@@ -451,8 +620,10 @@ export default function ProfilePage() {
 
                   <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isRequestsExpanded ? 'max-h-[600px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
                     <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 flex flex-col gap-2 max-h-[500px] overflow-y-auto scrollbar-hide">
-                      {counts.requests > 0 ? (
-                        Array.from({ length: counts.requests }).map((_, i) => (
+                      {verificationRequests.length > 0 ? (
+                        verificationRequests.map((request, i) => {
+                          const canApproveRequest = request.canApprove;
+                          return (
                           <div key={i} className="flex flex-col gap-2">
                             <div 
                               onClick={() => setExpandedRequestId(expandedRequestId === i ? null : i)}
@@ -460,8 +631,9 @@ export default function ProfilePage() {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex flex-col gap-1">
-                                  <span className="text-[13px] font-bold text-white/90">Zahtjev #{1002 + i}</span>
-                                  <span className="text-[11px] text-white/40">Korisnik: Marko Marić</span>
+                                  <span className="text-[13px] font-bold text-white/90">Zahtjev #{request.id}</span>
+                                  <span className="text-[11px] text-white/40">Korisnik: {request.fullName || request.email}</span>
+                                  <span className="text-[11px] text-white/40">Kontakt: {request.email || "Email nije dostupan"}{request.phone ? ` • ${request.phone}` : ""}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-[#7C3AED]" />
@@ -476,20 +648,36 @@ export default function ProfilePage() {
                                 <div>
                                   <span className="font-bold text-white/80 block mb-1">Detalji zahtjeva:</span>
                                   <ul className="space-y-1 list-disc list-inside">
-                                    <li>Tip: Vozač</li>
+                                    <li>Tip: {request.roleLabel || "Korisnik"}</li>
                                     <li>Status: Na čekanju</li>
-                                    <li>Vrijeme: Prije 2 sata</li>
+                                    <li>Email: {request.email || "Nije dostupan"}</li>
+                                    <li>Mobitel: {request.phone || "Nije dostupan"}</li>
                                   </ul>
+                                </div>
+                                <div className="flex gap-2">
+                                  <a
+                                    href={request.email ? `mailto:${request.email}` : "#"}
+                                    className={`flex-1 h-9 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center ${request.email ? "bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-blue-300" : "bg-white/5 border-white/10 text-white/30 pointer-events-none"}`}
+                                  >
+                                    Email
+                                  </a>
+                                  <a
+                                    href={request.phone ? `tel:${request.phone}` : "#"}
+                                    className={`flex-1 h-9 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center ${request.phone ? "bg-violet-500/20 hover:bg-violet-500/30 border-violet-500/30 text-violet-300" : "bg-white/5 border-white/10 text-white/30 pointer-events-none"}`}
+                                  >
+                                    Nazovi
+                                  </a>
                                 </div>
                                 <div className="flex gap-2 pt-2">
                                   <button 
-                                    onClick={() => alert(`Zahtjev #${1002 + i} odobren.`)}
-                                    className="flex-1 h-10 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-500 text-[11px] font-bold uppercase tracking-wider transition-all"
+                                    onClick={() => handleApproveVerification(request)}
+                                    disabled={!canApproveRequest || approvingRequestId === request.id}
+                                    className="flex-1 h-10 rounded-lg bg-green-500/20 hover:bg-green-500/30 disabled:opacity-40 disabled:cursor-not-allowed border border-green-500/30 text-green-500 text-[11px] font-bold uppercase tracking-wider transition-all"
                                   >
-                                    Odobri
+                                    {approvingRequestId === request.id ? "Odobravanje..." : (canApproveRequest ? "Odobri" : "Samo payparq@outlook.com")}
                                   </button>
                                   <button 
-                                    onClick={() => alert(`Zahtjev #${1002 + i} odbijen.`)}
+                                    onClick={() => alert(`Zahtjev #${request.id} odbijen.`)}
                                     className="flex-1 h-10 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-500 text-[11px] font-bold uppercase tracking-wider transition-all"
                                   >
                                     Odbij
@@ -498,7 +686,8 @@ export default function ProfilePage() {
                               </div>
                             )}
                           </div>
-                        ))
+                        );
+                      })
                       ) : (
                         <span className="text-center py-4 text-xs text-white/20">Nema zahtjeva na čekanju</span>
                       )}
@@ -550,15 +739,7 @@ export default function ProfilePage() {
                     />
                   </div>
                   <button 
-                    onClick={() => {
-                      if (newVehiclePlate.length < 5) {
-                        alert('Molimo unesite ispravnu registracijsku oznaku.');
-                        return;
-                      }
-                      alert(`Vozilo s tablicom ${newVehiclePlate} je uspješno dodano!`);
-                      setNewVehiclePlate("");
-                      setIsVehiclesExpanded(false);
-                    }}
+                    onClick={handleAddVehiclePlate}
                     className="h-12 w-full rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-[13px] font-bold transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(124,58,237,0.3)]"
                   >
                     Spremi vozilo
@@ -566,16 +747,51 @@ export default function ProfilePage() {
                   <div className="pt-2 border-t border-white/5 mt-1">
                     <span className="text-[11px] text-white/30 px-1 uppercase font-bold tracking-wider">Vaša vozila</span>
                     <div className="flex flex-col gap-2 mt-2">
-                      <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
-                        <span className="text-sm font-medium text-white/80 tracking-wide">MA 123 AB</span>
-                        <span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full font-bold">AKTIVNO</span>
-                      </div>
+                      {vehiclePlates.length > 0 ? vehiclePlates.map((plate) => (
+                        <div key={plate} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-white/80 tracking-wide">{plate}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full font-bold">AKTIVNO</span>
+                            <button
+                              onClick={() => handleDeleteVehiclePlate(plate)}
+                              className="h-7 px-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-[10px] font-bold uppercase tracking-wider transition-all"
+                            >
+                              Obriši
+                            </button>
+                          </div>
+                        </div>
+                      )) : (
+                        <span className="text-xs text-white/30 px-1 py-2">Nema dodanih vozila</span>
+                      )}
                     </div>
                   </div>
                   </div>
                 </div>
               </div>
             </div>
+            {isVerified && (
+              <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-2rem)] max-w-[398px]">
+                <div className="rounded-2xl border border-white/15 bg-black/80 backdrop-blur-md px-4 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.45)] flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-2xl bg-[#7C3AED]/25 border border-[#7C3AED]/40 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-[#A78BFA]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A9.958 9.958 0 0112 15c2.249 0 4.325.742 5.999 1.994M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[12px] font-bold text-white">{supportWidget.name}</span>
+                      <span className="text-[11px] text-white/50">{supportWidget.rating} ★ · {supportWidget.reviews}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={`tel:${supportWidget.phone}`}
+                    className="h-9 px-3 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-[11px] font-bold uppercase tracking-wider flex items-center justify-center"
+                  >
+                    Nazovi
+                  </a>
+                </div>
+              </div>
+            )}
 
             <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 px-6 mt-4">Financije</h2>
             <div className="flex flex-col gap-2">
@@ -900,12 +1116,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {!isVerified && (
-            <div className="w-full mb-8">
-              <EspressoDashboard />
-            </div>
-          )}
-
           <div className="flex flex-col gap-4">
             <div 
               className="flex items-center justify-between px-6 cursor-pointer group"
@@ -1006,23 +1216,14 @@ export default function ProfilePage() {
               <div className="bg-white/[0.03] rounded-[32px] p-8 border border-white/10 flex flex-col gap-6">
                 <div className="flex flex-col gap-6 text-white/60 leading-relaxed text-[13px]">
                   <section className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">1. Opće odredbe</h3>
-                    <p>Korištenjem aplikacije PayParq prihvaćate sve navedene uvjete korištenja. Ova platforma omogućuje upravljanje parking uslugama i plaćanjima.</p>
+                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">1. Uloga pri registraciji</h3>
+                    <p className="text-white/90 font-semibold">{registrationRoleLabel}</p>
+                    <p>{selectedTerms.summary}</p>
                   </section>
-                  
+
                   <section className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">2. Privatnost i podaci</h3>
-                    <p>Vaši osobni podaci se obrađuju u skladu s GDPR regulativom. Prikupljamo samo nužne podatke za pružanje usluge (email, ime, registracijske oznake).</p>
-                  </section>
-                  
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">3. Plaćanja</h3>
-                    <p>Sva plaćanja se izvršavaju putem Stripe platforme. PayParq ne pohranjuje pune brojeve vaših kreditnih kartica.</p>
-                  </section>
-                  
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">4. Odgovornost</h3>
-                    <p>Korisnik je odgovoran za točnost unesenih podataka, posebno registracijskih oznaka vozila radi ispravne naplate parkinga.</p>
+                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">2. Uvjeti za odabranu ulogu</h3>
+                    <p>{selectedTerms.summary}</p>
                   </section>
 
                   <div className="pt-4 border-t border-white/5 mt-2">

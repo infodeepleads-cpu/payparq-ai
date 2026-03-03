@@ -622,7 +622,7 @@ export default function EspressoDashboard() {
 
   if (isAdmin) {
     return (
-      <div className="w-full py-8 pb-32 -ml-[0.3cm]">
+      <div className="w-full py-8 pb-32 overflow-x-hidden">
         <div className="w-full">
           <div className="flex items-center justify-start border-b border-gray-200 mb-8 pb-4 pl-1">
             <span className="text-sm font-bold tracking-tight text-black mr-4">{t('mission_control')}</span>
@@ -633,8 +633,8 @@ export default function EspressoDashboard() {
             {/* Mission Status Overview */}
             <section className="text-left pl-1">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 text-left">{t('global_progress')}</h2>
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="w-full">
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="w-full overflow-x-auto">
                   <table className="w-full text-sm text-left table-auto">
                     <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 font-bold">
                       <tr>
