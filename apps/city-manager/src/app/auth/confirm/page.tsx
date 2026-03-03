@@ -56,7 +56,7 @@ export default function Confirm() {
 
         setSafeStatus("ok");
         setSafeMessage("Uspješno potvrđeno! Preusmjeravamo vas...");
-        window.location.replace("/profile");
+        window.location.replace("/profile?email_verified=1");
       };
 
       if (error || errorDescription) {

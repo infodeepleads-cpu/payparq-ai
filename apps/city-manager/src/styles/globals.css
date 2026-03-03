@@ -84,6 +84,17 @@ select:-webkit-autofill:active {
   background-color: #D1D5DB;
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Thin Scrollbar for TopControlsWidget */
 .thin-scrollbar {
   scrollbar-width: thin; /* Firefox */

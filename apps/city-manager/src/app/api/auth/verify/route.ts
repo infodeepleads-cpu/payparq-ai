@@ -68,10 +68,15 @@ export async function POST(req: NextRequest) {
           }
         });
 
-        if (linkData?.properties?.action_link) {
+        const signupTokenHash = linkData?.properties?.hashed_token;
+        if (signupTokenHash) {
+          confirmUrl = `${finalOrigin}/auth/confirm?token_hash=${encodeURIComponent(signupTokenHash)}&type=signup&email=${encodeURIComponent(email)}`;
+          linkGenerated = true;
+          console.log(`[VerifyAPI] Generated signup token link for ${email}`);
+        } else if (linkData?.properties?.action_link) {
           confirmUrl = linkData.properties.action_link;
           linkGenerated = true;
-          console.log(`[VerifyAPI] Generated signup link for ${email}`);
+          console.log(`[VerifyAPI] Generated signup action link for ${email}`);
         } else if (linkError) {
           console.warn(`[VerifyAPI] Signup link failed (${linkError.message}), trying magiclink...`);
           // Fallback to magiclink if signup link fails (e.g. user exists)
@@ -83,10 +88,15 @@ export async function POST(req: NextRequest) {
             }
           });
 
-          if (magicData?.properties?.action_link) {
+          const magicTokenHash = magicData?.properties?.hashed_token;
+          if (magicTokenHash) {
+            confirmUrl = `${finalOrigin}/auth/confirm?token_hash=${encodeURIComponent(magicTokenHash)}&type=magiclink&email=${encodeURIComponent(email)}`;
+            linkGenerated = true;
+            console.log(`[VerifyAPI] Generated magiclink token for ${email}`);
+          } else if (magicData?.properties?.action_link) {
             confirmUrl = magicData.properties.action_link;
             linkGenerated = true;
-            console.log(`[VerifyAPI] Generated magiclink for ${email}`);
+            console.log(`[VerifyAPI] Generated magiclink action link for ${email}`);
           } else {
             const message = magicError?.message || linkError.message || "Unable to generate verification link";
             console.error("[VerifyAPI] All link generation methods failed:", message);
@@ -148,15 +158,27 @@ export async function POST(req: NextRequest) {
 
 function resolvePublicOrigin(req: NextRequest) {
   const headerOrigin = req.headers.get("origin") || "";
+  const forwardedHost = req.headers.get("x-forwarded-host") || "";
+  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
+  const forwardedOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : "";
+  const requestOrigin = new URL(req.url).origin;
   const derivedFromVercel = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
   const configured =
     env.APP_BASE_URL ||
     env.NEXT_PUBLIC_APP_URL ||
-    env.NEXT_PUBLIC_SITE_URL ||
-    derivedFromVercel;
-  const normalizedConfigured = normalizeUrl(configured);
-  if (normalizedConfigured) return normalizedConfigured;
-  return normalizeUrl(headerOrigin) || new URL(req.url).origin;
+    env.NEXT_PUBLIC_SITE_URL;
+
+  const candidates = [
+    normalizeUrl(forwardedOrigin),
+    normalizeUrl(headerOrigin),
+    normalizeUrl(requestOrigin),
+    normalizeUrl(configured),
+    normalizeUrl(derivedFromVercel)
+  ].filter(Boolean);
+
+  const nonLocal = candidates.find((value) => !isLocalOrigin(value));
+  if (nonLocal) return nonLocal;
+  return candidates[0] || "http://localhost:3000";
 }
 
 function resolveFromAddress() {
@@ -169,6 +191,15 @@ function normalizeUrl(value: string) {
   if (!trimmed) return "";
   const unwrapped = trimmed.replace(/^["'`]+/, "").replace(/["'`]+$/, "");
   return unwrapped.replace(/\/+$/, "");
+}
+
+function isLocalOrigin(value: string) {
+  try {
+    const parsed = new URL(value);
+    return ["localhost", "127.0.0.1", "0.0.0.0"].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function getRoleLabel(role: string) {

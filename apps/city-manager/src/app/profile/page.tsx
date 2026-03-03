@@ -3,7 +3,7 @@
 // Deployment trigger: 2026-03-03 (Standard)
 import { useEffect, useState } from "react";
 import { getSupabase } from "../../lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type VerificationRequest = {
@@ -82,18 +82,34 @@ export default function ProfilePage() {
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
   const [approvingRequestId, setApprovingRequestId] = useState<string | null>(null);
   const [vehiclePlates, setVehiclePlates] = useState<string[]>([]);
-  const [inboxMessages, setInboxMessages] = useState<Array<{
+  const [inboxMessages, setInboxMessages] = useState<{
     id: string;
     subject: string;
     body: string;
     from: string;
     createdAt: string;
-  }>>([]);
+  }[]>([]);
   const [counts, setCounts] = useState({ messages: 0, requests: 0 });
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
+  const [cardLast4, setCardLast4] = useState("");
   const [isStripeConnectConnected, setIsStripeConnectConnected] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState<"applepay" | "googlepay" | null>(null);
+  const [showVerificationSuccess, setShowVerificationSuccess] = useState(false);
+  const [editingField, setEditingField] = useState<"full_name" | "phone" | "address" | "parking_capacity" | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [isSavingProfileField, setIsSavingProfileField] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("email_verified") !== "1") return;
+    setShowVerificationSuccess(true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("email_verified");
+    const nextQuery = url.searchParams.toString();
+    window.history.replaceState({}, "", `${url.pathname}${nextQuery ? `?${nextQuery}` : ""}${url.hash}`);
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchUserAndCounts = async () => {
@@ -105,6 +121,8 @@ export default function ProfilePage() {
           return;
         }
         setUser(user);
+        const metadata = user?.user_metadata || {};
+        const isInfoDeepLeads = user?.email?.toLowerCase()?.startsWith("info.deepleads");
 
         // Fetch profile data from public.profiles
         const { data: profileData } = await supabase
@@ -115,6 +133,31 @@ export default function ProfilePage() {
         
         if (profileData) {
           setProfile(profileData);
+        } else {
+          setProfile({
+            id: user.id,
+            full_name: metadata.full_name || metadata.name || (isInfoDeepLeads ? "Karlo Žamić" : null),
+            role: metadata.role || (isInfoDeepLeads ? "3" : null),
+            phone: metadata.phone || (isInfoDeepLeads ? "+385915963139" : null),
+            address: metadata.address || (isInfoDeepLeads ? "Obala Kneza Domagoja 52" : null),
+            parking_capacity: metadata.parking_capacity || null
+          });
+        }
+
+        if (isInfoDeepLeads) {
+          const needsMetadataPatch = !metadata.full_name || !metadata.phone || !metadata.address || !metadata.role;
+          if (needsMetadataPatch) {
+            await supabase.auth.updateUser({
+              data: {
+                ...metadata,
+                full_name: metadata.full_name || metadata.name || "Karlo Žamić",
+                role: metadata.role || "3",
+                original_role: metadata.original_role || metadata.role || "3",
+                phone: metadata.phone || "+385915963139",
+                address: metadata.address || "Obala Kneza Domagoja 52"
+              }
+            });
+          }
         }
 
         const savedPlatesRaw = localStorage.getItem(`pp_vehicle_plates_${user.id}`);
@@ -144,7 +187,6 @@ export default function ProfilePage() {
         // API Sync with mobile-scanner project
         // If the user has role 2, 3, 5, or 6, we fetch their Stripe account details
         // from the mobile-scanner database to automatically link them.
-        const metadata = user?.user_metadata || {};
         const metadataRoles = Array.isArray(metadata.roles) ? metadata.roles : [metadata.original_role || metadata.role];
         const roles = metadataRoles.filter(Boolean);
         const isPayparqSuperadmin = user?.email?.toLowerCase() === "payparq@outlook.com";
@@ -211,6 +253,39 @@ export default function ProfilePage() {
       router.push("/auth?mode=signup");
     } catch (error) {
       console.error("New role redirect error:", error);
+    }
+  };
+
+  const handleConnectWallet = async (wallet: "applepay" | "googlepay") => {
+    try {
+      setConnectingWallet(wallet);
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          flow_type: "setup",
+          customer_email: user?.email || undefined,
+          wallet_preference: wallet
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.url) {
+        alert(data?.error || "Neuspjelo pokretanje povezivanja novčanika.");
+        return;
+      }
+      if (wallet === "applepay") {
+        setIsApplePayConnected(true);
+      } else {
+        setIsGooglePayConnected(true);
+      }
+      window.location.assign(data.url);
+    } catch (error) {
+      console.error("Wallet connect error:", error);
+      alert("Došlo je do pogreške pri povezivanju. Pokušajte ponovno.");
+    } finally {
+      setConnectingWallet(null);
     }
   };
 
@@ -315,6 +390,63 @@ export default function ProfilePage() {
     localStorage.setItem(`pp_vehicle_plates_${user.id}`, JSON.stringify(next));
   };
 
+  const handleStartEditing = (fieldId: "full_name" | "phone" | "address" | "parking_capacity") => {
+    const metadata = user?.user_metadata || {};
+    const currentValue = fieldId === "full_name"
+      ? (profile?.full_name || metadata.full_name || metadata.name || "")
+      : fieldId === "phone"
+        ? (profile?.phone || metadata.phone || "")
+        : fieldId === "address"
+          ? (profile?.address || metadata.address || "")
+          : (profile?.parking_capacity || metadata.parking_capacity || "");
+    setEditingField(fieldId);
+    setEditingValue(String(currentValue));
+  };
+
+  const handleCancelEditing = () => {
+    setEditingField(null);
+    setEditingValue("");
+  };
+
+  const handleSaveProfileField = async () => {
+    if (!editingField || !user?.id) return;
+    const supabase = getSupabase();
+    const normalizedValue = editingField === "parking_capacity"
+      ? editingValue.replace(/\D/g, "").slice(0, 4)
+      : editingValue.trim();
+    const nextValue = normalizedValue || null;
+
+    try {
+      setIsSavingProfileField(true);
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            id: user.id,
+            [editingField]: nextValue
+          },
+          { onConflict: "id" }
+        );
+
+      if (error) {
+        alert("Spremanje nije uspjelo. Pokušajte ponovno.");
+        return;
+      }
+
+      setProfile((prev: any) => ({
+        ...(prev || {}),
+        id: user.id,
+        [editingField]: nextValue
+      }));
+      handleCancelEditing();
+    } catch (error) {
+      console.error("Save profile field error:", error);
+      alert("Došlo je do greške prilikom spremanja.");
+    } finally {
+      setIsSavingProfileField(false);
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -360,13 +492,13 @@ export default function ProfilePage() {
     ? { name: "PayParq Super Admin", phone: "+385915963139", rating: "5.0", reviews: "198 recenzija" }
     : { name: "Ovlašteni zastupnik", phone: "+385915963139", rating: "4.9", reviews: "268 recenzija" };
 
-  const profileFields: { label: string; value: any; uppercase?: boolean }[] = [
-    { label: "Email Adresa", value: user?.email },
-    { label: "Ime i Prezime", value: profile?.full_name || metadata.full_name || metadata.name || null },
-    { label: "Broj Mobitela", value: profile?.phone || metadata.phone || null },
-    { label: "Adresa", value: profile?.address || metadata.address || null },
-    ...(allRoles.includes("2") ? [{ label: "Kapacitet Parkinga", value: (profile?.parking_capacity || metadata.parking_capacity) ? `${profile?.parking_capacity || metadata.parking_capacity} mjesta` : null }] : []),
-    { label: "Uloge", value: displayRoles }
+  const profileFields: { id: string; label: string; value: any; uppercase?: boolean; editable?: boolean }[] = [
+    { id: "email", label: "Email Adresa", value: user?.email },
+    { id: "full_name", label: "Ime i Prezime", value: profile?.full_name || metadata.full_name || metadata.name || null, editable: true },
+    { id: "phone", label: "Broj Mobitela", value: profile?.phone || metadata.phone || null, editable: true },
+    { id: "address", label: "Adresa", value: profile?.address || metadata.address || null, editable: true },
+    ...(allRoles.includes("2") ? [{ id: "parking_capacity", label: "Kapacitet Parkinga", value: profile?.parking_capacity || metadata.parking_capacity || null, editable: true }] : []),
+    { id: "roles", label: "Uloge", value: displayRoles }
   ];
 
   return (
@@ -397,6 +529,21 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {showVerificationSuccess && (
+          <div className="mb-5 p-4 rounded-2xl border border-green-500/30 bg-green-500/10 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.7)]" />
+              <p className="text-[12px] font-semibold text-green-200">Email je uspješno potvrđen.</p>
+            </div>
+            <button
+              onClick={() => setShowVerificationSuccess(false)}
+              className="h-7 px-3 rounded-full bg-white/10 hover:bg-white/20 text-[10px] font-bold uppercase tracking-wider text-white/80 transition-colors"
+            >
+              U redu
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col items-center gap-4 mb-10 w-full text-center">
           <div className="h-20 w-20 rounded-3xl bg-[#7C3AED] flex items-center justify-center text-3xl font-bold shadow-[0_0_30px_rgba(124,58,237,0.4)] border border-white/20">
             {displayName[0]?.toUpperCase()}
@@ -418,37 +565,22 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-8 w-full">
           {/* Inbox Section */}
           <div className="flex flex-col gap-4">
-            <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 px-6">Inbox</h2>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2">
-                <div 
-                  className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
-                  onClick={() => setIsInboxExpanded(!isInboxExpanded)}
+            <div 
+              className="flex items-center justify-between px-6 cursor-pointer group"
+              onClick={() => setIsInboxExpanded(!isInboxExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Inbox</h2>
+                <svg 
+                  className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isInboxExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="h-12 w-12 rounded-2xl bg-transparent flex items-center justify-center border border-[#7C3AED]/30 group-hover:bg-[#7C3AED]/10 transition-colors">
-                      <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold text-white">Poruke</span>
-                        {counts.messages > 0 && (
-                          <div className="px-2 py-0.5 rounded-full bg-[#7C3AED] text-[10px] font-bold text-white">
-                            {counts.messages}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-sm text-white/40">Pregledajte vaše obavijesti</span>
-                    </div>
-                  </div>
-                  <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isInboxExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
-                    <svg className={`w-4 h-4 ${isInboxExpanded ? 'text-[#7C3AED]' : 'text-white/30 group-hover:text-white/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                </div>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
 
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isInboxExpanded ? 'max-h-[800px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
                   <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 flex flex-col gap-2 max-h-[600px] overflow-y-auto scrollbar-hide">
@@ -583,8 +715,6 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
-              </div>
-
               {canApproveVerifications && (
                 <div className="flex flex-col gap-2">
                   <div 
@@ -696,35 +826,29 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-          </div>
 
           <div className="flex flex-col gap-4">
-            <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 px-6">Vozila</h2>
-            <div className="flex flex-col gap-2">
-              <div 
-                className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
-                onClick={() => setIsVehiclesExpanded(!isVehiclesExpanded)}
-              >
-                <div className="flex items-center gap-5">
-                  <div className="h-12 w-12 rounded-2xl bg-[#7C3AED]/10 flex items-center justify-center border border-[#7C3AED]/20 group-hover:bg-[#7C3AED]/20 transition-colors">
-                    <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-base font-bold text-white">Upravljajte registarskim oznakama</span>
-                    <span className="text-sm text-white/40">Dodajte ili promijenite vozila</span>
-                  </div>
-                </div>
-                <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isVehiclesExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
-                  <svg className={`w-4 h-4 ${isVehiclesExpanded ? 'text-[#7C3AED]' : 'text-white/30 group-hover:text-white/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </div>
+            <div 
+              className="flex items-center justify-between px-6 cursor-pointer group"
+              onClick={() => setIsVehiclesExpanded(!isVehiclesExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Vozila</h2>
+                <svg 
+                  className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isVehiclesExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              
 
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isVehiclesExpanded ? 'max-h-96 opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
-                <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 flex flex-col gap-3">
+              <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isVehiclesExpanded ? 'max-h-[1000px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
+                <div className="bg-white/[0.03] rounded-[32px] p-6 border border-white/10 flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-[11px] font-bold text-white/40 uppercase tracking-wider px-1">Registracijska oznaka</label>
                     <input 
@@ -793,53 +917,59 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 px-6 mt-4">Financije</h2>
-            <div className="flex flex-col gap-2">
-              <div 
-                className="bg-white/[0.03] rounded-[28px] p-6 border border-white/10 flex items-center justify-between group hover:bg-white/[0.06] transition-all active:scale-[0.98] cursor-pointer"
-                onClick={() => setIsFinanceExpanded(!isFinanceExpanded)}
-              >
-                <div className="flex items-center gap-5">
-                  <div className="h-12 w-12 rounded-2xl bg-[#7C3AED]/10 flex items-center justify-center border border-[#7C3AED]/20 group-hover:bg-[#7C3AED]/20 transition-colors">
-                    <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-base font-bold text-white">Načini plaćanja</span>
-                    <span className="text-sm text-white/40">Dodaj način plaćanja</span>
-                  </div>
-                </div>
-                <div className={`h-8 w-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#7C3AED]/40 transition-all ${isFinanceExpanded ? 'rotate-45 bg-[#7C3AED]/20 border-[#7C3AED]/40' : ''}`}>
-                  <svg className={`w-4 h-4 ${isFinanceExpanded ? 'text-[#7C3AED]' : 'text-white/30 group-hover:text-white/60'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </div>
+            <div 
+              className="flex items-center justify-between px-6 cursor-pointer group mt-4"
+              onClick={() => setIsFinanceExpanded(!isFinanceExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">Financije</h2>
+                <svg 
+                  className={`w-4 h-4 text-white/20 group-hover:text-white/40 transition-transform duration-300 ${isFinanceExpanded ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
+            </div>
+            <div className="flex flex-col gap-2">
 
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isFinanceExpanded ? 'max-h-[600px] opacity-100 mb-2' : 'max-h-0 opacity-0'}`}>
-                <div className="bg-white/[0.02] rounded-2xl border border-white/5 p-4 flex flex-col gap-4">
+              <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isFinanceExpanded ? 'max-h-[1000px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
+                <div className="bg-white/[0.03] rounded-[32px] p-6 border border-white/10 flex flex-col gap-6">
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={() => {
-                        setIsApplePayConnected(!isApplePayConnected);
-                        if (!isApplePayConnected) alert('Apple Pay povezan!');
+                        if (isApplePayConnected) {
+                          setIsApplePayConnected(false);
+                          return;
+                        }
+                        void handleConnectWallet("applepay");
                       }}
+                      disabled={!!connectingWallet}
                       className={`h-14 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 group/btn ${isApplePayConnected ? 'bg-[#7C3AED]/20 border-[#7C3AED]/40' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08]'}`}
                     >
                       <span className={`text-[11px] font-bold uppercase tracking-wider ${isApplePayConnected ? 'text-[#7C3AED]' : 'text-white/70 group-hover/btn:text-white'}`}>Apple Pay</span>
-                      <span className="text-[9px] font-bold uppercase">{isApplePayConnected ? 'POVEZANO' : 'POVEŽI'}</span>
+                      <span className="text-[9px] font-bold uppercase">
+                        {connectingWallet === "applepay" ? 'POVEZIVANJE' : (isApplePayConnected ? 'POVEZANO' : 'POVEŽI')}
+                      </span>
                     </button>
 
                     <button 
                       onClick={() => {
-                        setIsGooglePayConnected(!isGooglePayConnected);
-                        if (!isGooglePayConnected) alert('Google Pay povezan!');
+                        if (isGooglePayConnected) {
+                          setIsGooglePayConnected(false);
+                          return;
+                        }
+                        void handleConnectWallet("googlepay");
                       }}
+                      disabled={!!connectingWallet}
                       className={`h-14 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 group/btn ${isGooglePayConnected ? 'bg-[#7C3AED]/20 border-[#7C3AED]/40' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08]'}`}
                     >
                       <span className={`text-[11px] font-bold uppercase tracking-wider ${isGooglePayConnected ? 'text-[#7C3AED]' : 'text-white/70 group-hover/btn:text-white'}`}>Google Pay</span>
-                      <span className="text-[9px] font-bold uppercase">{isGooglePayConnected ? 'POVEZANO' : 'POVEŽI'}</span>
+                      <span className="text-[9px] font-bold uppercase">
+                        {connectingWallet === "googlepay" ? 'POVEZIVANJE' : (isGooglePayConnected ? 'POVEZANO' : 'POVEŽI')}
+                      </span>
                     </button>
 
                     <button 
@@ -848,6 +978,10 @@ export default function ProfilePage() {
                           // Show card input logic handled below
                         } else {
                           setIsCardConnected(false);
+                          setCardLast4("");
+                          setCardNumber("");
+                          setCardExpiry("");
+                          setCardCvc("");
                         }
                       }}
                       className={`h-14 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 group/btn ${isCardConnected ? 'bg-[#7C3AED]/20 border-[#7C3AED]/40' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08]'}`}
@@ -923,7 +1057,9 @@ export default function ProfilePage() {
                            const cleanCard = cardNumber.replace(/\s/g, '');
                            if (cleanCard.length === 16 && cardExpiry.length === 5 && cardCvc.length === 3) {
                              setIsCardConnected(true);
-                             // Keep cardNumber for display but masked logic will handle it
+                             setCardLast4(cleanCard.slice(-4));
+                             setCardNumber("");
+                             setCardCvc("");
                              alert('Kartica uspješno povezana!');
                            } else {
                              alert('Molimo ispravno unesite sve podatke s kartice.');
@@ -947,7 +1083,7 @@ export default function ProfilePage() {
                          </div>
                          <div className="flex flex-col">
                            <span className="text-[12px] font-bold text-white/90">
-                             **** **** **** {cardNumber.slice(-4)}
+                            **** **** **** {cardLast4 || "0000"}
                            </span>
                            <div className="flex items-center gap-2">
                              <span className="text-[10px] text-white/30 uppercase font-bold tracking-wider">Povezano</span>
@@ -958,6 +1094,7 @@ export default function ProfilePage() {
                        <button 
                          onClick={() => {
                            setIsCardConnected(false);
+                          setCardLast4("");
                            setCardNumber("");
                            setCardExpiry("");
                            setCardCvc("");
@@ -1087,35 +1224,6 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Nova Uloga section with header */}
-            <div className="flex flex-col gap-4 mt-4">
-              <h2 className="text-[13px] font-bold uppercase tracking-[0.2em] text-white/30 px-6">Doregistracija</h2>
-              <button 
-                onClick={handleNewRole}
-                className="w-full text-left bg-transparent border-none p-0 focus:outline-none group"
-              >
-                <div className="bg-[#7C3AED]/10 rounded-[28px] p-6 border border-[#7C3AED]/20 flex items-center justify-between group-hover:bg-[#7C3AED]/20 transition-all active:scale-[0.98]">
-                  <div className="flex items-center gap-5">
-                    <div className="h-12 w-12 rounded-2xl bg-[#7C3AED]/20 flex items-center justify-center border border-[#7C3AED]/30">
-                      <svg className="w-6 h-6 text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-base font-bold text-white">Nova uloga</span>
-                      <span className="text-sm text-[#7C3AED]/70 font-medium">Registrirajte se za novu ulogu</span>
-                    </div>
-                  </div>
-                  <div className="h-8 w-8 rounded-full bg-[#7C3AED]/10 flex items-center justify-center border border-[#7C3AED]/20 group-hover:border-[#7C3AED] transition-colors">
-                    <svg className="w-4 h-4 text-[#7C3AED]/60 group-hover:text-[#7C3AED]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
           <div className="flex flex-col gap-4">
             <div 
               className="flex items-center justify-between px-6 cursor-pointer group"
@@ -1137,12 +1245,15 @@ export default function ProfilePage() {
             <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isProfileExpanded ? 'max-h-[1000px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
               <div className="bg-white/[0.03] rounded-[32px] p-6 border border-white/10 flex flex-col gap-6">
                 <div className="grid grid-cols-1 gap-3 mt-2">
-                  {profileFields.map((field, idx) => (
-                    <div key={idx} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col gap-1 relative group/field transition-colors hover:border-[#7C3AED]/30">
+                  {profileFields.map((field) => (
+                    <div key={field.id} className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col gap-1 relative group/field transition-colors hover:border-[#7C3AED]/30">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase tracking-widest text-white/30 font-bold">{field.label}</span>
-                        {field.label !== "Email Adresa" && field.label !== "Uloge" && (
-                          <button className="opacity-0 group-hover/field:opacity-100 transition-opacity text-[#7C3AED] hover:text-[#9F67FF] bg-black/40 p-1 rounded-md border border-white/5">
+                        {field.editable && (
+                          <button
+                            onClick={() => handleStartEditing(field.id as "full_name" | "phone" | "address" | "parking_capacity")}
+                            className="opacity-100 transition-opacity text-[#7C3AED] hover:text-[#9F67FF] bg-black/40 p-1 rounded-md border border-white/5"
+                          >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
@@ -1167,17 +1278,61 @@ export default function ProfilePage() {
                           )}
                         </div>
                       ) : (
-                        <span
-                          className={`text-sm font-semibold ${
-                            field.value ? "text-white/90" : "text-white/20 italic"
-                          } ${field.uppercase ? "uppercase tracking-wider" : ""}`}
-                        >
-                          {field.value || "Nije uneseno"}
-                        </span>
+                        <>
+                          {editingField === field.id ? (
+                            <div className="flex flex-col gap-2 mt-1">
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => {
+                                  if (field.id === "parking_capacity") {
+                                    setEditingValue(e.target.value.replace(/\D/g, "").slice(0, 4));
+                                    return;
+                                  }
+                                  setEditingValue(e.target.value);
+                                }}
+                                placeholder={field.id === "parking_capacity" ? "Npr. 120" : "Unesite vrijednost"}
+                                className="h-10 w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 text-white text-sm focus:outline-none focus:border-[#7C3AED]/50 transition-colors placeholder:text-white/20"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={handleSaveProfileField}
+                                  disabled={isSavingProfileField}
+                                  className="h-8 px-3 rounded-lg bg-[#7C3AED] hover:bg-[#6D28D9] disabled:opacity-50 text-white text-[10px] font-bold uppercase tracking-wider transition-all"
+                                >
+                                  {isSavingProfileField ? "Spremanje..." : "Spremi"}
+                                </button>
+                                <button
+                                  onClick={handleCancelEditing}
+                                  disabled={isSavingProfileField}
+                                  className="h-8 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-wider transition-all"
+                                >
+                                  Odustani
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <span
+                              className={`text-sm font-semibold ${
+                                field.value ? "text-white/90" : "text-white/20 italic"
+                              } ${field.uppercase ? "uppercase tracking-wider" : ""}`}
+                            >
+                              {field.id === "parking_capacity" && field.value ? `${field.value} mjesta` : (field.value || "Nije uneseno")}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   ))}
                 </div>
+            <div className="pt-1">
+              <button 
+                onClick={handleNewRole}
+                className="h-10 w-full rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-[11px] font-bold uppercase tracking-wider transition-all active:scale-[0.98]"
+              >
+                Nova uloga
+              </button>
+            </div>
 
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col gap-3 mt-4">
                   <p className="text-[11px] text-white/40 leading-relaxed font-medium">
@@ -1212,7 +1367,7 @@ export default function ProfilePage() {
               </div>
             </div>
             
-            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isTermsExpanded ? 'max-h-[2000px] opacity-100 mb-4' : 'max-h-0 opacity-0'}`}>
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isTermsExpanded ? 'max-h-[4200px] opacity-100 mb-14' : 'max-h-0 opacity-0'}`}>
               <div className="bg-white/[0.03] rounded-[32px] p-8 border border-white/10 flex flex-col gap-6">
                 <div className="flex flex-col gap-6 text-white/60 leading-relaxed text-[13px]">
                   <section className="flex flex-col gap-2">
@@ -1222,14 +1377,73 @@ export default function ProfilePage() {
                   </section>
 
                   <section className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider">2. Uvjeti za odabranu ulogu</h3>
-                    <p>{selectedTerms.summary}</p>
+                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">1. Uvjeti suradnje (Terms)</h3>
+                    <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerima u RH.</p>
+                    <p className="font-bold text-white">1. Nagrada</p>
+                    <p>Suradnik ostvaruje proviziju u iznosu 50% neto prihoda koji generira njegov teren, pri čemu se neto prihod definira kao prihod nakon odbitka svih financijskih naknada i poreza.</p>
+                    <p className="font-bold text-white">2. Obveze i troškovi Suradnika</p>
+                    <p>Suradnik snosi organizaciju i trošak sljedećeg:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Označavanje terena (sprej, naljepnice, manji znakovi i njihovo pričvršćivanje)</li>
+                      <li>Obilazak terena i odlasci na sastanke (uključujući trošak prijevoza)</li>
+                      <li>Verifikacija partnera</li>
+                      <li>Korisnička podrška za prioritetne partnere i uspostava terenske podrške</li>
+                      <li>Svakodnevno logiranje u Parq chatbot, izvršavanje dnevnih zadataka, pravovremeni unos povratnih informacija te aktivno sudjelovanje u usavršavanju sustava, uključujući:</li>
+                    </ul>
+                    <ul className="list-none pl-4 mt-1 space-y-0.5 text-white/70">
+                      <li>• Slikanje terena</li>
+                      <li>• Videozapise</li>
+                      <li>• Feedback</li>
+                      <li>• Sastanke</li>
+                      <li>• Ispunjavanje dokumenata</li>
+                      <li>• Redoviti obilazak terena</li>
+                    </ul>
+                    <p className="font-bold text-white pt-2 italic">Potvrđujem da razumijem i u cijelosti prihvaćam navedene uvjete.</p>
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">2. NDA</h3>
+                    <p className="italic">Izjava o prihvaćanju uvjeta suradnje</p>
+                    <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerskim entitetima u RH.:</p>
+                    <p className="font-bold text-white">1. Povjerljivost</p>
+                    <p>Obvezujem se čuvati kao strogo povjerljive sve informacije vezane uz poslovni model, podjelu prihoda (50% net prihoda nakon financijskih naknada i poreza), partnere i lokacije, cijene, financije, operativne procese, Parq chatbot, interne sustave, strategiju i razvoj.</p>
+                    <p>Informacije neću koristiti niti otkrivati izvan svrhe suradnje.</p>
+                    <p className="font-bold text-white">2. Zabrana konkurencije</p>
+                    <p>Obvezujem se da tijekom trajanja suradnje i 24 mjeseca nakon njenog prestanka neću samostalno niti putem trećih osoba sudjelovati u konkurentskom projektu u području digitalnog upravljanja i monetizacije parking terena na teritoriju Republike Hrvatske.</p>
+                    <p className="font-bold text-white">3. Trajanje</p>
+                    <p>Obveza povjerljivosti vrijedi tijekom suradnje i 5 godina nakon prestanka suradnje.</p>
+                    <p className="font-bold text-white pt-2 italic">Potvrđujem da sam upoznat s uvjetima i da ih u cijelosti prihvaćam.</p>
+                  </section>
+
+                  <section className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                    <h3 className="text-white font-bold text-base tracking-tight italic">Brain</h3>
+                    <p>Sukladno Viziji i Misije postavlja najefikasnije dnevne zadatke City Manageru, Scrapea sve Leadove.</p>
+                    <p>Na Manageru ostaje održavanje sastanaka pregled poruka i mailova i send, telefonski pozivi i sastanci, te obilazak terena i terenska/ prioritetna podrška.</p>
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">3. Klauzula o jednostranom raskidu i ograničenju odgovornosti</h3>
+                    <p>Leadvex Group LLC i njegovi partneri u Republici Hrvatskoj zadržavaju pravo jednostrano raskinuti suradnju u bilo kojem trenutku, bez obrazloženja i bez otkaznog roka.</p>
+                    <p>Suradnik nema pravo na naknadu štete, izgubljenu dobit, buduće provizije niti bilo kakvu drugu kompenzaciju temeljem raskida ili izmjene uvjeta suradnje.</p>
+                    <p>Suradnik se odriče svih sadašnjih i budućih potraživanja, tužbi i zahtjeva prema Leadvex Group LLC, njegovim vlasnicima, povezanim društvima i partnerima, osim za nesporne i dospjele iznose koji su već obračunati do dana raskida.</p>
+                    <p>Ukupna eventualna odgovornost Leadvex Group LLC i partnera, ako bi postojala, ograničena je maksimalno na iznos zadnje isplaćene provizije Suradniku.</p>
+                  </section>
+
+                  <section className="flex flex-col gap-2">
+                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">4. Završne odredbe</h3>
+                    <p>Završne odredbe čine sastavni dio Uvjeta suradnje, NDA-a i svih povezanih odredbi između Suradnika i Leadvex Group LLC te njegovih partnera u Republici Hrvatskoj.</p>
+                    <p>U slučaju bilo kakve nejasnoće, tumačenje odredbi ide u korist Društva.</p>
+                    <p>Ako se bilo koja odredba pokaže ništavnom ili neprovedivom, ostale odredbe ostaju u punoj pravnoj snazi.</p>
+                    <p>Ovaj dokument predstavlja cjelokupni sporazum između strana i zamjenjuje sve prethodne usmene ili pisane dogovore.</p>
+                    <p className="font-bold text-white pt-2 italic underline decoration-[#7C3AED] underline-offset-4">Suradnik potvrđuje da Uvjete prihvaća svjesno, dobrovoljno i bez prisile.</p>
+                    <p className="text-white/60 text-[12px]">Leadvex Group LLC zadržava pravo izmjene operativnih procesa, poslovnog modela, sustava obračuna i strukture suradnje u bilo kojem trenutku.</p>
                   </section>
 
                   <div className="pt-4 border-t border-white/5 mt-2">
                     <p className="text-[11px] italic">Zadnja izmjena: 02. ožujka 2026.</p>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

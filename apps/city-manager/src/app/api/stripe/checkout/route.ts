@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
+  const wallet_preference =
+    (typeof body.wallet_preference === 'string' && body.wallet_preference) || url.searchParams.get('wallet') || '';
   let customer_email: string | undefined = undefined;
   if (typeof body === 'object' && body && 'customer_email' in body) {
     const v = (body as { customer_email?: unknown }).customer_email;
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}${wallet_preference ? `&wallet=${encodeURIComponent(wallet_preference)}` : ''}`,
         cancel_url: `${url.origin}/`,
         customer_email,
         payment_method_types: ['card'],
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
             location_id,
             plate_number,
             flow_type,
+            wallet_preference,
           },
         },
       });
@@ -230,12 +233,13 @@ export async function GET(req: NextRequest) {
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
   const customer_email = url.searchParams.get('email') || undefined;
+  const wallet_preference = url.searchParams.get('wallet') || '';
 
   if (flow_type === 'setup') {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}${wallet_preference ? `&wallet=${encodeURIComponent(wallet_preference)}` : ''}`,
         cancel_url: `${url.origin}/`,
         customer_email,
         payment_method_types: ['card'],
@@ -244,6 +248,7 @@ export async function GET(req: NextRequest) {
             location_id,
             plate_number,
             flow_type,
+            wallet_preference,
           },
         },
       });
