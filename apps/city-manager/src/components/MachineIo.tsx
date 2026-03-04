@@ -4,7 +4,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { CapacitorCalendar } from '@ebarooni/capacitor-calendar';
 import React, { useState, useRef, useEffect } from "react";
 import ChatMessage from "../components/ChatMessage";
-import { getSupabase } from "../lib/supabase";
+import { getSupabase, pullMirroredTasksToLocal, queueTasksMirror } from "../lib/supabase";
 import TopControlsWidget from "../components/TopControlsWidget";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -534,6 +534,7 @@ export default function MachineIo() {
   const writeTasks = (tasks: any[]) => {
     localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
     window.dispatchEvent(new Event("storage"));
+    queueTasksMirror(tasks);
   };
   const addTaskLocal = (title: string) => {
     const t = { id: String(Date.now()), title, completed: false, confirmed: false, createdAt: Date.now() };
@@ -651,6 +652,27 @@ export default function MachineIo() {
     return id;
   };
 
+  const pushSystemUpdate = (content: string) => {
+    const text = String(content || "").trim();
+    if (!text) return;
+    const id = ensureThread("Updates");
+    if (!id) return;
+    const raw = localStorage.getItem(MSG_PREFIX + id);
+    const existing: Message[] = raw ? JSON.parse(raw) : [];
+    const next: Message[] = [...existing, { role: "system", content: text, animate: true }];
+    saveMessages(id, next);
+    if (threadId === id) {
+      setMessages(next);
+    }
+    const threads = readThreads();
+    const idx = threads.findIndex((t: any) => t.id === id);
+    if (idx >= 0) {
+      threads[idx] = { ...threads[idx], updatedAt: Date.now() };
+      writeThreads(threads);
+    }
+    window.dispatchEvent(new Event("storage"));
+  };
+
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
@@ -701,6 +723,7 @@ export default function MachineIo() {
   }, [messages, loading]);
 
   useEffect(() => {
+    void pullMirroredTasksToLocal();
     const init = () => {
       const cur = localStorage.getItem(CURRENT_KEY);
       loadMessages(cur);
@@ -751,6 +774,24 @@ export default function MachineIo() {
     }
     return () => window.removeEventListener("pp-current-thread", handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const advice = String(e?.detail?.advice || "").trim();
+      const updates = Array.isArray(e?.detail?.updates) ? e.detail.updates : [];
+      if (advice) {
+        pushSystemUpdate(`✓ System: ${advice}`);
+      }
+      updates.forEach((entry: any) => {
+        const value = String(entry || "").trim();
+        if (value) {
+          pushSystemUpdate(`✓ System: ${value}`);
+        }
+      });
+    };
+    window.addEventListener("brain_feedback_processed", handler);
+    return () => window.removeEventListener("brain_feedback_processed", handler);
+  }, [threadId]);
 
   const sendMessage = async () => {
     if ((!input.trim() && !selectedImage) || loadingRef.current) return;

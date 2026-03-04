@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useEspressoSystem } from "../hooks/useEspressoSystem";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getSupabase, getCurrentUser, isSuperAdmin } from "../lib/supabase";
+import { getSupabase, getCurrentUser, isSuperAdmin, pullMirroredTasksToLocal, queueTasksMirror } from "../lib/supabase";
 import PermitsForm from "./PermitsForm";
 import ActivationKitForm from "./ActivationKitForm";
 import AirportForm from "./AirportForm";
@@ -249,6 +249,7 @@ export default function EspressoDashboard() {
       if (updated) {
         localStorage.setItem(TASKS_KEY, JSON.stringify(next));
         window.dispatchEvent(new Event("storage"));
+        queueTasksMirror(next);
       }
     } catch (e) {
       console.error("Failed to sync brain tasks", e);
@@ -588,10 +589,20 @@ export default function EspressoDashboard() {
   const [feedbackAdvice, setFeedbackAdvice] = useState("");
   const [crmUpdateFeed, setCrmUpdateFeed] = useState<string[]>([]);
 
+  const readLocalTasks = () => {
+    const rawTasks = localStorage.getItem(TASKS_KEY);
+    return rawTasks ? JSON.parse(rawTasks) : [];
+  };
+
+  const writeLocalTasks = (tasks: any[]) => {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    window.dispatchEvent(new Event("storage"));
+    queueTasksMirror(tasks);
+  };
+
   const refreshTaskCompletion = () => {
     try {
-      const rawTasks = localStorage.getItem(TASKS_KEY);
-      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      const tasks = readLocalTasks();
       const map: Record<string, boolean> = {};
       tasks.forEach((task: any) => {
         if (typeof task?.id === "string") {
@@ -608,13 +619,13 @@ export default function EspressoDashboard() {
     refreshTaskCompletion();
     const handler = () => refreshTaskCompletion();
     window.addEventListener("storage", handler);
+    void pullMirroredTasksToLocal().then(() => refreshTaskCompletion());
     return () => window.removeEventListener("storage", handler);
   }, []);
 
   const toggleTaskCompletion = (id: string, title: string) => {
     try {
-      const raw = localStorage.getItem(TASKS_KEY);
-      const tasks = raw ? JSON.parse(raw) : [];
+      const tasks = readLocalTasks();
       const idx = tasks.findIndex((task: any) => task.id === id);
       if (idx >= 0) {
         const completed = !tasks[idx].completed;
@@ -633,8 +644,7 @@ export default function EspressoDashboard() {
           completedAt: Date.now(),
         });
       }
-      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-      window.dispatchEvent(new Event("storage"));
+      writeLocalTasks(tasks);
       refreshTaskCompletion();
     } catch {}
   };
@@ -739,39 +749,63 @@ export default function EspressoDashboard() {
       }
       const data = await res.json();
       const parsed = typeof data === "string" ? JSON.parse(normalizeAiJson(data)) : data;
-      let crmUpdateMessage = "";
-      if (parsed.action === "add_task" && parsed.taskTitle) {
-        toggleTaskCompletion(`manual-${Date.now()}`, parsed.taskTitle);
-      } else if (parsed.action === "complete_task" && parsed.taskTitle) {
-        const raw = localStorage.getItem(TASKS_KEY);
-        const next = raw ? JSON.parse(raw) : [];
-        const idx = next.findIndex((task: any) => String(task.title || "").toLowerCase() === String(parsed.taskTitle).toLowerCase());
-        if (idx >= 0) {
-          next[idx] = { ...next[idx], completed: true, completedAt: Date.now() };
-          localStorage.setItem(TASKS_KEY, JSON.stringify(next));
-          window.dispatchEvent(new Event("storage"));
-          refreshTaskCompletion();
+      const updateFeed: string[] = [];
+      const operations: any[] = [];
+      if (parsed?.action) operations.push(parsed);
+      if (Array.isArray(parsed?.actions)) operations.push(...parsed.actions);
+      if (Array.isArray(parsed?.taskUpdates)) operations.push(...parsed.taskUpdates);
+      if (Array.isArray(parsed?.crmUpdates)) operations.push(...parsed.crmUpdates);
+
+      for (const op of operations) {
+        if (op?.action === "add_task" && op?.taskTitle) {
+          toggleTaskCompletion(`manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, op.taskTitle);
+          updateFeed.push(`Task added: ${op.taskTitle}`);
+          continue;
         }
-      } else if (parsed.action === "delete_task" && parsed.taskTitle) {
-        const raw = localStorage.getItem(TASKS_KEY);
-        const next = raw ? JSON.parse(raw) : [];
-        const filtered = next.filter((task: any) => String(task.title || "").toLowerCase() !== String(parsed.taskTitle).toLowerCase());
-        localStorage.setItem(TASKS_KEY, JSON.stringify(filtered));
-        window.dispatchEvent(new Event("storage"));
-        refreshTaskCompletion();
-      } else if (parsed.action === "add_crm_contact" && parsed.crmContact) {
-        await addCRMContact(parsed.crmContact);
-        crmUpdateMessage = `Added CRM contact: ${parsed.crmContact.decisionMaker || parsed.crmContact.name || "Contact"}`;
-      } else if (parsed.action === "update_crm_contact" && parsed.crmContact) {
-        await updateCRMContact(parsed.crmContact);
-        crmUpdateMessage = `Updated CRM contact: ${parsed.crmContact.decisionMaker || parsed.crmContact.name || "Contact"}`;
-      } else {
-        crmUpdateMessage = "No CRM changes from this feedback.";
+
+        if (op?.action === "complete_task" && op?.taskTitle) {
+          const next = readLocalTasks();
+          const idx = next.findIndex((task: any) => String(task.title || "").toLowerCase() === String(op.taskTitle).toLowerCase());
+          if (idx >= 0) {
+            next[idx] = { ...next[idx], completed: true, completedAt: Date.now() };
+            writeLocalTasks(next);
+            refreshTaskCompletion();
+            updateFeed.push(`Task completed: ${op.taskTitle}`);
+          }
+          continue;
+        }
+
+        if (op?.action === "delete_task" && op?.taskTitle) {
+          const next = readLocalTasks();
+          const filtered = next.filter((task: any) => String(task.title || "").toLowerCase() !== String(op.taskTitle).toLowerCase());
+          writeLocalTasks(filtered);
+          refreshTaskCompletion();
+          updateFeed.push(`Task removed: ${op.taskTitle}`);
+          continue;
+        }
+
+        if (op?.action === "add_crm_contact" && op?.crmContact) {
+          await addCRMContact(op.crmContact);
+          updateFeed.push(`Added CRM contact: ${op.crmContact.decisionMaker || op.crmContact.name || "Contact"}`);
+          continue;
+        }
+
+        if (op?.action === "update_crm_contact" && op?.crmContact) {
+          await updateCRMContact(op.crmContact);
+          updateFeed.push(`Updated CRM contact: ${op.crmContact.decisionMaker || op.crmContact.name || "Contact"}`);
+        }
       }
-      if (crmUpdateMessage) {
-        setCrmUpdateFeed((prev) => [crmUpdateMessage, ...prev].slice(0, 6));
+
+      if (updateFeed.length === 0) {
+        updateFeed.push("No direct task or CRM changes from this feedback.");
       }
-      setFeedbackAdvice(parsed.nextStep || "Keep moving on highest-impact outreach and refresh CRM after each call.");
+      setCrmUpdateFeed((prev) => [...updateFeed, ...prev].slice(0, 10));
+
+      const immediateAdvice = parsed.nextStep || "Keep moving on highest-impact outreach and refresh CRM after each call.";
+      setFeedbackAdvice(immediateAdvice);
+      window.dispatchEvent(new CustomEvent("brain_feedback_processed", { detail: { advice: immediateAdvice, updates: updateFeed } }));
+      refreshTaskCompletion();
+      await runBrainPlan(true);
       setFeedbackMessage("Feedback processed.");
       setFeedbackText("");
     } catch (e) {
@@ -881,10 +915,10 @@ export default function EspressoDashboard() {
             {brainError && (
               <p className="text-[10px] text-red-500 px-2 py-1">{brainError}</p>
             )}
-            {brainPlan?.tasks?.map((task, idx) => {
+            {brainPlan?.tasks?.map((task) => {
               const lead = brainPlan.leads.find((l) => l.id === task.leadId);
               const title = buildBrainTaskTitle(task, lead);
-              const taskId = `brain-${task.type}-${task.leadId}-${idx}`;
+              const taskId = `brain-${task.type}-${task.leadId}`;
               const completed = !!taskCompletionMap[taskId];
               return (
                 <div

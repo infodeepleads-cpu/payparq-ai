@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { pullMirroredTasksToLocal, queueTasksMirror } from "@/lib/supabase";
 
 type Task = {
   id: string;
@@ -24,6 +25,7 @@ function load(): Task[] {
 function save(tasks: Task[]) {
   localStorage.setItem(KEY, JSON.stringify(tasks));
   window.dispatchEvent(new Event("storage"));
+  queueTasksMirror(tasks);
 }
 
 export default function TopControlsWidget() {
@@ -38,6 +40,7 @@ export default function TopControlsWidget() {
     setTasks(load());
     const handler = () => setTasks(load());
     window.addEventListener("storage", handler);
+    void pullMirroredTasksToLocal();
     return () => window.removeEventListener("storage", handler);
   }, []);
 
