@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type ResourceCategory = "Notes" | "Legal & Finance" | "Follow Up Materials" | "Mentorship";
+type ResourceCategory = "Notes" | "Legal & Finance" | "Follow Up Materials" | "Mentorship" | "Operations";
 
 interface ResourceItem {
   id: string;
@@ -19,15 +18,11 @@ export default function Page() {
   const { t } = useLanguage();
 
   const resources: ResourceItem[] = [
-    // Notes
     { id: "notes-main", nameKey: "my_notes", category: "Notes", categoryKey: "notes_category", link: "/resources/notes", linkLabelKey: "view_notes" },
-
-    // Legal & Finance
     { id: "lf-contracts", nameKey: "contracts", category: "Legal & Finance", categoryKey: "legal_finance", link: "https://www.payparq.com/terms", linkLabelKey: "contracts" },
     { id: "lf-invoices", nameKey: "invoices", category: "Legal & Finance", categoryKey: "legal_finance", link: "https://www.stripe.com", linkLabelKey: "invoices" },
     { id: "lf-compliance", nameKey: "compliance", category: "Legal & Finance", categoryKey: "legal_finance", link: "https://www.payparq.com/privacy", linkLabelKey: "compliance" },
 
-    // Follow Up Materials
     { id: "fu-legal-ref", nameKey: "legal_reference", category: "Follow Up Materials", categoryKey: "follow_up_materials", link: "https://www.payparq.com/legal", linkLabelKey: "legal_reference" },
     { id: "fu-testimonials", nameKey: "testimonials", category: "Follow Up Materials", categoryKey: "follow_up_materials", link: "https://www.payparq.com/parking", linkLabelKey: "testimonials" },
     { id: "fu-demos", nameKey: "demos", category: "Follow Up Materials", categoryKey: "follow_up_materials", link: "https://www.payparq.com/news", linkLabelKey: "demos" },
@@ -37,7 +32,6 @@ export default function Page() {
     { id: "fu-security", nameKey: "security", category: "Follow Up Materials", categoryKey: "follow_up_materials", link: "https://www.payparq.com/security", linkLabelKey: "security" },
     { id: "fu-pricing", nameKey: "pricing", category: "Follow Up Materials", categoryKey: "follow_up_materials", link: "https://www.payparq.com/product", linkLabelKey: "pricing" },
 
-    // Mentorship
     { id: "m-product", nameKey: "product", category: "Mentorship", categoryKey: "mentorship_category", link: "https://www.payparq.com/product", linkLabelKey: "product" },
     { id: "m-sales", nameKey: "sales", category: "Mentorship", categoryKey: "mentorship_category", link: "/resources/sales-rules", linkLabelKey: "sales_rules_label" },
     { id: "m-ops", nameKey: "ops_mastery", category: "Mentorship", categoryKey: "mentorship_category", link: "/resources/ops-mastery", linkLabelKey: "non_negotiables" },
@@ -45,6 +39,9 @@ export default function Page() {
     { id: "m-objection", nameKey: "objection_handling", category: "Mentorship", categoryKey: "mentorship_category", link: "/resources/objection-handling", linkLabelKey: "common_objections_legal" },
     { id: "m-scripts", nameKey: "scripts", category: "Mentorship", categoryKey: "mentorship_category", link: "/resources/scripts", linkLabelKey: "personalized_outreach" },
     { id: "m-3keys", nameKey: "three_biggest_problems", category: "Mentorship", categoryKey: "mentorship_category", link: "/resources/mentorship", linkLabelKey: "three_biggest_problems" },
+
+    { id: "ops-mission", nameKey: "mission", category: "Operations", categoryKey: "resources", link: "/mission", linkLabelKey: "mission" },
+    { id: "ops-documents", nameKey: "documents", category: "Operations", categoryKey: "resources", link: "/resources/documents", linkLabelKey: "documents" },
   ];
 
   const categories = [
@@ -52,6 +49,7 @@ export default function Page() {
     { id: "Legal & Finance", key: "legal_finance" },
     { id: "Follow Up Materials", key: "follow_up_materials" },
     { id: "Mentorship", key: "mentorship_category" },
+    { id: "Operations", key: "resources" },
   ];
 
   return (
@@ -71,24 +69,29 @@ export default function Page() {
                 {resources
                   .filter(r => r.category === category.id)
                   .map((item) => (
-                    <div 
-                      key={item.id} 
-                      className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1"
-                    >
-                      <span className="text-xs font-bold text-black shrink-0 break-words">{t(item.nameKey)}</span>
-                      {item.link ? (
-                        <a 
-                          href={item.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-[10px] text-gray-500 hover:text-gray-700 underline break-all font-bold"
+                    (() => {
+                      const isExternal = !!item.link && (item.link.startsWith("http") || item.link.startsWith("mailto:"));
+                      return (
+                        <div 
+                          key={item.id} 
+                          className="group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex flex-col items-start gap-1"
                         >
-                          {item.linkLabelKey ? t(item.linkLabelKey) : t('view_link')}
-                        </a>
-                      ) : (
-                        <span className="text-[10px] font-bold text-gray-400 italic">{t('no_document')}</span>
-                      )}
-                    </div>
+                          <span className="text-xs font-bold text-black shrink-0 break-words">{t(item.nameKey)}</span>
+                          {item.link ? (
+                            <a 
+                              href={item.link} 
+                              target={isExternal ? "_blank" : undefined}
+                              rel={isExternal ? "noopener noreferrer" : undefined}
+                              className="text-[10px] text-gray-500 hover:text-gray-700 underline break-all font-bold"
+                            >
+                              {item.linkLabelKey ? t(item.linkLabelKey) : t('view_link')}
+                            </a>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-400 italic">{t('no_document')}</span>
+                          )}
+                        </div>
+                      );
+                    })()
                   ))}
               </div>
             </div>

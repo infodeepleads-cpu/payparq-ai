@@ -143,7 +143,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </div>
             </div>
             {showChat && (
-              <div className={`absolute top-0 bottom-0 ${shouldShowSidebar ? "left-[40px] right-0" : "-left-px -right-px"} z-[2000] pointer-events-none flex flex-col overflow-hidden overscroll-none bg-white`}>
+              <div className={`absolute inset-0 ${shouldShowSidebar ? "left-[40px]" : "left-0"} z-[2000] pointer-events-none flex flex-col overflow-hidden overscroll-none bg-white`}>
                 <div className="w-full pointer-events-auto flex-1 flex flex-col h-full overflow-hidden overscroll-none bg-white relative">
                   <MachineIo />
                 </div>
@@ -151,7 +151,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </main>
         </div>
-        {shouldShowSidebar && <DailyRecap />}
+        {shouldShowSidebar && !showChat && <DailyRecap />}
       </div>
     </Suspense>
   );

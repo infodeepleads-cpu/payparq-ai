@@ -174,6 +174,17 @@ export default function EspressoDashboard() {
   const buildBrainTaskTitle = (task: BrainTask, lead?: BrainLead) => {
     const name = lead?.name || "Lead";
     const type = lead?.type || "poi";
+    if (task.type === "activate_lot") {
+      return `Aktiviraj 1 lot: ${name}`;
+    }
+    if (task.type === "map_lot") {
+      if (type === "hotel") return `Mapiraj parking potencijal za hotel ${name}`;
+      if (type === "apartment" || type === "villa") return `Mapiraj parking potencijal za objekt ${name}`;
+      if (type === "restaurant" || type === "cafe" || type === "bar" || type === "bakery") {
+        return `Mapiraj parking potencijal za ${name}`;
+      }
+      return `Mapiraj relevantni lot za ${name}`;
+    }
     if (task.type === "call") {
       if (type === "parking") {
         return `Nazovi vlasnika parkinga ${name} o Payparq i Park&Taxi`;
@@ -202,7 +213,15 @@ export default function EspressoDashboard() {
         leadsMap[l.id] = l;
       });
       let updated = false;
-      const next = [...tasks];
+      const nextPlanTaskIds = new Set(plan.tasks.map((task) => `brain-${task.type}-${task.leadId}`));
+      const next = tasks.filter((task: any) => {
+        if (typeof task?.id !== "string") return true;
+        if (!task.id.startsWith("brain-")) return true;
+        return nextPlanTaskIds.has(task.id);
+      });
+      if (next.length !== tasks.length) {
+        updated = true;
+      }
 
       plan.tasks.forEach((task) => {
         const id = `brain-${task.type}-${task.leadId}`;
@@ -220,7 +239,8 @@ export default function EspressoDashboard() {
             title,
             completed: false,
             confirmed: false,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            planDate: plan.date
           });
           updated = true;
         }
@@ -557,64 +577,210 @@ export default function EspressoDashboard() {
     }));
   }, [mapLotsCompleted, activateLotCompleted, progress.currentTier]);
 
-  // Sync Daily Form Tasks to Chat Task List
-  useEffect(() => {
+  const TASKS_KEY = "pp_tasks";
+  const CRM_KEY = "pp_crm_contacts";
+  const [taskCompletionMap, setTaskCompletionMap] = useState<Record<string, boolean>>({});
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackError, setFeedbackError] = useState("");
+  const [selectedFeedbackModel, setSelectedFeedbackModel] = useState("llama-3.3-70b-versatile");
+  const [feedbackAdvice, setFeedbackAdvice] = useState("");
+  const [crmUpdateFeed, setCrmUpdateFeed] = useState<string[]>([]);
+
+  const refreshTaskCompletion = () => {
     try {
-      const TASKS_KEY = "pp_tasks";
       const rawTasks = localStorage.getItem(TASKS_KEY);
       const tasks = rawTasks ? JSON.parse(rawTasks) : [];
-      let updated = false;
-
-      const dailyFormTasks = [
-        { 
-          id: `daily-permits-t${progress.currentTier}`, 
-          title: `${t('fill_permits_task')} (Tier ${progress.currentTier})`,
-          completed: !!docsState[`t${progress.currentTier}-permits`]
-        },
-        { 
-          id: `daily-competition-t${progress.currentTier}`, 
-          title: `${t('fill_competition_task')} (Tier ${progress.currentTier})`,
-          completed: !!docsState[`t${progress.currentTier}-competition`]
-        },
-        { 
-          id: `daily-activation-t${progress.currentTier}`, 
-          title: `${t('fill_lot_activation_task')} (Tier ${progress.currentTier})`,
-          completed: !!docsState[`t${progress.currentTier}-activation`]
-        },
-        { 
-          id: `daily-specific-t${progress.currentTier}`, 
-          title: `Fill ${progress.currentTier === 1 ? t('airport_analysis') : progress.currentTier === 6 ? t('hotel_analysis') : progress.currentTier === 7 ? t('whales_analysis') : t('area_analysis')} (Tier ${progress.currentTier})`,
-          completed: !!docsState[`t${progress.currentTier}-specific`]
-        }
-      ];
-
-      dailyFormTasks.forEach(dt => {
-        const existingIdx = tasks.findIndex((t: any) => t.id === dt.id);
-        if (existingIdx >= 0) {
-          if (tasks[existingIdx].completed !== dt.completed) {
-            tasks[existingIdx].completed = dt.completed;
-            updated = true;
-          }
-        } else {
-          tasks.push({
-            id: dt.id,
-            title: dt.title,
-            completed: dt.completed,
-            confirmed: false,
-            createdAt: Date.now()
-          });
-          updated = true;
+      const map: Record<string, boolean> = {};
+      tasks.forEach((task: any) => {
+        if (typeof task?.id === "string") {
+          map[task.id] = !!task.completed;
         }
       });
-
-      if (updated) {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-        window.dispatchEvent(new Event("storage"));
-      }
-    } catch (e) {
-      console.error("Failed to sync daily tasks", e);
+      setTaskCompletionMap(map);
+    } catch {
+      setTaskCompletionMap({});
     }
-  }, [docsState, progress.currentTier]);
+  };
+
+  useEffect(() => {
+    refreshTaskCompletion();
+    const handler = () => refreshTaskCompletion();
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
+
+  const toggleTaskCompletion = (id: string, title: string) => {
+    try {
+      const raw = localStorage.getItem(TASKS_KEY);
+      const tasks = raw ? JSON.parse(raw) : [];
+      const idx = tasks.findIndex((task: any) => task.id === id);
+      if (idx >= 0) {
+        const completed = !tasks[idx].completed;
+        tasks[idx] = {
+          ...tasks[idx],
+          completed,
+          completedAt: completed ? Date.now() : undefined,
+        };
+      } else {
+        tasks.push({
+          id,
+          title,
+          completed: true,
+          confirmed: false,
+          createdAt: Date.now(),
+          completedAt: Date.now(),
+        });
+      }
+      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+      window.dispatchEvent(new Event("storage"));
+      refreshTaskCompletion();
+    } catch {}
+  };
+
+  const readCRM = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      try {
+        const raw = localStorage.getItem(CRM_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    const supabase = getSupabase();
+    const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
+    return data || [];
+  };
+
+  const addCRMContact = async (contact: any) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      const current = await readCRM();
+      const next = [{ ...contact, id: String(Date.now()), created_at: new Date().toISOString() }, ...current];
+      localStorage.setItem(CRM_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event("crm_storage"));
+      return;
+    }
+    const supabase = getSupabase();
+    await supabase.from("crm_contacts").insert({
+      tier: contact.tier,
+      decision_maker: contact.decisionMaker,
+      location: contact.location,
+      estimated_capacity: contact.estimatedCapacity,
+      status: contact.status,
+      next_step: contact.nextStep,
+      notes: contact.notes
+    });
+    window.dispatchEvent(new Event("crm_storage"));
+    localStorage.setItem("crm_update_signal", Date.now().toString());
+  };
+
+  const updateCRMContact = async (contact: any) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      const contacts = await readCRM();
+      const idx = contacts.findIndex((c: any) => c.decisionMaker?.toLowerCase() === String(contact.decisionMaker || "").toLowerCase());
+      if (idx >= 0) {
+        contacts[idx] = { ...contacts[idx], ...contact };
+        localStorage.setItem(CRM_KEY, JSON.stringify(contacts));
+        window.dispatchEvent(new Event("crm_storage"));
+      }
+      return;
+    }
+    const supabase = getSupabase();
+    const { data: contacts } = await supabase.from("crm_contacts").select("*");
+    if (!contacts) return;
+    const match = contacts.find((c: any) => c.decision_maker?.toLowerCase() === String(contact.decisionMaker || "").toLowerCase());
+    if (!match) return;
+    await supabase.from("crm_contacts").update({
+      tier: contact.tier,
+      decision_maker: contact.decisionMaker,
+      location: contact.location,
+      estimated_capacity: contact.estimatedCapacity,
+      status: contact.status,
+      next_step: contact.nextStep,
+      notes: contact.notes
+    }).eq("id", match.id);
+    window.dispatchEvent(new Event("crm_storage"));
+    localStorage.setItem("crm_update_signal", Date.now().toString());
+  };
+
+  const normalizeAiJson = (raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("```")) {
+      return trimmed.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+    }
+    return trimmed;
+  };
+
+  const submitBrainFeedback = async () => {
+    if (!feedbackText.trim()) return;
+    setFeedbackLoading(true);
+    setFeedbackError("");
+    setFeedbackMessage("");
+    try {
+      const rawTasks = localStorage.getItem(TASKS_KEY);
+      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      const crmContacts = await readCRM();
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: `Brain feedback. Update CRM when relevant and provide immediate next action: ${feedbackText.trim()}`,
+          model: selectedFeedbackModel,
+          tasks,
+          crmContacts
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("Feedback request failed");
+      }
+      const data = await res.json();
+      const parsed = typeof data === "string" ? JSON.parse(normalizeAiJson(data)) : data;
+      let crmUpdateMessage = "";
+      if (parsed.action === "add_task" && parsed.taskTitle) {
+        toggleTaskCompletion(`manual-${Date.now()}`, parsed.taskTitle);
+      } else if (parsed.action === "complete_task" && parsed.taskTitle) {
+        const raw = localStorage.getItem(TASKS_KEY);
+        const next = raw ? JSON.parse(raw) : [];
+        const idx = next.findIndex((task: any) => String(task.title || "").toLowerCase() === String(parsed.taskTitle).toLowerCase());
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], completed: true, completedAt: Date.now() };
+          localStorage.setItem(TASKS_KEY, JSON.stringify(next));
+          window.dispatchEvent(new Event("storage"));
+          refreshTaskCompletion();
+        }
+      } else if (parsed.action === "delete_task" && parsed.taskTitle) {
+        const raw = localStorage.getItem(TASKS_KEY);
+        const next = raw ? JSON.parse(raw) : [];
+        const filtered = next.filter((task: any) => String(task.title || "").toLowerCase() !== String(parsed.taskTitle).toLowerCase());
+        localStorage.setItem(TASKS_KEY, JSON.stringify(filtered));
+        window.dispatchEvent(new Event("storage"));
+        refreshTaskCompletion();
+      } else if (parsed.action === "add_crm_contact" && parsed.crmContact) {
+        await addCRMContact(parsed.crmContact);
+        crmUpdateMessage = `Added CRM contact: ${parsed.crmContact.decisionMaker || parsed.crmContact.name || "Contact"}`;
+      } else if (parsed.action === "update_crm_contact" && parsed.crmContact) {
+        await updateCRMContact(parsed.crmContact);
+        crmUpdateMessage = `Updated CRM contact: ${parsed.crmContact.decisionMaker || parsed.crmContact.name || "Contact"}`;
+      } else {
+        crmUpdateMessage = "No CRM changes from this feedback.";
+      }
+      if (crmUpdateMessage) {
+        setCrmUpdateFeed((prev) => [crmUpdateMessage, ...prev].slice(0, 6));
+      }
+      setFeedbackAdvice(parsed.nextStep || "Keep moving on highest-impact outreach and refresh CRM after each call.");
+      setFeedbackMessage("Feedback processed.");
+      setFeedbackText("");
+    } catch (e) {
+      console.error("Feedback submission failed", e);
+      setFeedbackError("Failed to process feedback.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
 
   if (loadingAdmin) {
     return <div className="p-8 text-center text-sm text-gray-500">{t('loading_mission_control')}</div>;
@@ -695,412 +861,139 @@ export default function EspressoDashboard() {
 
   return (
     <div className="max-w-3xl w-full mx-auto px-1 md:px-0 py-6 pb-32 overflow-x-hidden">
-      {/* Header matching Inbox style */}
       <div className="flex items-center border-b border-gray-100 mb-6 pb-2 pl-2">
-        <span className="text-xs font-semibold tracking-tight text-black mr-4">ESPRESSO</span>
-        <span className="text-[10px] text-gray-400">Tier {progress.currentTier}/7</span>
+        <span className="text-xs font-semibold tracking-tight text-black mr-4">BRAIN</span>
       </div>
 
       <div className="space-y-8">
-        {showPermitsForm && (
-          <PermitsForm 
-            onClose={() => setShowPermitsForm(false)} 
-            onSave={handlePermitsSave}
-            initialData={permitsData}
-            tier={progress.currentTier}
-          />
-        )}
-        {showActivationForm && (
-          <ActivationKitForm 
-            onClose={() => setShowActivationForm(false)} 
-            onSave={handleActivationSave}
-            initialData={activationData}
-            tier={progress.currentTier}
-          />
-        )}
-        {showCompetitionForm && (
-          <CompetitionForm 
-            onClose={() => setShowCompetitionForm(false)} 
-            onSave={handleCompetitionSave}
-            initialData={competitionData}
-            tier={progress.currentTier}
-          />
-        )}
-        {showAirportForm && (
-          <AirportForm 
-            onClose={() => setShowAirportForm(false)} 
-            onSave={handleAirportSave}
-            initialData={airportData}
-          />
-        )}
-        {showLotForm && (
-          <LotActivationForm 
-            onClose={() => setShowLotForm(false)} 
-            onSave={handleLotSave}
-            initialData={lotData}
-            tier={progress.currentTier}
-          />
-        )}
-        {showStakeholderModal && (
-          <DocumentSubmissionModal
-            onClose={() => setShowStakeholderModal(false)}
-            onSubmitted={() => {
-              handleStakeholderSubmitted();
-              setShowStakeholderModal(false);
-            }}
-            tier={progress.currentTier}
-            type="stakeholder"
-            title={progress.currentTier === 6 ? `${t('hotel_analysis')} (Essay)` : `${t('whales_analysis')} (Essay)`}
-            placeholder={progress.currentTier === 6 
-              ? t('hotel_analysis_placeholder')
-              : t('whales_analysis_placeholder')
-            }
-          />
-        )}
-
-        {/* 0. Documents */}
         <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('documents')}</h2>
-          <div className="space-y-1">
-
-
-            {/* Permits */}
-            <div 
-              onClick={() => handleFormClick("permits", setShowPermitsForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
-                docsState[`t${progress.currentTier}-permits`] ? "bg-gray-50/50" : ""
-              } ${canOpenForm("permits") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex items-center gap-2">
-                <div>
-                  <h3 className="text-xs font-bold text-black">{t('permits_public')}</h3>
-                  <div className="mt-1">
-                    {getStatusBadge("permits", !!docsState[`t${progress.currentTier}-permits`])}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Competition */}
-            <div 
-              onClick={() => handleFormClick("competition", setShowCompetitionForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
-                docsState[`t${progress.currentTier}-competition`] ? "bg-gray-50/50" : ""
-              } ${canOpenForm("competition") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex items-center gap-2">
-                <div>
-                  <h3 className="text-xs font-bold text-black">{t('competition_analysis')}</h3>
-                  <div className="mt-1">
-                    {getStatusBadge("competition", !!docsState[`t${progress.currentTier}-competition`])}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Lot Activation */}
-            <div 
-              onClick={() => handleFormClick("lot_activation", setShowLotForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
-                docsState[`t${progress.currentTier}-activation`] ? "bg-gray-50/50" : ""
-              } ${canOpenForm("lot_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex items-center gap-3">
-                <div>
-                  <h3 className="text-xs font-bold text-black">{t('lot_activation_list')}</h3>
-                  <div className="mt-1">
-                    {getStatusBadge("lot_activation", !!docsState[`t${progress.currentTier}-activation`])}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Special Forms Logic */}
-            {progress.currentTier === 1 && (
-              <div 
-                onClick={() => handleFormClick("airport", setShowAirportForm)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""} ${canOpenForm("airport") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-black">{t('airport_analysis')}</h3>
-                    <div className="mt-1">
-                      {getStatusBadge("airport", !!docsState[`t${progress.currentTier}-specific`])}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {(progress.currentTier === 6 || progress.currentTier === 7) && (
-              <div 
-                onClick={() => handleFormClick("stakeholder", setShowStakeholderModal)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${docsState[`t${progress.currentTier}-specific`] ? "bg-gray-50/50" : ""} ${canOpenForm("stakeholder") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-              >
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-black">{t('stakeholder_analysis')}</h3>
-                    <div className="mt-1">
-                      {getStatusBadge("stakeholder", !!docsState[`t${progress.currentTier}-specific`])}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* HUB Activation Form (Moved to end) */}
-            <div 
-              onClick={() => handleFormClick("hub_activation", setShowActivationForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between ${
-                activationData ? "bg-gray-50/50" : ""
-              } ${canOpenForm("hub_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex items-center gap-2">
-                <div>
-                  <h3 className="text-sm font-black text-black uppercase tracking-tight">{t('hub_activation_form')}</h3>
-                  <div className="mt-1">
-                    {getStatusBadge("hub_activation", !!activationData)}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        {/* 1. Daily Tasks */}
-        <section>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">{t('daily_tasks')}</h2>
-          
-          <div className="space-y-1">
-            <div 
-              onClick={() => handleFormClick("permits", setShowPermitsForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("permits") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex-1">
-                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-permits`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  {t('fill_permits_task')}
-                </h3>
-                <p className="text-[10px] text-gray-500">Tier {progress.currentTier}</p>
-              </div>
-               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-permits`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-permits`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
-            </div>
-
-            <div 
-              onClick={() => handleFormClick("competition", setShowCompetitionForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("competition") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex-1">
-                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-competition`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  {t('fill_competition_task')}
-                </h3>
-                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-              </div>
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-competition`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-competition`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
-            </div>
-
-            <div 
-              onClick={() => handleFormClick("lot_activation", setShowLotForm)}
-              className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-2 ${canOpenForm("lot_activation") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-            >
-              <div className="flex-1">
-                <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-activation`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  {t('fill_lot_activation_task')}
-                </h3>
-                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-              </div>
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-activation`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-activation`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
-            </div>
-
-            {progress.currentTier === 1 && (
-              <div 
-                onClick={() => handleFormClick("airport", setShowAirportForm)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-3 ${canOpenForm("airport") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-              >
-                <div className="flex-1">
-                  <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
-                    {t('fill_airport_analysis_task')}
-                  </h3>
-                  <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-                </div>
-                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                  docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
-                }`}>
-                  {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                </div>
-              </div>
-            )}
-
-            {(progress.currentTier === 6 || progress.currentTier === 7) && (
-              <div 
-                onClick={() => handleFormClick("stakeholder", setShowStakeholderModal)}
-                className={`group border-b border-gray-100 py-3 hover:bg-gray-50 transition-colors px-2 rounded-lg flex items-center justify-between gap-3 ${canOpenForm("stakeholder") ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
-              >
-                <div className="flex-1">
-                  <h3 className={`text-xs font-bold ${docsState[`t${progress.currentTier}-specific`] ? "text-gray-400 line-through" : "text-black"}`}>
-                  {t('fill_analysis').replace('{type}', progress.currentTier === 6 ? t('hotel') : t('whales_corporation'))}
-                </h3>
-                <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-              </div>
-              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                docsState[`t${progress.currentTier}-specific`] ? "bg-black border-black" : "border-gray-300 bg-white"
-              }`}>
-                {docsState[`t${progress.currentTier}-specific`] && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-              </div>
-            </div>
-          )}
-
-          <div 
-            onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
-            className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
-          >
-            <div className="flex-1">
-              <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>
-                {t('map_relevant_lots')}
-              </h3>
-              <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-            </div>
-            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-              mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
-            }`}>
-              {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-            </div>
-          </div>
-
-          <div 
-            onClick={() => setActivateLotCompleted(!activateLotCompleted)}
-            className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
-          >
-            <div className="flex-1">
-              <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>
-                {t('activate_1_lot_goal')}
-              </h3>
-              <p className="text-[10px] text-gray-500">{t('tier_label')} {progress.currentTier}</p>
-            </div>
-            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-              activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"
-            }`}>
-              {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-2">Brain plan</h2>
-        <div className="border border-gray-100 rounded-lg px-2 py-3 bg-gray-50/50">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-xs text-black">Dnevni plan leadova</p>
-              {brainPlan && (
-                <p className="text-[10px] text-gray-500">
-                  {brainPlan.date} • zona {brainPlan.zone.lat.toFixed(3)}, {brainPlan.zone.lon.toFixed(3)}
-                </p>
-              )}
-            </div>
+          <div className="flex items-center justify-between mb-2 pl-2">
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('daily_tasks')}</h2>
             <button
               onClick={() => runBrainPlan(false)}
               disabled={brainLoading}
               className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50"
             >
-              {brainLoading ? "Generiram..." : "Regeneriraj"}
+              {brainLoading ? "Generating..." : "Regenerate"}
             </button>
           </div>
-          {brainError && (
-            <p className="text-[10px] text-red-500 mb-1">
-              {brainError}
-            </p>
-          )}
-          {brainPlan ? (
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {brainPlan.tasks.slice(0, 15).map((task, idx) => {
-                const lead = brainPlan.leads.find((l) => l.id === task.leadId);
-                const title = buildBrainTaskTitle(task, lead);
-                return (
-                  <div key={`${task.type}-${task.leadId}-${idx}`} className="flex items-start gap-2">
-                    <div className="w-3 h-3 rounded-full bg-black mt-0.5" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-black">
-                        {title}
-                      </span>
-                      {lead && (
-                        <span className="text-[10px] text-gray-500">
-                          {lead.name} • {lead.type}
-                        </span>
-                      )}
-                    </div>
+          <div className="space-y-1">
+            {brainError && (
+              <p className="text-[10px] text-red-500 px-2 py-1">{brainError}</p>
+            )}
+            {brainPlan?.tasks?.map((task, idx) => {
+              const lead = brainPlan.leads.find((l) => l.id === task.leadId);
+              const title = buildBrainTaskTitle(task, lead);
+              const taskId = `brain-${task.type}-${task.leadId}-${idx}`;
+              const completed = !!taskCompletionMap[taskId];
+              return (
+                <div
+                  key={taskId}
+                  onClick={() => toggleTaskCompletion(taskId, title)}
+                  className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+                >
+                  <div className="flex-1">
+                    <h3 className={`text-xs font-bold ${completed ? "text-gray-400 line-through" : "text-black"}`}>{title}</h3>
+                    {lead && <p className="text-[10px] text-gray-500">{lead.name} • {lead.type}</p>}
                   </div>
-                );
-              })}
-              {brainPlan.tasks.length > 15 && (
-                <p className="text-[10px] text-gray-400">
-                  + još zadataka u taskbaru
-                </p>
-              )}
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${completed ? "bg-black border-black" : "border-gray-300 bg-white"}`}>
+                    {completed && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                </div>
+              );
+            })}
+            <div
+              onClick={() => setMapLotsCompleted(!mapLotsCompleted)}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+            >
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${mapLotsCompleted ? "text-gray-400 line-through" : "text-black"}`}>{t('map_relevant_lots')}</h3>
+              </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${mapLotsCompleted ? "bg-black border-black" : "border-gray-300 bg-white"}`}>
+                {mapLotsCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
-          ) : (
-            <p className="text-[10px] text-gray-500">
-              Plan se učitava iz Brain sloja...
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Mission Section */}
-      <section>
-        <div className="flex items-center border-b border-gray-100 mb-4 pb-2 pl-2 mt-8">
-          <span className="text-xs font-semibold tracking-tight text-black mr-4">{t('mission')}</span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-          {/* Primary Metrics */}
-          <div>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('performance')}</h2>
-            <div className="flex flex-col space-y-1">
-              <MissionItem label={t('current_revenue')} value={`${currentValue.toLocaleString()}€`} />
-              <MissionItem label={t('lots_mapped')} value={lotsMapped} />
-              <MissionItem label={t('lots_activated')} value={lotsActivated} />
+            <div
+              onClick={() => setActivateLotCompleted(!activateLotCompleted)}
+              className="group border-b border-gray-100 py-3 hover:bg-gray-50 cursor-pointer transition-colors px-2 rounded-lg flex items-center justify-between gap-3"
+            >
+              <div className="flex-1">
+                <h3 className={`text-xs font-bold ${activateLotCompleted ? "text-gray-400 line-through" : "text-black"}`}>{t('activate_1_lot_goal')}</h3>
+              </div>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${activateLotCompleted ? "bg-black border-black" : "border-gray-300 bg-white"}`}>
+                {activateLotCompleted && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+              </div>
             </div>
           </div>
+        </section>
 
-          {/* Strategic Initiatives */}
-          <div>
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">{t('strategic_initiatives')}</h2>
-            <div className="flex flex-col space-y-1">
-              <MissionItem 
-                label={t('smart_city_program')} 
-                value={smartProgram ? t('yes') : t('no')} 
-                onClick={() => setSmartProgram(!smartProgram)}
-              />
-              <MissionItem 
-                label={t('airport_hub_contract')} 
-                value={airportHub ? t('yes') : t('no')} 
-                onClick={() => setAirportHub(!airportHub)}
-              />
-              <MissionItem 
-                label={t('city_hub_contract')} 
-                value={cityHub ? t('yes') : t('no')} 
-                onClick={() => setCityHub(!cityHub)}
-              />
+        <section>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Rationale</h2>
+          <div className="border border-gray-100 rounded-lg px-3 py-3 bg-gray-50/50">
+            {brainPlan ? (
+              <p className="text-xs text-black leading-relaxed">
+                Brain selected {brainPlan.tasks.length} tasks using nearby lead density around {brainPlan.zone.lat.toFixed(3)}, {brainPlan.zone.lon.toFixed(3)} and today&apos;s outreach quotas ({brainPlan.quotas.calls} calls, {brainPlan.quotas.emails} emails, {brainPlan.quotas.messages} messages, {brainPlan.quotas.walk_in_zones} walk-in zones, {brainPlan.quotas.ads} ads).
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">Brain is generating a daily rationale.</p>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">Feedback</h2>
+          <div className="border border-gray-100 rounded-lg px-3 py-3 bg-white space-y-3">
+            <select
+              value={selectedFeedbackModel}
+              onChange={(e) => setSelectedFeedbackModel(e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded px-2 py-2 bg-white"
+            >
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq)</option>
+              <option value="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B (Groq)</option>
+              <option value="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B (Groq)</option>
+              <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq)</option>
+            </select>
+            <textarea
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              className="w-full min-h-24 text-xs border border-gray-200 rounded px-2 py-2 resize-y"
+              placeholder="Describe what should change in today’s plan."
+            />
+            <div className="flex items-center justify-between">
+              <button
+                onClick={submitBrainFeedback}
+                disabled={feedbackLoading || !feedbackText.trim()}
+                className="text-[10px] px-3 py-1.5 rounded border border-gray-300 bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {feedbackLoading ? "Processing..." : "Send Feedback"}
+              </button>
+              {feedbackMessage && <span className="text-[10px] text-green-600">{feedbackMessage}</span>}
+              {feedbackError && <span className="text-[10px] text-red-600">{feedbackError}</span>}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section>
+          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 pl-2">CRM Updates & Advice</h2>
+          <div className="border border-gray-100 rounded-lg px-3 py-3 bg-white space-y-3">
+            <div className="border border-gray-100 rounded px-3 py-2 bg-gray-50/60">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Immediate Advice</p>
+              <p className="text-xs text-black leading-relaxed">{feedbackAdvice || "Submit feedback to receive immediate next-course guidance."}</p>
+            </div>
+            <div className="border border-gray-100 rounded px-3 py-2 bg-gray-50/60">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">CRM Update Feed</p>
+              <div className="space-y-1">
+                {crmUpdateFeed.length > 0 ? (
+                  crmUpdateFeed.map((entry, idx) => (
+                    <p key={`${entry}-${idx}`} className="text-xs text-black">{entry}</p>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500">No CRM update events yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

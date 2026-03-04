@@ -16,6 +16,18 @@ type OverpassResponse = {
   elements: OverpassElement[];
 };
 
+type Lead = {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lon: number;
+  score: number;
+  source: string;
+  nearestParkingId?: string;
+  nearestParkingDistanceM?: number;
+};
+
 function getCoords(e: OverpassElement) {
   if (typeof e.lat === "number" && typeof e.lon === "number") {
     return { lat: e.lat, lon: e.lon };
@@ -25,12 +37,16 @@ function getCoords(e: OverpassElement) {
 }
 
 function weightFor(tags: Record<string, string>) {
-  if (tags["amenity"] === "parking") return 10;
-  const t = tags["tourism"];
-  if (t === "hotel") return 8;
-  if (t === "guest_house") return 7;
-  if (t === "apartment") return 6;
-  return 5;
+  if (tags["tourism"] === "hotel") return 14;
+  if (tags["tourism"] === "apartment") return 12;
+  if (tags["tourism"] === "guest_house") return 11;
+  if (tags["tourism"] === "chalet") return 11;
+  if (tags["amenity"] === "restaurant") return 11;
+  if (tags["amenity"] === "cafe") return 10;
+  if (tags["amenity"] === "bar") return 10;
+  if (tags["shop"] === "bakery") return 10;
+  if (tags["amenity"] === "parking") return 9;
+  return 6;
 }
 
 async function fetchOverpass(bbox: [number, number, number, number]) {
@@ -40,36 +56,80 @@ async function fetchOverpass(bbox: [number, number, number, number]) {
   node["amenity"="parking"](${s},${w},${n},${e});
   way["amenity"="parking"](${s},${w},${n},${e});
   relation["amenity"="parking"](${s},${w},${n},${e});
-  node["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
-  way["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
-  relation["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
+  node["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  way["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  relation["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  node["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  way["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  relation["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  node["shop"="bakery"](${s},${w},${n},${e});
+  way["shop"="bakery"](${s},${w},${n},${e});
+  relation["shop"="bakery"](${s},${w},${n},${e});
 );
 out center;`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    body: new URLSearchParams({ data: q }),
-    cache: "no-store",
-  });
-  if (!res.ok) return { elements: [] } as OverpassResponse;
-  const json = (await res.json()) as OverpassResponse;
-  return json;
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+  ];
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: new URLSearchParams({ data: q }),
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as OverpassResponse;
+      if (Array.isArray(json.elements) && json.elements.length > 0) {
+        return json;
+      }
+    } catch {}
+  }
+  return { elements: [] } as OverpassResponse;
+}
+
+function isParking(tags: Record<string, string>) {
+  return tags["amenity"] === "parking";
+}
+
+function getVenueType(tags: Record<string, string>) {
+  const tourism = tags["tourism"];
+  if (tourism === "hotel") return "hotel";
+  if (tourism === "apartment") return "apartment";
+  if (tourism === "guest_house" || tourism === "chalet") return "villa";
+  if (tags["amenity"] === "restaurant") return "restaurant";
+  if (tags["amenity"] === "cafe") return "cafe";
+  if (tags["amenity"] === "bar") return "bar";
+  if (tags["shop"] === "bakery") return "bakery";
+  return null;
+}
+
+function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 export async function GET(req: NextRequest) {
   const persist = req.nextUrl.searchParams.get("persist") === "true";
   const bbox: [number, number, number, number] = [43.37, 16.15, 43.66, 16.80];
   const data = await fetchOverpass(bbox);
-  const leads = data.elements
+  const all = data.elements
     .map((e) => {
       const tags = e.tags || {};
       const coords = getCoords(e);
       if (!coords) return null;
       const name = tags["name"] || tags["operator"] || tags["brand"] || "Nepoznato";
-      const type =
-        tags["amenity"] === "parking"
-          ? "parking"
-          : tags["tourism"] || "poi";
+      const venueType = getVenueType(tags);
+      const type = isParking(tags) ? "parking" : venueType || "poi";
       const score = weightFor(tags);
       return {
         id: `${e.type}_${e.id}`,
@@ -79,27 +139,103 @@ export async function GET(req: NextRequest) {
         lon: coords.lon,
         score,
         source: "osm",
+        tags,
       };
     })
-    .filter((x) => !!x) as {
-    id: string;
-    name: string;
-    type: string;
-    lat: number;
-    lon: number;
-    score: number;
-    source: string;
-  }[];
-  leads.sort((a, b) => b.score - a.score);
-  const top = leads.slice(0, 20);
+    .filter((x) => !!x) as (Lead & { tags: Record<string, string> })[];
 
-  const quotas = { calls: 10, emails: 10, messages: 10, walk_in_zones: 1, ads: 1 };
+  const parkings = all.filter((x) => x.type === "parking");
+  const venues = all.filter((x) => x.type !== "parking" && x.type !== "poi");
+  const focusedVenues: Lead[] = [];
+  venues.forEach((v) => {
+    let nearestParking: Lead | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const p of parkings) {
+      const d = distanceMeters(v.lat, v.lon, p.lat, p.lon);
+      if (d < nearestDistance) {
+        nearestDistance = d;
+        nearestParking = p;
+      }
+    }
+    if (!nearestParking || !Number.isFinite(nearestDistance) || nearestDistance > 300) return;
+    const proximityBonus = Math.max(0, 300 - nearestDistance) / 100;
+    focusedVenues.push({
+      id: v.id,
+      name: v.name,
+      type: v.type,
+      lat: v.lat,
+      lon: v.lon,
+      score: Number((v.score + proximityBonus).toFixed(2)),
+      source: v.source,
+      nearestParkingId: nearestParking.id,
+      nearestParkingDistanceM: Math.round(nearestDistance),
+    });
+  });
+
+  focusedVenues.sort((a, b) => b.score - a.score);
+  const fallbackVenues = venues
+    .map((v) => ({
+      id: v.id,
+      name: v.name,
+      type: v.type,
+      lat: v.lat,
+      lon: v.lon,
+      score: v.score,
+      source: v.source,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20);
+  let topVenues = (focusedVenues.length > 0 ? focusedVenues : fallbackVenues).slice(0, 20);
+  if (topVenues.length === 0) {
+    try {
+      const supabase = getSupabase();
+      const { data: dbLeads, error } = await supabase
+        .from("leads")
+        .select("id,name,type,latitude,longitude,score,source")
+        .in("type", ["hotel", "apartment", "villa", "restaurant", "cafe", "bar", "bakery"])
+        .gte("latitude", bbox[0])
+        .gte("longitude", bbox[1])
+        .lte("latitude", bbox[2])
+        .lte("longitude", bbox[3])
+        .order("score", { ascending: false })
+        .limit(20);
+      if (!error && dbLeads && dbLeads.length > 0) {
+        topVenues = dbLeads.map((l: any) => ({
+          id: l.id,
+          name: l.name,
+          type: l.type,
+          lat: l.latitude,
+          lon: l.longitude,
+          score: l.score || 0,
+          source: l.source || "db",
+        }));
+      }
+    } catch {}
+  }
+  const parkingIds = Array.from(new Set(focusedVenues.map((v) => v.nearestParkingId).filter(Boolean))) as string[];
+  const mappedParkings = parkingIds
+    .map((id) => parkings.find((p) => p.id === id))
+    .filter((x): x is Lead & { tags: Record<string, string> } => !!x)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      lat: p.lat,
+      lon: p.lon,
+      score: p.score,
+      source: p.source,
+    }))
+    .slice(0, 10);
+  const leads: Lead[] = [...topVenues, ...mappedParkings].filter(
+    (lead, idx, arr) => arr.findIndex((x) => x.id === lead.id) === idx
+  );
+
+  const quotas = { calls: 0, emails: 0, messages: 0, walk_in_zones: 0, ads: 0 };
+  const bestParking = mappedParkings[0] || leads.find((l) => l.type === "parking") || leads[0] || null;
+  const mappableLeads = topVenues.filter((l) => l.type !== "parking");
   const tasks = [
-    ...top.slice(0, 10).map((l) => ({ type: "call", leadId: l.id })),
-    ...top.slice(0, 10).map((l) => ({ type: "email", leadId: l.id })),
-    ...top.slice(0, 10).map((l) => ({ type: "message", leadId: l.id })),
-    { type: "walk_in_zone", lat: top[0]?.lat ?? (bbox[0] + bbox[2]) / 2, lon: top[0]?.lon ?? (bbox[1] + bbox[3]) / 2 },
-    { type: "ad", channel: "social" },
+    ...(bestParking ? [{ type: "activate_lot", leadId: bestParking.id }] : []),
+    ...(mappableLeads.length > 0 ? mappableLeads : topVenues).slice(0, 12).map((l) => ({ type: "map_lot", leadId: l.id })),
   ];
 
   let persisted = 0;
@@ -130,7 +266,7 @@ export async function GET(req: NextRequest) {
     JSON.stringify({
       date: new Date().toISOString().slice(0, 10),
       quotas,
-      leads: top,
+      leads,
       tasks,
       persisted,
       persistError,

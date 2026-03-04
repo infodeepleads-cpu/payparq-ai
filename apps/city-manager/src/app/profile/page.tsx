@@ -549,9 +549,8 @@ export default function ProfilePage() {
             {displayName[0]?.toUpperCase()}
           </div>
           <div className="flex flex-col items-center gap-2">
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-base font-bold text-white">{displayName}</p>
-              <p className="text-[12px] text-white/60">{user?.email || "-"}</p>
+            <div className="flex flex-col items-center">
+              <p className="text-base font-bold text-white">{user?.email || "-"}</p>
             </div>
             <div className="flex items-center gap-2 bg-white/[0.03] px-4 py-1.5 rounded-full border border-white/10">
               <div className={`h-2 w-2 rounded-full ${isVerified ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.6)]'}`} />

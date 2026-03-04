@@ -24,12 +24,16 @@ function getCoords(e: OverpassElement) {
 }
 
 function weightFor(tags: Record<string, string>) {
-  if (tags["amenity"] === "parking") return 10;
-  const t = tags["tourism"];
-  if (t === "hotel") return 8;
-  if (t === "guest_house") return 7;
-  if (t === "apartment") return 6;
-  return 5;
+  if (tags["tourism"] === "hotel") return 14;
+  if (tags["tourism"] === "apartment") return 12;
+  if (tags["tourism"] === "guest_house") return 11;
+  if (tags["tourism"] === "chalet") return 11;
+  if (tags["amenity"] === "restaurant") return 11;
+  if (tags["amenity"] === "cafe") return 10;
+  if (tags["amenity"] === "bar") return 10;
+  if (tags["shop"] === "bakery") return 10;
+  if (tags["amenity"] === "parking") return 9;
+  return 6;
 }
 
 async function fetchOverpass(bbox: [number, number, number, number]) {
@@ -39,20 +43,66 @@ async function fetchOverpass(bbox: [number, number, number, number]) {
   node["amenity"="parking"](${s},${w},${n},${e});
   way["amenity"="parking"](${s},${w},${n},${e});
   relation["amenity"="parking"](${s},${w},${n},${e});
-  node["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
-  way["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
-  relation["tourism"~"hotel|guest_house|apartment"](${s},${w},${n},${e});
+  node["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  way["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  relation["tourism"~"hotel|guest_house|apartment|chalet"](${s},${w},${n},${e});
+  node["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  way["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  relation["amenity"~"restaurant|cafe|bar"](${s},${w},${n},${e});
+  node["shop"="bakery"](${s},${w},${n},${e});
+  way["shop"="bakery"](${s},${w},${n},${e});
+  relation["shop"="bakery"](${s},${w},${n},${e});
 );
 out center;`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-    body: new URLSearchParams({ data: q }),
-    cache: "no-store",
-  });
-  if (!res.ok) return { elements: [] } as OverpassResponse;
-  const json = (await res.json()) as OverpassResponse;
-  return json;
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+  ];
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body: new URLSearchParams({ data: q }),
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as OverpassResponse;
+      if (Array.isArray(json.elements) && json.elements.length > 0) {
+        return json;
+      }
+    } catch {}
+  }
+  return { elements: [] } as OverpassResponse;
+}
+
+function isParking(tags: Record<string, string>) {
+  return tags["amenity"] === "parking";
+}
+
+function getVenueType(tags: Record<string, string>) {
+  const tourism = tags["tourism"];
+  if (tourism === "hotel") return "hotel";
+  if (tourism === "apartment") return "apartment";
+  if (tourism === "guest_house" || tourism === "chalet") return "villa";
+  if (tags["amenity"] === "restaurant") return "restaurant";
+  if (tags["amenity"] === "cafe") return "cafe";
+  if (tags["amenity"] === "bar") return "bar";
+  if (tags["shop"] === "bakery") return "bakery";
+  return null;
+}
+
+function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 export async function GET(req: Request) {
@@ -62,16 +112,13 @@ export async function GET(req: Request) {
   const limit = Math.max(1, Math.min(200, limitParam ? parseInt(limitParam, 10) : 40));
   const bbox: [number, number, number, number] = [43.37, 16.15, 43.66, 16.80];
   const data = await fetchOverpass(bbox);
-  const leads = data.elements
+  const all = data.elements
     .map((e) => {
       const tags = e.tags || {};
       const coords = getCoords(e);
       if (!coords) return null;
       const name = tags["name"] || tags["operator"] || tags["brand"] || "Nepoznato";
-      const type =
-        tags["amenity"] === "parking"
-          ? "parking"
-          : tags["tourism"] || "poi";
+      const type = isParking(tags) ? "parking" : getVenueType(tags) || "poi";
       const score = weightFor(tags);
       const rec = {
         id: `${e.type}_${e.id}`,
@@ -81,6 +128,7 @@ export async function GET(req: Request) {
         lon: coords.lon,
         score,
         source: "osm",
+        tags,
         address: [
           tags["addr:street"] || "",
           tags["addr:housenumber"] || "",
@@ -100,11 +148,57 @@ export async function GET(req: Request) {
     lon: number;
     score: number;
     source: string;
+    tags: Record<string, string>;
     address: string | null;
   }[];
 
-  leads.sort((a, b) => b.score - a.score);
-  const top = leads.slice(0, limit);
+  const parkings = all.filter((x) => x.type === "parking");
+  const venues = all.filter((x) => x.type !== "parking" && x.type !== "poi");
+  const focused = venues
+    .map((v) => {
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      for (const p of parkings) {
+        const d = distanceMeters(v.lat, v.lon, p.lat, p.lon);
+        if (d < nearestDistance) nearestDistance = d;
+      }
+      if (!Number.isFinite(nearestDistance) || nearestDistance > 300) return null;
+      const proximityBonus = Math.max(0, 300 - nearestDistance) / 100;
+      return {
+        id: v.id,
+        name: v.name,
+        type: v.type,
+        lat: v.lat,
+        lon: v.lon,
+        score: Number((v.score + proximityBonus).toFixed(2)),
+        source: v.source,
+        address: v.address,
+      };
+    })
+    .filter((x): x is {
+      id: string;
+      name: string;
+      type: string;
+      lat: number;
+      lon: number;
+      score: number;
+      source: string;
+      address: string | null;
+    } => !!x);
+
+  focused.sort((a, b) => b.score - a.score);
+  const fallback = venues
+    .map((v) => ({
+      id: v.id,
+      name: v.name,
+      type: v.type,
+      lat: v.lat,
+      lon: v.lon,
+      score: v.score,
+      source: v.source,
+      address: v.address,
+    }))
+    .sort((a, b) => b.score - a.score);
+  const top = (focused.length > 0 ? focused : fallback).slice(0, limit);
 
   let stored = 0;
   let storeError: string | null = null;
@@ -120,7 +214,7 @@ export async function GET(req: Request) {
             type: l.type,
             latitude: l.lat,
             longitude: l.lon,
-            score: l.score,
+            score: Math.round(l.score),
             source: l.source,
             address: l.address,
           })),
