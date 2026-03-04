@@ -130,7 +130,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <Suspense fallback={null}>
-      <div className="flex flex-col h-[100dvh] w-full overflow-hidden overscroll-none bg-background">
+      <div className="flex flex-col h-[100dvh] w-full overflow-hidden overscroll-none bg-white">
         {shouldShowHeader && <Header />}
         <div className={`flex-1 flex overflow-hidden ${shouldShowHeader ? 'pt-[40px]' : ''} relative`}>
           {shouldShowSidebar && <Sidebar />}

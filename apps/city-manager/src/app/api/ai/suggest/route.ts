@@ -74,7 +74,7 @@ Application Structure & Pages:
           `Context:\n${appStructure}\n\nCurrent Taskbar Content:\n${taskList}\n\n` +
           `Current Server Time (ISO): ${new Date().toISOString()}\n` +
           `Current Server Time (Local): ${new Date().toLocaleString()}\n\n` +
-          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string). ` +
+          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), actions (optional array), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string), rationale (optional string), taskUpdates (optional array), crmUpdates (optional array). ` +
           `Instructions:\n` +
           `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
           `2. **REMINDER LOGIC IS CRITICAL**: If the user asks for a reminder, you MUST set "action": "schedule_reminder" and "reminderTime" (ISO 8601). Do NOT just say you did it in "nextStep" without setting these fields. You MUST output valid JSON.\n` +
@@ -137,6 +137,9 @@ Application Structure & Pages:
           `     Response: { "action": "schedule_reminder", "taskTitle": "Call John", "reminderTime": "2024-01-02T14:00:00.000Z", "nextStep": "I've set a reminder to call John tomorrow at 2pm.", "urgent": false }\n` +
           `   - IMPORTANT: Do not include markdown code blocks (backticks) in your JSON output. Just raw JSON.\n` +
           `   - IMPORTANT: The frontend will handle the actual scheduling based on your response. You just need to identify the intent.\n` +
+          `9. If the user challenges today's rationale or asks to change it:\n` +
+          `   - Set "rationale" to the updated rationale text.\n` +
+          `   - If task changes are needed, include them in "actions" as add_task/complete_task/delete_task entries.\n` +
           `10. If an image is provided: Analyze it and answer the user's request in 'nextStep'.
 ` +
           `Style: concise, actionable, manager-oriented. Return ONLY JSON.\n` +
@@ -239,7 +242,7 @@ Application Structure & Pages:
           `Current Server Time (ISO): ${new Date().toISOString()}\n` +
           `Current Server Time (Local): ${new Date().toLocaleString()}\n\n` +
           `Conversation History:\n${historyText}\n\n` +
-          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string). ` +
+          `Return JSON with keys: nextStep, urgent (boolean), action (optional string), actions (optional array), taskTitle (optional string), crmContact (optional object), reminderTime (optional ISO string), rationale (optional string), taskUpdates (optional array), crmUpdates (optional array). ` +
            `Instructions:\n` +
            `1. Analyze the conversation history, the new note, and the provided context (tasks and pages).\n` +
            `2. Be mindful of the application pages and current tasks when answering. Suggest actions related to them if relevant.\n` +
@@ -297,7 +300,10 @@ Application Structure & Pages:
           `   - EXAMPLE:\n` +
           `     Input: "Remind me to call John at 2pm tomorrow"\n` +
           `     Response: { "action": "schedule_reminder", "taskTitle": "Call John", "reminderTime": "2024-01-02T14:00:00.000Z", "nextStep": "I've set a reminder to call John tomorrow at 2pm.", "urgent": false }\n` +
-          `9. If an image is provided: Analyze it and answer the user's request in 'nextStep'.\n` +
+          `9. If the user challenges today's rationale or asks to change it:\n` +
+          `   - Set "rationale" to the updated rationale text.\n` +
+          `   - If task changes are needed, include them in "actions" as add_task/complete_task/delete_task entries.\n` +
+          `10. If an image is provided: Analyze it and answer the user's request in 'nextStep'.\n` +
            `Style: concise, actionable, manager-oriented. Return ONLY JSON. Do not include markdown code blocks.`
          });
 
@@ -359,9 +365,13 @@ Application Structure & Pages:
         nextStep: parsed.nextStep || "",
         urgent: !!parsed.urgent,
         action: parsed.action,
+        actions: Array.isArray(parsed.actions) ? parsed.actions : undefined,
+        taskUpdates: Array.isArray(parsed.taskUpdates) ? parsed.taskUpdates : undefined,
+        crmUpdates: Array.isArray(parsed.crmUpdates) ? parsed.crmUpdates : undefined,
         taskTitle: parsed.taskTitle,
         crmContact: parsed.crmContact,
-        reminderTime: parsed.reminderTime
+        reminderTime: parsed.reminderTime,
+        rationale: typeof parsed.rationale === "string" ? parsed.rationale : undefined
       });
 
     } catch (error: any) {

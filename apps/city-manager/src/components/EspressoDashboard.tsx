@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEspressoSystem } from "../hooks/useEspressoSystem";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupabase, getCurrentUser, isSuperAdmin, pullMirroredTasksToLocal, queueTasksMirror } from "../lib/supabase";
@@ -37,6 +37,7 @@ type BrainLead = {
 type BrainTask = {
   type: string;
   leadId: string;
+  title?: string;
 };
 
 type BrainPlan = {
@@ -51,12 +52,13 @@ type BrainPlan = {
   zone: { lat: number; lon: number };
   leads: BrainLead[];
   tasks: BrainTask[];
+  rationale?: string;
 };
 
 async function loadContacts(): Promise<Contact[]> {
   try {
     const supabase = getSupabase();
-    const { data } = await supabase.from("crm_contacts").select("*");
+    const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
     
     if (!data) return [];
 
@@ -138,9 +140,16 @@ export default function EspressoDashboard() {
   const [cityHub, setCityHub] = useState(false);
 
   useEffect(() => {
-    loadContacts().then(setContacts);
-    const handler = () => loadContacts().then(setContacts);
+    const refreshContacts = () => loadContacts().then(setContacts);
+    refreshContacts();
+    const handler = () => refreshContacts();
     window.addEventListener("crm_storage", handler);
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === "crm_update_signal") {
+        refreshContacts();
+      }
+    };
+    window.addEventListener("storage", storageHandler);
     
     // Load hub state
     const savedHubs = localStorage.getItem("pp_mission_hubs");
@@ -151,7 +160,10 @@ export default function EspressoDashboard() {
       setSmartProgram(smart);
     }
 
-    return () => window.removeEventListener("crm_storage", handler);
+    return () => {
+      window.removeEventListener("crm_storage", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
   }, []);
 
   // Save hub state
@@ -172,6 +184,9 @@ export default function EspressoDashboard() {
     .reduce((acc, c) => acc + (c.estimatedCapacity || 0) * 100, 0);
 
   const buildBrainTaskTitle = (task: BrainTask, lead?: BrainLead) => {
+    if (typeof task.title === "string" && task.title.trim()) {
+      return task.title.trim();
+    }
     const name = lead?.name || "Lead";
     const type = lead?.type || "poi";
     if (task.type === "activate_lot") {
@@ -203,6 +218,33 @@ export default function EspressoDashboard() {
     return `Follow up s ${name}`;
   };
 
+  const tierForLeadType = (type: string) => {
+    const normalized = String(type || "").toLowerCase();
+    if (normalized === "hotel") return 6;
+    if (normalized === "apartment" || normalized === "villa") return 4;
+    if (normalized === "restaurant" || normalized === "cafe" || normalized === "bar" || normalized === "bakery") return 3;
+    if (normalized === "parking") return 5;
+    return 2;
+  };
+
+  const buildBrainTaskId = (task: BrainTask, index: number, date?: string) => {
+    return `brain-${date || "undated"}-${index}-${task.type}-${task.leadId}`;
+  };
+
+  const buildBrainRationale = (plan: BrainPlan) => {
+    if (typeof plan.rationale === "string" && plan.rationale.trim()) {
+      return plan.rationale.trim();
+    }
+    return `Brain selected ${plan.tasks.length} tasks using nearby lead density around ${plan.zone.lat.toFixed(3)}, ${plan.zone.lon.toFixed(3)} and today's outreach quotas (${plan.quotas.calls} calls, ${plan.quotas.emails} emails, ${plan.quotas.messages} messages, ${plan.quotas.walk_in_zones} walk-in zones, ${plan.quotas.ads} ads).`;
+  };
+
+  const persistBrainPlan = (plan: BrainPlan) => {
+    const normalized = { ...plan, rationale: buildBrainRationale(plan) };
+    setBrainPlan(normalized);
+    localStorage.setItem("pp_brain_last_date", normalized.date || new Date().toISOString().slice(0, 10));
+    localStorage.setItem("pp_brain_plan", JSON.stringify(normalized));
+  };
+
   const syncBrainTasksToLocal = (plan: BrainPlan) => {
     try {
       const TASKS_KEY = "pp_tasks";
@@ -213,7 +255,7 @@ export default function EspressoDashboard() {
         leadsMap[l.id] = l;
       });
       let updated = false;
-      const nextPlanTaskIds = new Set(plan.tasks.map((task) => `brain-${task.type}-${task.leadId}`));
+      const nextPlanTaskIds = new Set(plan.tasks.map((task, index) => buildBrainTaskId(task, index, plan.date)));
       const next = tasks.filter((task: any) => {
         if (typeof task?.id !== "string") return true;
         if (!task.id.startsWith("brain-")) return true;
@@ -223,8 +265,8 @@ export default function EspressoDashboard() {
         updated = true;
       }
 
-      plan.tasks.forEach((task) => {
-        const id = `brain-${task.type}-${task.leadId}`;
+      plan.tasks.forEach((task, index) => {
+        const id = buildBrainTaskId(task, index, plan.date);
         const lead = leadsMap[task.leadId];
         const title = buildBrainTaskTitle(task, lead);
         const existingIdx = next.findIndex((t: any) => t.id === id);
@@ -256,6 +298,104 @@ export default function EspressoDashboard() {
     }
   };
 
+  const syncBrainLeadsToCRM = async (plan: BrainPlan) => {
+    const date = plan.date || new Date().toISOString().slice(0, 10);
+    const leadsById = new Map((plan.leads || []).map((lead) => [lead.id, lead]));
+    const signatureCounters = new Map<string, number>();
+    const taskEntries = (plan.tasks || []).map((task, index) => {
+      const lead = leadsById.get(task.leadId);
+      const title = buildBrainTaskTitle(task, lead);
+      const signature = `${task.type}|${task.leadId}|${title}`;
+      const count = (signatureCounters.get(signature) || 0) + 1;
+      signatureCounters.set(signature, count);
+      return {
+        index,
+        task,
+        lead,
+        title,
+        marker: `${date}|${signature}|${count}`,
+      };
+    });
+    if (taskEntries.length === 0) return;
+    const user = await getCurrentUser();
+    const userKey = user?.id || "guest";
+    const markerKey = `pp_brain_crm_sync_${userKey}_${date}`;
+    const markerValue = taskEntries.map((entry) => entry.marker).join("|");
+    if (localStorage.getItem(markerKey) === markerValue) {
+      await loadContacts().then(setContacts);
+      return;
+    }
+
+    if (!user) {
+      const raw = localStorage.getItem(CRM_KEY);
+      const existing = raw ? JSON.parse(raw) : [];
+      const existingMarkers = new Set<string>();
+      existing.forEach((contact: any) => {
+        const text = String(contact?.notes || "");
+        const matches = text.match(/\[BRAIN_TASK:([^\]]+)\]/g) || [];
+        matches.forEach((m: string) => existingMarkers.add(m.replace("[BRAIN_TASK:", "").replace("]", "")));
+      });
+      const toInsert = taskEntries
+        .filter((entry) => !existingMarkers.has(entry.marker))
+        .map((entry) => ({
+          id: `brain-${entry.task.leadId}-${entry.index}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          tier: tierForLeadType(entry.lead?.type || "custom"),
+          decisionMaker: entry.lead?.name || entry.title,
+          city: entry.lead
+            ? `${String(entry.lead.type || "lead").toUpperCase()} • (${entry.lead.lat.toFixed(3)}, ${entry.lead.lon.toFixed(3)})`
+            : "CUSTOM • Feedback task",
+          estimatedCapacity: Math.max(1, Math.round((entry.lead?.score || 1) * 5)),
+          decisionStatus: `${entry.index + 1}. ${date}`,
+          notes: `[BRAIN_TASK:${entry.marker}] [BRAIN_LEAD:${entry.task.leadId}] Source:${entry.lead?.source || "feedback"} Score:${entry.lead?.score || 1} Date:${date} Title:${entry.title}`,
+          created_at: new Date().toISOString(),
+        }));
+      if (toInsert.length > 0) {
+        localStorage.setItem(CRM_KEY, JSON.stringify([...toInsert, ...existing]));
+        window.dispatchEvent(new Event("crm_storage"));
+      }
+      localStorage.setItem(markerKey, markerValue);
+      await loadContacts().then(setContacts);
+      return;
+    }
+
+    const supabase = getSupabase();
+    const { data: existingRows } = await supabase
+      .from("crm_contacts")
+      .select("id,notes")
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    const existingMarkers = new Set<string>();
+    (existingRows || []).forEach((row: any) => {
+      const text = String(row?.notes || "");
+      const matches = text.match(/\[BRAIN_TASK:([^\]]+)\]/g) || [];
+      matches.forEach((m: string) => existingMarkers.add(m.replace("[BRAIN_TASK:", "").replace("]", "")));
+    });
+    const payload = taskEntries
+      .filter((entry) => !existingMarkers.has(entry.marker))
+      .map((entry) => ({
+        user_id: user.id,
+        tier: tierForLeadType(entry.lead?.type || "custom"),
+        decision_maker: entry.lead?.name || entry.title,
+        location: entry.lead
+          ? `${String(entry.lead.type || "lead").toUpperCase()} • (${entry.lead.lat.toFixed(3)}, ${entry.lead.lon.toFixed(3)})`
+          : "CUSTOM • Feedback task",
+        estimated_capacity: Math.max(1, Math.round((entry.lead?.score || 1) * 5)),
+        status: `${entry.index + 1}. ${date}`,
+        next_step: `Contact from Brain daily task list (${date})`,
+        notes: `[BRAIN_TASK:${entry.marker}] [BRAIN_LEAD:${entry.task.leadId}] Source:${entry.lead?.source || "feedback"} Score:${entry.lead?.score || 1} Date:${date} Title:${entry.title}`,
+      }));
+    if (payload.length > 0) {
+      const { error } = await supabase.from("crm_contacts").insert(payload);
+      if (error) {
+        throw error;
+      }
+      window.dispatchEvent(new Event("crm_storage"));
+      localStorage.setItem("crm_update_signal", Date.now().toString());
+    }
+    localStorage.setItem(markerKey, markerValue);
+    await loadContacts().then(setContacts);
+  };
+
   const runBrainPlan = async (auto: boolean) => {
     try {
       setBrainLoading(true);
@@ -265,11 +405,9 @@ export default function EspressoDashboard() {
         throw new Error("Failed to load daily plan");
       }
       const json = (await res.json()) as BrainPlan;
-      setBrainPlan(json);
+      persistBrainPlan(json);
       syncBrainTasksToLocal(json);
-      const today = json.date || new Date().toISOString().slice(0, 10);
-      localStorage.setItem("pp_brain_last_date", today);
-      localStorage.setItem("pp_brain_plan", JSON.stringify(json));
+      await syncBrainLeadsToCRM(json);
     } catch (err) {
       console.error("Brain plan failed", err);
       if (!auto) {
@@ -288,8 +426,9 @@ export default function EspressoDashboard() {
         const saved = localStorage.getItem("pp_brain_plan");
         if (saved) {
           const parsed = JSON.parse(saved) as BrainPlan;
-          setBrainPlan(parsed);
+          setBrainPlan({ ...parsed, rationale: buildBrainRationale(parsed) });
           syncBrainTasksToLocal(parsed);
+          void syncBrainLeadsToCRM(parsed);
           return;
         }
       }
@@ -589,6 +728,21 @@ export default function EspressoDashboard() {
   const [feedbackAdvice, setFeedbackAdvice] = useState("");
   const [crmUpdateFeed, setCrmUpdateFeed] = useState<string[]>([]);
 
+  const sortedContactsByTier = useMemo(() => {
+    const grouped = contacts.reduce((acc: Record<number, Contact[]>, contact) => {
+      const tier = Number(contact.tier) || 0;
+      if (!acc[tier]) acc[tier] = [];
+      acc[tier].push(contact);
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .map(([tier, list]) => ({
+        tier: Number(tier),
+        list: [...list].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+      }))
+      .sort((a, b) => b.tier - a.tier);
+  }, [contacts]);
+
   const readLocalTasks = () => {
     const rawTasks = localStorage.getItem(TASKS_KEY);
     return rawTasks ? JSON.parse(rawTasks) : [];
@@ -675,6 +829,7 @@ export default function EspressoDashboard() {
     }
     const supabase = getSupabase();
     await supabase.from("crm_contacts").insert({
+      user_id: user.id,
       tier: contact.tier,
       decision_maker: contact.decisionMaker,
       location: contact.location,
@@ -725,75 +880,208 @@ export default function EspressoDashboard() {
     return trimmed;
   };
 
+  const extractRationaleOverride = (text: string) => {
+    const match = text.match(/rationale\s*[: -]\s*([\s\S]+)/i);
+    if (!match) return "";
+    return match[1].trim();
+  };
+
+  const parseManualOperations = (text: string) => {
+    const ops: any[] = [];
+    text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .forEach((line) => {
+        const add = line.match(/^(add|create)\s+task[:\s-]+(.+)$/i);
+        if (add) {
+          ops.push({ action: "add_task", taskTitle: add[2].trim() });
+          return;
+        }
+        const del = line.match(/^(delete|remove)\s+task[:\s-]+(.+)$/i);
+        if (del) {
+          ops.push({ action: "delete_task", taskTitle: del[2].trim() });
+          return;
+        }
+        const done = line.match(/^(complete|finish)\s+task[:\s-]+(.+)$/i);
+        if (done) {
+          ops.push({ action: "complete_task", taskTitle: done[2].trim() });
+          return;
+        }
+        const revert = line.match(/^(revert|undo)\s+task[:\s-]+(.+)$/i);
+        if (revert) {
+          ops.push({ action: "revert_task", taskTitle: revert[2].trim() });
+          return;
+        }
+        const update = line.match(/^(update|edit)\s+task[:\s-]+(.+?)\s*(?:->|=>)\s*(.+)$/i);
+        if (update) {
+          ops.push({ action: "update_task", taskTitle: update[2].trim(), newTaskTitle: update[3].trim() });
+        }
+      });
+    return ops;
+  };
+
   const submitBrainFeedback = async () => {
     if (!feedbackText.trim()) return;
     setFeedbackLoading(true);
     setFeedbackError("");
     setFeedbackMessage("");
     try {
-      const rawTasks = localStorage.getItem(TASKS_KEY);
-      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      let workingTasks = readLocalTasks();
       const crmContacts = await readCRM();
+      const updateFeed: string[] = [];
+      let nextPlan: BrainPlan | null = brainPlan
+        ? { ...brainPlan, tasks: [...brainPlan.tasks], leads: [...brainPlan.leads], rationale: buildBrainRationale(brainPlan) }
+        : null;
+
+      const applyTaskOpToPlan = (op: any) => {
+        if (!nextPlan || !op?.taskTitle) return;
+        const title = String(op.taskTitle).trim();
+        if (!title) return;
+        if (op.action === "add_task") {
+          const leadId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          nextPlan = {
+            ...nextPlan,
+            leads: [
+              ...nextPlan.leads,
+              { id: leadId, name: "Feedback task", type: "custom", lat: nextPlan.zone.lat, lon: nextPlan.zone.lon, score: 1, source: "feedback" },
+            ],
+            tasks: [...nextPlan.tasks, { type: "custom_feedback", leadId, title }],
+          };
+          return;
+        }
+        if (op.action === "delete_task") {
+          nextPlan = {
+            ...nextPlan,
+            tasks: nextPlan.tasks.filter((task) => buildBrainTaskTitle(task, nextPlan!.leads.find((lead) => lead.id === task.leadId)).toLowerCase() !== title.toLowerCase()),
+          };
+          return;
+        }
+        if (op.action === "update_task" && op.newTaskTitle) {
+          const nextTitle = String(op.newTaskTitle).trim();
+          if (!nextTitle) return;
+          nextPlan = {
+            ...nextPlan,
+            tasks: nextPlan.tasks.map((task) => {
+              const currentTitle = buildBrainTaskTitle(task, nextPlan!.leads.find((lead) => lead.id === task.leadId));
+              if (currentTitle.toLowerCase() !== title.toLowerCase()) return task;
+              return { ...task, title: nextTitle };
+            }),
+          };
+        }
+      };
+
+      const applyLocalTaskOp = (op: any) => {
+        if (!op?.taskTitle) return;
+        const title = String(op.taskTitle).trim();
+        if (!title) return;
+        if (op.action === "add_task") {
+          workingTasks.push({
+            id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            title,
+            completed: false,
+            confirmed: false,
+            createdAt: Date.now(),
+          });
+          writeLocalTasks(workingTasks);
+          updateFeed.push(`Task added: ${title}`);
+          applyTaskOpToPlan(op);
+          return;
+        }
+        if (op.action === "complete_task") {
+          const idx = workingTasks.findIndex((task: any) => String(task.title || "").toLowerCase() === title.toLowerCase());
+          if (idx >= 0) {
+            workingTasks[idx] = { ...workingTasks[idx], completed: true, completedAt: Date.now() };
+          } else {
+            workingTasks.push({
+              id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              title,
+              completed: true,
+              confirmed: false,
+              createdAt: Date.now(),
+              completedAt: Date.now(),
+            });
+          }
+          writeLocalTasks(workingTasks);
+          updateFeed.push(`Task completed: ${title}`);
+          return;
+        }
+        if (op.action === "revert_task") {
+          const idx = workingTasks.findIndex((task: any) => String(task.title || "").toLowerCase() === title.toLowerCase());
+          if (idx >= 0) {
+            workingTasks[idx] = { ...workingTasks[idx], completed: false, completedAt: undefined };
+            writeLocalTasks(workingTasks);
+            updateFeed.push(`Task reverted: ${title}`);
+          }
+          return;
+        }
+        if (op.action === "delete_task") {
+          workingTasks = workingTasks.filter((task: any) => String(task.title || "").toLowerCase() !== title.toLowerCase());
+          writeLocalTasks(workingTasks);
+          updateFeed.push(`Task removed: ${title}`);
+          applyTaskOpToPlan(op);
+          return;
+        }
+        if (op.action === "update_task" && op.newTaskTitle) {
+          const nextTitle = String(op.newTaskTitle).trim();
+          if (!nextTitle) return;
+          const idx = workingTasks.findIndex((task: any) => String(task.title || "").toLowerCase() === title.toLowerCase());
+          if (idx >= 0) {
+            workingTasks[idx] = { ...workingTasks[idx], title: nextTitle };
+            writeLocalTasks(workingTasks);
+            updateFeed.push(`Task updated: ${title} → ${nextTitle}`);
+            applyTaskOpToPlan(op);
+          }
+        }
+      };
+
+      const manualRationale = extractRationaleOverride(feedbackText);
+      if (manualRationale && nextPlan) {
+        nextPlan = { ...nextPlan, rationale: manualRationale };
+        updateFeed.push("Rationale updated from feedback.");
+      }
+      parseManualOperations(feedbackText).forEach((op) => applyLocalTaskOp(op));
+      refreshTaskCompletion();
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
       const res = await fetch("/api/ai/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           note: `Brain feedback. Update CRM when relevant and provide immediate next action: ${feedbackText.trim()}`,
           model: selectedFeedbackModel,
-          tasks,
+          tasks: workingTasks,
           crmContacts
         }),
-      });
+      }).finally(() => clearTimeout(timeout));
       if (!res.ok) {
         throw new Error("Feedback request failed");
       }
       const data = await res.json();
       const parsed = typeof data === "string" ? JSON.parse(normalizeAiJson(data)) : data;
-      const updateFeed: string[] = [];
       const operations: any[] = [];
       if (parsed?.action) operations.push(parsed);
       if (Array.isArray(parsed?.actions)) operations.push(...parsed.actions);
       if (Array.isArray(parsed?.taskUpdates)) operations.push(...parsed.taskUpdates);
       if (Array.isArray(parsed?.crmUpdates)) operations.push(...parsed.crmUpdates);
-
       for (const op of operations) {
-        if (op?.action === "add_task" && op?.taskTitle) {
-          toggleTaskCompletion(`manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, op.taskTitle);
-          updateFeed.push(`Task added: ${op.taskTitle}`);
-          continue;
-        }
-
-        if (op?.action === "complete_task" && op?.taskTitle) {
-          const next = readLocalTasks();
-          const idx = next.findIndex((task: any) => String(task.title || "").toLowerCase() === String(op.taskTitle).toLowerCase());
-          if (idx >= 0) {
-            next[idx] = { ...next[idx], completed: true, completedAt: Date.now() };
-            writeLocalTasks(next);
-            refreshTaskCompletion();
-            updateFeed.push(`Task completed: ${op.taskTitle}`);
-          }
-          continue;
-        }
-
-        if (op?.action === "delete_task" && op?.taskTitle) {
-          const next = readLocalTasks();
-          const filtered = next.filter((task: any) => String(task.title || "").toLowerCase() !== String(op.taskTitle).toLowerCase());
-          writeLocalTasks(filtered);
-          refreshTaskCompletion();
-          updateFeed.push(`Task removed: ${op.taskTitle}`);
-          continue;
-        }
-
         if (op?.action === "add_crm_contact" && op?.crmContact) {
           await addCRMContact(op.crmContact);
           updateFeed.push(`Added CRM contact: ${op.crmContact.decisionMaker || op.crmContact.name || "Contact"}`);
           continue;
         }
-
         if (op?.action === "update_crm_contact" && op?.crmContact) {
           await updateCRMContact(op.crmContact);
           updateFeed.push(`Updated CRM contact: ${op.crmContact.decisionMaker || op.crmContact.name || "Contact"}`);
+          continue;
         }
+        applyLocalTaskOp(op);
+      }
+      if (parsed?.rationale && nextPlan) {
+        nextPlan = { ...nextPlan, rationale: String(parsed.rationale) };
+        updateFeed.push("Rationale updated by Brain feedback.");
       }
 
       if (updateFeed.length === 0) {
@@ -805,15 +1093,56 @@ export default function EspressoDashboard() {
       setFeedbackAdvice(immediateAdvice);
       window.dispatchEvent(new CustomEvent("brain_feedback_processed", { detail: { advice: immediateAdvice, updates: updateFeed } }));
       refreshTaskCompletion();
-      await runBrainPlan(true);
+      if (nextPlan) {
+        persistBrainPlan(nextPlan);
+        syncBrainTasksToLocal(nextPlan);
+        await syncBrainLeadsToCRM(nextPlan);
+      }
       setFeedbackMessage("Feedback processed.");
       setFeedbackText("");
     } catch (e) {
       console.error("Feedback submission failed", e);
-      setFeedbackError("Failed to process feedback.");
+      setFeedbackError("Network delay detected. Local feedback updates were applied immediately.");
     } finally {
       setFeedbackLoading(false);
     }
+  };
+
+  const editBrainTask = async (taskIndex: number) => {
+    if (!brainPlan) return;
+    const task = brainPlan.tasks[taskIndex];
+    if (!task) return;
+    const lead = brainPlan.leads.find((l) => l.id === task.leadId);
+    const currentTitle = buildBrainTaskTitle(task, lead);
+    const nextTitle = window.prompt("Edit daily task", currentTitle);
+    if (!nextTitle || !nextTitle.trim() || nextTitle.trim() === currentTitle) return;
+    const nextPlan: BrainPlan = {
+      ...brainPlan,
+      tasks: brainPlan.tasks.map((item, idx) => (idx === taskIndex ? { ...item, title: nextTitle.trim() } : item)),
+    };
+    persistBrainPlan(nextPlan);
+    syncBrainTasksToLocal(nextPlan);
+    await syncBrainLeadsToCRM(nextPlan);
+    setCrmUpdateFeed((prev) => [`Task edited: ${currentTitle} → ${nextTitle.trim()}`, ...prev].slice(0, 10));
+    refreshTaskCompletion();
+  };
+
+  const deleteBrainTask = async (taskIndex: number) => {
+    if (!brainPlan) return;
+    const task = brainPlan.tasks[taskIndex];
+    if (!task) return;
+    const lead = brainPlan.leads.find((l) => l.id === task.leadId);
+    const title = buildBrainTaskTitle(task, lead);
+    if (!window.confirm(`Delete task "${title}"?`)) return;
+    const nextPlan: BrainPlan = {
+      ...brainPlan,
+      tasks: brainPlan.tasks.filter((_, idx) => idx !== taskIndex),
+    };
+    persistBrainPlan(nextPlan);
+    syncBrainTasksToLocal(nextPlan);
+    await syncBrainLeadsToCRM(nextPlan);
+    setCrmUpdateFeed((prev) => [`Task deleted: ${title}`, ...prev].slice(0, 10));
+    refreshTaskCompletion();
   };
 
   if (loadingAdmin) {
@@ -902,23 +1231,19 @@ export default function EspressoDashboard() {
       <div className="space-y-8">
         <section>
           <div className="flex items-center justify-between mb-2 pl-2">
-            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('daily_tasks')}</h2>
-            <button
-              onClick={() => runBrainPlan(false)}
-              disabled={brainLoading}
-              className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50"
-            >
-              {brainLoading ? "Generating..." : "Regenerate"}
-            </button>
+            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              {t('daily_tasks')} ({brainPlan?.tasks?.filter((task, index) => !!taskCompletionMap[buildBrainTaskId(task, index, brainPlan?.date)]).length || 0}/{brainPlan?.tasks?.length || 0})
+            </h2>
+            <span className="text-[10px] text-gray-400 pr-2">{brainLoading ? "Refreshing..." : "Auto daily refresh"}</span>
           </div>
           <div className="space-y-1">
             {brainError && (
               <p className="text-[10px] text-red-500 px-2 py-1">{brainError}</p>
             )}
-            {brainPlan?.tasks?.map((task) => {
+            {brainPlan?.tasks?.map((task, index) => {
               const lead = brainPlan.leads.find((l) => l.id === task.leadId);
               const title = buildBrainTaskTitle(task, lead);
-              const taskId = `brain-${task.type}-${task.leadId}`;
+              const taskId = buildBrainTaskId(task, index, brainPlan?.date);
               const completed = !!taskCompletionMap[taskId];
               return (
                 <div
@@ -930,8 +1255,28 @@ export default function EspressoDashboard() {
                     <h3 className={`text-xs font-bold ${completed ? "text-gray-400 line-through" : "text-black"}`}>{title}</h3>
                     {lead && <p className="text-[10px] text-gray-500">{lead.name} • {lead.type}</p>}
                   </div>
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${completed ? "bg-black border-black" : "border-gray-300 bg-white"}`}>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void editBrainTask(index);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deleteBrainTask(index);
+                      }}
+                      className="text-[10px] px-2 py-1 rounded border border-gray-300 text-black bg-white hover:bg-gray-100"
+                    >
+                      Delete
+                    </button>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${completed ? "bg-black border-black" : "border-gray-300 bg-white"}`}>
                     {completed && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
                   </div>
                 </div>
               );
@@ -966,7 +1311,7 @@ export default function EspressoDashboard() {
           <div className="border border-gray-100 rounded-lg px-3 py-3 bg-gray-50/50">
             {brainPlan ? (
               <p className="text-xs text-black leading-relaxed">
-                Brain selected {brainPlan.tasks.length} tasks using nearby lead density around {brainPlan.zone.lat.toFixed(3)}, {brainPlan.zone.lon.toFixed(3)} and today&apos;s outreach quotas ({brainPlan.quotas.calls} calls, {brainPlan.quotas.emails} emails, {brainPlan.quotas.messages} messages, {brainPlan.quotas.walk_in_zones} walk-in zones, {brainPlan.quotas.ads} ads).
+                {buildBrainRationale(brainPlan)}
               </p>
             ) : (
               <p className="text-xs text-gray-500">Brain is generating a daily rationale.</p>
@@ -1023,6 +1368,29 @@ export default function EspressoDashboard() {
                   ))
                 ) : (
                   <p className="text-xs text-gray-500">No CRM update events yet.</p>
+                )}
+              </div>
+            </div>
+            <div className="border border-gray-100 rounded px-3 py-2 bg-gray-50/60">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">CRM Contacts by Tier ({contacts.length})</p>
+              <div className="space-y-2">
+                {sortedContactsByTier.length > 0 ? (
+                  sortedContactsByTier.map((group) => (
+                    <details key={`tier-${group.tier}`} className="border border-gray-100 rounded bg-white" open={group.tier === sortedContactsByTier[0]?.tier}>
+                      <summary className="text-[10px] font-bold text-gray-600 px-2 py-2 cursor-pointer select-none">
+                        Tier {group.tier} ({group.list.length})
+                      </summary>
+                      <div className="space-y-1 px-2 pb-2">
+                        {group.list.map((contact) => (
+                          <p key={contact.id} className="text-xs text-black">
+                            {contact.decisionMaker} • {contact.city}
+                          </p>
+                        ))}
+                      </div>
+                    </details>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500">No CRM contacts available.</p>
                 )}
               </div>
             </div>

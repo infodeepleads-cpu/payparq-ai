@@ -244,12 +244,13 @@ export async function GET(req: Request) {
     (lead, idx, arr) => arr.findIndex((x) => x.id === lead.id) === idx
   );
 
+  const outreachPool = Math.max(1, topVenues.length);
   const quotas = {
-    calls: 0,
-    emails: 0,
-    messages: 0,
-    walk_in_zones: 0,
-    ads: 0,
+    calls: Math.max(2, Math.min(8, Math.ceil(outreachPool * 0.35))),
+    emails: Math.max(1, Math.min(6, Math.ceil(outreachPool * 0.25))),
+    messages: Math.max(1, Math.min(6, Math.ceil(outreachPool * 0.25))),
+    walk_in_zones: Math.max(1, Math.min(4, Math.ceil(outreachPool * 0.1))),
+    ads: Math.max(1, Math.min(3, Math.ceil(outreachPool * 0.05))),
   };
 
   const bestParking = mappedParkings[0] || leads.find((l) => l.type === "parking") || leads[0] || null;
@@ -270,6 +271,7 @@ export async function GET(req: Request) {
     zone,
     leads,
     tasks,
+    rationale: `Brain selected ${tasks.length} tasks using nearby lead density around ${zone.lat.toFixed(3)}, ${zone.lon.toFixed(3)} and today's outreach quotas (${quotas.calls} calls, ${quotas.emails} emails, ${quotas.messages} messages, ${quotas.walk_in_zones} walk-in zones, ${quotas.ads} ads).`,
   };
 
   return new Response(JSON.stringify(plan), {

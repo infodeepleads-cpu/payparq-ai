@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getCurrentUser, getSupabase } from "../../lib/supabase";
 
 // Duplicate Contact type to avoid dependency issues for now
 type Contact = {
@@ -10,7 +11,7 @@ type Contact = {
   decisionMaker: string;
   city: string;
   estimatedCapacity: number;
-  decisionStatus: "ENTRY" | "DEMO" | "TRIAL" | "CONTRACT" | "NO" | "FOLLOW UP";
+  decisionStatus: string;
   noReason?: string;
   cooldownUntil?: string;
   notes?: string;
@@ -19,12 +20,38 @@ type Contact = {
 
 const CRM_KEY = "pp_crm_contacts";
 
-function loadContacts(): Contact[] {
+function loadContactsFromLocal(): Contact[] {
   try {
     const raw = localStorage.getItem(CRM_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
+  }
+}
+
+async function loadContacts(): Promise<Contact[]> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return loadContactsFromLocal();
+    }
+    const supabase = getSupabase();
+    const { data } = await supabase.from("crm_contacts").select("*").order("created_at", { ascending: false });
+    if (!data) return [];
+    return data.map((c: any) => ({
+      id: c.id,
+      tier: c.tier,
+      decisionMaker: c.decision_maker,
+      city: c.location,
+      estimatedCapacity: c.estimated_capacity,
+      decisionStatus: c.status,
+      noReason: c.no_reason,
+      cooldownUntil: c.follow_up_date,
+      notes: c.notes,
+      createdAt: new Date(c.created_at).getTime(),
+    }));
+  } catch {
+    return loadContactsFromLocal();
   }
 }
 
@@ -36,9 +63,16 @@ export default function Page() {
   const { t } = useLanguage();
 
   useEffect(() => {
-    setContacts(loadContacts());
-    const handler = () => setContacts(loadContacts());
+    const refreshContacts = () => loadContacts().then(setContacts);
+    refreshContacts();
+    const handler = () => refreshContacts();
     window.addEventListener("crm_storage", handler);
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === "crm_update_signal") {
+        refreshContacts();
+      }
+    };
+    window.addEventListener("storage", storageHandler);
     
     // Load hub state
     const savedHubs = localStorage.getItem("pp_mission_hubs");
@@ -49,7 +83,10 @@ export default function Page() {
       setSmartProgram(smart);
     }
 
-    return () => window.removeEventListener("crm_storage", handler);
+    return () => {
+      window.removeEventListener("crm_storage", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
   }, []);
 
   // Save hub state
