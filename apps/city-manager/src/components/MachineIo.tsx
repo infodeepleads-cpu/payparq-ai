@@ -15,9 +15,15 @@ type SuggestResponse = {
   taskTitle?: string;
   reminderTime?: string;
   crmContact?: any;
+  scrapeRequest?: {
+    street?: string;
+    city?: string;
+    limit?: number;
+  };
 };
 
 type Message = { role: "user" | "assistant" | "system"; content: string; attachment?: string; animate?: boolean };
+type StreetScrapeCommand = { street: string; city: string; limit: number };
 
 const AI_MODELS = [
   { id: "auto", name: "Auto (Smart Switch)" },
@@ -590,6 +596,98 @@ export default function MachineIo() {
     if (m) return { type: "confirm", title: m[1].trim() };
     return null;
   };
+  const parseStreetScrapeCommand = (text: string): StreetScrapeCommand | null => {
+    const s = String(text || "").trim();
+    if (!s) return null;
+    const low = s.toLowerCase();
+    const hasIntent =
+      low.includes("scrape") ||
+      low.includes("lead") ||
+      low.includes("contact address") ||
+      low.includes("contact adresses") ||
+      low.includes("addresses");
+    if (!hasIntent) return null;
+
+    const numMatch = low.match(/\b(\d{1,2})\b/);
+    const limit = Math.max(1, Math.min(30, numMatch ? parseInt(numMatch[1], 10) : 10));
+    const locationMatch = s.match(/\b(?:on|in|from|for)\s+(.+)$/i);
+    let locationText = (locationMatch ? locationMatch[1] : s)
+      .replace(/\b(?:leads?|contacts?|addresses?|contact\s+adresses?|contact\s+addresses?)\b/gi, " ")
+      .replace(/\b(?:scrape|find|get|give me|show me|prepare)\b/gi, " ")
+      .replace(/\b\d+\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    locationText = locationText.replace(/[.?!]+$/, "").trim();
+    if (!locationText) return null;
+
+    let street = locationText;
+    let city = "Split";
+    if (locationText.includes(",")) {
+      const parts = locationText.split(",").map((x) => x.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        street = parts[0];
+        city = parts[parts.length - 1];
+      }
+    } else {
+      const tokens = locationText.split(" ").filter(Boolean);
+      if (tokens.length >= 2) {
+        const last = tokens[tokens.length - 1];
+        if (last.length >= 3) {
+          city = last;
+          street = tokens.slice(0, -1).join(" ").trim();
+        }
+      }
+    }
+    if (!street) return null;
+    return { street, city, limit };
+  };
+
+  const mapTypeToTier = (type: string) => {
+    if (type === "hotel") return 6;
+    if (type === "apartment" || type === "villa") return 4;
+    if (type === "restaurant" || type === "cafe" || type === "bar" || type === "bakery") return 3;
+    return 3;
+  };
+
+  const executeStreetScrape = async (command: StreetScrapeCommand) => {
+    const params = new URLSearchParams({
+      street: command.street,
+      city: command.city,
+      limit: String(command.limit),
+    });
+    const response = await fetch(`/api/crm/ingest/street?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err || "street_scrape_failed");
+    }
+    const payload = await response.json();
+    const leads = Array.isArray(payload?.leads) ? payload.leads : [];
+    const today = new Date().toISOString().slice(0, 10);
+    let inserted = 0;
+    for (const lead of leads) {
+      const line = [
+        `[AUTO_SCRAPE:${command.street}|${command.city}]`,
+        `type:${lead.type || "poi"}`,
+        `phone:${lead.phone || "n/a"}`,
+        `email:${lead.email || "n/a"}`,
+        `website:${lead.website || "n/a"}`,
+      ].join(" ");
+      const saved = await addCRMContact({
+        tier: mapTypeToTier(String(lead.type || "")),
+        decisionMaker: String(lead.name || "Unknown contact"),
+        location: String(lead.address || `${command.street}, ${command.city}`),
+        estimatedCapacity: Math.max(50, Math.round(Number(lead.score || 1) * 100)),
+        status: `1. ${today}`,
+        nextStep: "Call and qualify lead",
+        notes: line,
+      });
+      if (saved) inserted += 1;
+    }
+    return { leads, inserted };
+  };
   
   const deleteAllTasksLocal = () => {
     writeTasks([]);
@@ -840,6 +938,55 @@ export default function MachineIo() {
       }
       return;
     }
+    const scrapeCmd = parseStreetScrapeCommand(userText);
+    if (scrapeCmd) {
+      setInput("");
+      setSelectedImage(null);
+      setError(null);
+      setLoading(true);
+      loadingRef.current = true;
+      const id = ensureThread(userText || "Street Scrape");
+      const userMsg: Message = { role: "user", content: userText, attachment: image || undefined };
+      const nextUserMsgs: Message[] = [...messages, userMsg];
+      setMessages(nextUserMsgs);
+      saveMessages(id!, nextUserMsgs);
+      try {
+        const result = await executeStreetScrape(scrapeCmd);
+        const listed = result.leads
+          .slice(0, Math.min(5, result.leads.length))
+          .map((lead: any, idx: number) => `${idx + 1}. ${lead.name} — ${lead.address || `${scrapeCmd.street}, ${scrapeCmd.city}`}`)
+          .join("\n");
+        const assistantText =
+          result.leads.length > 0
+            ? `Scraped ${result.leads.length} leads on ${scrapeCmd.street}, ${scrapeCmd.city}. Inserted ${result.inserted} CRM contacts.\n${listed}`
+            : `No leads matched ${scrapeCmd.street}, ${scrapeCmd.city}. Try another spelling or nearby street.`;
+        const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: assistantText, animate: true }];
+        setMessages(finalMsgs);
+        if (id) {
+          saveMessages(id, finalMsgs);
+          const threads = readThreads();
+          const idx = threads.findIndex((t: any) => t.id === id);
+          if (idx >= 0) {
+            threads[idx] = {
+              ...threads[idx],
+              title: threads[idx].title === "Untitled" ? userText.slice(0, 48) : threads[idx].title,
+              updatedAt: Date.now(),
+            };
+            writeThreads(threads);
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
+      } catch (e: any) {
+        const failText = `Street scrape failed: ${e?.message || "unknown_error"}`;
+        const finalMsgs: Message[] = [...nextUserMsgs, { role: "assistant", content: failText, animate: true }];
+        setMessages(finalMsgs);
+        if (id) saveMessages(id, finalMsgs);
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
+      }
+      return;
+    }
     
     setInput("");
     setSelectedImage(null);
@@ -1039,6 +1186,24 @@ export default function MachineIo() {
           const updated = await updateCRMContact(data.crmContact);
           const name = updated?.decisionMaker || data.crmContact?.decisionMaker || "Contact";
           systemNote = `✓ System: ${t('crm_updated')}: ${name}`;
+        } else if (data.action === "scrape_street_leads") {
+          const request = data.scrapeRequest || {};
+          const street = String(request.street || "").trim();
+          const city = String(request.city || "Split").trim();
+          const limit = Math.max(1, Math.min(30, Number(request.limit || 10)));
+          if (street) {
+            const result = await executeStreetScrape({ street, city, limit });
+            if (result.leads.length > 0) {
+              const preview = result.leads
+                .slice(0, Math.min(5, result.leads.length))
+                .map((lead: any, idx: number) => `${idx + 1}. ${lead.name} — ${lead.address || `${street}, ${city}`}`)
+                .join("\n");
+              assistantText = `${assistantText}\n\n${preview}`.trim();
+            }
+            systemNote = `✓ System: Scraped ${result.leads.length} leads on ${street}, ${city}. Added ${result.inserted} CRM contacts.`;
+          } else {
+            systemNote = "⚠ System: Missing street for scrape request.";
+          }
         } else if (data.action === "schedule_reminder" && data.taskTitle && data.reminderTime) {
           console.log("=== SCHEDULING REMINDER ===");
           console.log("TaskTitle:", data.taskTitle);

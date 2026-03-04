@@ -23,11 +23,11 @@
 
 html, body {
   min-height: 100vh;
-  background: #000000 !important;
+  background: #ffffff !important;
 }
 
 body {
-  background: #000000 !important;
+  background: #ffffff !important;
   color: var(--foreground);
   -webkit-text-size-adjust: 100%; /* Prevent font boosting on mobile */
 }

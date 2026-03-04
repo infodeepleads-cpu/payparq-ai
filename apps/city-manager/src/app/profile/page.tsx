@@ -1364,68 +1364,150 @@ export default function ProfilePage() {
                     <p>{selectedTerms.summary}</p>
                   </section>
 
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">1. Uvjeti suradnje (Terms)</h3>
-                    <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerima u RH.</p>
-                    <p className="font-bold text-white">1. Nagrada</p>
-                    <p>Suradnik ostvaruje proviziju u iznosu 50% neto prihoda koji generira njegov teren, pri čemu se neto prihod definira kao prihod nakon odbitka svih financijskih naknada i poreza.</p>
-                    <p className="font-bold text-white">2. Obveze i troškovi Suradnika</p>
-                    <p>Suradnik snosi organizaciju i trošak sljedećeg:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Označavanje terena (sprej, naljepnice, manji znakovi i njihovo pričvršćivanje)</li>
-                      <li>Obilazak terena i odlasci na sastanke (uključujući trošak prijevoza)</li>
-                      <li>Verifikacija partnera</li>
-                      <li>Korisnička podrška za prioritetne partnere i uspostava terenske podrške</li>
-                      <li>Svakodnevno logiranje u Parq chatbot, izvršavanje dnevnih zadataka, pravovremeni unos povratnih informacija te aktivno sudjelovanje u usavršavanju sustava, uključujući:</li>
-                    </ul>
-                    <ul className="list-none pl-4 mt-1 space-y-0.5 text-white/70">
-                      <li>• Slikanje terena</li>
-                      <li>• Videozapise</li>
-                      <li>• Feedback</li>
-                      <li>• Sastanke</li>
-                      <li>• Ispunjavanje dokumenata</li>
-                      <li>• Redoviti obilazak terena</li>
-                    </ul>
-                    <p className="font-bold text-white pt-2 italic">Potvrđujem da razumijem i u cijelosti prihvaćam navedene uvjete.</p>
-                  </section>
-
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">2. NDA</h3>
-                    <p className="italic">Izjava o prihvaćanju uvjeta suradnje</p>
-                    <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerskim entitetima u RH.:</p>
-                    <p className="font-bold text-white">1. Povjerljivost</p>
-                    <p>Obvezujem se čuvati kao strogo povjerljive sve informacije vezane uz poslovni model, podjelu prihoda (50% net prihoda nakon financijskih naknada i poreza), partnere i lokacije, cijene, financije, operativne procese, Parq chatbot, interne sustave, strategiju i razvoj.</p>
-                    <p>Informacije neću koristiti niti otkrivati izvan svrhe suradnje.</p>
-                    <p className="font-bold text-white">2. Zabrana konkurencije</p>
-                    <p>Obvezujem se da tijekom trajanja suradnje i 24 mjeseca nakon njenog prestanka neću samostalno niti putem trećih osoba sudjelovati u konkurentskom projektu u području digitalnog upravljanja i monetizacije parking terena na teritoriju Republike Hrvatske.</p>
-                    <p className="font-bold text-white">3. Trajanje</p>
-                    <p>Obveza povjerljivosti vrijedi tijekom suradnje i 5 godina nakon prestanka suradnje.</p>
-                    <p className="font-bold text-white pt-2 italic">Potvrđujem da sam upoznat s uvjetima i da ih u cijelosti prihvaćam.</p>
-                  </section>
-
-                  <section className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
-                    <h3 className="text-white font-bold text-base tracking-tight italic">Brain</h3>
-                    <p>Sukladno Viziji i Misije postavlja najefikasnije dnevne zadatke City Manageru, Scrapea sve Leadove.</p>
-                    <p>Na Manageru ostaje održavanje sastanaka pregled poruka i mailova i send, telefonski pozivi i sastanci, te obilazak terena i terenska/ prioritetna podrška.</p>
-                  </section>
-
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">3. Klauzula o jednostranom raskidu i ograničenju odgovornosti</h3>
-                    <p>Leadvex Group LLC i njegovi partneri u Republici Hrvatskoj zadržavaju pravo jednostrano raskinuti suradnju u bilo kojem trenutku, bez obrazloženja i bez otkaznog roka.</p>
-                    <p>Suradnik nema pravo na naknadu štete, izgubljenu dobit, buduće provizije niti bilo kakvu drugu kompenzaciju temeljem raskida ili izmjene uvjeta suradnje.</p>
-                    <p>Suradnik se odriče svih sadašnjih i budućih potraživanja, tužbi i zahtjeva prema Leadvex Group LLC, njegovim vlasnicima, povezanim društvima i partnerima, osim za nesporne i dospjele iznose koji su već obračunati do dana raskida.</p>
-                    <p>Ukupna eventualna odgovornost Leadvex Group LLC i partnera, ako bi postojala, ograničena je maksimalno na iznos zadnje isplaćene provizije Suradniku.</p>
-                  </section>
-
-                  <section className="flex flex-col gap-2">
-                    <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">4. Završne odredbe</h3>
-                    <p>Završne odredbe čine sastavni dio Uvjeta suradnje, NDA-a i svih povezanih odredbi između Suradnika i Leadvex Group LLC te njegovih partnera u Republici Hrvatskoj.</p>
-                    <p>U slučaju bilo kakve nejasnoće, tumačenje odredbi ide u korist Društva.</p>
-                    <p>Ako se bilo koja odredba pokaže ništavnom ili neprovedivom, ostale odredbe ostaju u punoj pravnoj snazi.</p>
-                    <p>Ovaj dokument predstavlja cjelokupni sporazum između strana i zamjenjuje sve prethodne usmene ili pisane dogovore.</p>
-                    <p className="font-bold text-white pt-2 italic underline decoration-[#7C3AED] underline-offset-4">Suradnik potvrđuje da Uvjete prihvaća svjesno, dobrovoljno i bez prisile.</p>
-                    <p className="text-white/60 text-[12px]">Leadvex Group LLC zadržava pravo izmjene operativnih procesa, poslovnog modela, sustava obračuna i strukture suradnje u bilo kojem trenutku.</p>
-                  </section>
+                  {registrationRoleId === "2" ? (
+                    <>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">OPĆI UVJETI SURADNJE ZA VLASNIKE ZEMLJIŠTA (PARTNERE)</h3>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">1. TEMELJNA NAČELA SURADNJE</h3>
+                        <p>Ova suradnja temelji se na modelu potpunog partnerstva bez financijskog tereta za Vlasnika zemljišta:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Bez troška: PayParq snosi sve troškove implementacije sustava, digitalizacije i marketinške vidljivosti.</li>
+                          <li>Bez rizika: Vlasnik ne ulaže vlastita sredstva. Zarada se ostvaruje isključivo od realiziranog prometa.</li>
+                          <li>Bez ugovorne obveze: Partnerstvo je fleksibilno. Vlasnik može raskinuti suradnju u bilo kojem trenutku uz prethodnu najavu od 30 dana, bez izlaznih naknada.</li>
+                        </ul>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">2. MODELI PROVIZIJA I USLUGA</h3>
+                        <p>PayParq nudi dva modela upravljanja, ovisno o razini automatizacije i lokaciji:</p>
+                        <p className="font-bold text-white">A. Safe Parking Model (Provizija 10% – 20%)</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Namjena: Za vlasnike koji žele digitalnu naplatu, sigurnost i zadržavanje osnovne kontrole.</li>
+                          <li>Usluga: Digitalni sustav naplate putem QR kodova, korisnička podrška i osnovni sustav nadzora.</li>
+                          <li>Naplata: PayParq zadržava dogovoreni postotak od svake transakcije izvršene putem platforme.</li>
+                        </ul>
+                        <p className="font-bold text-white">B. HUB Model (Zarada 20% – 60%)</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Namjena: Potpuno automatizirani Smart HUB sustavi s visokim protokom vozila.</li>
+                          <li>Usluga: Kompletno upravljanje (Management), postavljanje skenera (scanner.payparq.com), automatizacija ulaza/izlaza i intenzivan digitalni marketing za maksimalno popunjavanje kapaciteta.</li>
+                          <li>Naplata: Veća provizija pokriva troškove napredne hardverske opreme i aktivnog upravljanja lokacijom.</li>
+                          <li>Naknada 1/3 LPR Dnevna Karta uz Payparq sustav ili 1/4 uz posredništvo Parq agenta.</li>
+                        </ul>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">3. OBVEZE I UPRAVLJANJE (PAYPARQ)</h3>
+                        <p>PayParq se obvezuje na potpunu tehničku i operativnu podršku:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Implementacija: Postavljanje QR kodova, skenera i digitalnih barijera.</li>
+                          <li>Obrada plaćanja: Sigurna naplata od domaćih i stranih korisnika (kartice, Apple Pay, Google Pay).</li>
+                          <li>Transparentnost: Vlasnik ima 24/7 uvid u promet u realnom vremenu putem partnerskog sučelja.</li>
+                          <li>Održavanje: Redovito ažuriranje softvera i održavanje funkcionalnosti sustava.</li>
+                        </ul>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">4. OBVEZE VLASNIKA ZEMLJIŠTA</h3>
+                        <p>Vlasnik se obvezuje:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Osigurati pristup: Omogućiti nesmetan pristup zemljištu za korisnike koji su platili parking.</li>
+                          <li>Urednost: Održavati osnovnu čistoću i pristupačnost terena.</li>
+                          <li>Isključivost: Tijekom trajanja suradnje, PayParq je primarni sustav za digitalnu naplatu na predmetnoj lokaciji.</li>
+                        </ul>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">5. PARTNERI I ODGOVORNOST</h3>
+                        <p>Ova platforma rezultat je suradnje međunarodnih i lokalnih stručnjaka:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Nositelj: Leadvex Group LLC</li>
+                          <li>Hrvatski operativni partneri: Lokalni tim stručnjaka (PayParq tim) zadužen je za direktnu komunikaciju, tehničku podršku na terenu (Dalmacija i ostatak Hrvatske) te postavljanje signalizacije.</li>
+                        </ul>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">6. ISPLATA ZARADE I RJEŠAVANJE SPOROVA</h3>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Isplata: Zarada se obračunava mjesečno. PayParq isplaćuje neto iznos Vlasniku na žiro-račun najkasnije do 15. u mjesecu za prethodni mjesec.</li>
+                          <li>Nadležnost: Svi sporovi rješavat će se sporazumno. U slučaju potrebe, nadležan je sud u Splitu.</li>
+                        </ul>
+                        <p>Zaključna napomena: Ovim modelom Vlasnik pretvara neiskorišteno zemljište u pasivni prihod bez ikakvih operativnih briga, dok kompletan sustav upravljanja i rizika preuzimaju Leadvex Group LLC i lokalni operativni partneri.</p>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">7. Addendum</h3>
+                        <p className="font-bold text-white">1. Isključenje odgovornosti za nenaplatu (Rizik korisnika)</p>
+                        <p>PayParq djeluje kao platforma za posredovanje i upravljanje. Iako sustav koristi napredne metode kontrole (skeneri, barijere), PayParq ne jamči 100% naplatu od svakog pojedinog korisnika.</p>
+                        <p>Vlasnik zemljišta prihvaća da se provizija obračunava isključivo na stvarno naplaćene transakcije. PayParq nije dužan nadoknaditi potencijalno izgubljenu dobit za vozila koja su koristila parking bez valjane digitalne transakcije, ali će poduzeti sve tehničke mjere da takve slučajeve svede na minimum.</p>
+                        <p className="font-bold text-white">2. Zaštita od prekršajne i kaznene odgovornosti</p>
+                        <p>Prema zakonima RH, za nepropisno parkiranje, neplaćanje parkinga ili ometanje prometa odgovoran je isključivo vozač vozila, a ne vlasnik zemljišta niti operater platforme.</p>
+                        <p>U slučaju potrebe za intervencijom nadležnih službi, PayParq pruža tehničku dokumentaciju, ali sve troškove i rizike postupka snosi vlasnik vozila.</p>
+                        <p className="font-bold text-white">3. Isključenje odgovornosti za štetu na vozilima</p>
+                        <p>Ni Vlasnik zemljišta ni PayParq ne odgovaraju za krađu dragocjenosti iz vozila, oštećenja od trećih osoba ni štete nastale uslijed viših sila.</p>
+                        <p>Vlasnik zemljišta se oslobađa odštetnih zahtjeva korisnika pod uvjetom da je šteta nastala uobičajenim korištenjem parkinga.</p>
+                        <p className="font-bold text-white">4. Pravna zaštita (Indemnifikacija)</p>
+                        <p>Leadvex Group LLC i lokalni operativni partneri obvezuju se braniti Vlasnika zemljišta od svih neosnovanih pravnih zahtjeva proizašlih iz grešaka u radu PayParq softvera.</p>
+                        <p>Vlasnik zemljišta je zaštićen od troškova pravnih sporova koji nastanu isključivo zbog načina rada sustava naplate.</p>
+                      </section>
+                    </>
+                  ) : (
+                    <>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">1. Uvjeti suradnje (Terms)</h3>
+                        <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerima u RH.</p>
+                        <p className="font-bold text-white">1. Nagrada</p>
+                        <p>Suradnik ostvaruje proviziju u iznosu 50% neto prihoda koji generira njegov teren, pri čemu se neto prihod definira kao prihod nakon odbitka svih financijskih naknada i poreza.</p>
+                        <p className="font-bold text-white">2. Obveze i troškovi Suradnika</p>
+                        <p>Suradnik snosi organizaciju i trošak sljedećeg:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Označavanje terena (sprej, naljepnice, manji znakovi i njihovo pričvršćivanje)</li>
+                          <li>Obilazak terena i odlasci na sastanke (uključujući trošak prijevoza)</li>
+                          <li>Verifikacija partnera</li>
+                          <li>Korisnička podrška za prioritetne partnere i uspostava terenske podrške</li>
+                          <li>Svakodnevno logiranje u Parq chatbot, izvršavanje dnevnih zadataka, pravovremeni unos povratnih informacija te aktivno sudjelovanje u usavršavanju sustava, uključujući:</li>
+                        </ul>
+                        <ul className="list-none pl-4 mt-1 space-y-0.5 text-white/70">
+                          <li>• Slikanje terena</li>
+                          <li>• Videozapise</li>
+                          <li>• Feedback</li>
+                          <li>• Sastanke</li>
+                          <li>• Ispunjavanje dokumenata</li>
+                          <li>• Redoviti obilazak terena</li>
+                        </ul>
+                        <p className="font-bold text-white pt-2 italic">Potvrđujem da razumijem i u cijelosti prihvaćam navedene uvjete.</p>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">2. NDA</h3>
+                        <p className="italic">Izjava o prihvaćanju uvjeta suradnje</p>
+                        <p>Ovim putem potvrđujem da prihvaćam sljedeće uvjete suradnje s Leadvex Group LLC i partnerskim entitetima u RH.:</p>
+                        <p className="font-bold text-white">1. Povjerljivost</p>
+                        <p>Obvezujem se čuvati kao strogo povjerljive sve informacije vezane uz poslovni model, podjelu prihoda (50% net prihoda nakon financijskih naknada i poreza), partnere i lokacije, cijene, financije, operativne procese, Parq chatbot, interne sustave, strategiju i razvoj.</p>
+                        <p>Informacije neću koristiti niti otkrivati izvan svrhe suradnje.</p>
+                        <p className="font-bold text-white">2. Zabrana konkurencije</p>
+                        <p>Obvezujem se da tijekom trajanja suradnje i 24 mjeseca nakon njenog prestanka neću samostalno niti putem trećih osoba sudjelovati u konkurentskom projektu u području digitalnog upravljanja i monetizacije parking terena na teritoriju Republike Hrvatske.</p>
+                        <p className="font-bold text-white">3. Trajanje</p>
+                        <p>Obveza povjerljivosti vrijedi tijekom suradnje i 5 godina nakon prestanka suradnje.</p>
+                        <p className="font-bold text-white pt-2 italic">Potvrđujem da sam upoznat s uvjetima i da ih u cijelosti prihvaćam.</p>
+                      </section>
+                      <section className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                        <h3 className="text-white font-bold text-base tracking-tight italic">Brain</h3>
+                        <p>Sukladno Viziji i Misije postavlja najefikasnije dnevne zadatke City Manageru, Scrapea sve Leadove.</p>
+                        <p>Na Manageru ostaje održavanje sastanaka pregled poruka i mailova i send, telefonski pozivi i sastanci, te obilazak terena i terenska/ prioritetna podrška.</p>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">3. Klauzula o jednostranom raskidu i ograničenju odgovornosti</h3>
+                        <p>Leadvex Group LLC i njegovi partneri u Republici Hrvatskoj zadržavaju pravo jednostrano raskinuti suradnju u bilo kojem trenutku, bez obrazloženja i bez otkaznog roka.</p>
+                        <p>Suradnik nema pravo na naknadu štete, izgubljenu dobit, buduće provizije niti bilo kakvu drugu kompenzaciju temeljem raskida ili izmjene uvjeta suradnje.</p>
+                        <p>Suradnik se odriče svih sadašnjih i budućih potraživanja, tužbi i zahtjeva prema Leadvex Group LLC, njegovim vlasnicima, povezanim društvima i partnerima, osim za nesporne i dospjele iznose koji su već obračunati do dana raskida.</p>
+                        <p>Ukupna eventualna odgovornost Leadvex Group LLC i partnera, ako bi postojala, ograničena je maksimalno na iznos zadnje isplaćene provizije Suradniku.</p>
+                      </section>
+                      <section className="flex flex-col gap-2">
+                        <h3 className="text-[#7C3AED] font-bold text-base uppercase tracking-wider border-l-4 border-[#7C3AED] pl-3">4. Završne odredbe</h3>
+                        <p>Završne odredbe čine sastavni dio Uvjeta suradnje, NDA-a i svih povezanih odredbi između Suradnika i Leadvex Group LLC te njegovih partnera u Republici Hrvatskoj.</p>
+                        <p>U slučaju bilo kakve nejasnoće, tumačenje odredbi ide u korist Društva.</p>
+                        <p>Ako se bilo koja odredba pokaže ništavnom ili neprovedivom, ostale odredbe ostaju u punoj pravnoj snazi.</p>
+                        <p>Ovaj dokument predstavlja cjelokupni sporazum između strana i zamjenjuje sve prethodne usmene ili pisane dogovore.</p>
+                        <p className="font-bold text-white pt-2 italic underline decoration-[#7C3AED] underline-offset-4">Suradnik potvrđuje da Uvjete prihvaća svjesno, dobrovoljno i bez prisile.</p>
+                        <p className="text-white/60 text-[12px]">Leadvex Group LLC zadržava pravo izmjene operativnih procesa, poslovnog modela, sustava obračuna i strukture suradnje u bilo kojem trenutku.</p>
+                      </section>
+                    </>
+                  )}
 
                   <div className="pt-4 border-t border-white/5 mt-2">
                     <p className="text-[11px] italic">Zadnja izmjena: 02. ožujka 2026.</p>
