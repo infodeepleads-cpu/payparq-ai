@@ -18,12 +18,15 @@ class SupabaseService {
   Future<void> initialize({
     required String url,
     required String anonKey,
-    Duration timeout = const Duration(seconds: 5),
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     try {
       debugPrint('SupabaseService: About to initialize');
       debugPrint('SupabaseService: DEBUG url=$url');
       debugPrint('SupabaseService: DEBUG anon key length=${anonKey.length}');
+      if (url.isEmpty || anonKey.isEmpty) {
+        throw ArgumentError('Supabase URL or Anon Key is empty');
+      }
       final prefix = anonKey.isNotEmpty
           ? (anonKey.length > 20 ? anonKey.substring(0, 20) : anonKey)
           : '<empty>';
@@ -31,6 +34,7 @@ class SupabaseService {
       final initFuture = Supabase.initialize(
         url: url,
         anonKey: anonKey,
+        debug: true,
       );
 
       await initFuture.timeout(timeout, onTimeout: () {
@@ -40,7 +44,22 @@ class SupabaseService {
       debugPrint('SupabaseService: Initialized successfully');
     } catch (e) {
       debugPrint('SupabaseService: Initialization failed: $e');
-      rethrow;
+      try {
+        debugPrint('SupabaseService: Retrying initialization once...');
+        final retryFuture = Supabase.initialize(
+          url: url,
+          anonKey: anonKey,
+          debug: true,
+        );
+        await retryFuture.timeout(const Duration(seconds: 10), onTimeout: () {
+          throw TimeoutException(
+              'Supabase retry timed out after 10 seconds');
+        });
+        debugPrint('SupabaseService: Retry succeeded');
+      } catch (e2) {
+        debugPrint('SupabaseService: Retry failed: $e2');
+        rethrow;
+      }
     }
   }
 
