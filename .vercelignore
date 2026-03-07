@@ -1,7 +1,19 @@
-node_modules
 build
-dist
+.dart_tool
 .git
-.trae
-.log
-.figma
+.github
+.idea
+.vscode
+.firebase
+.vercel
+coverage
+node_modules
+CANONICAL_BACKUP_20260130
+apps
+apps 2
+linux/flutter/ephemeral
+macos/Flutter/ephemeral
+windows/flutter/ephemeral
+android/.gradle
+android/build
+**/*.log

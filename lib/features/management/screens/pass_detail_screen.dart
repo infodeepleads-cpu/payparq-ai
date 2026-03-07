@@ -355,6 +355,7 @@ class PassDetailScreen extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}";
+    final berlin = date.toUtc().add(const Duration(hours: 1));
+    return "${berlin.day.toString().padLeft(2, '0')}.${berlin.month.toString().padLeft(2, '0')}.${berlin.year} ${berlin.hour.toString().padLeft(2, '0')}:${berlin.minute.toString().padLeft(2, '0')}";
   }
 }

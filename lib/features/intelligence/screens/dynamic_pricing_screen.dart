@@ -44,7 +44,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   final TextEditingController _hourlyFloorController = TextEditingController();
   final TextEditingController _dailyFloorController = TextEditingController();
   final TextEditingController _monthlyFloorController = TextEditingController();
+  final TextEditingController _couponNameController = TextEditingController(
+    text: 'FREE100',
+  );
 
+  bool _hourlyCouponFieldEnabled = true;
   final GlobalKey _signKey = GlobalKey();
   final GlobalKey _noticeKey = GlobalKey();
 
@@ -347,10 +351,30 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   void _generateStripeLink(String type) async {
     if (_selectedLocation == null) return;
     final locationId = (_selectedLocation!['id']).toString();
+    final displayId = (_selectedLocation!['display_id'] ?? '').toString();
+    final price = _priceForType(type);
+    final allowPromotionCodes = _hourlyCouponFieldEnabled;
+    final promotionCodeLabel =
+        allowPromotionCodes ? _couponNameController.text.trim() : null;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final url = Uri.parse(AppConfig.createCheckoutUrl(
-        locationId: locationId, type: type, timestamp: timestamp));
+    final checkoutUrl = AppConfig.createCheckoutUrl(
+      locationId: locationId,
+      displayId: displayId,
+      type: type,
+      timestamp: timestamp,
+      price: price,
+      allowPromotionCodes: allowPromotionCodes,
+      promotionCodeLabel: promotionCodeLabel,
+    );
+
+    // LOGGING TO VERIFY URL PARAMETERS
+    debugPrint('🚀 GENERATING STRIPE LINK:');
+    debugPrint('📍 URL: $checkoutUrl');
+    debugPrint('🎫 PROMO CODES ENABLED: $allowPromotionCodes');
+    debugPrint('🏷️ PROMO LABEL: $promotionCodeLabel');
+
+    final url = Uri.parse(checkoutUrl);
 
     debugPrint('Opening Checkout: $url');
 
@@ -587,16 +611,139 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     );
   }
 
+  Widget _buildCouponFieldToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: _hourlyCouponFieldEnabled
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _hourlyCouponFieldEnabled ? Colors.green : Colors.grey[300]!,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.card_giftcard,
+                  size: 20,
+                  color: _hourlyCouponFieldEnabled
+                      ? Colors.green
+                      : Colors.grey[600],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        Lang.sel(ref.watch(localeIsCroatianProvider),
+                            'Stripe Coupon Field', 'Polje kupona'),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _hourlyCouponFieldEnabled
+                              ? Colors.green[800]
+                              : Colors.black,
+                        ),
+                      ),
+                      Text(
+                        Lang.sel(
+                            ref.watch(localeIsCroatianProvider),
+                            'Enables "Add promotion code" on Stripe',
+                            'Omogućuje "Add promotion code" na Stripeu'),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: _hourlyCouponFieldEnabled
+                              ? Colors.green[700]
+                              : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _couponNameController,
+                        enabled: _hourlyCouponFieldEnabled,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          labelText: Lang.sel(
+                              ref.watch(localeIsCroatianProvider),
+                              'Coupon name text',
+                              'Naziv kupona'),
+                          hintText: 'FREE100',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: _hourlyCouponFieldEnabled,
+            onChanged: (val) => setState(() => _hourlyCouponFieldEnabled = val),
+            activeThumbColor: Colors.green,
+          ),
+        ],
+      ),
+    );
+  }
+
   String _baseCheckoutUrl(String type) {
     if (_selectedLocation == null) return '';
     final locationId = (_selectedLocation!['id']).toString();
-    return AppConfig.createCheckoutUrl(locationId: locationId, type: type);
+    final displayId = (_selectedLocation!['display_id'] ?? '').toString();
+    final price = _priceForType(type);
+    return AppConfig.createCheckoutUrl(
+      locationId: locationId,
+      displayId: displayId,
+      type: type,
+      price: price,
+      allowPromotionCodes: _hourlyCouponFieldEnabled,
+      promotionCodeLabel:
+          _hourlyCouponFieldEnabled ? _couponNameController.text.trim() : null,
+    );
+  }
+
+  double _priceForType(String type) {
+    final fromInput = switch (type) {
+      'hourly' => double.tryParse(_hourlyController.text) ?? 0.0,
+      'daily' => double.tryParse(_dailyController.text) ?? 0.0,
+      'monthly' => double.tryParse(_monthlyController.text) ?? 0.0,
+      _ => 0.0,
+    };
+    if (fromInput >= 0) return fromInput;
+    final selected = _selectedLocation;
+    if (selected == null) return 0.0;
+    final key = switch (type) {
+      'hourly' => 'rate_per_hour',
+      'daily' => 'base_price_daily',
+      'monthly' => 'base_price_monthly',
+      _ => 'rate_per_hour',
+    };
+    final stored = double.tryParse((selected[key] ?? 0).toString()) ?? 0.0;
+    return stored < 0 ? 0.0 : stored;
   }
 
   Widget _buildStripeLinksSection() {
     return Container(
       width: 400,
-      height: 600,
+      constraints: const BoxConstraints(minHeight: 400),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -605,7 +752,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -622,6 +769,14 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Added build date to verify deployment version
+          Text(
+            'Build: ${AppConfig.buildDate}',
+            style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[400]),
+          ),
+          const SizedBox(height: 8),
+          _buildCouponFieldToggle(),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,

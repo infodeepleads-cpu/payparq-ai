@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -140,8 +140,11 @@ class _HudScreenState extends ConsumerState<HudScreen>
         selected,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup:
-            kIsWeb ? null : (Platform.isAndroid ? ImageFormatGroup.nv21 : null),
+        imageFormatGroup: kIsWeb
+            ? null
+            : (defaultTargetPlatform == TargetPlatform.android
+                ? ImageFormatGroup.nv21
+                : null),
       );
 
       await _controller!.initialize();

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/management/repositories/parking_repository.dart';
 
@@ -37,17 +38,23 @@ class ChartPoint {
   ChartPoint(this.x, this.y);
 }
 
-final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((ref) {
+final analyticsProvider =
+    Provider.autoDispose<AsyncValue<DashboardAnalytics>>((ref) {
   final sessionsAsync = ref.watch(sessionsStreamProvider);
   final permitsAsync = ref.watch(permitsStreamProvider);
   final violationsAsync = ref.watch(violationsStreamProvider);
   final locationsAsync = ref.watch(locationsStreamProvider);
 
-  if (sessionsAsync.isLoading || permitsAsync.isLoading || violationsAsync.isLoading || locationsAsync.isLoading) {
+  if (sessionsAsync.isLoading ||
+      permitsAsync.isLoading ||
+      violationsAsync.isLoading ||
+      locationsAsync.isLoading) {
     return const AsyncValue.loading();
   }
 
-  if (sessionsAsync.hasError || permitsAsync.hasError || violationsAsync.hasError) {
+  if (sessionsAsync.hasError ||
+      permitsAsync.hasError ||
+      violationsAsync.hasError) {
     return AsyncValue.error('Error loading analytics', StackTrace.current);
   }
 
@@ -55,7 +62,7 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   final permits = permitsAsync.value ?? [];
   final violations = violationsAsync.value ?? [];
   final locations = locationsAsync.value ?? [];
-  
+
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final startOfMonth = DateTime(now.year, now.month, 1);
@@ -67,12 +74,19 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   double finesRev = 0;
   double normalRev = 0;
 
+  // Debug counts
+  int activePaidSessions = 0;
+  int activePermits = 0;
+  int paidViolations = 0;
+
   // Guest Sessions Revenue
   for (var s in sessions) {
-    final date = DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
+    final date =
+        DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
     final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
-    
+
     if (s['payment_status'] == 'paid') {
+      activePaidSessions++;
       if (date.isAfter(today)) dailyRev += price;
       if (date.isAfter(startOfMonth)) monthlyRev += price;
       normalRev += price;
@@ -82,26 +96,36 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   // Subscription Revenue (Estimated monthly)
   for (var p in permits) {
     final price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
+    final date =
+        DateTime.tryParse(p['created_at']?.toString() ?? '') ?? DateTime(2000);
     if (p['status'] == 'active') {
-      monthlyRev += price;
+      activePermits++;
+      if (date.isAfter(startOfMonth)) monthlyRev += price;
       normalRev += price;
       // Daily portion of subscription
-      dailyRev += price / 30;
+      if (date.isAfter(today)) dailyRev += price / 30;
     }
   }
 
   // Fines Revenue
   for (var v in violations) {
-    final date = DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
+    final date =
+        DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
     final amount = double.tryParse(v['fine_amount']?.toString() ?? '0') ?? 0.0;
     if (v['status'] == 'paid') {
+      paidViolations++;
       if (date.isAfter(today)) dailyRev += amount;
       if (date.isAfter(startOfMonth)) monthlyRev += amount;
       finesRev += amount;
     }
   }
 
-  double calculateItemCommission(double gross, Map<String, dynamic>? location, String type, {String? subType}) {
+  debugPrint(
+      'Analytics Calculation: sessions=$activePaidSessions, permits=$activePermits, violations=$paidViolations, dailyRev=$dailyRev, monthlyRev=$monthlyRev');
+
+  double calculateItemCommission(
+      double gross, Map<String, dynamic>? location, String type,
+      {String? subType}) {
     if (location == null) return gross * 0.15; // Fallback
 
     // 1. Calculate Shared Revenue (Deduct fees)
@@ -144,12 +168,18 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
 
   for (var s in sessions) {
     if (s['payment_status'] != 'paid') continue;
-    final date = DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
+    final date =
+        DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
     final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere((l) => l['id'] == s['location_id'] || l['display_id'] == s['location_id'], orElse: () => {});
-    
-    double comm = calculateItemCommission(price, loc, 'session', subType: s['payment_source']);
-    double net = price - (price * 0.079 + 0.30) - comm; // Gross - Fees - Commission
+    final loc = locations.firstWhere(
+        (l) =>
+            l['id'] == s['location_id'] || l['display_id'] == s['location_id'],
+        orElse: () => {});
+
+    double comm = calculateItemCommission(price, loc, 'session',
+        subType: s['payment_source']);
+    double net =
+        price - (price * 0.079 + 0.30) - comm; // Gross - Fees - Commission
 
     if (date.isAfter(today)) netDaily += net;
     if (date.isAfter(startOfMonth)) netMonthly += net;
@@ -157,11 +187,14 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
 
   for (var v in violations) {
     if (v['status'] != 'paid') continue;
-    final date = DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
+    final date =
+        DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
     final amount = double.tryParse(v['fine_amount']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere((l) => l['id'] == v['location_id'], orElse: () => {});
+    final loc = locations.firstWhere((l) => l['id'] == v['location_id'],
+        orElse: () => {});
 
-    double comm = calculateItemCommission(amount, loc, 'violation', subType: v['issuer_role']);
+    double comm = calculateItemCommission(amount, loc, 'violation',
+        subType: v['issuer_role']);
     double net = amount - (amount * 0.079 + 0.30) - comm;
 
     if (date.isAfter(today)) netDaily += net;
@@ -171,7 +204,8 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   for (var p in permits) {
     if (p['status'] != 'active') continue;
     final price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere((l) => l['id'] == p['location_id'], orElse: () => {});
+    final loc = locations.firstWhere((l) => l['id'] == p['location_id'],
+        orElse: () => {});
 
     double comm = calculateItemCommission(price, loc, 'permit');
     double net = price - (price * 0.079 + 0.30) - comm;
@@ -188,9 +222,12 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   }
   if (totalSpots == 0) totalSpots = 100; // Fallback
 
-  int activeSessions = sessions.where((s) => s['status'] == 'active').length;
-  int activePermits = permits.where((p) => p['status'] == 'active').length;
-  double dailyOcc = ((activeSessions + activePermits) / totalSpots) * 100;
+  int currentActiveSessions =
+      sessions.where((s) => s['status'] == 'active').length;
+  int currentActivePermits =
+      permits.where((p) => p['status'] == 'active').length;
+  double dailyOcc =
+      ((currentActiveSessions + currentActivePermits) / totalSpots) * 100;
   if (dailyOcc > 100) dailyOcc = 100;
 
   // Monthly average occupancy (simulated based on historical density if available, or current)
@@ -208,7 +245,7 @@ final analyticsProvider = Provider.autoDispose<AsyncValue<DashboardAnalytics>>((
   for (int i = 6; i >= 0; i--) {
     final date = today.subtract(Duration(days: i));
     // Simulate some variation for demo
-    double factor = 0.7 + (i * 0.05); 
+    double factor = 0.7 + (i * 0.05);
     revData.add(ChartPoint(date, dailyRev * factor));
     occData.add(ChartPoint(date, dailyOcc * factor));
     netData.add(ChartPoint(date, netDaily * factor));

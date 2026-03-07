@@ -14,24 +14,35 @@ class LocationSelection {
   LocationSelection({this.uuid, this.displayId, required this.source});
 }
 
+String _normalizeRole(String? rawRole) {
+  final role = (rawRole ?? '').toString().trim().toLowerCase();
+  if (role == 'super_admin' ||
+      role == 'admin' ||
+      role == 'manager' ||
+      role == 'officer') {
+    return role;
+  }
+  return 'admin';
+}
+
+bool _isAdminOverrideEmail(String? email) {
+  final normalized = (email ?? '').trim().toLowerCase();
+  return normalized == 'kzamic@gmail.com' ||
+      normalized == 'pension.zamic@gmail.com' ||
+      normalized == 'pension.zamic@gmai.com';
+}
+
 final authStateProvider = StreamProvider<AuthState>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
 });
 
 final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
-  debugPrint('userProfileProvider: starting');
-  debugPrint('userProfileProvider: timestamp: ${DateTime.now()}');
-
   final user = Supabase.instance.client.auth.currentUser;
-  debugPrint('userProfileProvider: currentUser: $user');
-
   if (user == null) {
-    debugPrint('userProfileProvider: no user, returning null');
     return Stream.value(null);
   }
 
-  final controller = StreamController<Map<String, dynamic>?>();
-  debugPrint('userProfileProvider: created controller');
+  final controller = StreamController<Map<String, dynamic>?>(sync: true);
 
   // IMMEDIATE FALLBACK: Send minimal profile immediately
   final immediateFallback = {
@@ -42,19 +53,9 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
     'full_name': user.userMetadata?['name'] ?? 'User',
     '_immediate': true,
   };
-  debugPrint('userProfileProvider: IMMEDIATE FALLBACK: $immediateFallback');
   controller.add(immediateFallback);
 
-  // Enhanced fallback after 500ms if database is slow
-  Future.delayed(const Duration(milliseconds: 500), () {
-    if (!controller.isClosed && controller.hasListener) {
-      debugPrint('userProfileProvider: Enhanced fallback check');
-      // This ensures we have at least some data if database is very slow
-    }
-  });
-
   // 1. Initial fetch with timeout (runs in parallel)
-  debugPrint('userProfileProvider: starting database fetch');
   final stopwatch = Stopwatch()..start();
   SupabaseService.instance
       .executeQuery<Map<String, dynamic>?>(
@@ -75,7 +76,6 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       metadata: {'userId': user.id, 'source': 'database'},
     );
 
-    debugPrint('userProfileProvider: database fetch success: $data');
     if (!controller.isClosed) {
       if (data != null) {
         controller.add(data);
@@ -90,7 +90,6 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       metadata: {'userId': user.id, 'error': e.toString()},
     );
 
-    debugPrint('userProfileProvider: database fetch failed: $e');
     // If database fetch fails, try to build a basic profile from JWT metadata
     final metadata = user.userMetadata;
     if (metadata != null && !controller.isClosed) {
@@ -102,7 +101,6 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         'full_name': metadata['name'] ?? 'User',
         '_jwt_fallback': true,
       };
-      debugPrint('userProfileProvider: JWT fallback: $fallback');
       controller.add(fallback);
     }
   });
@@ -117,7 +115,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         if (data.isNotEmpty && !controller.isClosed) {
           // Debounce updates to prevent excessive rebuilds
           updateTimer?.cancel();
-          updateTimer = Timer(const Duration(milliseconds: 300), () {
+          updateTimer = Timer(const Duration(milliseconds: 120), () {
             if (!controller.isClosed) {
               controller.add(data.first);
             }
@@ -136,11 +134,12 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
 final userRoleProvider = Provider<String>((ref) {
   final profile = ref.watch(userProfileProvider).value;
+  final user = Supabase.instance.client.auth.currentUser;
   final email =
-      (profile?['email'] ?? Supabase.instance.client.auth.currentUser?.email)
-          ?.toString();
-  if (email == 'kzamic@gmail.com') return 'admin';
-  return profile?['role'] ?? 'guest';
+      (profile?['email'] ?? user?.email)?.toString().trim().toLowerCase();
+  if (_isAdminOverrideEmail(email)) return 'admin';
+  return _normalizeRole(
+      (profile?['role'] ?? user?.userMetadata?['role'])?.toString());
 });
 
 final userLocationIdProvider = Provider<String?>((ref) {
@@ -157,6 +156,16 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
 final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
   final displayId = ref.watch(selectedLocationIdProvider);
   if (displayId == null) return null;
+
+  final available = ref.watch(availableLocationsProvider).value;
+  if (available != null) {
+    for (final loc in available) {
+      if ((loc['display_id'] ?? '').toString() == displayId) {
+        final id = (loc['id'] ?? '').toString();
+        if (id.isNotEmpty) return id;
+      }
+    }
+  }
 
   try {
     final res = await Supabase.instance.client
@@ -257,7 +266,8 @@ final availableLocationsProvider =
 
   final profile = ref.watch(userProfileProvider).value;
   // Fallback to metadata if profile is not yet loaded to prevent "red lot" flicker
-  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final role = _normalizeRole(
+      (profile?['role'] ?? user.userMetadata?['role'])?.toString());
 
   final controller = StreamController<List<Map<String, dynamic>>>();
 
@@ -265,21 +275,27 @@ final availableLocationsProvider =
   Future<void> fetch() async {
     try {
       List<Map<String, dynamic>> data = [];
+      final email =
+          (profile?['email'] ?? user.email)?.toString().trim().toLowerCase();
       if (role == 'admin' || role == 'manager' || role == 'officer') {
-        final owned = await Supabase.instance.client
-            .from('locations')
-            .select('id')
-            .eq('owner_id', user.id);
-        final assigned = await Supabase.instance.client
-            .from('officer_assignments')
-            .select('location_id')
-            .eq('officer_id', user.id);
+        final responses = await Future.wait([
+          Supabase.instance.client
+              .from('locations')
+              .select('id')
+              .eq('owner_id', user.id),
+          Supabase.instance.client
+              .from('officer_assignments')
+              .select('location_id')
+              .eq('officer_id', user.id),
+        ]);
+        final owned = List<Map<String, dynamic>>.from(responses[0] as List);
+        final assigned = List<Map<String, dynamic>>.from(responses[1] as List);
         final ids = <String>{};
-        for (final loc in List<Map<String, dynamic>>.from(owned)) {
+        for (final loc in owned) {
           final v = (loc['id'] ?? '').toString();
           if (v.isNotEmpty) ids.add(v);
         }
-        for (final a in List<Map<String, dynamic>>.from(assigned)) {
+        for (final a in assigned) {
           final v = (a['location_id'] ?? '').toString();
           if (v.isNotEmpty) ids.add(v);
         }
@@ -287,17 +303,13 @@ final availableLocationsProvider =
             'availableLocationsProvider role=$role user=${user.id} merged_ids=$ids');
         final List<Map<String, dynamic>> mergedLocations = [];
         if (ids.isNotEmpty) {
-          final List<Map<String, dynamic>> acc = [];
-          for (final id in ids) {
-            try {
-              final row = await Supabase.instance.client
-                  .from('locations')
-                  .select()
-                  .eq('id', id)
-                  .maybeSingle();
-              if (row != null) acc.add(Map<String, dynamic>.from(row));
-            } catch (_) {}
-          }
+          final filter = ids.map((id) => 'id.eq.$id').join(',');
+          final rows = await Supabase.instance.client
+              .from('locations')
+              .select()
+              .or(filter);
+          final List<Map<String, dynamic>> acc =
+              List<Map<String, dynamic>>.from(rows);
           acc.sort((a, b) => (a['name'] ?? '')
               .toString()
               .compareTo((b['name'] ?? '').toString()));
@@ -334,9 +346,15 @@ final availableLocationsProvider =
             if (fb != null) mergedLocations.add(fb);
           } catch (_) {}
         }
-        if (mergedLocations.isEmpty) {
-          if (!controller.isClosed) controller.add([]);
-          return;
+        if (mergedLocations.isEmpty &&
+            (role == 'admin' || _isAdminOverrideEmail(email))) {
+          try {
+            final all = await Supabase.instance.client
+                .from('locations')
+                .select()
+                .order('name');
+            mergedLocations.addAll(List<Map<String, dynamic>>.from(all));
+          } catch (_) {}
         }
         mergedLocations.sort((a, b) => (a['name'] ?? '')
             .toString()
@@ -351,14 +369,14 @@ final availableLocationsProvider =
       }
       final List<Map<String, dynamic>> locations =
           List<Map<String, dynamic>>.from(data);
-      final Map<String, Map<String, dynamic>> byDid = {};
+      final Map<String, Map<String, dynamic>> byKey = {};
       for (final l in locations) {
         final did = (l['display_id'] ?? '').toString();
-        if (did.isNotEmpty) {
-          byDid[did] = l;
-        }
+        final id = (l['id'] ?? '').toString();
+        final key = did.isNotEmpty ? 'did:$did' : 'id:$id';
+        if (key != 'id:') byKey[key] = l;
       }
-      final uniqueLocations = byDid.values.toList();
+      final uniqueLocations = byKey.values.toList();
 
       // Restore persisted selection or auto-select first available for all roles
       final currentSelectedId = ref.read(selectedLocationIdProvider);
@@ -379,7 +397,13 @@ final availableLocationsProvider =
         if (firstId != null && firstId.isNotEmpty) {
           ref.read(selectedLocationIdProvider.notifier).state = firstId;
           await prefs.setString('selected_location_display_id', firstId);
+        } else {
+          ref.read(selectedLocationIdProvider.notifier).state = null;
+          await prefs.remove('selected_location_display_id');
         }
+      } else if (uniqueLocations.isEmpty && currentSelectedId != null) {
+        ref.read(selectedLocationIdProvider.notifier).state = null;
+        await prefs.remove('selected_location_display_id');
       }
 
       if (!controller.isClosed) controller.add(uniqueLocations);
@@ -396,7 +420,7 @@ final availableLocationsProvider =
       .from('locations')
       .stream(primaryKey: ['id']).listen((_) {
     fetchDebounce?.cancel();
-    fetchDebounce = Timer(const Duration(milliseconds: 800), () {
+    fetchDebounce = Timer(const Duration(milliseconds: 80), () {
       fetch();
     });
   }, onError: (e) => debugPrint('Loc Stream Error: $e'));

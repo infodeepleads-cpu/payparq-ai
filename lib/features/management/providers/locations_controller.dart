@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../repositories/locations_repository.dart';
 import '../repositories/parking_repository.dart';
@@ -87,15 +88,19 @@ class LocationsController {
         });
       } catch (_) {}
     }
-    final newDisplayId = response['display_id'];
-    if (newDisplayId == null) {
+    final newDisplayId = response['display_id']?.toString();
+    if (newDisplayId == null || newDisplayId.isEmpty) {
       throw const AppError('Location created without display ID');
     }
     _ref.read(selectedLocationIdProvider.notifier).state = newDisplayId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_location_display_id', newDisplayId);
     // tiny delay to let the dialog pop before streams rebuild
     await Future.delayed(const Duration(milliseconds: 50));
+    _ref.invalidate(selectedLocationUuidProvider);
+    _ref.invalidate(selectedEffectiveLocationUuidProvider);
     _ref.invalidate(locationsStreamProvider);
     _ref.invalidate(availableLocationsProvider);
-    return newDisplayId.toString();
+    return newDisplayId;
   }
 }

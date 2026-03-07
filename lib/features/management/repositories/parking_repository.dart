@@ -49,6 +49,17 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
   });
 }
 
+String _normalizeRoleValue(String? rawRole) {
+  final role = (rawRole ?? '').toString().trim().toLowerCase();
+  if (role == 'super_admin' ||
+      role == 'admin' ||
+      role == 'manager' ||
+      role == 'officer') {
+    return role;
+  }
+  return 'admin';
+}
+
 /// Repository for handling all parking-related data interactions with Supabase.
 /// This abstracts the data layer from the UI, following Clean Architecture principles.
 class ParkingRepository {
@@ -65,6 +76,13 @@ class ParkingRepository {
               caseSensitive: false)
           .hasMatch(locationId.toLowerCase());
       if (isUuid) {
+        return _client
+            .from('parking_permits')
+            .stream(primaryKey: ['id'])
+            .eq('location_id', locationId)
+            .order('created_at', ascending: false);
+      } else if (RegExp(r'^\d{5}$').hasMatch(locationId)) {
+        // Fallback for display_id if it's not a UUID but a 5-digit string
         return _client
             .from('parking_permits')
             .stream(primaryKey: ['id'])
@@ -87,6 +105,13 @@ class ParkingRepository {
               caseSensitive: false)
           .hasMatch(locationId.toLowerCase());
       if (isUuid) {
+        return _client
+            .from('parking_sessions')
+            .stream(primaryKey: ['id'])
+            .eq('location_id', locationId)
+            .order('created_at', ascending: false);
+      } else if (RegExp(r'^\d{5}$').hasMatch(locationId)) {
+        // Fallback for display_id if it's not a UUID but a 5-digit string
         return _client
             .from('parking_sessions')
             .stream(primaryKey: ['id'])
@@ -229,7 +254,8 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
-  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final role = _normalizeRoleValue(
+      (profile?['role'] ?? user.userMetadata?['role'])?.toString());
   final isSuperAdmin = role == 'super_admin';
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';
@@ -294,20 +320,77 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
         caseSensitive: false);
     return _cachedStream(cacheKey, baseStream).map((items) {
       final noFilters = ownedIds.isEmpty &&
-          selectedDisplayId == null &&
+          (selectedDisplayId == null || selectedDisplayId.isEmpty) &&
           (selectedUuid == null || selectedUuid.isEmpty) &&
           (effectiveUuid == null || effectiveUuid.isEmpty) &&
           (fallbackLocId == null || fallbackLocId.toString().isEmpty);
-      if (noFilters) return items;
+
+      // RELAXED FILTERING: If no filters are active, show all items
+      if (noFilters) {
+        debugPrint(
+            'permitsStreamProvider: No filters, showing all ${items.length} items');
+        return items.map((it) {
+          final raw = (it['location_id'] ?? '').toString();
+          String uiDid = raw;
+          if (uuidRegExp.hasMatch(raw.toLowerCase())) {
+            final locsAsync = ref.read(availableLocationsProvider);
+            final Map<String, String> idToDisplay = {};
+            if (locsAsync.hasValue) {
+              for (final l in (locsAsync.value ?? [])) {
+                final id = (l['id'] ?? '').toString();
+                final did = (l['display_id'] ?? '').toString();
+                if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+              }
+            }
+            uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+          }
+          return {...it, 'location_display_id': uiDid};
+        }).toList();
+      }
+
       final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
-        return ownedIds.contains(locId) ||
-            locId == (selectedUuid ?? '') ||
-            locId == (effectiveUuid ?? '') ||
-            locId == (selectedDisplayId ?? '') ||
-            locId == (fallbackLocId?.toString() ?? '');
+        final matchesOwned = ownedIds.contains(locId);
+        final matchesSelectedUuid =
+            selectedUuid != null && locId == selectedUuid;
+        final matchesEffectiveUuid =
+            effectiveUuid != null && locId == effectiveUuid;
+        final matchesSelectedDisplayId =
+            selectedDisplayId != null && locId == selectedDisplayId;
+        final matchesFallback =
+            fallbackLocId != null && locId == fallbackLocId.toString();
+
+        final result = matchesOwned ||
+            matchesSelectedUuid ||
+            matchesEffectiveUuid ||
+            matchesSelectedDisplayId ||
+            matchesFallback;
+
+        if (!result && items.length < 50) {
+          debugPrint(
+              'permitsStreamProvider filtering out item: locId=$locId, matchesOwned=$matchesOwned, matchesSelectedUuid=$matchesSelectedUuid, matchesEffectiveUuid=$matchesEffectiveUuid, matchesSelectedDisplayId=$matchesSelectedDisplayId, matchesFallback=$matchesFallback');
+        }
+
+        return result;
       }).toList();
-      return filtered.map((it) {
+
+      // RELAXED FILTERING: If filtering results in nothing, but we have items,
+      // and the user hasn't explicitly selected a location, show all as a fallback.
+      final hasExplicitSelection =
+          (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
+              (effectiveUuid != null && effectiveUuid.isNotEmpty);
+
+      final resultSet =
+          (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+              ? items
+              : filtered;
+
+      if (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection) {
+        debugPrint(
+            'permitsStreamProvider: Relaxed filtering, showing all ${items.length} items as fallback');
+      }
+
+      return resultSet.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
@@ -346,7 +429,8 @@ final sessionsStreamProvider =
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
-  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final role = _normalizeRoleValue(
+      (profile?['role'] ?? user.userMetadata?['role'])?.toString());
   final isSuperAdmin = role == 'super_admin';
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';
@@ -358,7 +442,29 @@ final sessionsStreamProvider =
         ? repo.getSessionsStream(locationId: effUuid)
         : repo.getSessionsStream();
     final cacheKey = 'sessions_super_admin_${effUuid ?? 'all'}';
-    return _cachedStream(cacheKey, baseStream);
+    final locsAsync = ref.watch(availableLocationsProvider);
+    final Map<String, String> idToDisplay = {};
+    if (locsAsync.hasValue) {
+      for (final l in (locsAsync.value ?? [])) {
+        final id = (l['id'] ?? '').toString();
+        final did = (l['display_id'] ?? '').toString();
+        if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+      }
+    }
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    final uuidRegExp = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        caseSensitive: false);
+    return _cachedStream(cacheKey, baseStream).map((items) {
+      return items.map((it) {
+        final raw = (it['location_id'] ?? '').toString();
+        String uiDid = raw;
+        if (uuidRegExp.hasMatch(raw.toLowerCase())) {
+          uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+        }
+        return {...it, 'location_display_id': uiDid};
+      }).toList();
+    });
   }
 
   if (isAdmin || isManager || isOfficer) {
@@ -366,38 +472,105 @@ final sessionsStreamProvider =
     if (!locationsAsync.hasValue) return repo.getSessionsStream();
     final locs = locationsAsync.value ?? [];
     final ownedIds = <String>{};
+    final idToDisplay = <String, String>{};
     for (final l in locs) {
       final id = (l['id'] ?? '').toString();
       final displayId = (l['display_id'] ?? '').toString();
       if (id.isNotEmpty) ownedIds.add(id);
       if (displayId.isNotEmpty) ownedIds.add(displayId);
+      if (id.isNotEmpty && displayId.isNotEmpty) idToDisplay[id] = displayId;
     }
-    final cacheKey = 'sessions_${role}_${user.id}';
-    debugPrint(
-        'sessionsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
     final selectedDisplayId = ref.watch(selectedLocationIdProvider);
     final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
     final effectiveUuid =
         ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final cacheKey =
+        'sessions_${role}_${user.id}_${effectiveUuid ?? selectedUuid ?? selectedDisplayId ?? 'all'}';
+    debugPrint(
+        'sessionsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
     final fallbackLocId =
         ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effectiveUuid)
         : repo.getSessionsStream();
+    final uuidRegExp = RegExp(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+        caseSensitive: false);
     return _cachedStream(cacheKey, baseStream).map((items) {
       final noFilters = ownedIds.isEmpty &&
-          selectedDisplayId == null &&
+          (selectedDisplayId == null || selectedDisplayId.isEmpty) &&
           (selectedUuid == null || selectedUuid.isEmpty) &&
           (effectiveUuid == null || effectiveUuid.isEmpty) &&
           (fallbackLocId == null || fallbackLocId.toString().isEmpty);
-      if (noFilters) return items;
-      return items.where((it) {
+
+      // RELAXED FILTERING: If no filters are active, show all items
+      if (noFilters) {
+        debugPrint(
+            'sessionsStreamProvider: No filters, showing all ${items.length} items');
+        return items.map((it) {
+          final raw = (it['location_id'] ?? '').toString();
+          String uiDid = raw;
+          if (uuidRegExp.hasMatch(raw.toLowerCase())) {
+            uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+          }
+          return {...it, 'location_display_id': uiDid};
+        }).toList();
+      }
+
+      final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
-        return ownedIds.contains(locId) ||
-            locId == (selectedUuid ?? '') ||
-            locId == (effectiveUuid ?? '') ||
-            locId == (selectedDisplayId ?? '') ||
-            locId == (fallbackLocId?.toString() ?? '');
+        final mappedDisplayId = idToDisplay[locId];
+        final matchesOwned = ownedIds.contains(locId);
+        final matchesSelectedUuid =
+            selectedUuid != null && locId == selectedUuid;
+        final matchesEffectiveUuid =
+            effectiveUuid != null && locId == effectiveUuid;
+        final matchesSelectedDisplayId = selectedDisplayId != null &&
+            (locId == selectedDisplayId ||
+                mappedDisplayId == selectedDisplayId);
+        final matchesFallback = fallbackLocId != null &&
+            (locId == fallbackLocId.toString() ||
+                mappedDisplayId == fallbackLocId.toString());
+
+        // V18.3: EXTRA RELAXED CHECK - if the item has a stripe session and the user has no explicit filter,
+        // we might want to show it if it matches ANY of our owned IDs
+        final result = matchesOwned ||
+            matchesSelectedUuid ||
+            matchesEffectiveUuid ||
+            matchesSelectedDisplayId ||
+            matchesFallback;
+
+        if (!result && items.length < 50) {
+          debugPrint(
+              'sessionsStreamProvider filtering out item: locId=$locId, matchesOwned=$matchesOwned, matchesSelectedUuid=$matchesSelectedUuid, matchesEffectiveUuid=$matchesEffectiveUuid, matchesSelectedDisplayId=$matchesSelectedDisplayId, matchesFallback=$matchesFallback');
+        }
+
+        return result;
+      }).toList();
+
+      // RELAXED FILTERING: If filtering results in nothing, but we have items,
+      // and the user hasn't explicitly selected a location, show all as a fallback.
+      final hasExplicitSelection =
+          (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
+              (effectiveUuid != null && effectiveUuid.isNotEmpty);
+
+      final resultSet =
+          (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+              ? items
+              : filtered;
+
+      if (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection) {
+        debugPrint(
+            'sessionsStreamProvider: Relaxed filtering, showing all ${items.length} items as fallback (filtered was empty)');
+      }
+
+      return resultSet.map((it) {
+        final raw = (it['location_id'] ?? '').toString();
+        String uiDid = raw;
+        if (uuidRegExp.hasMatch(raw.toLowerCase())) {
+          uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+        }
+        return {...it, 'location_display_id': uiDid};
       }).toList();
     });
   }
@@ -421,7 +594,8 @@ final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
-  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final role = _normalizeRoleValue(
+      (profile?['role'] ?? user.userMetadata?['role'])?.toString());
   final isSuperAdmin = role == 'super_admin';
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';
@@ -452,13 +626,20 @@ final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
           (selectedUuid == null || selectedUuid.isEmpty) &&
           (fallbackLocId == null || fallbackLocId.toString().isEmpty);
       if (noFilters) return items;
-      return items.where((it) {
+      final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
         return ownedIds.contains(locId) ||
             locId == (selectedUuid ?? '') ||
             locId == (selectedDisplayId ?? '') ||
             locId == (fallbackLocId?.toString() ?? '');
       }).toList();
+      final canFallbackToAll = ownedIds.isEmpty &&
+          (selectedUuid == null || selectedUuid.isEmpty) &&
+          (fallbackLocId == null || fallbackLocId.toString().isEmpty);
+      if (filtered.isEmpty && items.isNotEmpty && canFallbackToAll) {
+        return items;
+      }
+      return filtered;
     });
   }
 
@@ -489,21 +670,69 @@ final locationsStreamProvider =
 
   final locationUuid = ref.watch(selectedLocationUuidProvider).value;
   final displayId = ref.watch(selectedLocationIdProvider);
+  final user = Supabase.instance.client.auth.currentUser;
+  final fallbackLocId =
+      ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
   final isSuperAdmin = profile['role'] == 'super_admin';
   final isAdmin = profile['role'] == 'admin';
+  final isManager = profile['role'] == 'manager';
+  final isOfficer = profile['role'] == 'officer';
 
   Stream<List<Map<String, dynamic>>> getBaseStream() {
     if (isSuperAdmin) return repo.getLocationsStream();
-    if (isAdmin) return repo.getLocationsStream(ownerId: profile['id']);
+    if (isAdmin || isManager || isOfficer) return repo.getLocationsStream();
     return repo.getLocationsStream(
         locationId: locationUuid ?? displayId ?? profile['location_id']);
   }
 
   final cacheKey = isSuperAdmin
       ? 'locations_all'
-      : isAdmin
-          ? 'locations_owner_${profile['id']}'
+      : (isAdmin || isManager || isOfficer)
+          ? 'locations_${profile['role']}_${profile['id']}'
           : 'locations_${locationUuid ?? displayId ?? profile['location_id'] ?? 'none'}';
+  if (isSuperAdmin) return _cachedStream(cacheKey, getBaseStream());
+
+  if (isAdmin || isManager || isOfficer) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    if (!locationsAsync.hasValue) {
+      return _cachedStream(cacheKey, getBaseStream());
+    }
+    final locs = locationsAsync.value ?? [];
+    final allowedIds = <String>{};
+    for (final l in locs) {
+      final id = (l['id'] ?? '').toString();
+      final did = (l['display_id'] ?? '').toString();
+      if (id.isNotEmpty) allowedIds.add(id);
+      if (did.isNotEmpty) allowedIds.add(did);
+    }
+    return _cachedStream(cacheKey, getBaseStream()).map((items) {
+      final selected = displayId ?? '';
+      final selectedUuid = locationUuid ?? '';
+      final fallback = fallbackLocId?.toString() ?? '';
+      final noFilters = allowedIds.isEmpty &&
+          selected.isEmpty &&
+          selectedUuid.isEmpty &&
+          fallback.isEmpty;
+      if (noFilters) return items;
+      final filtered = items.where((it) {
+        final locId = (it['id'] ?? it['location_id'] ?? '').toString();
+        final did = (it['display_id'] ?? '').toString();
+        return allowedIds.contains(locId) ||
+            allowedIds.contains(did) ||
+            locId == selectedUuid ||
+            did == selected ||
+            locId == fallback ||
+            did == fallback;
+      }).toList();
+      final canFallbackToAll =
+          allowedIds.isEmpty && selectedUuid.isEmpty && fallback.isEmpty;
+      if (filtered.isEmpty && items.isNotEmpty && canFallbackToAll) {
+        return items;
+      }
+      return filtered;
+    });
+  }
+
   return _cachedStream(cacheKey, getBaseStream());
 });
 
@@ -519,7 +748,8 @@ final violationsStreamProvider =
   final fallbackLocId =
       ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
 
-  final role = profile?['role'] ?? user.userMetadata?['role'] ?? 'admin';
+  final role = _normalizeRoleValue(
+      (profile?['role'] ?? user.userMetadata?['role'])?.toString());
   final isSuperAdmin = role == 'super_admin';
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';

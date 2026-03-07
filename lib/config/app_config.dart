@@ -1,13 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 class AppConfig {
-  static const _rawUrl =
-      String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-  static const _rawAnonKey =
-      String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+  static const _rawUrl = String.fromEnvironment('SUPABASE_URL',
+      defaultValue: 'https://iafjygownkhedereaoxw.supabase.co');
+  static const _rawAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY',
+      defaultValue:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhZmp5Z293bmtoZWRlcmVhb3h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDA3ODgsImV4cCI6MjA4MzcxNjc4OH0.O4fylsFOmrxwZj9MeASIypOxJdQROLjTwUq8KZewFfg');
 
-  static String get supabaseUrl => _rawUrl.trim();
-  static String get supabaseAnonKey => _rawAnonKey.trim();
+  static String get supabaseUrl =>
+      _rawUrl.trim().replaceAll('"', '').replaceAll("'", "");
+  static String get supabaseAnonKey =>
+      _rawAnonKey.trim().replaceAll('"', '').replaceAll("'", "");
 
   static const supabaseFunctionsBaseUrl =
       String.fromEnvironment('SUPABASE_FUNCTIONS_URL', defaultValue: '');
@@ -19,6 +22,8 @@ class AppConfig {
   static const supabaseRedirectUrl = String.fromEnvironment(
       'SUPABASE_REDIRECT_URL',
       defaultValue: 'https://mobile-scanner-flax-static.vercel.app');
+  static const zeroPriceSetupLink =
+      String.fromEnvironment('ZERO_PRICE_SETUP_LINK', defaultValue: '');
 
   static void validate() {
     if (supabaseUrl.isEmpty) {
@@ -49,13 +54,53 @@ class AppConfig {
 
   static String createCheckoutUrl({
     required String locationId,
+    String? displayId,
     required String type,
     String? timestamp,
+    double? price,
+    bool allowPromotionCodes = false,
+    String? promotionCodeLabel,
   }) {
     final t = timestamp ?? DateTime.now().millisecondsSinceEpoch.toString();
     final base = supabaseFunctionsBaseUrl.isNotEmpty
         ? supabaseFunctionsBaseUrl
-        : (supabaseUrl.isNotEmpty ? '$supabaseUrl/functions/v1' : '');
-    return '$base/create-checkout?location_id=$locationId&type=$type&t=$t';
+        : '$supabaseUrl/functions/v1';
+    final queryParams = <String, String>{
+      'location_id': locationId,
+      if (displayId != null && displayId.isNotEmpty) 'display_id': displayId,
+      'type': type,
+      't': t,
+    };
+    if (price != null) {
+      final normalized = price < 0 ? 0.0 : price;
+      queryParams['price'] = normalized.toStringAsFixed(2);
+      queryParams['amount'] = normalized.toStringAsFixed(2);
+      queryParams['amount_cents'] = (normalized * 100).round().toString();
+    }
+    if (allowPromotionCodes) {
+      queryParams['allow_promotion_codes'] = '1';
+    }
+    final trimmedLabel = promotionCodeLabel?.trim() ?? '';
+    if (trimmedLabel.isNotEmpty) {
+      queryParams['promotion_code_label'] = trimmedLabel;
+    }
+    return Uri.parse('$base/create-checkout')
+        .replace(queryParameters: queryParams)
+        .toString();
+  }
+
+  static String createZeroPriceUrl({
+    required String locationId,
+    String? displayId,
+    required String type,
+    String? timestamp,
+  }) {
+    return createCheckoutUrl(
+      locationId: locationId,
+      displayId: displayId,
+      type: type,
+      timestamp: timestamp,
+      price: 0,
+    );
   }
 }

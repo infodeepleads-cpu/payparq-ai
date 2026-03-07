@@ -91,7 +91,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ElevatedButton(
             onPressed: () async {
               final email = emailCtrl.text.trim();
-              if (email.isEmpty) return;
+              if (email.isEmpty) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Please enter your email')),
+                );
+                return;
+              }
               Navigator.pop(dialogContext);
               await AsyncActionHandler.run<void>(
                 context: rootContext,

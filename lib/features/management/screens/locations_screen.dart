@@ -1122,10 +1122,21 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         ),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty
-                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
-                              'Required', 'Obavezno')
-                          : null,
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+                        if (value.isEmpty) {
+                          return Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Required', 'Obavezno');
+                        }
+                        final parsed = int.tryParse(value);
+                        if (parsed == null || parsed < 1) {
+                          return Lang.sel(
+                              ref.watch(localeIsCroatianProvider),
+                              'Capacity must be at least 1',
+                              'Kapacitet mora biti najmanje 1');
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
                     Text(

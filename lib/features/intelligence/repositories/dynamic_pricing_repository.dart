@@ -5,6 +5,35 @@ class DynamicPricingRepository {
 
   DynamicPricingRepository(this._client);
 
+  String? _extractMissingColumnName(Object error) {
+    final text = error.toString();
+    final quoted = RegExp(r'column "([^"]+)"').firstMatch(text);
+    if (quoted != null) return quoted.group(1);
+    final plain = RegExp(r"column '([^']+)'").firstMatch(text);
+    return plain?.group(1);
+  }
+
+  Future<Map<String, dynamic>?> _updateByIdOrDisplayId({
+    required String id,
+    required String? displayId,
+    required Map<String, dynamic> data,
+  }) async {
+    final resById = await _client
+        .from('locations')
+        .update(data)
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
+    if (resById != null) return resById;
+    if (displayId == null || displayId.isEmpty) return null;
+    return await _client
+        .from('locations')
+        .update(data)
+        .eq('display_id', displayId)
+        .select('id')
+        .maybeSingle();
+  }
+
   Future<List<Map<String, dynamic>>> fetchLocations({
     required String role,
     required String? locationId,
@@ -30,20 +59,31 @@ class DynamicPricingRepository {
     required String? displayId,
     required Map<String, dynamic> data,
   }) async {
-    final resById = await _client
-        .from('locations')
-        .update(data)
-        .eq('id', id)
-        .select('id')
-        .maybeSingle();
-    if (resById == null && displayId != null && displayId.isNotEmpty) {
-      await _client
-          .from('locations')
-          .update(data)
-          .eq('display_id', displayId)
-          .select('id')
-          .maybeSingle();
+    final payload = Map<String, dynamic>.from(data);
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final updated = await _updateByIdOrDisplayId(
+          id: id,
+          displayId: displayId,
+          data: payload,
+        );
+        if (updated != null) return;
+        break;
+      } catch (error) {
+        final missingColumn = _extractMissingColumnName(error);
+        if (missingColumn == null || !payload.containsKey(missingColumn)) {
+          rethrow;
+        }
+        payload.remove(missingColumn);
+        if (payload.isEmpty) {
+          throw Exception('No valid pricing fields remained for update.');
+        }
+      }
     }
+    if (displayId != null && displayId.isNotEmpty) {
+      throw Exception('Failed to update location pricing for $displayId');
+    }
+    throw Exception('Failed to update location pricing for $id');
   }
 
   Future<Map<String, dynamic>?> readLocationById(String id) async {

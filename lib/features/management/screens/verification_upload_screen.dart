@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +31,7 @@ class VerificationUploadScreen extends ConsumerStatefulWidget {
 class _VerificationUploadScreenState
     extends ConsumerState<VerificationUploadScreen> {
   final List<XFile> _selectedImages = [];
+  final Map<String, Uint8List> _imagePreviewBytes = {};
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
   final GlobalKey _signKey = GlobalKey();
@@ -93,9 +93,21 @@ class _VerificationUploadScreenState
   }
 
   void _removeImage(int index) {
+    final path = _selectedImages[index].path;
     setState(() {
       _selectedImages.removeAt(index);
+      _imagePreviewBytes.remove(path);
     });
+  }
+
+  Future<ImageProvider> _previewProvider(XFile file) async {
+    final cached = _imagePreviewBytes[file.path];
+    if (cached != null) {
+      return MemoryImage(cached);
+    }
+    final bytes = await file.readAsBytes();
+    _imagePreviewBytes[file.path] = bytes;
+    return MemoryImage(bytes);
   }
 
   Future<void> _downloadSign() async {
@@ -185,10 +197,11 @@ class _VerificationUploadScreenState
   Widget build(BuildContext context) {
     final isHr = ref.watch(localeIsCroatianProvider);
     final String displayId = widget.location['display_id'] ?? 'N/A';
+    final String locationId = (widget.location['id'] ?? '').toString();
     final String status =
         widget.location['verification_status'] ?? 'unverified';
     final String stripeUrl = AppConfig.createCheckoutUrl(
-        locationId: displayId, type: 'hourly');
+        locationId: locationId, displayId: displayId, type: 'hourly');
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
     // Determine what to show based on status
@@ -456,38 +469,52 @@ class _VerificationUploadScreenState
               );
             }
 
-            return Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.border),
-                    image: DecorationImage(
-                      image: kIsWeb
-                          ? NetworkImage(_selectedImages[index].path)
-                          : FileImage(File(_selectedImages[index].path))
-                              as ImageProvider,
-                      fit: BoxFit.cover,
+            return FutureBuilder<ImageProvider>(
+              future: _previewProvider(_selectedImages[index]),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.border),
+                      color: AppTheme.surface,
                     ),
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: InkWell(
-                    onTap: () => _removeImage(index),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                }
+                return Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.border),
+                        image: DecorationImage(
+                          image: snapshot.data!,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      child: const Icon(Icons.close,
-                          size: 16, color: Colors.white),
                     ),
-                  ),
-                ),
-              ],
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: InkWell(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close,
+                              size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),

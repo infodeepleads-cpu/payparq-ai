@@ -25,12 +25,11 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('&t=\$timestamp') ||
-          content
-              .contains('?location_id=\$locationId&type=\$type&t=\$timestamp'),
+      content.contains('timestamp: timestamp') ||
+          content.contains("DateTime.now().millisecondsSinceEpoch.toString()"),
       isTrue,
       reason:
-          'Stripe link must include a timestamp cache-buster to avoid stale sessions/URLs.',
+          'Stripe link generation must pass a timestamp cache-buster to avoid stale sessions/URLs.',
     );
   });
 }

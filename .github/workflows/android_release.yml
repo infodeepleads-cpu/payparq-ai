@@ -24,15 +24,13 @@ jobs:
         with:
           flutter-version: 'stable'
           channel: 'stable'
+          cache: true
 
       - name: Flutter Pub Get
         run: flutter pub get
 
       - name: Build Android APK (release, debug-signed)
-        working-directory: android
-        run: |
-          cd ..
-          flutter build apk --release
+        run: flutter build apk --release --no-pub
 
       - name: Locate APK
         id: locate_apk

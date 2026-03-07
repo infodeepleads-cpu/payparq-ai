@@ -106,32 +106,31 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildMobileScaffold() {
-    debugPrint('MasterScaffold: _buildMobileScaffold() started');
-    debugPrint('MasterScaffold: timestamp: ${DateTime.now()}');
-
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
 
     final profileAsync = ref.watch(userProfileProvider);
-    debugPrint('MasterScaffold: userProfileProvider state: $profileAsync');
-    debugPrint(
-        'MasterScaffold: userProfileProvider hasValue: ${profileAsync.hasValue}');
-    debugPrint(
-        'MasterScaffold: userProfileProvider isLoading: ${profileAsync.isLoading}');
-    debugPrint(
-        'MasterScaffold: userProfileProvider hasError: ${profileAsync.hasError}');
-
     final profile = profileAsync.value;
-    debugPrint('MasterScaffold: profile value: $profile');
 
     final isOfficer = profile?['role'] == 'officer';
 
     // Handle profile loading states
     if (profile == null) {
       if (profileAsync.isLoading) {
-        debugPrint(
-            'MasterScaffold: profile is null and still loading, waiting...');
-        // Show a simple loading indicator while we wait for the immediate fallback
+        final user = ref.read(authControllerProvider).currentUser();
+        if (user != null) {
+          final warmProfile = {
+            'id': user.id,
+            'email': user.email,
+            'role': user.userMetadata?['role'] ?? 'officer',
+            'location_id': user.userMetadata?['location_id'],
+            'full_name': user.userMetadata?['name'] ?? 'User',
+            '_warm_fallback': true,
+          };
+          final warmIsOfficer = warmProfile['role'] == 'officer';
+          return _buildScaffoldWithProfile(
+              warmProfile, availableLocsAsync, selectedLocId, warmIsOfficer);
+        }
         return const Scaffold(
           body: Center(
             child: CircularProgressIndicator(),
@@ -139,8 +138,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         );
       } else {
         // Profile is null and not loading - this shouldn't happen with immediate fallback
-        debugPrint(
-            'MasterScaffold: profile is null and not loading - using emergency fallback');
         // Emergency fallback - use basic user data from session
         final user = ref.read(authControllerProvider).currentUser();
         if (user != null) {
@@ -152,8 +149,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
             'full_name': user.userMetadata?['name'] ?? 'User',
             '_emergency_fallback': true,
           };
-          debugPrint(
-              'MasterScaffold: using emergency profile: $emergencyProfile');
           // Continue with emergency profile
           return _buildScaffoldWithProfile(
               emergencyProfile, availableLocsAsync, selectedLocId, isOfficer);
@@ -163,17 +158,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     // Final null check - if profile is still null, show loading
     if (profile == null) {
-      debugPrint(
-          'MasterScaffold: profile is still null after all fallbacks, showing loading');
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
-
-    debugPrint('MasterScaffold: profile loaded, continuing');
-    debugPrint('MasterScaffold: profile role: ${profile['role']}');
 
     return _buildScaffoldWithProfile(
         profile, availableLocsAsync, selectedLocId, isOfficer);
@@ -520,7 +510,18 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               'Account profile not found. Please try signing out and back in.');
         }
 
-        final role = profile['role'] ?? 'guest';
+        final user = ref.read(authControllerProvider).currentUser();
+        final roleRaw =
+            (profile['role'] ?? user?.userMetadata?['role'] ?? 'admin')
+                .toString()
+                .trim()
+                .toLowerCase();
+        final role = (roleRaw == 'super_admin' ||
+                roleRaw == 'admin' ||
+                roleRaw == 'manager' ||
+                roleRaw == 'officer')
+            ? roleRaw
+            : 'admin';
         final isOfficer = role == 'officer';
         final isManager = role == 'manager';
         final isSuperAdmin = role == 'super_admin';
@@ -863,6 +864,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                 onChanged: (id) {
                   if (id != null) {
                     ref.read(selectedLocationIdProvider.notifier).state = id;
+                    () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('selected_location_display_id', id);
+                    }();
                   }
                 },
                 items: uniqueLocs

@@ -23,81 +23,104 @@ class LocationsHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final titleFontSize = screenWidth >= 1300
+        ? 40.0
+        : screenWidth >= 1024
+            ? 34.0
+            : 28.0;
+    final compactHeader = screenWidth < 1180;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  Lang.sel(isCroatian, 'Locations & Hubs', 'Lokacije i Hubovi'),
-                  style: GoogleFonts.inter(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: -1,
+                Expanded(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: compactHeader ? constraints.maxWidth : 760,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          Lang.sel(isCroatian, 'Locations & Hubs',
+                              'Lokacije i Hubovi'),
+                          style: GoogleFonts.inter(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isSuperAdmin
+                              ? Lang.sel(
+                                  isCroatian,
+                                  'Super Admin Mode: Viewing all locations',
+                                  'Super Admin način: Prikaz svih lokacija')
+                              : Lang.sel(
+                                  isCroatian,
+                                  'Managing access for Location ID: $locationId',
+                                  'Upravljanje pristupom za ID lokacije: $locationId'),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  isSuperAdmin
-                      ? Lang.sel(
-                          isCroatian,
-                          'Super Admin Mode: Viewing all locations',
-                          'Super Admin način: Prikaz svih lokacija')
-                      : Lang.sel(
-                          isCroatian,
-                          'Managing access for Location ID: $locationId',
-                          'Upravljanje pristupom za ID lokacije: $locationId'),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
+                if (isAdmin || isSuperAdmin) ...[
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: onAddLocation,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(
+                        Lang.sel(isCroatian, 'Add Lot', 'Dodaj parkiralište')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
-            if (isAdmin || isSuperAdmin)
-              ElevatedButton.icon(
-                onPressed: onAddLocation,
-                icon: const Icon(Icons.add, size: 18),
-                label:
-                    Text(Lang.sel(isCroatian, 'Add Lot', 'Dodaj parkiralište')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4)),
+            SizedBox(height: compactHeader ? 28 : 48),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: TextField(
+                onChanged: onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  filled: true,
+                  fillColor: AppTheme.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 48),
-        SizedBox(
-          width: 400,
-          child: TextField(
-            onChanged: onSearchChanged,
-            decoration: InputDecoration(
-              hintText: Lang.sel(isCroatian, 'Search', 'Pretraži'),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: AppTheme.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

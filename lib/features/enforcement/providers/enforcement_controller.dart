@@ -152,10 +152,11 @@ class EnforcementController {
         }
       }
     }
+    final dailyPrice = await _repo.getDailyBasePrice(normalizedUuid);
     final dbRecord = {
       'plate': plate,
       'violation_type': violationType,
-      'fine_amount': 50.00,
+      'fine_amount': dailyPrice,
       'status': 'issued',
       'location_id': normalizedUuid,
       'evidence_r2_url': fileName,
