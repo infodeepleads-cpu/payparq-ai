@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../features/management/repositories/parking_repository.dart';
 import '../../utils/date_sort_helpers.dart';
+import 'dart:convert';
 
 /// Provider for the search query in the dashboard.
 final dashboardSearchProvider = StateProvider.autoDispose<String>((ref) => '');
@@ -26,17 +27,15 @@ final unifiedDashboardProvider =
   List<Map<String, dynamic>> extractData(
       AsyncValue<List<Map<String, dynamic>>> asyncVal, String type) {
     return asyncVal.maybeWhen(
-      data: (data) => data
-          .map((item) {
-            DateSortHelpers.ensureCachedDate(
-              item,
-              'created_at',
-              'ui_created_at',
-              fallback: DateTime(2000),
-            );
-            return {...item, 'ui_type': type};
-          })
-          .toList(),
+      data: (data) => data.map((item) {
+        DateSortHelpers.ensureCachedDate(
+          item,
+          'created_at',
+          'ui_created_at',
+          fallback: DateTime(2000),
+        );
+        return {...item, 'ui_type': type};
+      }).toList(),
       orElse: () => [],
     );
   }
@@ -61,31 +60,109 @@ final unifiedDashboardProvider =
 
   // Apply filtering
   final filtered = combined.where((item) {
-    final plate = (item['plate'] ?? '').toString().toLowerCase();
-    // Support both guest (email/mobile) and subscriber (contact_email/contact_phone) fields
-    final email =
-        (item['email'] ?? item['contact_email'] ?? '').toString().toLowerCase();
-    final mobile = (item['mobile'] ?? item['contact_phone'] ?? '')
-        .toString()
-        .toLowerCase();
-    final name = (item['contact_name'] ?? '').toString().toLowerCase();
+    // V14: Extract metadata for search if available
+    String? metadataEmail;
+    String? metadataMobile;
+    String? couponCode;
+    try {
+      if (item['stripe_metadata'] != null) {
+        final metaStr = item['stripe_metadata'].toString();
+        if (metaStr.startsWith('{')) {
+          final metaJson = jsonDecode(metaStr);
+          metadataEmail = metaJson['email']?.toString();
+          metadataMobile = metaJson['mobile']?.toString();
+          couponCode = metaJson['coupon_code']?.toString();
+        }
+      }
+    } catch (_) {}
 
-    final matchesSearch = plate.contains(search) ||
-        email.contains(search) ||
-        mobile.contains(search) ||
-        name.contains(search);
+    final plate = (item['plate'] ?? '').toString().toLowerCase();
+    // Support both guest (email/mobile) and subscriber (contact_email/contact_phone) fields + metadata
+    final email =
+        (item['email'] ?? item['contact_email'] ?? metadataEmail ?? '')
+            .toString()
+            .toLowerCase();
+    final mobile =
+        (item['mobile'] ?? item['contact_phone'] ?? metadataMobile ?? '')
+            .toString()
+            .toLowerCase();
+    final name = (item['contact_name'] ?? '').toString().toLowerCase();
+    final locationDisplayId =
+        (item['location_display_id'] ?? '').toString().toLowerCase();
+    final coupon =
+        (item['coupon_code'] ?? couponCode ?? '').toString().toLowerCase();
+
+    // V14: Multi-term search support (e.g. "ivo 56071")
+    final searchTerms = search.split(' ').where((t) => t.isNotEmpty).toList();
+    bool matchesSearch = true;
+
+    if (searchTerms.isEmpty) {
+      matchesSearch = true;
+    } else {
+      for (final term in searchTerms) {
+        final termMatches = plate.contains(term) ||
+            email.contains(term) ||
+            mobile.contains(term) ||
+            name.contains(term) ||
+            locationDisplayId.contains(term) ||
+            coupon.contains(term);
+        if (!termMatches) {
+          matchesSearch = false;
+          break;
+        }
+      }
+    }
 
     if (!matchesSearch) return false;
 
-    final isPaid =
-        item['payment_status'] == 'paid' || item['status'] == 'active';
+    final amount = double.tryParse((item['price'] ?? 0).toString()) ?? 0.0;
+    final paymentStatus =
+        (item['payment_status'] ?? '').toString().trim().toLowerCase();
+    final status = (item['status'] ?? '').toString().trim().toLowerCase();
+    final hasStripeSession =
+        (item['stripe_session_id'] ?? '').toString().isNotEmpty;
+
+    // V18.4: Stripe metadata mapping
+    final isPaid = paymentStatus == 'paid' ||
+        paymentStatus == 'succeeded' ||
+        paymentStatus == 'complete' ||
+        paymentStatus == 'completed' ||
+        status == 'active' ||
+        status == 'pending' ||
+        status == 'paid' ||
+        status == 'succeeded' ||
+        status == 'complete' ||
+        status == 'completed' ||
+        (hasStripeSession &&
+            status != 'canceled' &&
+            status != 'cancelled' &&
+            status != 'expired') ||
+        amount == 0.0 ||
+        (item['stripe_metadata'] != null &&
+            (item['stripe_metadata']
+                    .toString()
+                    .contains('"status":"complete"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"payment_status":"paid"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"checkout.session.completed"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"checkout_session_id"')));
+
     if (filter == 'Active') return isPaid;
     if (filter == 'Inactive') return !isPaid;
-
     return true;
   }).toList();
 
-  DateSortHelpers.sortByCachedDate(filtered, 'ui_created_at');
+  // Sorting: most recent first
+  filtered.sort((a, b) {
+    final da = (a['ui_created_at'] as DateTime?) ?? DateTime(2000);
+    final db = (b['ui_created_at'] as DateTime?) ?? DateTime(2000);
+    return db.compareTo(da);
+  });
 
   return AsyncValue.data(filtered);
 });

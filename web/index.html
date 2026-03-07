@@ -1,49 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
-
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Payparq Scanner for parking operations, analytics, and location management.">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Payparq Scanner">
-  <meta property="og:title" content="Payparq Scanner">
-  <meta property="og:description" content="Parking operations dashboard, location management, and analytics.">
-  <meta property="og:image" content="https://mobile-scanner-flax-static.vercel.app/icons/Icon-512.png">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Payparq Scanner">
-  <meta name="twitter:description" content="Parking operations dashboard, location management, and analytics.">
-  <meta name="twitter:image" content="https://mobile-scanner-flax-static.vercel.app/icons/Icon-512.png">
-
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Payparq Scanner">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/Icon-32.png"/>
-  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png"/>
-  <link rel="shortcut icon" href="favicon.png"/>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Payparq Scanner</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=pp1">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/Icon-32.png">
   <link rel="manifest" href="manifest.json">
+  <style>
+    body { background-color: #f9fafb; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+    .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="loading">
+    <div class="loader"></div>
+  </div>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

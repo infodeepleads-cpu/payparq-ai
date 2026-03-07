@@ -1,173 +1,742 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import Stripe from "https://esm.sh/stripe@11.1.0?target=deno"
+// @ts-nocheck
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.25.0?target=denonext";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-  apiVersion: '2022-11-15',
-  httpClient: Stripe.createFetchHttpClient(),
-})
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const successUrl = Deno.env.get("STRIPE_SUCCESS_URL") ??
+  "https://mobile-scanner-flax-static.vercel.app/#/dashboard";
+const cancelUrl = Deno.env.get("STRIPE_CANCEL_URL") ??
+  "https://mobile-scanner-flax-static.vercel.app/#/dashboard";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+};
 
-serve(async (req) => {
-  const url = new URL(req.url)
-  const locationId = url.searchParams.get('location_id')
-  const type = url.searchParams.get('type') // hourly, daily, monthly
+const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+const stripeWebhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 
-  if (!locationId || !type) {
-    return new Response(JSON.stringify({ error: 'Missing parameters' }), { status: 400 })
+const admin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+function json(data: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function normalizeType(v: string | null): "hourly" | "daily" | "monthly" {
+  const t = (v ?? "").trim().toLowerCase();
+  if (t === "daily" || t === "monthly") return t;
+  return "hourly";
+}
+
+function checkoutCustomFields(): any[] {
+  return [
+    {
+      key: "plate_number",
+      type: "text",
+      label: { type: "custom", custom: "Vehicle Plate Number (e.g. MA679XX)" },
+      optional: false,
+    },
+  ];
+}
+
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    v,
+  );
+}
+
+function parseCents(v: unknown): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n);
+}
+
+function parseEuroToCents(v: unknown): number | null {
+  if (v == null) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 100);
+}
+
+async function resolveLocation(input: string): Promise<{ id: string; display_id?: string } | null> {
+  const candidate = String(input ?? "").trim();
+  if (!candidate) return null;
+  if (isUuid(candidate)) {
+    const { data } = await admin
+      .from("locations")
+      .select("id, display_id")
+      .eq("id", candidate)
+      .maybeSingle();
+    if (data?.id) return data as { id: string; display_id?: string };
+  }
+  if (/^\d{5}$/.test(candidate)) {
+    const { data } = await admin
+      .from("locations")
+      .select("id, display_id")
+      .eq("display_id", candidate)
+      .maybeSingle();
+    if (data?.id) return data as { id: string; display_id?: string };
+  }
+  const { data: bySlug } = await admin
+    .from("locations")
+    .select("id, display_id")
+    .eq("canonical_slug", candidate)
+    .maybeSingle();
+  if (bySlug?.id) return bySlug as { id: string; display_id?: string };
+
+  const { data: byName } = await admin
+    .from("locations")
+    .select("id, display_id")
+    .eq("name", candidate)
+    .maybeSingle();
+  if (byName?.id) return byName as { id: string; display_id?: string };
+
+  const { data: byNameInsensitive } = await admin
+    .from("locations")
+    .select("id, display_id")
+    .ilike("name", candidate)
+    .maybeSingle();
+  if (byNameInsensitive?.id) return byNameInsensitive as { id: string; display_id?: string };
+
+  const { data: byAny } = await admin
+    .from("locations")
+    .select("id, display_id")
+    .or(`display_id.eq.${candidate},canonical_slug.eq.${candidate},name.ilike.%${candidate}%`)
+    .limit(1)
+    .maybeSingle();
+  if (byAny?.id) return byAny as { id: string; display_id?: string };
+
+  return null;
+}
+
+function extractMissingColumnName(message: string): string | null {
+  const quoted = message.match(/column "([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const singleQuoted = message.match(/column '([^']+)'/i);
+  if (singleQuoted?.[1]) return singleQuoted[1];
+  const plain = message.match(/column ([a-zA-Z0-9_]+) does not exist/i);
+  return plain?.[1] ?? null;
+}
+
+function extractNotNullColumnName(message: string): string | null {
+  const quoted = message.match(/null value in column "([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const singleQuoted = message.match(/null value in column '([^']+)'/i);
+  return singleQuoted?.[1] ?? null;
+}
+
+function defaultValueForSessionColumn(column: string): unknown {
+  if (column === "entry_time" || column === "created_at") return new Date().toISOString();
+  if (column === "plate") return "PENDING";
+  if (column === "email" || column === "mobile" || column === "contact_name") return "";
+  if (column === "type") return "hourly";
+  if (column === "status" || column === "payment_status") return "pending";
+  if (column === "price" || column === "amount_cents" || column === "duration_minutes") return 0;
+  return undefined;
+}
+
+async function insertSessionWithSchemaFallback(
+  insertData: Record<string, unknown>,
+): Promise<{ ok: boolean; message?: string }> {
+  let payload: Record<string, unknown> = { ...insertData };
+  console.log(`[V18.1] Initial insert attempt with payload: ${JSON.stringify(payload)}`);
+  for (let i = 0; i < 20; i++) {
+    const { error } = await admin
+      .from("parking_sessions")
+      .insert(payload);
+    if (!error || error.code === "23505") {
+      if (error?.code === "23505") console.log(`[V18.1] Duplicate session (23505), treating as success`);
+      return { ok: true };
+    }
+    console.warn(`[V18.1] Insert error (attempt ${i+1}): code=${error.code}, message=${error.message}`);
+    const notNullColumn = extractNotNullColumnName(error.message ?? "");
+    if (notNullColumn) {
+      const fallbackValue = defaultValueForSessionColumn(notNullColumn);
+      if (fallbackValue !== undefined) {
+        payload = { ...payload, [notNullColumn]: fallbackValue };
+        continue;
+      }
+    }
+    // Handle invalid UUID error (22P02)
+    if (error.code === "22P02" && error.message?.includes("location_id")) {
+      console.warn("[V15] Invalid UUID for location_id, skipping this field");
+      const { location_id: _removed, ...rest } = payload;
+      payload = rest;
+      continue;
+    }
+    const missingColumn = extractMissingColumnName(error.message ?? "");
+    if (!missingColumn || !(missingColumn in payload)) {
+      return { ok: false, message: error.message };
+    }
+    const { [missingColumn]: _removed, ...rest } = payload;
+    payload = rest;
+  }
+  return { ok: false, message: "Failed to insert parking session after schema fallbacks" };
+}
+
+async function updateSessionWithSchemaFallback(
+  stripeSessionId: string,
+  updateData: Record<string, unknown>,
+): Promise<{ ok: boolean; message?: string }> {
+  let payload: Record<string, unknown> = { ...updateData };
+  for (let i = 0; i < 20; i++) {
+    const { error } = await admin
+      .from("parking_sessions")
+      .update(payload)
+      .eq("stripe_session_id", stripeSessionId);
+    if (!error) {
+      return { ok: true };
+    }
+    const missingColumn = extractMissingColumnName(error.message ?? "");
+    if (!missingColumn || !(missingColumn in payload)) {
+      return { ok: false, message: error.message };
+    }
+    const { [missingColumn]: _removed, ...rest } = payload;
+    payload = rest;
+  }
+  return { ok: false, message: "Failed to update parking session after schema fallbacks" };
+}
+
+async function persistCheckoutSession(
+  session: Stripe.Checkout.Session,
+): Promise<{ ok: boolean; status?: number; message?: string }> {
+  const metadata = session.metadata || {};
+  const candidates = [
+    metadata.location_id,
+    metadata.display_id,
+    session.client_reference_id,
+  ]
+    .map((v) => String(v ?? "").trim())
+    .filter((v) => v.length > 0);
+
+  let resolvedLocation: { id: string; display_id?: string } | null = null;
+  for (const candidate of candidates) {
+    resolvedLocation = await resolveLocation(candidate);
+    if (resolvedLocation?.id) break;
+  }
+  if (!resolvedLocation?.id) {
+    return { ok: false, status: 400, message: "Unable to resolve location_id" };
+  }
+
+  const { data: existing, error: existingError } = await admin
+    .from("parking_sessions")
+    .select("id")
+    .eq("stripe_session_id", session.id)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error(`[V17] Error checking for existing session ${session.id}: ${existingError.message}`);
+  }
+
+  const email = session.customer_details?.email || metadata.email || "";
+  const phone = session.customer_details?.phone || metadata.mobile || "";
+  const name = session.customer_details?.name || "";
+  const type = (metadata.type || "hourly").toString();
+  let couponCode = "";
+  let discountAmount = 0;
+  if (session.total_details?.breakdown?.discounts) {
+    const discount = session.total_details.breakdown.discounts[0];
+    if (discount && discount.discount) {
+      const d = discount.discount as any;
+      if (d.coupon) {
+        couponCode = d.coupon.name || d.coupon.id;
+        discountAmount = (discount.amount / 100);
+      } else if (d.promotion_code) {
+        couponCode = d.promotion_code.code;
+        discountAmount = (discount.amount / 100);
+      }
+    }
+  }
+
+  let plateNumber = "";
+  if (session.custom_fields) {
+    const plateField = session.custom_fields.find((f) => f.key === "plate_number");
+    if (plateField && plateField.text) {
+      plateNumber = plateField.text.value || "";
+    }
+  }
+  if (!plateNumber && metadata.plate) {
+    plateNumber = metadata.plate;
+  }
+
+  const insertData: any = {
+    location_id: resolvedLocation.id,
+    plate: plateNumber || "PENDING",
+    email: email,
+    mobile: phone,
+    contact_name: name, // V14: Save Stripe customer name
+    type: type,
+    status: "active",
+    payment_status: "paid",
+    price: Number(session.amount_total ?? 0) / 100,
+    amount_cents: Number(session.amount_total ?? 0),
+    stripe_session_id: session.id,
+    created_at: new Date().toISOString(),
+    coupon_code: couponCode || null,
+    discount_amount: discountAmount || 0,
+    stripe_metadata: JSON.stringify({
+      ...metadata,
+      stripe_id: session.id,
+      customer: session.customer,
+      payment_intent: session.payment_intent,
+    }), // V17: Save full context
+  };
+
+  if (existing?.id) {
+    console.log(`[V17] Updating existing session ${existing.id} for stripe_id ${session.id}`);
+    const updated = await updateSessionWithSchemaFallback(session.id, insertData);
+    if (updated.ok) return { ok: true };
+    return { ok: false, status: 500, message: updated.message };
+  }
+
+  console.log(`[V17] Inserting new session for stripe_id ${session.id}`);
+  const inserted = await insertSessionWithSchemaFallback(insertData);
+  if (inserted.ok) return { ok: true };
+  return { ok: false, status: 500, message: inserted.message };
+}
+
+async function locationPriceCents(
+  locationId: string,
+  type: "hourly" | "daily" | "monthly",
+): Promise<number> {
+  const idColumn = isUuid(locationId) ? "id" : "display_id";
+  const { data, error } = await admin
+    .from("locations")
+    .select("rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly")
+    .eq(idColumn, locationId)
+    .maybeSingle();
+  if (error || !data) return 500;
+  let euro = 5;
+  if (type === "hourly") {
+    euro = Number(data["rate_per_hour"] ?? data["base_price_hourly"] ?? 5);
+  } else if (type === "daily") {
+    euro = Number(data["base_price_daily"] ?? 20);
+  } else {
+    euro = Number(data["base_price_monthly"] ?? 150);
+  }
+  if (!Number.isFinite(euro) || euro < 0) euro = 0;
+  return Math.round(euro * 100);
+}
+
+serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  
+  const signature = req.headers.get("stripe-signature");
+
+  if (signature) {
+    if (!stripeWebhookSecret) {
+      return json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, 500);
+    }
+    try {
+      const bodyText = await req.text();
+      const event = await stripe.webhooks.constructEventAsync(
+        bodyText,
+        signature,
+        stripeWebhookSecret,
+      );
+
+      console.log(`[V7] Received webhook event: ${event.type}`);
+
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded"
+      ) {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const persisted = await persistCheckoutSession(session);
+        if (!persisted.ok) {
+          return json({ error: persisted.message ?? "Failed to persist parking session" }, persisted.status ?? 500);
+        }
+      }
+
+      return json({ received: true });
+    } catch (err: any) {
+      console.error(`[V7] Webhook Error: ${err?.message ?? String(err)}`);
+      return json({ error: `Webhook Error: ${err?.message ?? String(err)}` }, 400);
+    }
   }
 
   try {
-    // 1. Fetch location pricing settings and owner's Stripe account
-    const isFiveDigit = locationId.length === 5 && /^\d+$/.test(locationId);
-    
-    const { data: location, error: locError } = await supabase
-      .from('locations')
-      .select('*, profiles:owner_id(stripe_account_id, stripe_onboarding_complete)')
-      .or(isFiveDigit ? `display_id.eq.${locationId}` : `id.eq.${locationId}`)
-      .single();
-
-    if (locError || !location) {
-      return new Response(JSON.stringify({ error: 'Location not found' }), { status: 404 })
+    if (req.method !== "GET" && req.method !== "POST") {
+      return json({ error: "Method not allowed" }, 405);
+    }
+    if (!stripeSecretKey || !supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("[CRITICAL] Missing configuration environment variables");
+      return json({ error: "Missing server configuration" }, 500);
     }
 
-    const ownerProfile = (location as any).profiles;
-    const stripeAccountId = ownerProfile?.stripe_onboarding_complete ? ownerProfile?.stripe_account_id : null;
-
-    // 2. Calculate Base Price
-    let basePrice = 0
-    if (type === 'hourly') basePrice = location.rate_per_hour || 0
-    else if (type === 'daily') basePrice = location.base_price_daily || 0
-    else if (type === 'monthly') basePrice = location.base_price_monthly || 0
-    else return new Response(JSON.stringify({ error: 'Invalid type' }), { status: 400 })
-
-    // 3. Apply Dynamic Adjustments
-    let dynamicRatio = location.dynamic_pricing_ratio || 1.0
-    let surchargeMultiplier = location.surcharge_multiplier || 1.0
-    
-    // AutoPilot Logic (Global Toggle)
-    if (location.autopilot_enabled) {
-      const now = new Date()
-      const month = now.getMonth() + 1 // 1-12
-      const hour = now.getHours()
-
-      // Seasonal Algorithms
-      if (month >= 7 && month <= 8) {
-        dynamicRatio = 2.0 // Jul-Aug 200%
-      } else if (month >= 6 && month <= 9) {
-        dynamicRatio = 1.5 // Jun-Sep 150%
-      }
-
-      // Time-based Algorithms
-      if (hour >= 8 && hour < 16) {
-        surchargeMultiplier = 1.5 // 08-16h 150%
-      } else if (hour >= 20 || hour < 6) {
-        surchargeMultiplier = 0.8 // Night 80%
+    const url = new URL(req.url);
+    let body: Record<string, unknown> = {};
+    if (req.method === "POST") {
+      try {
+        body = await req.json();
+      } catch (_) {
+        body = {};
       }
     }
 
-    let finalPrice = basePrice
+    const locationId = String(
+      body["location_id"] ?? url.searchParams.get("location_id") ?? "",
+    ).trim();
+    const urlDisplayId = String(
+      body["display_id"] ?? url.searchParams.get("display_id") ?? "",
+    ).trim();
+    if (!locationId) return json({ error: "location_id is required" }, 400);
+
+    // V10: Super robust location resolution
+    let locData = null;
     
-    if (location.dynamic_pricing_enabled) {
-      finalPrice *= dynamicRatio
+    // 1. Try UUID
+    if (isUuid(locationId)) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("id", locationId)
+        .maybeSingle();
+      locData = data;
     }
     
-    if (location.surcharge_enabled) {
-      finalPrice *= surchargeMultiplier
+    // 2. Try Display ID (5 digits) from locationId parameter
+    if (!locData && /^\d{5}$/.test(locationId)) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("display_id", locationId)
+        .maybeSingle();
+      locData = data;
     }
 
-    // Apply Smart AutoPilot Ceiling Constraints
-    if (location.autopilot_enabled) {
-      let ceiling = 0
-      if (type === 'hourly') ceiling = location.rate_per_hour_ceiling || 0
-      else if (type === 'daily') ceiling = location.base_price_daily_ceiling || 0
-      else if (type === 'monthly') ceiling = location.base_price_monthly_ceiling || 0
-
-      if (ceiling > 0 && finalPrice > ceiling) {
-        finalPrice = ceiling
-      }
+    // 2.5 Try Display ID from explicit parameter
+    if (!locData && /^\d{5}$/.test(urlDisplayId)) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("display_id", urlDisplayId)
+        .maybeSingle();
+      locData = data;
+    }
+    
+    // 3. Try Canonical Slug
+    if (!locData) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("canonical_slug", locationId)
+        .maybeSingle();
+      locData = data;
+    }
+    
+    // 4. Try exact Name
+    if (!locData) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("name", locationId)
+        .maybeSingle();
+      locData = data;
+    }
+    
+    // 5. Try case-insensitive Name
+    if (!locData) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .ilike("name", locationId)
+        .maybeSingle();
+      locData = data;
+    }
+    
+    // 6. Try partial Name match
+    if (!locData) {
+      const { data } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .ilike("name", `%${locationId}%`)
+        .maybeSingle();
+      locData = data;
     }
 
-    // Round to 2 decimal places and convert to cents for Stripe
-    const amountInCents = Math.round(finalPrice * 100)
+    const displayId = locData?.display_id || (urlDisplayId && /^\d{5}$/.test(urlDisplayId) ? urlDisplayId : locationId);
+    let locationUuid = locData?.id;
 
-    if (amountInCents <= 0) {
-      return new Response(JSON.stringify({ error: 'Price calculation resulted in zero or negative amount' }), { status: 400 })
+    // V15: If we couldn't resolve locData, but locationId is a UUID, use it as fallback
+    if (!locationUuid && isUuid(locationId)) {
+      locationUuid = locationId;
     }
 
-    // 4. Create Stripe Checkout Session
-    // Commission Logic: 15% platform fee
-    const commissionPercent = 0.15;
-    const applicationFeeAmount = Math.round(amountInCents * commissionPercent);
+    // V13: Robust display ID logging for debugging
+    console.log(`[V13] Resolution: input=${locationId}, urlDisplayId=${urlDisplayId}, resolvedUuid=${locationUuid}, resolvedDisplayId=${displayId}`);
 
-    const sessionParams: any = {
-      payment_method_types: ['card'],
+    if (!locationUuid) {
+      console.error(`[V15] CRITICAL: Could not resolve a valid UUID for locationId: ${locationId}`);
+      // If we can't find a UUID, we can't insert into parking_sessions.
+      // We'll proceed with the Stripe checkout but skip the seeding.
+    }
+
+    const type = normalizeType(
+      String(body["type"] ?? url.searchParams.get("type") ?? "hourly"),
+    );
+    const email = String(
+      body["email"] ?? url.searchParams.get("email") ?? "",
+    ).trim();
+
+    const explicitCents = parseCents(body["amount_cents"]) ??
+      parseCents(url.searchParams.get("amount_cents")) ??
+      parseEuroToCents(body["amount"]) ??
+      parseEuroToCents(url.searchParams.get("amount")) ??
+      parseEuroToCents(body["price"]) ??
+      parseEuroToCents(url.searchParams.get("price"));
+
+    // V6: Dynamic promotion code support and mobile phone field
+    const allowPromotionCodes = (
+      body["allow_promotion_codes"] === "1" ||
+      body["allow_promotion_codes"] === true ||
+      url.searchParams.get("allow_promotion_codes") === "1"
+    );
+
+    const promotionCodeLabel = String(
+      body["promotion_code_label"] ?? url.searchParams.get("promotion_code_label") ?? "",
+    ).trim();
+
+    const plate = String(
+      body["plate"] ?? url.searchParams.get("plate") ?? "",
+    ).trim();
+
+    const mobile = String(
+      body["mobile"] ?? url.searchParams.get("mobile") ?? "",
+    ).trim();
+
+    console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}`);
+
+    // V13: Exact description format requested by user
+    const now = new Date();
+    let purchaseTimeDisplay = "";
+    try {
+      const formatter = new Intl.DateTimeFormat("de-DE", {
+        timeZone: "Europe/Berlin",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      // Keep the comma for "07.03.2026, 12:09:28" format
+      purchaseTimeDisplay = formatter.format(now);
+    } catch (e) {
+      purchaseTimeDisplay = now.toISOString().replace("T", " ").split(".")[0];
+    }
+
+    let amountCents = explicitCents;
+    if (amountCents == null) {
+      // Use the fetched locData for price if available
+      amountCents = await locationPriceCents(locationUuid, type);
+    }
+    if (amountCents < 50) amountCents = 50;
+
+    console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
+
+    const sessionOptions: any = {
+      mode: "payment",
+      payment_method_types: ["card"],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: locationUuid, // Use UUID if possible
+      customer_email: email || undefined,
       phone_number_collection: {
         enabled: true,
       },
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `Parking ${type.toUpperCase()} - ${location.name}`,
-              description: `Parking access at ${location.address}`,
-            },
-            unit_amount: amountInCents,
-          },
-          adjustable_quantity: {
-            enabled: true,
-            minimum: 1,
-            maximum: 99,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${supabaseUrl}/auth/v1/callback?next=/success`, 
-      cancel_url: `${supabaseUrl}/auth/v1/callback?next=/cancel`, 
-      metadata: {
-        location_id: locationId,
-        type: type,
-        is_autopilot: (location.autopilot_enabled ?? false).toString(),
+      consent_collection: {
+        terms_of_service: "required",
       },
-      custom_fields: [
-        {
-          key: 'plate_number',
-          label: { type: 'custom', custom: 'Vehicle Plate Number' },
-          type: 'text',
+      custom_text: {
+        terms_of_service_acceptance: {
+          message: "By paying, you agree to our [Terms of Service](https://payparq.ai/terms) and [Privacy Policy](https://payparq.ai/privacy).",
         },
-      ],
+      },
+      custom_fields: checkoutCustomFields(),
+      line_items: [{
+        quantity: 1,
+        adjustable_quantity: {
+          enabled: true,
+          minimum: 1,
+          maximum: 99,
+        },
+        price_data: {
+          currency: "eur",
+          unit_amount: amountCents,
+          product_data: {
+            // V13: Exact description format requested by user
+            name: `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
+            description: `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
+          },
+        },
+      }],
+      metadata: {
+        location_id: locationUuid, // Use UUID
+        display_id: displayId,
+        type,
+        flow: "payment",
+        quantity: "1",
+        amount_cents: String(amountCents),
+        purchase_time_berlin: purchaseTimeDisplay,
+        plate: plate,
+        mobile: mobile,
+        email: email,
+      },
     };
 
-    // If owner has a connected account, split the payment
-    if (stripeAccountId) {
-      sessionParams.payment_intent_data = {
-        application_fee_amount: applicationFeeAmount,
-        transfer_data: {
-          destination: stripeAccountId,
-        },
-      };
+    // V6.4: Dynamic Promo Code Management (Manual Entry)
+    // We ensure the code typed in the app exists in Stripe, but we do NOT auto-apply it.
+    // The user must manually type it on the checkout page.
+    if (promotionCodeLabel) {
+      try {
+        const upperLabel = promotionCodeLabel.toUpperCase().trim();
+        console.log(`[V6.4] Ensuring manual promo code exists: ${upperLabel}`);
+        
+        // 1. Check if this specific code already exists as a Promotion Code
+        const existingPromoCodes = await stripe.promotionCodes.list({
+          active: true,
+          limit: 100,
+        });
+        
+        let matchedPromo = existingPromoCodes.data.find(
+          (pc: any) => pc.code.toUpperCase().trim() === upperLabel
+        );
+
+        if (!matchedPromo) {
+          console.log(`[V6.4] Code ${upperLabel} not found. Creating...`);
+          
+          // 2. Ensure a 100% coupon exists
+          let couponId = "FREE100_COUPON";
+          try {
+            await stripe.coupons.retrieve(couponId);
+          } catch (e) {
+            const newCoupon = await stripe.coupons.create({
+              id: couponId,
+              percent_off: 100,
+              duration: "forever",
+              name: "100% Discount",
+            });
+            couponId = newCoupon.id;
+          }
+
+          // 3. Create the new Promotion Code
+          await stripe.promotionCodes.create({
+            coupon: couponId,
+            code: upperLabel,
+          });
+          console.log(`[V6.4] Created promotion code ${upperLabel}. User can now type it.`);
+
+          // 4. Deactivate the "former" codes if they are different from the new one
+          // This ensures only the current app-defined code works.
+          for (const pc of existingPromoCodes.data) {
+            if (pc.code.toUpperCase().trim() !== upperLabel) {
+              try {
+                await stripe.promotionCodes.update(pc.id, { active: false });
+                console.log(`[V6.4] Deactivated former code: ${pc.code}`);
+              } catch (e) {
+                console.warn(`[V6.4] Failed to deactivate former code ${pc.code}:`, e);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`[V6.4] Error in manual promo management:`, e);
+      }
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    // V6.4: ALWAYS enable the manual entry field if the toggle is on in the app.
+    // We do NOT use 'discounts' because we want the user to type it themselves.
+    sessionOptions.allow_promotion_codes = allowPromotionCodes;
 
-    // 5. Redirect user to Stripe (with No-Cache headers)
-    return new Response(null, {
-      status: 303,
-      headers: { 
-        'Location': session.url as string,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      },
-    })
+    const paymentSession = await stripe.checkout.sessions.create(sessionOptions);
+    if (!paymentSession.url) {
+      return json({ error: "Failed to create checkout session" }, 500);
+    }
 
-  } catch (err: any) {
-    console.error('Error creating checkout:', err.message)
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+    // V15: Robust seeding only if we have a valid UUID
+    if (locationUuid) {
+      console.log(`[V18.2] Attempting seeding for locationUuid: ${locationUuid}, stripe_session_id: ${paymentSession.id}`);
+      
+      // V18.2: First, let's verify if the location exists in the database
+      const { data: locCheck, error: locCheckError } = await admin
+        .from("locations")
+        .select("id")
+        .eq("id", locationUuid)
+        .maybeSingle();
+        
+      if (locCheckError) {
+        console.error(`[V18.2] Error checking location ${locationUuid}: ${locCheckError.message}`);
+      }
+      
+      if (!locCheck) {
+        console.error(`[V18.2] Location ${locationUuid} DOES NOT EXIST in the database. Seeding will fail.`);
+      }
+
+      const seedData = {
+        location_id: locationUuid,
+        plate: plate || "PENDING",
+        email: email,
+        mobile: mobile || "",
+        contact_name: "",
+        type,
+        status: "pending",
+        payment_status: "pending",
+        price: Number(amountCents ?? 0) / 100,
+        amount_cents: Number(amountCents ?? 0),
+        stripe_session_id: paymentSession.id,
+        created_at: new Date().toISOString(),
+        stripe_metadata: JSON.stringify({
+          location_id: locationUuid,
+          display_id: displayId,
+          type,
+          flow: "payment",
+          amount_cents: String(amountCents),
+          purchase_time_berlin: purchaseTimeDisplay,
+          seeded_from: "checkout_create",
+          plate: plate,
+          mobile: mobile,
+          email: email,
+        }),
+      };
+      
+      console.log(`[V18.2] Seed data payload: ${JSON.stringify(seedData)}`);
+      
+      const seeded = await insertSessionWithSchemaFallback(seedData);
+      if (!seeded.ok) {
+        console.warn(`[V18.2] Seed insert FAILED: ${seeded.message ?? "unknown error"}`);
+      } else {
+        console.log(`[V18.2] Seed insert SUCCESS for ${paymentSession.id}`);
+      }
+    } else {
+      console.warn("[V18.2] Skipping seeding because locationUuid is null");
+    }
+
+    if (req.method === "GET") {
+      return new Response(null, {
+        status: 303,
+        headers: { ...corsHeaders, Location: paymentSession.url },
+      });
+    }
+    return json({
+      url: paymentSession.url,
+      id: paymentSession.id,
+      mode: "payment",
+      amount_cents: amountCents,
+    });
+  } catch (error) {
+    console.error("[ERROR] Uncaught exception:", error);
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
-})
+});

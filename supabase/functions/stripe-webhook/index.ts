@@ -1,155 +1,179 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import Stripe from "https://esm.sh/stripe@11.1.0?target=deno"
+// @ts-nocheck
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.25.0?target=denonext";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-  apiVersion: '2022-11-15',
-  httpClient: Stripe.createFetchHttpClient(),
-})
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const stripeWebhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') as string
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+};
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+const admin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
-serve(async (req) => {
-  const reqId = crypto.randomUUID()
-  // For Stripe webhooks, we don't use Supabase Auth JWTs.
-  // We use the Stripe signature for verification.
-  const signature = req.headers.get('stripe-signature')
+function json(data: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
-  if (!signature) {
-    console.error(`[${reqId}] Missing stripe-signature header`)
-    return new Response(JSON.stringify({ error: 'No Stripe signature' }), { 
-      status: 400, 
-      headers: { 'Content-Type': 'application/json' } 
-    })
+function isUuid(v: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+}
+
+async function resolveLocation(input: string): Promise<{ id: string; display_id?: string } | null> {
+  const candidate = String(input ?? "").trim();
+  if (!candidate) return null;
+  if (isUuid(candidate)) {
+    const { data } = await admin.from("locations").select("id, display_id").eq("id", candidate).maybeSingle();
+    if (data?.id) return data as { id: string; display_id?: string };
   }
+  if (/^\d{5}$/.test(candidate)) {
+    const { data } = await admin.from("locations").select("id, display_id").eq("display_id", candidate).maybeSingle();
+    if (data?.id) return data as { id: string; display_id?: string };
+  }
+  return null;
+}
+
+function extractMissingColumnName(message: string): string | null {
+  const quoted = message.match(/column "([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const plain = message.match(/column ([a-zA-Z0-9_]+) does not exist/i);
+  return plain?.[1] ?? null;
+}
+
+async function insertSessionWithSchemaFallback(insertData: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
+  let payload: Record<string, unknown> = { ...insertData };
+  for (let i = 0; i < 20; i++) {
+    const { error } = await admin.from("parking_sessions").insert(payload);
+    if (!error || error.code === "23505") return { ok: true };
+    const missingColumn = extractMissingColumnName(error.message ?? "");
+    if (!missingColumn || !(missingColumn in payload)) return { ok: false, message: error.message };
+    const { [missingColumn]: _removed, ...rest } = payload;
+    payload = rest;
+  }
+  return { ok: false, message: "Failed insert after fallbacks" };
+}
+
+async function updateSessionWithSchemaFallback(stripeSessionId: string, updateData: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
+  let payload: Record<string, unknown> = { ...updateData };
+  for (let i = 0; i < 20; i++) {
+    const { error } = await admin.from("parking_sessions").update(payload).eq("stripe_session_id", stripeSessionId);
+    if (!error) return { ok: true };
+    const missingColumn = extractMissingColumnName(error.message ?? "");
+    if (!missingColumn || !(missingColumn in payload)) return { ok: false, message: error.message };
+    const { [missingColumn]: _removed, ...rest } = payload;
+    payload = rest;
+  }
+  return { ok: false, message: "Failed update after fallbacks" };
+}
+
+async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise<{ ok: boolean; status?: number; message?: string }> {
+  console.log(`[V19] Persisting session: ${session.id}`);
+  const metadata = session.metadata || {};
+  console.log(`[V19] Metadata: ${JSON.stringify(metadata)}`);
+  const candidates = [metadata.location_id, metadata.display_id, session.client_reference_id].map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
+
+  let resolvedLocation: { id: string; display_id?: string } | null = null;
+  for (const candidate of candidates) {
+    resolvedLocation = await resolveLocation(candidate);
+    if (resolvedLocation?.id) break;
+  }
+  if (!resolvedLocation?.id) {
+    console.error(`[V19] Failed to resolve location from: ${candidates.join(", ")}`);
+    return { ok: false, status: 400, message: "Unable to resolve location_id" };
+  }
+  console.log(`[V19] Resolved location: ${resolvedLocation.id}`);
+
+  const { data: existing, error: existingError } = await admin.from("parking_sessions").select("id").eq("stripe_session_id", session.id).maybeSingle();
+  if (existingError) console.error(`[V19] Error checking existing: ${existingError.message}`);
+
+  const email = session.customer_details?.email || metadata.email || "";
+  const phone = session.customer_details?.phone || metadata.mobile || "";
+  const name = session.customer_details?.name || "";
+  const type = (metadata.type || "hourly").toString();
+  
+  let plateNumber = "";
+  if (session.custom_fields) {
+    const plateField = session.custom_fields.find((f: any) => f.key === "plate_number");
+    if (plateField && plateField.text) plateNumber = plateField.text.value || "";
+  }
+  if (!plateNumber && metadata.plate) {
+    plateNumber = metadata.plate;
+  }
+
+  const insertData: any = {
+    location_id: resolvedLocation.id,
+    plate: plateNumber || "PENDING",
+    email: email,
+    mobile: phone,
+    contact_name: name,
+    type: type,
+    status: "active",
+    payment_status: "paid",
+    price: Number(session.amount_total ?? 0) / 100,
+    amount_cents: Number(session.amount_total ?? 0),
+    stripe_session_id: session.id,
+    created_at: new Date().toISOString(),
+    stripe_metadata: JSON.stringify({
+      ...metadata,
+      stripe_id: session.id,
+      customer: session.customer,
+      payment_intent: session.payment_intent,
+    }),
+  };
+
+  console.log(`[V19] Upserting data for session ${session.id}: ${JSON.stringify(insertData)}`);
+
+  if (existing?.id) {
+    console.log(`[V19] Updating existing session: ${existing.id}`);
+    const updated = await updateSessionWithSchemaFallback(session.id, insertData);
+    if (updated.ok) return { ok: true };
+    console.error(`[V19] Update failed: ${updated.message}`);
+    return { ok: false, status: 500, message: updated.message };
+  }
+
+  console.log(`[V19] Inserting new session`);
+  const inserted = await insertSessionWithSchemaFallback(insertData);
+  if (inserted.ok) {
+    console.log(`[V19] Insert successful`);
+    return { ok: true };
+  }
+  console.error(`[V19] Insert failed: ${inserted.message}`);
+  return { ok: false, status: 500, message: inserted.message };
+}
+
+serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  
+  const signature = req.headers.get("stripe-signature");
+  if (!signature) return json({ error: "Missing signature" }, 400);
+  if (!stripeWebhookSecret) return json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, 500);
 
   try {
-    const body = await req.text()
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      Deno.env.get('STRIPE_WEBHOOK_SECRET') as string
-    )
+    const bodyText = await req.text();
+    const event = await stripe.webhooks.constructEventAsync(bodyText, signature, stripeWebhookSecret);
 
-    console.log(`[${reqId}] 🔔 Event received: ${event.type}`)
+    console.log(`[V16] Webhook event: ${event.type}`);
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as any
-      const sessionId = session.id
-      
-      // LOG RAW METADATA AND CUSTOM FIELDS
-      console.log(`[${reqId}] 📝 Raw Metadata:`, JSON.stringify(session.metadata))
-      console.log(`[${reqId}] 📝 Raw Custom Fields:`, JSON.stringify(session.custom_fields))
-      
-      console.log(`[${reqId}] ✅ Processing Session: ${sessionId}`)
-
-      // 1. EXTRACT DATA WITH ROBUST FALLBACKS
-      let location_id = session.metadata?.location_id || ''
-      let plate_number = session.metadata?.plate_number || ''
-
-      if ((!location_id || !plate_number) && session.custom_fields) {
-        for (const f of session.custom_fields) {
-          const key = (f.key || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-          const val = f.text?.value || f.numeric?.value || ''
-          
-          if (key.includes('location') || key.includes('loc')) location_id = val
-          if (key.includes('plate') || key.includes('reg')) plate_number = val.toUpperCase()
-        }
-      }
-
-      location_id = location_id || 'DEFAULT_LOC'
-      plate_number = plate_number || 'UNKNOWN'
-
-      console.log(`[${reqId}] 📦 Extracted Data - Plate: ${plate_number}, Loc: ${location_id}`)
-
-      // 2. ATOMIC INSERT (Upsert)
-      // Relying on UNIQUE constraint on stripe_session_id for true scalability.
-      // This prevents double-processing even if two webhooks arrive at the same millisecond.
-      const insertData = {
-        location_id,
-        plate: plate_number,
-        mobile: session.customer_details?.phone || '',
-        email: session.customer_details?.email || '',
-        price: (session.amount_total || 0) / 100,
-        currency: session.currency || 'usd',
-        stripe_session_id: sessionId,
-        payment_status: 'paid',
-        created_at: new Date().toISOString(),
-      }
-
-      console.log(`[${reqId}] 🚀 Upserting session: ${sessionId}`)
-
-      const { error: upsertError } = await supabase
-        .from('parking_sessions')
-        .upsert(insertData, { 
-          onConflict: 'stripe_session_id',
-          ignoreDuplicates: true 
-        })
-        .select()
-        .single()
-
-      if (upsertError) {
-        console.error(`[${reqId}] ❌ Upsert failed:`, upsertError)
-        throw new Error(`Upsert Error: ${upsertError.message}`)
-      }
-
-      console.log(`[${reqId}] ✨ Session processed successfully.`)
-
-      // 4. BEST-EFFORT OCCUPANCY UPDATE
-      try {
-        // Try to find location by ID (UUID) or display_id (Stripe short-code)
-        const { data: loc } = await supabase
-          .from('locations')
-          .select('id, occupancy')
-          .or(`id.eq.${location_id},display_id.eq.${location_id}`)
-          .maybeSingle()
-
-        if (loc) {
-          await supabase.from('locations').update({ occupancy: (loc.occupancy || 0) + 1 }).eq('id', loc.id)
-          console.log(`[${reqId}] 📈 Occupancy updated for ${loc.id}.`)
-        } else {
-          console.log(`[${reqId}] ⚠️ Location not found for ID: ${location_id}. Skipping occupancy update.`)
-        }
-      } catch (e) {
-        console.error(`[${reqId}] ⚠️ Occupancy Update Error: ${e.message}`)
-      }
-    } else if (event.type === 'account.updated') {
-      const account = event.data.object as any
-      console.log(`[${reqId}] 💳 Account Updated: ${account.id}`)
-
-      const onboardingComplete = account.details_submitted
-      const payoutsEnabled = account.payouts_enabled
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          stripe_onboarding_complete: onboardingComplete,
-          stripe_payouts_enabled: payoutsEnabled,
-        })
-        .eq('stripe_account_id', account.id)
-
-      if (updateError) {
-        console.error(`[${reqId}] ❌ Profile update failed:`, updateError)
-        throw new Error(`Profile Update Error: ${updateError.message}`)
-      }
-      
-      console.log(`[${reqId}] ✨ Profile updated for Stripe account ${account.id}.`)
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const persisted = await persistCheckoutSession(session);
+      if (!persisted.ok) return json({ error: persisted.message ?? "Failed persist" }, persisted.status ?? 500);
     }
 
-    return new Response(JSON.stringify({ received: true }), { 
-      status: 200,
-      headers: { "Content-Type": "application/json" } 
-    })
-
+    return json({ received: true });
   } catch (err: any) {
-    console.error(`[${reqId}] ❌ Webhook Critical Failure: ${err.message}`)
-    // Return 400 to Stripe for non-recoverable errors so they show in logs
-    return new Response(JSON.stringify({ error: err.message, requestId: reqId }), { 
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    })
+    console.error(`[V16] Webhook Error: ${err?.message ?? String(err)}`);
+    return json({ error: `Webhook Error: ${err?.message ?? String(err)}` }, 400);
   }
-})
+});
