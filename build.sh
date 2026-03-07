@@ -3,14 +3,16 @@ set -euo pipefail
 
 echo "=== Starting Vercel Flutter Web build ==="
 
-if [ -n "${VERCEL:-}" ] || [ -d "/vercel" ]; then
-  export HOME="/tmp"
-fi
+# Force move home to /tmp to avoid /vercel/.flutter conflict
+export HOME="/tmp/flutter_build_$(date +%s)"
 mkdir -p "$HOME"
-
-export CI=true
 export FLUTTER_SUPPRESS_ANALYTICS=true
+export CI=true
 export PUB_CACHE="${HOME}/.pub-cache"
+
+# Ensure we have a writable directory for flutter settings
+mkdir -p "$HOME/.flutter"
+touch "$HOME/.flutter" 2>/dev/null || true
 
 FLUTTER_SDK_DIR="${HOME}/flutter-sdk"
 if [ ! -d "$FLUTTER_SDK_DIR" ]; then
@@ -18,10 +20,17 @@ if [ ! -d "$FLUTTER_SDK_DIR" ]; then
 fi
 export PATH="$FLUTTER_SDK_DIR/bin:$PATH"
 
+# Set ALL analytics suppression flags BEFORE any flutter command
+export FLUTTER_SUPPRESS_ANALYTICS=true
+export FLUTTER_NO_ANALYTICS=1
+export NO_ANALYTICS=1
+
+# Disable analytics first thing
+flutter config --no-analytics >/dev/null 2>&1 || true
+
 echo "=== Flutter version ==="
 flutter --version
 flutter config --enable-web
-flutter config --no-analytics >/dev/null 2>&1 || true
 echo "=== Fetching dependencies ==="
 flutter clean
 flutter pub get
