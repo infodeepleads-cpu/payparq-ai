@@ -1,5 +1,5 @@
 {
-  "buildCommand": "chmod +x build.sh && ./build.sh",
+  "buildCommand": "sed -i 's/\\r$//' build.sh && chmod +x build.sh && ./build.sh",
   "outputDirectory": "build/web",
   "installCommand": "echo 'Installing Flutter...'",
   "framework": null,
