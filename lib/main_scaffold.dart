@@ -298,23 +298,30 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                       title: Text(l['name']),
                                       subtitle: Text(l['display_id']),
                                       onTap: () {
-                                        final did =
-                                            (l['display_id'] ?? '').toString();
-                                        ref
-                                            .read(selectedLocationIdProvider
-                                                .notifier)
-                                            .state = did;
-                                        () async {
-                                          final prefs = await SharedPreferences
-                                              .getInstance();
-                                          if (did.isNotEmpty) {
-                                            await prefs.setString(
-                                                'selected_location_display_id',
-                                                did);
-                                          }
-                                        }();
-                                        Navigator.pop(context);
-                                      },
+                                          final did =
+                                              (l['display_id'] ?? '').toString();
+                                          final uuid =
+                                              (l['id'] ?? '').toString();
+                                          ref
+                                              .read(selectedLocationIdProvider
+                                                  .notifier)
+                                              .state = did;
+                                          () async {
+                                            final prefs = await SharedPreferences
+                                                .getInstance();
+                                            if (did.isNotEmpty) {
+                                              await prefs.setString(
+                                                  'selected_location_display_id',
+                                                  did);
+                                            }
+                                            if (uuid.isNotEmpty) {
+                                              await prefs.setString(
+                                                  'selected_location_uuid',
+                                                  uuid);
+                                            }
+                                          }();
+                                          Navigator.pop(context);
+                                        },
                                     )),
                               ],
                             ),

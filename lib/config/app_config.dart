@@ -19,9 +19,45 @@ class AppConfig {
   static const env = String.fromEnvironment('ENV', defaultValue: 'dev');
   static const productionGuard =
       String.fromEnvironment('PROD_GUARD', defaultValue: '0');
-  static const supabaseRedirectUrl = String.fromEnvironment(
-      'SUPABASE_REDIRECT_URL',
-      defaultValue: 'https://mobile-scanner-flax-static.vercel.app');
+  static const _rawRedirectUrl =
+      String.fromEnvironment('SUPABASE_REDIRECT_URL', defaultValue: '');
+  static bool _isLocalHost(String host) {
+    final value = host.toLowerCase();
+    return value == 'localhost' || value == '127.0.0.1';
+  }
+
+  static String _webResetPath(Uri base) {
+    final portPart = base.hasPort ? ':${base.port}' : '';
+    return '${base.scheme}://${base.host}$portPart/reset-password';
+  }
+
+  static String get supabaseRedirectUrl {
+    final configured =
+        _rawRedirectUrl.trim().replaceAll('"', '').replaceAll("'", "");
+    if (kIsWeb) {
+      final base = Uri.base;
+      if (base.hasScheme && base.host.isNotEmpty) {
+        if (configured.isNotEmpty) {
+          final configuredUri = Uri.tryParse(configured);
+          if (configuredUri != null &&
+              configuredUri.hasScheme &&
+              configuredUri.host.isNotEmpty) {
+            final configuredIsLocal = _isLocalHost(configuredUri.host);
+            final currentIsLocal = _isLocalHost(base.host);
+            if (configuredIsLocal == currentIsLocal) {
+              return configured;
+            }
+          }
+        }
+        return _webResetPath(base);
+      }
+      return 'http://localhost:8080/reset-password';
+    }
+    if (configured.isNotEmpty) {
+      return configured;
+    }
+    return 'io.supabase.flutter://reset-callback/';
+  }
   static const zeroPriceSetupLink =
       String.fromEnvironment('ZERO_PRICE_SETUP_LINK', defaultValue: '');
 

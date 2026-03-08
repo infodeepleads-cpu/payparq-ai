@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'theme.dart';
 import 'main_scaffold.dart';
 import 'screens/auth_screen.dart';
+import 'screens/update_password_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/performance_monitor.dart';
 import 'config/app_config.dart';
@@ -81,7 +82,7 @@ class _BootAppState extends State<BootApp> {
       _addLog('Watchdog TIMEOUT triggered!');
       // Instead of throwing, we just let it finish or fail naturally to avoid infinite buffering
       _addLog('Continuing without timeout guard for stability...');
-      return; 
+      return;
     });
   }
 
@@ -321,25 +322,78 @@ class _BootAppState extends State<BootApp> {
   }
 }
 
-class PayParqApp extends StatelessWidget {
+class PayParqApp extends StatefulWidget {
   const PayParqApp({super.key});
+
+  @override
+  State<PayParqApp> createState() => _PayParqAppState();
+}
+
+class _PayParqAppState extends State<PayParqApp> {
+  bool _isRecoveryMode = false;
+  late final StreamSubscription<AuthState> _authSubscription;
+  bool _isResetPasswordPath() {
+    if (!kIsWeb) return false;
+    return Uri.base.pathSegments
+        .map((segment) => segment.toLowerCase())
+        .contains('reset-password');
+  }
+
+  bool _isRecoveryRequestFromUrl() {
+    if (!kIsWeb) return false;
+    final queryType = Uri.base.queryParameters['type']?.toLowerCase();
+    if (queryType == 'recovery') return true;
+    final fragment = Uri.base.fragment;
+    if (fragment.isEmpty) return false;
+    final fragmentQuery = Uri.splitQueryString(fragment);
+    return fragmentQuery['type']?.toLowerCase() == 'recovery';
+  }
+
+  bool get _showResetPasswordScreen =>
+      _isRecoveryMode || _isResetPasswordPath() || _isRecoveryRequestFromUrl();
+
+  @override
+  void initState() {
+    super.initState();
+    _isRecoveryMode = _isRecoveryRequestFromUrl();
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        setState(() => _isRecoveryMode = true);
+      } else if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.signedOut ||
+          data.event == AuthChangeEvent.userUpdated) {
+        if (_isRecoveryMode) {
+          setState(() => _isRecoveryMode = false);
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'payparq.ai',
-      theme: AppTheme.lightTheme, // Default to Light Theme
-      home: StreamBuilder<AuthState>(
-        stream: Supabase.instance.client.auth.onAuthStateChange,
-        builder: (context, snapshot) {
-          final session = Supabase.instance.client.auth.currentSession ??
-              snapshot.data?.session;
-          if (session != null) {
-            return const MasterScaffold();
-          }
-          return const AuthScreen();
-        },
-      ),
+      theme: AppTheme.lightTheme,
+      home: _showResetPasswordScreen
+          ? const UpdatePasswordScreen()
+          : StreamBuilder<AuthState>(
+              stream: Supabase.instance.client.auth.onAuthStateChange,
+              builder: (context, snapshot) {
+                final session = Supabase.instance.client.auth.currentSession ??
+                    snapshot.data?.session;
+                if (session != null) {
+                  return const MasterScaffold();
+                }
+                return const AuthScreen();
+              },
+            ),
       debugShowCheckedModeBanner: false,
     );
   }

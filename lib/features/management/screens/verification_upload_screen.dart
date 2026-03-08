@@ -200,8 +200,27 @@ class _VerificationUploadScreenState
     final String locationId = (widget.location['id'] ?? '').toString();
     final String status =
         widget.location['verification_status'] ?? 'unverified';
+
+    // Calculate hourly price with floor/ceiling
+    double price = double.tryParse(
+            (widget.location['rate_per_hour'] ?? 0.0).toString()) ??
+        0.0;
+    final floor = double.tryParse(
+            (widget.location['rate_per_hour_floor'] ?? 0.0).toString()) ??
+        0.0;
+    final ceiling = double.tryParse(
+            (widget.location['rate_per_hour_ceiling'] ?? 0.0).toString()) ??
+        0.0;
+
+    if (floor > 0 && price < floor) price = floor;
+    if (ceiling > 0 && price > ceiling) price = ceiling;
+
     final String stripeUrl = AppConfig.createCheckoutUrl(
-        locationId: locationId, displayId: displayId, type: 'hourly');
+      locationId: locationId,
+      displayId: displayId,
+      type: 'hourly',
+      price: price > 0 ? price : null,
+    );
     final isNarrow = MediaQuery.of(context).size.width < 900;
 
     // Determine what to show based on status

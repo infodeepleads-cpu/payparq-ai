@@ -253,14 +253,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 Text(
                                   isHub
-                                      ? Lang.sel(
-                                          isCroatian,
-                                          'Active Parking Hub',
-                                          'Aktivni parking hub')
-                                      : Lang.sel(
-                                          isCroatian,
-                                          'Active Parking Lot',
-                                          'Aktivno parkiralište'),
+                                      ? Lang.sel(isCroatian, 'Active Hub',
+                                          'Aktivni hub')
+                                      : Lang.sel(isCroatian, 'Active Lot',
+                                          'Aktivni lot'),
                                   style: GoogleFonts.inter(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
@@ -473,7 +469,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Widget _buildStatusBadge(String status) {
-    final isActive = status.toLowerCase() == 'active';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -481,27 +476,13 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.border),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isActive ? Colors.green[400] : Colors.red[400],
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            status.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
+      child: Text(
+        status.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
       ),
     );
   }

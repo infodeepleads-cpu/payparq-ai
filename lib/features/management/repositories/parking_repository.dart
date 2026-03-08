@@ -250,7 +250,8 @@ final cacheInvalidationProvider = Provider<void>((ref) {
 final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   ref.watch(cacheInvalidationProvider);
   final repo = ref.watch(parkingRepositoryProvider);
-  final profile = ref.watch(userProfileProvider).value;
+  final profileAsync = ref.watch(userProfileProvider);
+  final profile = profileAsync.value;
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
@@ -260,32 +261,34 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';
   final isOfficer = role == 'officer';
+
+  // Use a predictable cache key that doesn't depend on location details if possible
+  final cacheKey = 'permits_${role}_${user.id}';
+  final uuidRegExp = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false);
+
   if (isSuperAdmin) {
-    debugPrint('permitsStreamProvider role=$role user=${user.id} path=global');
     final effUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effUuid)
         : repo.getPermitsStream();
-    final cacheKey = 'permits_super_admin_${effUuid ?? 'all'}';
-    final locsAsync = ref.watch(availableLocationsProvider);
-    final Map<String, String> idToDisplay = {};
-    if (locsAsync.hasValue) {
-      for (final l in (locsAsync.value ?? [])) {
-        final id = (l['id'] ?? '').toString();
-        final did = (l['display_id'] ?? '').toString();
-        if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+
+    return _cachedStream('${cacheKey}_super', baseStream).map((items) {
+      final locsAsync = ref.watch(availableLocationsProvider);
+      final Map<String, String> idToDisplay = {};
+      if (locsAsync.hasValue) {
+        for (final l in (locsAsync.value ?? [])) {
+          final id = (l['id'] ?? '').toString();
+          final did = (l['display_id'] ?? '').toString();
+          if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+        }
       }
-    }
-    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final uuidRegExp = RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-        caseSensitive: false);
-    return _cachedStream(cacheKey, baseStream).map((items) {
       return items.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
-          uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+          uiDid = idToDisplay[raw] ?? raw;
         }
         return {...it, 'location_display_id': uiDid};
       }).toList();
@@ -293,55 +296,47 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   }
 
   if (isAdmin || isManager || isOfficer) {
-    final locationsAsync = ref.watch(availableLocationsProvider);
-    if (!locationsAsync.hasValue) return repo.getPermitsStream();
-    final locs = locationsAsync.value ?? [];
-    final ownedIds = <String>{};
-    for (final l in locs) {
-      final id = (l['id'] ?? '').toString();
-      final displayId = (l['display_id'] ?? '').toString();
-      if (id.isNotEmpty) ownedIds.add(id);
-      if (displayId.isNotEmpty) ownedIds.add(displayId);
-    }
-    final cacheKey = 'permits_${role}_${user.id}';
-    debugPrint(
-        'permitsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
-    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
     final effectiveUuid =
         ref.watch(selectedEffectiveLocationUuidProvider).value;
-    final fallbackLocId =
-        ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effectiveUuid)
         : repo.getPermitsStream();
-    final uuidRegExp = RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-        caseSensitive: false);
+
     return _cachedStream(cacheKey, baseStream).map((items) {
+      final locationsAsync = ref.watch(availableLocationsProvider);
+      final locs = locationsAsync.value ?? [];
+      final ownedIds = <String>{};
+      final Map<String, String> idToDisplay = {};
+
+      for (final l in locs) {
+        final id = (l['id'] ?? '').toString();
+        final displayId = (l['display_id'] ?? '').toString();
+        if (id.isNotEmpty) ownedIds.add(id);
+        if (displayId.isNotEmpty) ownedIds.add(displayId);
+        if (id.isNotEmpty && displayId.isNotEmpty) idToDisplay[id] = displayId;
+      }
+
+      final selectedDisplayId = ref.read(selectedLocationIdProvider);
+      final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
+      final fallbackLocId =
+          ref.read(userLocationIdProvider) ?? user.userMetadata?['location_id'];
+
+      // If we don't have location IDs yet, show all cached items for immediate UX
+      if (!locationsAsync.hasValue && items.isNotEmpty) {
+        return items;
+      }
+
       final noFilters = ownedIds.isEmpty &&
           (selectedDisplayId == null || selectedDisplayId.isEmpty) &&
           (selectedUuid == null || selectedUuid.isEmpty) &&
           (effectiveUuid == null || effectiveUuid.isEmpty) &&
           (fallbackLocId == null || fallbackLocId.toString().isEmpty);
 
-      // RELAXED FILTERING: If no filters are active, show all items
       if (noFilters) {
-        debugPrint(
-            'permitsStreamProvider: No filters, showing all ${items.length} items');
         return items.map((it) {
           final raw = (it['location_id'] ?? '').toString();
           String uiDid = raw;
           if (uuidRegExp.hasMatch(raw.toLowerCase())) {
-            final locsAsync = ref.read(availableLocationsProvider);
-            final Map<String, String> idToDisplay = {};
-            if (locsAsync.hasValue) {
-              for (final l in (locsAsync.value ?? [])) {
-                final id = (l['id'] ?? '').toString();
-                final did = (l['display_id'] ?? '').toString();
-                if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
-              }
-            }
             uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
           }
           return {...it, 'location_display_id': uiDid};
@@ -350,32 +345,13 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
 
       final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
-        final matchesOwned = ownedIds.contains(locId);
-        final matchesSelectedUuid =
-            selectedUuid != null && locId == selectedUuid;
-        final matchesEffectiveUuid =
-            effectiveUuid != null && locId == effectiveUuid;
-        final matchesSelectedDisplayId =
-            selectedDisplayId != null && locId == selectedDisplayId;
-        final matchesFallback =
-            fallbackLocId != null && locId == fallbackLocId.toString();
-
-        final result = matchesOwned ||
-            matchesSelectedUuid ||
-            matchesEffectiveUuid ||
-            matchesSelectedDisplayId ||
-            matchesFallback;
-
-        if (!result && items.length < 50) {
-          debugPrint(
-              'permitsStreamProvider filtering out item: locId=$locId, matchesOwned=$matchesOwned, matchesSelectedUuid=$matchesSelectedUuid, matchesEffectiveUuid=$matchesEffectiveUuid, matchesSelectedDisplayId=$matchesSelectedDisplayId, matchesFallback=$matchesFallback');
-        }
-
-        return result;
+        return ownedIds.contains(locId) ||
+            (selectedUuid != null && locId == selectedUuid) ||
+            (effectiveUuid != null && locId == effectiveUuid) ||
+            (selectedDisplayId != null && locId == selectedDisplayId) ||
+            (fallbackLocId != null && locId == fallbackLocId.toString());
       }).toList();
 
-      // RELAXED FILTERING: If filtering results in nothing, but we have items,
-      // and the user hasn't explicitly selected a location, show all as a fallback.
       final hasExplicitSelection =
           (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
               (effectiveUuid != null && effectiveUuid.isNotEmpty);
@@ -385,25 +361,10 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
               ? items
               : filtered;
 
-      if (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection) {
-        debugPrint(
-            'permitsStreamProvider: Relaxed filtering, showing all ${items.length} items as fallback');
-      }
-
       return resultSet.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
-          // Try match by selected or by ownedIds map from availableLocationsProvider
-          final locsAsync = ref.read(availableLocationsProvider);
-          final Map<String, String> idToDisplay = {};
-          if (locsAsync.hasValue) {
-            for (final l in (locsAsync.value ?? [])) {
-              final id = (l['id'] ?? '').toString();
-              final did = (l['display_id'] ?? '').toString();
-              if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
-            }
-          }
           uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
         }
         return {...it, 'location_display_id': uiDid};
@@ -417,15 +378,16 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   }
 
   final uuid = locationUuidAsync.value!;
-  final cacheKey = 'permits_$uuid';
-  return _cachedStream(cacheKey, repo.getPermitsStream(locationId: uuid));
+  return _cachedStream(
+      'permits_$uuid', repo.getPermitsStream(locationId: uuid));
 });
 
 final sessionsStreamProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
   ref.watch(cacheInvalidationProvider);
   final repo = ref.watch(parkingRepositoryProvider);
-  final profile = ref.watch(userProfileProvider).value;
+  final profileAsync = ref.watch(userProfileProvider);
+  final profile = profileAsync.value;
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
@@ -435,32 +397,33 @@ final sessionsStreamProvider =
   final isAdmin = role == 'admin';
   final isManager = role == 'manager';
   final isOfficer = role == 'officer';
+
+  final cacheKey = 'sessions_${role}_${user.id}';
+  final uuidRegExp = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', // Corrected UUID regex for simplicity
+      caseSensitive: false);
+
   if (isSuperAdmin) {
-    debugPrint('sessionsStreamProvider role=$role user=${user.id} path=global');
     final effUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effUuid)
         : repo.getSessionsStream();
-    final cacheKey = 'sessions_super_admin_${effUuid ?? 'all'}';
-    final locsAsync = ref.watch(availableLocationsProvider);
-    final Map<String, String> idToDisplay = {};
-    if (locsAsync.hasValue) {
-      for (final l in (locsAsync.value ?? [])) {
-        final id = (l['id'] ?? '').toString();
-        final did = (l['display_id'] ?? '').toString();
-        if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+
+    return _cachedStream('${cacheKey}_super', baseStream).map((items) {
+      final locsAsync = ref.watch(availableLocationsProvider);
+      final Map<String, String> idToDisplay = {};
+      if (locsAsync.hasValue) {
+        for (final l in (locsAsync.value ?? [])) {
+          final id = (l['id'] ?? '').toString();
+          final did = (l['display_id'] ?? '').toString();
+          if (id.isNotEmpty && did.isNotEmpty) idToDisplay[id] = did;
+        }
       }
-    }
-    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final uuidRegExp = RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-        caseSensitive: false);
-    return _cachedStream(cacheKey, baseStream).map((items) {
       return items.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
-          uiDid = idToDisplay[raw] ?? (selectedDisplayId ?? raw);
+          uiDid = idToDisplay[raw] ?? raw;
         }
         return {...it, 'location_display_id': uiDid};
       }).toList();
@@ -468,45 +431,43 @@ final sessionsStreamProvider =
   }
 
   if (isAdmin || isManager || isOfficer) {
-    final locationsAsync = ref.watch(availableLocationsProvider);
-    if (!locationsAsync.hasValue) return repo.getSessionsStream();
-    final locs = locationsAsync.value ?? [];
-    final ownedIds = <String>{};
-    final idToDisplay = <String, String>{};
-    for (final l in locs) {
-      final id = (l['id'] ?? '').toString();
-      final displayId = (l['display_id'] ?? '').toString();
-      if (id.isNotEmpty) ownedIds.add(id);
-      if (displayId.isNotEmpty) ownedIds.add(displayId);
-      if (id.isNotEmpty && displayId.isNotEmpty) idToDisplay[id] = displayId;
-    }
-    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
     final effectiveUuid =
         ref.watch(selectedEffectiveLocationUuidProvider).value;
-    final cacheKey =
-        'sessions_${role}_${user.id}_${effectiveUuid ?? selectedUuid ?? selectedDisplayId ?? 'all'}';
-    debugPrint(
-        'sessionsStreamProvider role=$role user=${user.id} ids=$ownedIds path=filtered');
-    final fallbackLocId =
-        ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effectiveUuid)
         : repo.getSessionsStream();
-    final uuidRegExp = RegExp(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-        caseSensitive: false);
+
     return _cachedStream(cacheKey, baseStream).map((items) {
+      final locationsAsync = ref.watch(availableLocationsProvider);
+      final locs = locationsAsync.value ?? [];
+      final ownedIds = <String>{};
+      final Map<String, String> idToDisplay = {};
+
+      for (final l in locs) {
+        final id = (l['id'] ?? '').toString();
+        final displayId = (l['display_id'] ?? '').toString();
+        if (id.isNotEmpty) ownedIds.add(id);
+        if (displayId.isNotEmpty) ownedIds.add(displayId);
+        if (id.isNotEmpty && displayId.isNotEmpty) idToDisplay[id] = displayId;
+      }
+
+      final selectedDisplayId = ref.read(selectedLocationIdProvider);
+      final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
+      final fallbackLocId =
+          ref.read(userLocationIdProvider) ?? user.userMetadata?['location_id'];
+
+      // If we don't have location IDs yet, show all cached items for immediate UX
+      if (!locationsAsync.hasValue && items.isNotEmpty) {
+        return items;
+      }
+
       final noFilters = ownedIds.isEmpty &&
           (selectedDisplayId == null || selectedDisplayId.isEmpty) &&
           (selectedUuid == null || selectedUuid.isEmpty) &&
           (effectiveUuid == null || effectiveUuid.isEmpty) &&
           (fallbackLocId == null || fallbackLocId.toString().isEmpty);
 
-      // RELAXED FILTERING: If no filters are active, show all items
       if (noFilters) {
-        debugPrint(
-            'sessionsStreamProvider: No filters, showing all ${items.length} items');
         return items.map((it) {
           final raw = (it['location_id'] ?? '').toString();
           String uiDid = raw;
@@ -519,37 +480,13 @@ final sessionsStreamProvider =
 
       final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
-        final mappedDisplayId = idToDisplay[locId];
-        final matchesOwned = ownedIds.contains(locId);
-        final matchesSelectedUuid =
-            selectedUuid != null && locId == selectedUuid;
-        final matchesEffectiveUuid =
-            effectiveUuid != null && locId == effectiveUuid;
-        final matchesSelectedDisplayId = selectedDisplayId != null &&
-            (locId == selectedDisplayId ||
-                mappedDisplayId == selectedDisplayId);
-        final matchesFallback = fallbackLocId != null &&
-            (locId == fallbackLocId.toString() ||
-                mappedDisplayId == fallbackLocId.toString());
-
-        // V18.3: EXTRA RELAXED CHECK - if the item has a stripe session and the user has no explicit filter,
-        // we might want to show it if it matches ANY of our owned IDs
-        final result = matchesOwned ||
-            matchesSelectedUuid ||
-            matchesEffectiveUuid ||
-            matchesSelectedDisplayId ||
-            matchesFallback;
-
-        if (!result && items.length < 50) {
-          debugPrint(
-              'sessionsStreamProvider filtering out item: locId=$locId, matchesOwned=$matchesOwned, matchesSelectedUuid=$matchesSelectedUuid, matchesEffectiveUuid=$matchesEffectiveUuid, matchesSelectedDisplayId=$matchesSelectedDisplayId, matchesFallback=$matchesFallback');
-        }
-
-        return result;
+        return ownedIds.contains(locId) ||
+            (selectedUuid != null && locId == selectedUuid) ||
+            (effectiveUuid != null && locId == effectiveUuid) ||
+            (selectedDisplayId != null && locId == selectedDisplayId) ||
+            (fallbackLocId != null && locId == fallbackLocId.toString());
       }).toList();
 
-      // RELAXED FILTERING: If filtering results in nothing, but we have items,
-      // and the user hasn't explicitly selected a location, show all as a fallback.
       final hasExplicitSelection =
           (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
               (effectiveUuid != null && effectiveUuid.isNotEmpty);
@@ -558,11 +495,6 @@ final sessionsStreamProvider =
           (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
               ? items
               : filtered;
-
-      if (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection) {
-        debugPrint(
-            'sessionsStreamProvider: Relaxed filtering, showing all ${items.length} items as fallback (filtered was empty)');
-      }
 
       return resultSet.map((it) {
         final raw = (it['location_id'] ?? '').toString();
@@ -575,14 +507,7 @@ final sessionsStreamProvider =
     });
   }
 
-  final locationUuidAsync = ref.watch(selectedLocationUuidProvider);
-  if (!locationUuidAsync.hasValue || locationUuidAsync.value == null) {
-    return Stream.value([]);
-  }
-
-  final uuid = locationUuidAsync.value!;
-  final cacheKey = 'sessions_$uuid';
-  return _cachedStream(cacheKey, repo.getSessionsStream(locationId: uuid));
+  return Stream.value([]);
 });
 
 final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {

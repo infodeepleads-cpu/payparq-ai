@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terms_conditions_screen.dart';
+import 'update_password_screen.dart';
 import '../theme.dart';
 import '../logic/providers/locale_provider.dart';
 import '../logic/providers/auth_controller.dart';
@@ -73,42 +74,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  Future<void> _showResetPasswordDialog() async {
-    final emailCtrl = TextEditingController();
-    final rootContext = context;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Reset Password'),
-        content: TextField(
-          controller: emailCtrl,
-          decoration: const InputDecoration(hintText: 'Enter your email'),
+  Future<void> _openResetPasswordPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UpdatePasswordScreen(
+          requestMode: true,
+          initialEmail: _emailController.text.trim(),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final email = emailCtrl.text.trim();
-              if (email.isEmpty) {
-                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                  const SnackBar(content: Text('Please enter your email')),
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              await AsyncActionHandler.run<void>(
-                context: rootContext,
-                action: () =>
-                    ref.read(authControllerProvider).resetPassword(email),
-                successMessage: 'Password reset link sent!',
-                errorBuilder: ErrorMapper.message,
-              );
-            },
-            child: const Text('Send Reset Link'),
-          ),
-        ],
       ),
     );
   }
@@ -237,7 +209,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         const SizedBox(height: 24),
                         Center(
                           child: TextButton(
-                            onPressed: _showResetPasswordDialog,
+                            onPressed: _openResetPasswordPage,
                             child: Text(
                               _forgotPassword(isCroatian),
                               style: GoogleFonts.inter(

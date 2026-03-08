@@ -12,7 +12,7 @@ class SupabaseService {
   /// Connection pool for managing concurrent requests
   final Map<String, Timer> _connectionTimers = {};
   final Map<String, int> _connectionPool = {};
-  static const int _maxConcurrentConnections = 10;
+  static const int _maxConcurrentConnections = 30;
 
   /// Initialize with timeout and error handling
   Future<void> initialize({

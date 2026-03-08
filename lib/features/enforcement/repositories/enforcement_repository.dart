@@ -41,9 +41,9 @@ class EnforcementRepository {
       if (v != null) {
         return (v is num)
             ? v.toDouble()
-            : double.tryParse(v.toString()) ?? 50.0;
+            : double.tryParse(v.toString()) ?? 20.0;
       }
     }
-    return 50.0;
+    return 20.0;
   }
 }

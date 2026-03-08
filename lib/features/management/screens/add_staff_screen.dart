@@ -667,18 +667,19 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                             itemCount: locations.length,
                             itemBuilder: (context, index) {
                               final loc = locations[index];
-                              final locId = loc['display_id'] as String;
+                              final locId = (loc['id'] ?? '').toString();
+                              final displayId = (loc['display_id'] ?? '').toString();
                               final isSelected =
                                   selectedLocationIds.contains(locId);
 
                               return CheckboxListTile(
                                 title: Text(loc['name'] ??
                                     Lang.sel(ref.read(localeIsCroatianProvider),
-                                        'Lot $locId', 'Parkiralište $locId')),
+                                        'Lot $displayId', 'Parkiralište $displayId')),
                                 subtitle: Text(Lang.sel(
                                     ref.read(localeIsCroatianProvider),
-                                    'ID: $locId',
-                                    'ID: $locId')),
+                                    'ID: $displayId',
+                                    'ID: $displayId')),
                                 value: isSelected,
                                 onChanged: (val) {
                                   setDialogState(() {

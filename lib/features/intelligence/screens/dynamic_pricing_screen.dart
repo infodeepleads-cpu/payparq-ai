@@ -721,23 +721,57 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   }
 
   double _priceForType(String type) {
-    final fromInput = switch (type) {
+    final selected = _selectedLocation;
+    if (selected == null) return 0.0;
+
+    double price = switch (type) {
       'hourly' => double.tryParse(_hourlyController.text) ?? 0.0,
       'daily' => double.tryParse(_dailyController.text) ?? 0.0,
       'monthly' => double.tryParse(_monthlyController.text) ?? 0.0,
       _ => 0.0,
     };
-    if (fromInput >= 0) return fromInput;
-    final selected = _selectedLocation;
-    if (selected == null) return 0.0;
-    final key = switch (type) {
-      'hourly' => 'rate_per_hour',
-      'daily' => 'base_price_daily',
-      'monthly' => 'base_price_monthly',
-      _ => 'rate_per_hour',
+
+    // If input is invalid/negative, use stored base rate
+    if (price <= 0) {
+      final key = switch (type) {
+        'hourly' => 'rate_per_hour',
+        'daily' => 'base_price_daily',
+        'monthly' => 'base_price_monthly',
+        _ => 'rate_per_hour',
+      };
+      price = double.tryParse((selected[key] ?? 0).toString()) ?? 0.0;
+    }
+
+    // Apply Floor
+    final floorKey = switch (type) {
+      'hourly' => 'rate_per_hour_floor',
+      'daily' => 'base_price_daily_floor',
+      'monthly' => 'base_price_monthly_floor',
+      _ => null,
     };
-    final stored = double.tryParse((selected[key] ?? 0).toString()) ?? 0.0;
-    return stored < 0 ? 0.0 : stored;
+    if (floorKey != null) {
+      final floor = double.tryParse((selected[floorKey] ?? 0).toString()) ?? 0.0;
+      if (floor > 0 && price < floor) {
+        price = floor;
+      }
+    }
+
+    // Apply Ceiling
+    final ceilingKey = switch (type) {
+      'hourly' => 'rate_per_hour_ceiling',
+      'daily' => 'base_price_daily_ceiling',
+      'monthly' => 'base_price_monthly_ceiling',
+      _ => null,
+    };
+    if (ceilingKey != null) {
+      final ceiling =
+          double.tryParse((selected[ceilingKey] ?? 0).toString()) ?? 0.0;
+      if (ceiling > 0 && price > ceiling) {
+        price = ceiling;
+      }
+    }
+
+    return price < 0 ? 0.0 : price;
   }
 
   Widget _buildStripeLinksSection() {

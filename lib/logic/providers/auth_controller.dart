@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -40,72 +41,101 @@ class AuthController {
     return regex.hasMatch(email);
   }
 
-  Future<void> _sendPasswordRecoveryViaFunction({
-    required String email,
-    String? redirectTo,
-  }) async {
-    final payload = <String, dynamic>{'email': email};
-    if (redirectTo != null && redirectTo.isNotEmpty) {
-      payload['redirectTo'] = redirectTo;
-    }
-    final response = await _client.functions.invoke(
-      'send-password-recovery',
-      body: payload,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      final data = response.data;
-      String message = 'Password reset email failed';
-      if (data is Map && data['error'] != null) {
-        message = data['error'].toString();
-      } else if (data != null) {
-        message = data.toString();
-      }
-      throw AppError(message);
-    }
-    final data = response.data;
-    if (data is Map && data['error'] != null) {
-      throw AppError(data['error'].toString());
-    }
-  }
-
   Future<AuthActionResult> handleAuth({
     required bool isSignIn,
     required String email,
     required String password,
   }) async {
-    try {
-      if (isSignIn) {
-        final e = email.trim();
-        final p = password.trim();
-        debugPrint(
-            'AuthController: signInWithPassword emailLen=${e.length} passLen=${p.length}');
-        await _auth.signInWithPassword(email: e, password: p);
-        debugPrint('AuthController: signInWithPassword success');
-        return const AuthActionResult();
-      } else {
-        final redirectBase = _validatedRedirectUrl();
-        final response = redirectBase != null
-            ? await _auth.signUp(
-                email: email.trim(),
-                password: password.trim(),
-                data: {'role': 'admin'},
-                emailRedirectTo: redirectBase,
-              )
-            : await _auth.signUp(
-                email: email.trim(),
-                password: password.trim(),
-                data: {'role': 'admin'},
-              );
-        if (response.user != null && response.session == null) {
-          return const AuthActionResult(requiresEmailVerification: true);
+    int attempts = 0;
+    const maxAttempts = 2; // Try up to 2 times (initial + 1 retry)
+
+    while (attempts < maxAttempts) {
+      try {
+        if (isSignIn) {
+          final e = email.trim();
+          final p = password.trim();
+          debugPrint(
+              'AuthController: signInWithPassword attempt=${attempts + 1} emailLen=${e.length}');
+
+          // Use a shorter timeout for the first attempt, longer for the second
+          final timeout = Duration(seconds: attempts == 0 ? 10 : 20);
+
+          await _auth
+              .signInWithPassword(email: e, password: p)
+              .timeout(timeout);
+          debugPrint('AuthController: signInWithPassword success');
+          return const AuthActionResult();
+        } else {
+          final redirectBase = _validatedRedirectUrl();
+          final emailTrim = email.trim();
+          final passwordTrim = password.trim();
+
+          // Sign up usually involves more backend work, give it more time
+          final timeout = Duration(seconds: attempts == 0 ? 15 : 25);
+
+          final response = await (redirectBase != null
+                  ? _auth.signUp(
+                      email: emailTrim,
+                      password: passwordTrim,
+                      data: {'role': 'admin'},
+                      emailRedirectTo: redirectBase,
+                    )
+                  : _auth.signUp(
+                      email: emailTrim,
+                      password: passwordTrim,
+                      data: {'role': 'admin'},
+                    ))
+              .timeout(timeout);
+
+          if (response.user != null && response.session == null) {
+            return const AuthActionResult(requiresEmailVerification: true);
+          }
+          return const AuthActionResult();
         }
-        return const AuthActionResult();
+      } catch (e) {
+        attempts++;
+        final isLastAttempt = attempts >= maxAttempts;
+        final errorStr = e.toString().toLowerCase();
+
+        // If it's a credentials error, don't retry
+        if (errorStr.contains('invalid login credentials') ||
+            errorStr.contains('invalid email') ||
+            errorStr.contains('password') ||
+            errorStr.contains('not found')) {
+          _handleAuthError(e);
+        }
+
+        // If it's a connection error or timeout, and we have attempts left, retry
+        final isConnectionError = errorStr.contains('connection') ||
+            errorStr.contains('socket') ||
+            errorStr.contains('timeout') ||
+            errorStr.contains('failed to host') ||
+            errorStr.contains('network');
+
+        if (isConnectionError && !isLastAttempt) {
+          debugPrint(
+              'AuthController: connection error on attempt $attempts, retrying... $e');
+          // Small delay before retry
+          await Future.delayed(Duration(milliseconds: 500 * attempts));
+          continue;
+        }
+
+        // Otherwise, throw the error
+        _handleAuthError(e);
       }
-    } on AuthException catch (e) {
+    }
+    throw AppError('Authentication failed after multiple attempts');
+  }
+
+  void _handleAuthError(Object e) {
+    if (e is AuthException) {
       debugPrint('AuthController: AuthException ${e.message}');
-      debugPrint('AuthController: AuthException raw=${e.toString()}');
       throw AppError(e.message, cause: e);
-    } catch (e) {
+    } else if (e is TimeoutException) {
+      debugPrint('AuthController: TimeoutException');
+      throw AppError(
+          'Connection timed out. Please check your internet and try again.');
+    } else {
       debugPrint('AuthController: unexpected error $e');
       throw AppError('An unexpected error occurred', cause: e);
     }
@@ -117,40 +147,13 @@ class AuthController {
       throw AppError('Please enter a valid email address');
     }
     final redirectTo = _validatedRedirectUrl();
+    if (redirectTo == null) {
+      throw AppError('Password reset redirect URL is missing');
+    }
     try {
-      if (redirectTo != null) {
-        await _auth.resetPasswordForEmail(normalized, redirectTo: redirectTo);
-        return;
-      }
-      await _auth.resetPasswordForEmail(normalized);
+      await _auth.resetPasswordForEmail(normalized, redirectTo: redirectTo);
     } on AuthException catch (e) {
-      try {
-        await _sendPasswordRecoveryViaFunction(
-          email: normalized,
-          redirectTo: redirectTo,
-        );
-        return;
-      } catch (_) {}
-      final msg = e.message.toLowerCase();
-      final shouldRetryWithoutRedirect = msg.contains('unexpected') ||
-          msg.contains('failure') ||
-          msg.contains('redirect') ||
-          msg.contains('invalid request');
-      if (shouldRetryWithoutRedirect && redirectTo != null) {
-        try {
-          await _auth.resetPasswordForEmail(normalized);
-          return;
-        } catch (_) {}
-      }
-      try {
-        await _sendPasswordRecoveryViaFunction(email: normalized);
-        return;
-      } catch (fallbackError) {
-        if (fallbackError is AppError) {
-          rethrow;
-        }
-        throw AppError(e.message, cause: e);
-      }
+      throw AppError(e.message, cause: e);
     } catch (e) {
       throw AppError('Failed to send reset link', cause: e);
     }
@@ -166,6 +169,59 @@ class AuthController {
       throw AppError(e.message, cause: e);
     } catch (e) {
       throw AppError('Session refresh failed', cause: e);
+    }
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      await _auth.updateUser(UserAttributes(password: newPassword));
+    } on AuthException catch (e) {
+      throw AppError(e.message, cause: e);
+    } catch (e) {
+      throw AppError('Failed to update password', cause: e);
+    }
+  }
+
+  Future<void> updatePasswordAndSignOut(String newPassword) async {
+    try {
+      await _auth.updateUser(UserAttributes(password: newPassword));
+      await _auth.signOut();
+    } on AuthException catch (e) {
+      throw AppError(e.message, cause: e);
+    } catch (e) {
+      throw AppError('Failed to finalize password reset', cause: e);
+    }
+  }
+
+  Future<void> requestPasswordChange({
+    required String email,
+    required String newPassword,
+  }) async {
+    final normalized = email.trim().toLowerCase();
+    if (normalized.isEmpty || !_isEmailValid(normalized)) {
+      throw AppError('Please enter a valid email address');
+    }
+    if (newPassword.trim().length < 8) {
+      throw AppError('Password must be at least 8 characters');
+    }
+    final response = await _client.functions.invoke(
+      'send-password-recovery',
+      body: <String, dynamic>{
+        'action': 'request_password_change',
+        'email': normalized,
+        'newPassword': newPassword,
+      },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      final data = response.data;
+      final message = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'Failed to send reset email (Status: ${response.status}). Please try again later.';
+      throw AppError(message);
+    }
+    final data = response.data;
+    if (data is Map && data['error'] != null) {
+      throw AppError(data['error'].toString());
     }
   }
 
