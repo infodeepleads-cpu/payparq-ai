@@ -43,9 +43,27 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
   int _selectedIndex = 2;
 
+  Future<void> _hydrateLocationSelection() async {
+    for (int attempt = 0; attempt < 4; attempt++) {
+      if (!mounted) return;
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(availableLocationsProvider);
+      ref.invalidate(guaranteedLocationSelectionProvider);
+      try {
+        final selection =
+            await ref.read(guaranteedLocationSelectionProvider.future);
+        if (!mounted) return;
+        final selected = (selection.displayId ?? '').trim();
+        if (selected.isNotEmpty) return;
+      } catch (_) {}
+      await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    Future.microtask(_hydrateLocationSelection);
     // Pre-load dashboard and other critical deferred modules
     Future.delayed(const Duration(milliseconds: 500), () {
       admin_mod.loadLibrary().catchError((_) {});
@@ -89,17 +107,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (!mounted) return;
     if (confirm != true) return;
 
-    final currentUserId = ref.read(authControllerProvider).currentUserId();
     ref.read(selectedLocationIdProvider.notifier).state = null;
     _selectedIndex = 2;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('selected_location_display_id');
     await prefs.remove('selected_location_uuid');
-    if (currentUserId != null && currentUserId.isNotEmpty) {
-      await prefs.remove(_selectedLocationDisplayKeyFor(currentUserId));
-      await prefs.remove(_selectedLocationUuidKeyFor(currentUserId));
-    }
 
     ref.invalidate(userProfileProvider);
     ref.invalidate(availableLocationsProvider);
@@ -112,6 +125,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       successMessage: Lang.sel(isHr, 'Signed out', 'Odjavljeni ste'),
       errorBuilder: ErrorMapper.message,
     );
+    if (!mounted) return;
+    Future.microtask(_hydrateLocationSelection);
   }
 
   @override

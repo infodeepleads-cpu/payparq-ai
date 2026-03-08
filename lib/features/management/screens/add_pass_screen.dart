@@ -6,6 +6,7 @@ import '../../../logic/providers/auth_providers.dart';
 import '../providers/passes_controller.dart';
 import '../../../utils/async_action_handler.dart';
 import '../../../services/error_mapper.dart';
+import '../../../config/app_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AddPassScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,9 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
   // State
   String _type = 'pass'; // 'pass' or 'subscription'
   bool _isProcessing = false;
+  bool _isPaid = false;
+  String _billingType =
+      'daily'; // 'daily' or 'hourly' for passes, fixed to 'monthly' for subscriptions
 
   // Pass Specific
   DateTime _startDate = DateTime.now();
@@ -99,9 +103,17 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
       'location_id': locationUuid,
       'start_time': _startDate.toIso8601String(),
       'end_time': _endDate.toIso8601String(),
-      'status': 'active',
+      'status': _isPaid ? 'pending' : 'active',
+      'is_paid': _isPaid,
+      'billing_type': _type == 'subscription'
+          ? (_isPaid ? 'monthly' : null)
+          : (_isPaid ? _billingType : null),
       'daily_duration_hours':
           _type == 'subscription' ? _dailyDurationHours.toInt() : null,
+      // Added quantity for duration logic
+      'quantity': _type == 'subscription'
+          ? _subscriptionDurationMonths
+          : (_isPaid && _billingType == 'daily' ? 1 : 1),
     };
 
     if (_type == 'subscription' && !_is24_7) {
@@ -116,7 +128,23 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
     final success = await AsyncActionHandler.run<bool>(
       context: context,
       action: () async {
-        await ref.read(passesControllerProvider).createPermit(data);
+        final permit =
+            await ref.read(passesControllerProvider).createPermit(data);
+
+        // If paid, we need to generate a checkout URL and update the permit with it
+        if (_isPaid) {
+          final checkoutUrl = AppConfig.createCheckoutUrl(
+            locationId: locationUuid!,
+            type: _type == 'subscription' ? 'monthly' : _billingType,
+            permitId: permit['id'].toString(),
+          );
+
+          // Update permit with payment link
+          await Supabase.instance.client
+              .from('parking_permits')
+              .update({'payment_link': checkoutUrl}).eq('id', permit['id']);
+        }
+
         return true;
       },
       successMessage:
@@ -139,6 +167,14 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
       setState(() {
         _endDate =
             _startDate.add(Duration(days: 30 * _subscriptionDurationMonths));
+      });
+    } else if (_isPaid) {
+      setState(() {
+        if (_billingType == 'daily') {
+          _endDate = _startDate.add(const Duration(days: 1));
+        } else if (_billingType == 'hourly') {
+          _endDate = _startDate.add(const Duration(hours: 1));
+        }
       });
     }
   }
@@ -193,6 +229,42 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                   color: AppTheme.textSecondary,
                 ),
               ),
+              const SizedBox(height: 48),
+
+              // Paid Toggle
+              Row(
+                children: [
+                  Text('Paid Permit',
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(width: 12),
+                  Switch(
+                    value: _isPaid,
+                    onChanged: (v) => setState(() {
+                      _isPaid = v;
+                      _updateSubscriptionDates();
+                    }),
+                    activeColor: Colors.black,
+                  ),
+                ],
+              ),
+              if (_isPaid && _type == 'pass') ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: 300,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildBillingTypeButton('Daily', 'daily'),
+                      _buildBillingTypeButton('Hourly', 'hourly'),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 48),
 
               // Type Toggle
@@ -421,6 +493,34 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
     );
   }
 
+  Widget _buildBillingTypeButton(String title, String value) {
+    final isSelected = _billingType == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _billingType = value;
+          _updateSubscriptionDates();
+        }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.black : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? Colors.white : AppTheme.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTypeButton(String title, String value) {
     final isSelected = _type == value;
     return Expanded(
@@ -498,46 +598,57 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                 color: Colors.black)),
         const SizedBox(height: 12),
         InkWell(
-          onTap: () async {
-            final date = await showDatePicker(
-                context: context,
-                initialDate: current,
-                firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                lastDate: DateTime.now().add(const Duration(days: 365)));
-            if (!mounted) return;
-            if (date != null) {
-              final time = await showTimePicker(
-                  context: context,
-                  initialTime: TimeOfDay.fromDateTime(current));
-              if (!mounted) return;
-              if (time != null) {
-                onChanged(DateTime(
-                    date.year, date.month, date.day, time.hour, time.minute));
-              }
-            }
-          },
+          onTap: _isPaid
+              ? null
+              : () async {
+                  final date = await showDatePicker(
+                      context: context,
+                      initialDate: current,
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)));
+                  if (!mounted) return;
+                  if (date != null) {
+                    final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(current));
+                    if (!mounted) return;
+                    if (time != null) {
+                      onChanged(DateTime(date.year, date.month, date.day,
+                          time.hour, time.minute));
+                    }
+                  }
+                },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: _isPaid ? AppTheme.background : AppTheme.surface,
               borderRadius: BorderRadius.circular(8),
+              border: _isPaid ? Border.all(color: AppTheme.border) : null,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${current.year}-${current.month}-${current.day} ${current.hour}:${current.minute.toString().padLeft(2, '0')}',
+                  _formatDateTime(current),
                   style: GoogleFonts.inter(
-                      fontSize: 14, fontWeight: FontWeight.w500),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: _isPaid ? Colors.grey : Colors.black,
+                  ),
                 ),
-                const Icon(Icons.calendar_today_outlined,
-                    size: 18, color: Colors.black54),
+                Icon(Icons.calendar_today_outlined,
+                    size: 18, color: _isPaid ? Colors.grey : Colors.black54),
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    return '${dt.day}.${dt.month}.${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildDatePicker(

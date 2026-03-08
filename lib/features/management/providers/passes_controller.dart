@@ -19,10 +19,11 @@ class PassesController {
 
   PassesController(this._ref, this._repo);
 
-  Future<void> createPermit(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createPermit(Map<String, dynamic> data) async {
     try {
-      await _repo.createPermit(data);
+      final permit = await _repo.createPermit(data);
       _ref.invalidate(permitsStreamProvider);
+      return permit;
     } catch (e) {
       throw AppError('Permit creation failed: $e', cause: e);
     }

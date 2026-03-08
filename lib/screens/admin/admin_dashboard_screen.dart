@@ -431,51 +431,45 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
     final isHr = ref.watch(localeIsCroatianProvider);
     final plate = s['plate'] ?? 'UNKNOWN';
-    final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
+    final amount = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
     final paymentStatus =
         (s['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (s['status'] ?? '').toString().trim().toLowerCase();
-    final stripeSessionId = (s['stripe_session_id'] ?? '').toString().trim();
-    final hasStripeSession = stripeSessionId.isNotEmpty;
     final isPaid = paymentStatus == 'paid' ||
         paymentStatus == 'succeeded' ||
         paymentStatus == 'complete' ||
         paymentStatus == 'completed' ||
         status == 'active' ||
-        status == 'pending' ||
         status == 'paid' ||
         status == 'succeeded' ||
         status == 'complete' ||
         status == 'completed' ||
-        (hasStripeSession &&
-            status != 'canceled' &&
-            status != 'cancelled' &&
-            status != 'expired') ||
-        price == 0.0;
-    final timeStr = s['created_at'] ?? s['entry_time'] ?? '';
-    String formattedTime = 'N/A';
-    if (timeStr.isNotEmpty) {
-      try {
-        final dt =
-            DateTime.parse(timeStr).toUtc().add(const Duration(hours: 1));
-        formattedTime =
-            '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}. ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-      } catch (_) {}
-    }
+        amount == 0.0;
+
+    String? metadataEmail;
+    String? metadataMobile;
+    try {
+      if (s['stripe_metadata'] != null) {
+        final metaStr = s['stripe_metadata'].toString();
+        if (metaStr.startsWith('{')) {
+          final metaJson = jsonDecode(metaStr);
+          metadataEmail = metaJson['email']?.toString();
+          metadataMobile = metaJson['mobile']?.toString();
+        }
+      }
+    } catch (_) {}
+
+    final resolvedEmail =
+        (s['email'] ?? s['contact_email'] ?? metadataEmail ?? '')
+            .toString()
+            .trim();
+    final displayName = _nameFromEmail(resolvedEmail);
+    final displayPhone =
+        (s['mobile'] ?? s['contact_phone'] ?? metadataMobile ?? 'N/A')
+            .toString()
+            .trim();
 
     if (!isDesktop) {
-      final stripeId = (s['stripe_session_id'] ?? '').toString();
-      final hasStripe = stripeId.isNotEmpty;
-
-      // V14: Extract additional Stripe metadata if available
-      String? stripeTime;
-      try {
-        if (s['stripe_metadata'] != null) {
-          final metaJson = jsonDecode(s['stripe_metadata'].toString());
-          stripeTime = metaJson['purchase_time_berlin']?.toString();
-        }
-      } catch (_) {}
-
       return Container(
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.all(4),
@@ -498,265 +492,95 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              s['contact_name'] ??
-                                  s['email'] ??
-                                  s['contact_email'] ??
-                                  'Guest User',
+                              displayName,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.black,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (hasStripe) ...[
-                            if (stripeTime != null)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Text(
-                                  '[$stripeTime]',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 8,
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            const Icon(Icons.credit_card,
-                                size: 10, color: Colors.blue),
-                          ],
                         ],
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              s['mobile'] ?? s['contact_phone'] ?? 'N/A',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: AppTheme.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if ((s['location_display_id'] ?? '')
-                              .toString()
-                              .isNotEmpty)
-                            Text(
-                              '#${s['location_display_id']} | ',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          Text(
-                            '€${price.toStringAsFixed(2)} | $formattedTime',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        displayPhone,
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: AppTheme.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 4),
+                      _buildDurationRow(s),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                SizedBox(
-                  height: 26,
-                  child: ElevatedButton(
-                    onPressed: () => _navigateToDetail(s),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 26,
+                      child: ElevatedButton(
+                        onPressed: () => _navigateToDetail(s),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          Lang.sel(isHr, 'View', 'Pogledaj'),
+                          style: const TextStyle(fontSize: 11),
+                        ),
                       ),
-                      elevation: 0,
                     ),
-                    child: const Text('View', style: TextStyle(fontSize: 11)),
-                  ),
+                  ],
                 ),
               ],
             ),
-            if (hasStripe) ...[
-              const Divider(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 4),
-                  child: Text(
-                    'Stripe ID: $stripeId',
-                    style: GoogleFonts.inter(
-                      fontSize: 8,
-                      color: AppTheme.textSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       );
     }
-
-    final stripeId = (s['stripe_session_id'] ?? '').toString();
-    final hasStripe = stripeId.isNotEmpty;
-
-    // V14: Extract additional Stripe metadata if available
-    String? stripeTime;
-    String? metadataEmail;
-    String? metadataMobile;
-    try {
-      if (s['stripe_metadata'] != null) {
-        final metaStr = s['stripe_metadata'].toString();
-        if (metaStr.startsWith('{')) {
-          final metaJson = jsonDecode(metaStr);
-          stripeTime = metaJson['purchase_time_berlin']?.toString();
-          metadataEmail = metaJson['email']?.toString();
-          metadataMobile = metaJson['mobile']?.toString();
-        }
-      }
-    } catch (_) {}
 
     return AdminDataCard(
       leading: _buildPlateBadge(plate, isDesktop: true),
       mainContent: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      s['contact_name'] ??
-                          s['email'] ??
-                          metadataEmail ??
-                          s['contact_email'] ??
-                          Lang.sel(isHr, 'Guest User', 'Gost korisnik'),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (hasStripe) ...[
-                      const SizedBox(width: 8),
-                      const Icon(Icons.credit_card,
-                          size: 14, color: Colors.blue),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Stripe ID: $stripeId',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: AppTheme.textSecondary,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      if (stripeTime != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '[$stripeTime]',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.blue[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-              if (s['type'] != null)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Text(
-                    (s['type'] as String).toUpperCase(),
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
-                ),
-              if (s['coupon_code'] != null)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'COUPON: ${s['coupon_code']}',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade800,
-                    ),
-                  ),
-                ),
-              Text(
-                '€${price.toStringAsFixed(2)}',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
+          Text(
+            displayName,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  s['mobile'] ?? s['contact_phone'] ?? metadataMobile ?? 'N/A',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if ((s['location_display_id'] ?? '').toString().isNotEmpty)
-                Text(
-                  '#${s['location_display_id']} | ',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              Text(
-                formattedTime,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ],
+          Text(
+            displayPhone,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 6),
+          _buildDurationRow(s),
         ],
       ),
       trailing: Row(
@@ -784,6 +608,171 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
+  String _nameFromEmail(String email) {
+    final normalized = email.trim();
+    if (normalized.isEmpty) {
+      return 'Guest User';
+    }
+    final atIndex = normalized.indexOf('@');
+    if (atIndex <= 0) {
+      return normalized;
+    }
+    return normalized.substring(0, atIndex);
+  }
+
+  Map<String, dynamic> _parseStripeMetadata(dynamic raw) {
+    try {
+      if (raw is Map<String, dynamic>) return raw;
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      if (raw is String) {
+        final first = jsonDecode(raw);
+        if (first is Map<String, dynamic>) return first;
+        if (first is Map) return Map<String, dynamic>.from(first);
+        if (first is String) {
+          final second = jsonDecode(first);
+          if (second is Map<String, dynamic>) return second;
+          if (second is Map) return Map<String, dynamic>.from(second);
+        }
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  int _parseQuantity(dynamic raw) {
+    if (raw == null) return 1;
+    final intValue = int.tryParse(raw.toString());
+    if (intValue != null && intValue > 0) return intValue;
+    final doubleValue = double.tryParse(raw.toString());
+    if (doubleValue != null && doubleValue > 0) return doubleValue.round();
+    return 1;
+  }
+
+  int _resolveQuantity(
+      Map<String, dynamic> item, Map<String, dynamic> stripeMetadata) {
+    // 1. Primary check: check session fields and metadata for explicit quantity
+    final parsed = _parseQuantity(
+      stripeMetadata['quantity'] ??
+          stripeMetadata['qty'] ??
+          stripeMetadata['duration_quantity'] ??
+          item['quantity'],
+    );
+
+    // V17: Ensure we use the parsed quantity if it's > 1, as it represents the number of units (hours/days/months)
+    if (parsed > 1) return parsed;
+
+    // 2. Secondary check: check session fields and metadata for duration minutes
+    final durationMinutes = _parseQuantity(
+      stripeMetadata['duration_minutes'] ??
+          stripeMetadata['duration'] ??
+          item['duration_minutes'],
+    );
+
+    final type = (item['type'] ?? stripeMetadata['type'] ?? 'hourly')
+        .toString()
+        .toLowerCase();
+    final unit =
+        (stripeMetadata['duration_unit'] ?? item['duration_unit'] ?? '')
+            .toString()
+            .toLowerCase();
+
+    if (durationMinutes > 1) {
+      if (type == 'monthly' || type == 'subscription' || unit == 'month') {
+        return (durationMinutes / (30 * 24 * 60)).round().clamp(1, 9999);
+      }
+      if (type == 'daily' || unit == 'day') {
+        return (durationMinutes / (24 * 60)).round().clamp(1, 9999);
+      }
+      // V16: Fixed issue where 1.1h was rounded up to 2h, now using round() and ensuring it handles minutes correctly
+      return (durationMinutes / 60).round().clamp(1, 9999);
+    }
+
+    // 3. Tertiary check: calculate from time difference
+    final start = DateTime.tryParse(
+        (item['entry_time'] ?? item['start_time'] ?? item['created_at'] ?? '')
+            .toString());
+    final end = DateTime.tryParse(
+        (item['exit_time'] ?? item['end_time'] ?? '').toString());
+
+    if (start != null && end != null && end.isAfter(start)) {
+      final diffMinutes = end.difference(start).inMinutes;
+      if (diffMinutes >= 1) {
+        if (type == 'monthly' || type == 'subscription' || unit == 'month') {
+          return (diffMinutes / (30 * 24 * 60)).round().clamp(1, 9999);
+        }
+        if (type == 'daily' || unit == 'day') {
+          return (diffMinutes / (24 * 60)).round().clamp(1, 9999);
+        }
+        // V16: Standardized to use round() to avoid overcounting and handle partial durations better
+        return (diffMinutes / 60).round().clamp(1, 9999);
+      }
+    }
+
+    return parsed;
+  }
+
+  Widget _buildDurationRow(Map<String, dynamic> s) {
+    final isHr = ref.watch(localeIsCroatianProvider);
+
+    // 1. Extract raw data
+    final String type = (s['type'] ?? 'hourly').toString().toLowerCase();
+    final String billingType =
+        (s['billing_type'] ?? '').toString().toLowerCase();
+
+    // 2. Metadata fallback (for Stripe sessions)
+    final stripeMetadata = _parseStripeMetadata(s['stripe_metadata']);
+    final int quantity = _resolveQuantity(s, stripeMetadata);
+
+    final String metadataType =
+        (stripeMetadata['type'] ?? '').toString().toLowerCase();
+    final String metadataUnit =
+        (stripeMetadata['duration_unit'] ?? '').toString().toLowerCase();
+
+    // 3. Determine display string
+    String durationStr = '';
+
+    // Check for monthly
+    if (type == 'monthly' ||
+        type == 'subscription' ||
+        billingType == 'monthly' ||
+        metadataType == 'monthly' ||
+        metadataUnit == 'month') {
+      durationStr =
+          '$quantity ${quantity == 1 ? (isHr ? 'Mjesec' : 'Month') : (isHr ? 'Mjeseci' : 'Months')}';
+    }
+    // Check for daily
+    else if (type == 'daily' ||
+        billingType == 'daily' ||
+        metadataType == 'daily' ||
+        metadataUnit == 'day') {
+      durationStr =
+          '$quantity ${quantity == 1 ? (isHr ? 'Dan' : 'Day') : (isHr ? 'Dana' : 'Days')}';
+    }
+    // Default to hourly
+    else {
+      durationStr =
+          '$quantity ${quantity == 1 ? (isHr ? 'Sat' : 'Hour') : (isHr ? 'Sati' : 'Hours')}';
+    }
+
+    return Row(
+      children: [
+        Icon(
+          Icons.access_time,
+          size: 14,
+          color: AppTheme.textSecondary.withValues(alpha: 0.7),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          durationStr,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPlateBadge(String plate, {bool isDesktop = false}) {
     return Container(
       width: isDesktop ? 160 : 120,
@@ -806,24 +795,66 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   void _navigateToDetail(Map<String, dynamic> s) {
+    // Decode metadata for quantity and billing_type fallback
+    final stripeMetadata = _parseStripeMetadata(s['stripe_metadata']);
+    final quantity = _resolveQuantity(s, stripeMetadata);
+
+    final Map<String, dynamic> normalizedPermit = s['ui_type'] == 'SUB'
+        ? s
+        : {
+            ...s,
+            'type': (s['type'] ?? 'hourly').toString(),
+            'start_time': s['entry_time'] ?? s['created_at'] ?? '',
+            'end_time': s['exit_time'] ?? s['end_time'] ?? '',
+            'price': double.tryParse(s['price']?.toString() ?? '0') ?? 0.0,
+            'contact_email': s['email'] ?? s['contact_email'] ?? '',
+            'contact_phone': s['mobile'] ?? s['contact_phone'] ?? '',
+            'contact_name': _nameFromEmail(
+                (s['email'] ?? s['contact_email'] ?? '').toString()),
+          };
+
+    // V15: Ensure end_time is calculated if missing for guest sessions (stripe)
+    if (normalizedPermit['end_time'] == null ||
+        normalizedPermit['end_time'].toString().isEmpty) {
+      final startStr = normalizedPermit['start_time']?.toString() ?? '';
+      if (startStr.isNotEmpty) {
+        final start = DateTime.tryParse(startStr);
+        if (start != null) {
+          final type = (s['type'] ?? 'hourly').toString().toLowerCase();
+          final bType = (s['billing_type'] ?? stripeMetadata['billing_type'])
+              ?.toString()
+              .toLowerCase();
+          final metadataType =
+              (stripeMetadata['type'] ?? '').toString().toLowerCase();
+          final metadataUnit =
+              (stripeMetadata['duration_unit'] ?? '').toString().toLowerCase();
+
+          if (type == 'monthly' ||
+              type == 'subscription' ||
+              bType == 'monthly' ||
+              metadataType == 'monthly' ||
+              metadataUnit == 'month') {
+            normalizedPermit['end_time'] =
+                start.add(Duration(days: 30 * quantity)).toIso8601String();
+          } else if (type == 'daily' ||
+              bType == 'daily' ||
+              metadataType == 'daily' ||
+              metadataUnit == 'day') {
+            normalizedPermit['end_time'] =
+                start.add(Duration(days: 1 * quantity)).toIso8601String();
+          } else {
+            // Default to +1 hour * quantity for hourly or any unknown guest session
+            normalizedPermit['end_time'] =
+                start.add(Duration(hours: 1 * quantity)).toIso8601String();
+          }
+        }
+      }
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => pass_detail.PassDetailScreen(
-          permit: s['ui_type'] == 'SUB'
-              ? s
-              : {
-                  ...s,
-                  'type': 'guest_session',
-                  'start_time': s['entry_time'] ??
-                      s['created_at'] ??
-                      DateTime.now().toIso8601String(),
-                  'end_time': DateTime.now().toIso8601String(),
-                  'price':
-                      double.tryParse(s['price']?.toString() ?? '0') ?? 0.0,
-                  'contact_email': s['email'] ?? s['contact_email'] ?? '',
-                  'contact_phone': s['mobile'] ?? s['contact_phone'] ?? '',
-                  'contact_name': s['contact_name'] ?? 'Guest User',
-                },
+          permit: normalizedPermit,
         ),
       ),
     );

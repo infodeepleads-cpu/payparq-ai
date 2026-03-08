@@ -6,8 +6,13 @@ class PassesRepository {
 
   PassesRepository(this._client);
 
-  Future<void> createPermit(Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> createPermit(Map<String, dynamic> data) async {
     debugPrint('createPermit location_id=${data['location_id']}');
-    await _client.from('parking_permits').insert(data);
+    final res = await _client
+        .from('parking_permits')
+        .insert(data)
+        .select()
+        .single();
+    return res;
   }
 }

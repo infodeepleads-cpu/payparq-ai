@@ -81,6 +81,33 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   console.log(`[V19] Persisting session: ${session.id}`);
   const metadata = session.metadata || {};
   console.log(`[V19] Metadata: ${JSON.stringify(metadata)}`);
+
+  // Handle Permit Activation if permit_id is present
+  if (metadata.permit_id) {
+    console.log(`[V19] Activating permit: ${metadata.permit_id}`);
+    const { error: permitError } = await admin
+      .from("parking_permits")
+      .update({
+        status: "active",
+        payment_status: "paid",
+        stripe_session_id: session.id,
+        stripe_metadata: JSON.stringify({
+          ...metadata,
+          stripe_id: session.id,
+          customer: session.customer,
+          payment_intent: session.payment_intent,
+        }),
+      })
+      .eq("id", metadata.permit_id);
+
+    if (permitError) {
+      console.error(`[V19] Permit activation failed: ${permitError.message}`);
+      // We still continue to persist the session as a backup record
+    } else {
+      console.log(`[V19] Permit activated successfully`);
+    }
+  }
+
   const candidates = [metadata.location_id, metadata.display_id, session.client_reference_id].map((v) => String(v ?? "").trim()).filter((v) => v.length > 0);
 
   let resolvedLocation: { id: string; display_id?: string } | null = null;
@@ -101,6 +128,49 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const phone = session.customer_details?.phone || metadata.mobile || "";
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
+  let checkoutQuantity = Number.parseInt((metadata.quantity ?? "1").toString(), 10);
+  if (!Number.isFinite(checkoutQuantity) || checkoutQuantity < 1) {
+    checkoutQuantity = 1;
+  }
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      limit: 100,
+    });
+    const lineItemQuantity = lineItems.data.reduce((sum, item) => {
+      const qty = Number(item?.quantity ?? 0);
+      return Number.isFinite(qty) && qty > 0 ? sum + qty : sum;
+    }, 0);
+    if (lineItemQuantity > 0) {
+      checkoutQuantity = lineItemQuantity;
+    }
+  } catch (lineItemError) {
+    console.warn(`[V19] Could not read line-item quantity for ${session.id}:`, lineItemError);
+  }
+  if (checkoutQuantity <= 1) {
+    const subtotalCents = Number(session.amount_subtotal ?? 0);
+    const unitCents = Number(metadata.amount_cents ?? 0);
+    if (
+      Number.isFinite(subtotalCents) &&
+      Number.isFinite(unitCents) &&
+      subtotalCents > 0 &&
+      unitCents > 0
+    ) {
+      const derivedQuantity = Math.round(subtotalCents / unitCents);
+      if (Number.isFinite(derivedQuantity) && derivedQuantity > 0) {
+        checkoutQuantity = derivedQuantity;
+      }
+    }
+  }
+  const durationUnit =
+    type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
+  const entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  const durationMinutes =
+    durationUnit === "month"
+      ? checkoutQuantity * 30 * 24 * 60
+      : durationUnit === "day"
+      ? checkoutQuantity * 24 * 60
+      : checkoutQuantity * 60;
+  const exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
   
   let plateNumber = "";
   if (session.custom_fields) {
@@ -123,9 +193,16 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     price: Number(session.amount_total ?? 0) / 100,
     amount_cents: Number(session.amount_total ?? 0),
     stripe_session_id: session.id,
-    created_at: new Date().toISOString(),
+    created_at: entryTime.toISOString(),
+    entry_time: entryTime.toISOString(),
+    exit_time: exitTime.toISOString(),
+    end_time: exitTime.toISOString(),
+    quantity: checkoutQuantity,
+    duration_minutes: durationMinutes,
     stripe_metadata: JSON.stringify({
       ...metadata,
+      quantity: String(checkoutQuantity),
+      duration_unit: durationUnit,
       stripe_id: session.id,
       customer: session.customer,
       payment_intent: session.payment_intent,

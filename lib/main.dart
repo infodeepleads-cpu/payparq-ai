@@ -45,21 +45,24 @@ Future<void> main() async {
     overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
     ],
-    child: const BootApp(),
+    child: const PayParqApp(),
   ));
 }
 
-class BootApp extends StatefulWidget {
-  const BootApp({super.key});
+class PayParqApp extends StatefulWidget {
+  const PayParqApp({super.key});
 
   @override
-  State<BootApp> createState() => _BootAppState();
+  State<PayParqApp> createState() => _PayParqAppState();
 }
 
-class _BootAppState extends State<BootApp> {
+class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   late Future<void> _initFuture;
   static const Duration _initGuardTimeout = Duration(seconds: 20);
   final List<String> _logs = [];
+
+  bool _isRecoveryMode = false;
+  late final StreamSubscription<AuthState> _authSubscription;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -77,13 +80,52 @@ class _BootAppState extends State<BootApp> {
     _addLog('App starting...');
     _logBuildInfo();
     _initFuture = _initWithGuard();
+
+    _isRecoveryMode = _isRecoveryRequestFromUrl();
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        setState(() => _isRecoveryMode = true);
+      } else if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.signedOut ||
+          data.event == AuthChangeEvent.userUpdated) {
+        if (_isRecoveryMode) {
+          setState(() => _isRecoveryMode = false);
+        }
+      }
+    });
   }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  bool _isResetPasswordPath() {
+    if (!kIsWeb) return false;
+    return Uri.base.pathSegments
+        .map((segment) => segment.toLowerCase())
+        .contains('reset-password');
+  }
+
+  bool _isRecoveryRequestFromUrl() {
+    if (!kIsWeb) return false;
+    final queryType = Uri.base.queryParameters['type']?.toLowerCase();
+    if (queryType == 'recovery') return true;
+    final fragment = Uri.base.fragment;
+    if (fragment.isEmpty) return false;
+    final fragmentQuery = Uri.splitQueryString(fragment);
+    return fragmentQuery['type']?.toLowerCase() == 'recovery';
+  }
+
+  bool get _showResetPasswordScreen =>
+      _isRecoveryMode || _isResetPasswordPath() || _isRecoveryRequestFromUrl();
 
   Future<void> _initWithGuard() {
     _addLog('Initializing with watchdog (20s)...');
     return _initSupabase().timeout(_initGuardTimeout, onTimeout: () {
       _addLog('Watchdog TIMEOUT triggered!');
-      // Instead of throwing, we just let it finish or fail naturally to avoid infinite buffering
       _addLog('Continuing without timeout guard for stability...');
       return;
     });
@@ -93,7 +135,6 @@ class _BootAppState extends State<BootApp> {
     try {
       _addLog('Logging build info (skipping PackageInfo for stability)...');
       const env = String.fromEnvironment('ENV', defaultValue: 'dev');
-
       const version = '1.0.0+1';
       final buildDate =
           AppConfig.buildDate.isEmpty ? 'unknown' : AppConfig.buildDate;
@@ -119,37 +160,6 @@ class _BootAppState extends State<BootApp> {
         timeout: const Duration(seconds: 15),
       );
 
-      // V14: Check today's Stripe data (2026-03-07)
-      try {
-        final client = Supabase.instance.client;
-        final today = '2026-03-07';
-
-        final sessions = await client
-            .from('parking_sessions')
-            .select('*')
-            .gte('created_at', '${today}T00:00:00')
-            .lte('created_at', '${today}T23:59:59');
-
-        final permits = await client
-            .from('parking_permits')
-            .select('*')
-            .gte('created_at', '${today}T00:00:00')
-            .lte('created_at', '${today}T23:59:59');
-
-        _addLog(
-            'TODAY STRIPE DATA: ${sessions.length} sessions, ${permits.length} permits');
-        for (var s in sessions) {
-          _addLog(
-              'STRIPE SESSION: plate=${s['plate']}, email=${s['email']}, status=${s['status']}, price=${s['price']}');
-        }
-        for (var p in permits) {
-          _addLog(
-              'STRIPE PERMIT: plate=${p['plate']}, email=${p['contact_email']}, status=${p['status']}');
-        }
-      } catch (e) {
-        _addLog('STRIPE CHECK ERROR: $e');
-      }
-
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
     } catch (e) {
@@ -162,26 +172,24 @@ class _BootAppState extends State<BootApp> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return MaterialApp(
-            title: 'payparq.ai',
-            home: Scaffold(
+    return MaterialApp(
+      title: 'payparq.ai',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      home: FutureBuilder<void>(
+        future: _initFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
               backgroundColor: Colors.black,
               body: Center(
-                child: const _PulsingBrandWordmark(),
+                child: _PulsingBrandWordmark(),
               ),
-            ),
-            debugShowCheckedModeBanner: false,
-          );
-        }
+            );
+          }
 
-        if (snapshot.hasError) {
-          return MaterialApp(
-            title: 'payparq.ai',
-            home: Scaffold(
+          if (snapshot.hasError) {
+            return Scaffold(
               backgroundColor: const Color(0xFFF9FAFB),
               body: Center(
                 child: ConstrainedBox(
@@ -247,12 +255,25 @@ class _BootAppState extends State<BootApp> {
                   ),
                 ),
               ),
-            ),
-            debugShowCheckedModeBanner: false,
-          );
-        }
-        return const PayParqApp();
-      },
+            );
+          }
+
+          return _showResetPasswordScreen
+              ? const UpdatePasswordScreen()
+              : StreamBuilder<AuthState>(
+                  stream: Supabase.instance.client.auth.onAuthStateChange,
+                  builder: (context, snapshot) {
+                    final session =
+                        Supabase.instance.client.auth.currentSession ??
+                            snapshot.data?.session;
+                    if (session != null) {
+                      return const MasterScaffold();
+                    }
+                    return const AuthScreen();
+                  },
+                );
+        },
+      ),
     );
   }
 }
@@ -308,83 +329,6 @@ class _PulsingBrandWordmarkState extends State<_PulsingBrandWordmark>
           ],
         ),
       ),
-    );
-  }
-}
-
-class PayParqApp extends StatefulWidget {
-  const PayParqApp({super.key});
-
-  @override
-  State<PayParqApp> createState() => _PayParqAppState();
-}
-
-class _PayParqAppState extends State<PayParqApp> {
-  bool _isRecoveryMode = false;
-  late final StreamSubscription<AuthState> _authSubscription;
-  bool _isResetPasswordPath() {
-    if (!kIsWeb) return false;
-    return Uri.base.pathSegments
-        .map((segment) => segment.toLowerCase())
-        .contains('reset-password');
-  }
-
-  bool _isRecoveryRequestFromUrl() {
-    if (!kIsWeb) return false;
-    final queryType = Uri.base.queryParameters['type']?.toLowerCase();
-    if (queryType == 'recovery') return true;
-    final fragment = Uri.base.fragment;
-    if (fragment.isEmpty) return false;
-    final fragmentQuery = Uri.splitQueryString(fragment);
-    return fragmentQuery['type']?.toLowerCase() == 'recovery';
-  }
-
-  bool get _showResetPasswordScreen =>
-      _isRecoveryMode || _isResetPasswordPath() || _isRecoveryRequestFromUrl();
-
-  @override
-  void initState() {
-    super.initState();
-    _isRecoveryMode = _isRecoveryRequestFromUrl();
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        setState(() => _isRecoveryMode = true);
-      } else if (data.event == AuthChangeEvent.signedIn ||
-          data.event == AuthChangeEvent.signedOut ||
-          data.event == AuthChangeEvent.userUpdated) {
-        if (_isRecoveryMode) {
-          setState(() => _isRecoveryMode = false);
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _authSubscription.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'payparq.ai',
-      theme: AppTheme.lightTheme,
-      home: _showResetPasswordScreen
-          ? const UpdatePasswordScreen()
-          : StreamBuilder<AuthState>(
-              stream: Supabase.instance.client.auth.onAuthStateChange,
-              builder: (context, snapshot) {
-                final session = Supabase.instance.client.auth.currentSession ??
-                    snapshot.data?.session;
-                if (session != null) {
-                  return const MasterScaffold();
-                }
-                return const AuthScreen();
-              },
-            ),
-      debugShowCheckedModeBanner: false,
     );
   }
 }

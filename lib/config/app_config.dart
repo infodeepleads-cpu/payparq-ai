@@ -96,6 +96,7 @@ class AppConfig {
     double? price,
     bool allowPromotionCodes = false,
     String? promotionCodeLabel,
+    String? permitId,
   }) {
     final t = timestamp ?? DateTime.now().millisecondsSinceEpoch.toString();
     final base = supabaseFunctionsBaseUrl.isNotEmpty
@@ -106,6 +107,7 @@ class AppConfig {
       if (displayId != null && displayId.isNotEmpty) 'display_id': displayId,
       'type': type,
       't': t,
+      if (permitId != null) 'permit_id': permitId,
     };
     if (price != null) {
       final normalized = price < 0 ? 0.0 : price;

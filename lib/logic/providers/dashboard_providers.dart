@@ -119,24 +119,15 @@ final unifiedDashboardProvider =
     final paymentStatus =
         (item['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (item['status'] ?? '').toString().trim().toLowerCase();
-    final hasStripeSession =
-        (item['stripe_session_id'] ?? '').toString().isNotEmpty;
-
-    // V18.4: Stripe metadata mapping
     final isPaid = paymentStatus == 'paid' ||
         paymentStatus == 'succeeded' ||
         paymentStatus == 'complete' ||
         paymentStatus == 'completed' ||
         status == 'active' ||
-        status == 'pending' ||
         status == 'paid' ||
         status == 'succeeded' ||
         status == 'complete' ||
         status == 'completed' ||
-        (hasStripeSession &&
-            status != 'canceled' &&
-            status != 'cancelled' &&
-            status != 'expired') ||
         amount == 0.0 ||
         (item['stripe_metadata'] != null &&
             (item['stripe_metadata']
@@ -151,6 +142,24 @@ final unifiedDashboardProvider =
                 item['stripe_metadata']
                     .toString()
                     .contains('"checkout_session_id"')));
+
+    final isPending =
+        paymentStatus == 'pending' || status == 'pending' || status == 'open';
+    final isGuest = (item['ui_type'] ?? '').toString() == 'GUEST';
+    final isSub = (item['ui_type'] ?? '').toString() == 'SUB';
+
+    if (isGuest && isPending && !isPaid) {
+      return false;
+    }
+
+    // Permit expiry logic: if status is pending and created_at is older than 60 mins, hide it.
+    if (isSub && isPending && !isPaid) {
+      final createdAt = (item['ui_created_at'] as DateTime?) ?? DateTime(2000);
+      final age = DateTime.now().difference(createdAt);
+      if (age.inMinutes > 60) {
+        return false;
+      }
+    }
 
     if (filter == 'Active') return isPaid;
     if (filter == 'Inactive') return !isPaid;

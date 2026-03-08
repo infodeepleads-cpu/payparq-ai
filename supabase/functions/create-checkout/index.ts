@@ -243,6 +243,49 @@ async function persistCheckoutSession(
   const phone = session.customer_details?.phone || metadata.mobile || "";
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
+  let checkoutQuantity = Number.parseInt((metadata.quantity ?? "1").toString(), 10);
+  if (!Number.isFinite(checkoutQuantity) || checkoutQuantity < 1) {
+    checkoutQuantity = 1;
+  }
+  try {
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      limit: 100,
+    });
+    const lineItemQuantity = lineItems.data.reduce((sum, item) => {
+      const qty = Number(item?.quantity ?? 0);
+      return Number.isFinite(qty) && qty > 0 ? sum + qty : sum;
+    }, 0);
+    if (lineItemQuantity > 0) {
+      checkoutQuantity = lineItemQuantity;
+    }
+  } catch (lineItemError) {
+    console.warn(`[V19] Could not read line-item quantity for ${session.id}:`, lineItemError);
+  }
+  if (checkoutQuantity <= 1) {
+    const subtotalCents = Number(session.amount_subtotal ?? 0);
+    const unitCents = Number(metadata.amount_cents ?? 0);
+    if (
+      Number.isFinite(subtotalCents) &&
+      Number.isFinite(unitCents) &&
+      subtotalCents > 0 &&
+      unitCents > 0
+    ) {
+      const derivedQuantity = Math.round(subtotalCents / unitCents);
+      if (Number.isFinite(derivedQuantity) && derivedQuantity > 0) {
+        checkoutQuantity = derivedQuantity;
+      }
+    }
+  }
+  const durationUnit =
+    type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
+  const entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  const durationMinutes =
+    durationUnit === "month"
+      ? checkoutQuantity * 30 * 24 * 60
+      : durationUnit === "day"
+      ? checkoutQuantity * 24 * 60
+      : checkoutQuantity * 60;
+  const exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
   let couponCode = "";
   let discountAmount = 0;
   if (session.total_details?.breakdown?.discounts) {
@@ -282,11 +325,18 @@ async function persistCheckoutSession(
     price: Number(session.amount_total ?? 0) / 100,
     amount_cents: Number(session.amount_total ?? 0),
     stripe_session_id: session.id,
-    created_at: new Date().toISOString(),
+    created_at: entryTime.toISOString(),
+    entry_time: entryTime.toISOString(),
+    exit_time: exitTime.toISOString(),
+    end_time: exitTime.toISOString(),
+    quantity: checkoutQuantity,
+    duration_minutes: durationMinutes,
     coupon_code: couponCode || null,
     discount_amount: discountAmount || 0,
     stripe_metadata: JSON.stringify({
       ...metadata,
+      quantity: String(checkoutQuantity),
+      duration_unit: durationUnit,
       stripe_id: session.id,
       customer: session.customer,
       payment_intent: session.payment_intent,
@@ -516,7 +566,11 @@ serve(async (req: Request) => {
       body["mobile"] ?? url.searchParams.get("mobile") ?? "",
     ).trim();
 
-    console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}`);
+    const permitId = String(
+      body["permit_id"] ?? url.searchParams.get("permit_id") ?? "",
+    ).trim();
+
+    console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
     // V13: Exact description format requested by user
     const now = new Date();
@@ -546,11 +600,15 @@ serve(async (req: Request) => {
 
     console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
 
+    // 60-minute expiry for permits
+    const sixtyMinutesFromNow = Math.floor(Date.now() / 1000) + 3600;
+
     const sessionOptions: any = {
       mode: "payment",
       payment_method_types: ["card"],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      expires_at: permitId ? sixtyMinutesFromNow : undefined,
       client_reference_id: locationUuid, // Use UUID if possible
       customer_email: email || undefined,
       phone_number_collection: {
@@ -593,6 +651,7 @@ serve(async (req: Request) => {
         plate: plate,
         mobile: mobile,
         email: email,
+        permit_id: permitId || undefined,
       },
     };
 
@@ -663,64 +722,6 @@ serve(async (req: Request) => {
     const paymentSession = await stripe.checkout.sessions.create(sessionOptions);
     if (!paymentSession.url) {
       return json({ error: "Failed to create checkout session" }, 500);
-    }
-
-    // V15: Robust seeding only if we have a valid UUID
-    if (locationUuid) {
-      console.log(`[V18.2] Attempting seeding for locationUuid: ${locationUuid}, stripe_session_id: ${paymentSession.id}`);
-      
-      // V18.2: First, let's verify if the location exists in the database
-      const { data: locCheck, error: locCheckError } = await admin
-        .from("locations")
-        .select("id")
-        .eq("id", locationUuid)
-        .maybeSingle();
-        
-      if (locCheckError) {
-        console.error(`[V18.2] Error checking location ${locationUuid}: ${locCheckError.message}`);
-      }
-      
-      if (!locCheck) {
-        console.error(`[V18.2] Location ${locationUuid} DOES NOT EXIST in the database. Seeding will fail.`);
-      }
-
-      const seedData = {
-        location_id: locationUuid,
-        plate: plate || "PENDING",
-        email: email,
-        mobile: mobile || "",
-        contact_name: "",
-        type,
-        status: "pending",
-        payment_status: "pending",
-        price: Number(amountCents ?? 0) / 100,
-        amount_cents: Number(amountCents ?? 0),
-        stripe_session_id: paymentSession.id,
-        created_at: new Date().toISOString(),
-        stripe_metadata: JSON.stringify({
-          location_id: locationUuid,
-          display_id: displayId,
-          type,
-          flow: "payment",
-          amount_cents: String(amountCents),
-          purchase_time_berlin: purchaseTimeDisplay,
-          seeded_from: "checkout_create",
-          plate: plate,
-          mobile: mobile,
-          email: email,
-        }),
-      };
-      
-      console.log(`[V18.2] Seed data payload: ${JSON.stringify(seedData)}`);
-      
-      const seeded = await insertSessionWithSchemaFallback(seedData);
-      if (!seeded.ok) {
-        console.warn(`[V18.2] Seed insert FAILED: ${seeded.message ?? "unknown error"}`);
-      } else {
-        console.log(`[V18.2] Seed insert SUCCESS for ${paymentSession.id}`);
-      }
-    } else {
-      console.warn("[V18.2] Skipping seeding because locationUuid is null");
     }
 
     if (req.method === "GET") {
