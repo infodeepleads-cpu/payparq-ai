@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -6,6 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/supabase_service.dart';
 import '../../services/performance_monitor.dart';
+
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError('Initialize in main()');
+});
 
 class LocationSelection {
   final String? uuid;
@@ -31,6 +36,12 @@ bool _isAdminOverrideEmail(String? email) {
       normalized == 'pension.zamic@gmail.com' ||
       normalized == 'pension.zamic@gmai.com';
 }
+
+String _selectedLocationDisplayKeyFor(String userId) =>
+    'selected_location_display_id_$userId';
+
+String _selectedLocationUuidKeyFor(String userId) =>
+    'selected_location_uuid_$userId';
 
 final authStateProvider = StreamProvider<AuthState>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
@@ -60,61 +71,66 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
   Future<Map<String, dynamic>?> fetchProfile({int attempt = 1}) async {
     try {
-      return await SupabaseService.instance.executeQuery<Map<String, dynamic>?>(
+      final data =
+          await SupabaseService.instance.executeQuery<Map<String, dynamic>?>(
         queryId: 'profile_${user.id}_attempt_$attempt',
-        timeout: Duration(seconds: attempt == 1 ? 5 : 10),
+        timeout: Duration(seconds: attempt == 1 ? 8 : 15), // Increased timeouts
         query: () => Supabase.instance.client
             .from('profiles')
             .select()
             .eq('id', user.id)
             .maybeSingle(),
       );
+      return data;
     } catch (e) {
-      if (attempt < 3) {
-        debugPrint('Profile fetch attempt $attempt failed, retrying...');
-        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('connection') ||
+          errorStr.contains('socket') ||
+          errorStr.contains('network') ||
+          errorStr.contains('failed to host');
+
+      if (attempt < 4 && isNetworkError) {
+        // More attempts for network issues
+        debugPrint(
+            'Profile fetch attempt $attempt failed (network), retrying in ${attempt}s...');
+        await Future.delayed(Duration(seconds: attempt));
         return fetchProfile(attempt: attempt + 1);
       }
-      rethrow;
+      debugPrint('Profile fetch failed after $attempt attempts: $e');
+      return null; // Return null instead of rethrowing to avoid stream error
     }
   }
 
   fetchProfile().then((data) {
     stopwatch.stop();
-    PerformanceMonitor.instance.recordMetric(
-      operation: 'profile_fetch',
-      duration: stopwatch.elapsed,
-      success: true,
-      metadata: {'userId': user.id, 'source': 'database'},
-    );
-
-    if (!controller.isClosed) {
-      if (data != null) {
+    if (data != null) {
+      PerformanceMonitor.instance.recordMetric(
+        operation: 'profile_fetch',
+        duration: stopwatch.elapsed,
+        success: true,
+        metadata: {'userId': user.id, 'source': 'database'},
+      );
+      if (!controller.isClosed) {
         controller.add(data);
+      }
+    } else {
+      // If data is null (failed after retries), use metadata fallback
+      final metadata = user.userMetadata;
+      if (metadata != null && !controller.isClosed) {
+        final fallback = {
+          'id': user.id,
+          'email': user.email,
+          'role': metadata['role'] ?? 'admin',
+          'location_id': metadata['location_id'],
+          'full_name': metadata['name'] ?? 'User',
+          '_jwt_fallback_after_fail': true,
+        };
+        controller.add(fallback);
       }
     }
   }).catchError((e) {
     stopwatch.stop();
-    PerformanceMonitor.instance.recordMetric(
-      operation: 'profile_fetch',
-      duration: stopwatch.elapsed,
-      success: false,
-      metadata: {'userId': user.id, 'error': e.toString()},
-    );
-
-    // If database fetch fails after retries, try to build a basic profile from JWT metadata
-    final metadata = user.userMetadata;
-    if (metadata != null && !controller.isClosed) {
-      final fallback = {
-        'id': user.id,
-        'email': user.email,
-        'role': metadata['role'] ?? 'admin',
-        'location_id': metadata['location_id'],
-        'full_name': metadata['name'] ?? 'User',
-        '_jwt_fallback': true,
-      };
-      controller.add(fallback);
-    }
+    debugPrint('Unexpected error in userProfileProvider: $e');
   });
 
   // 2. Real-time subscription (with debouncing to prevent excessive updates)
@@ -243,8 +259,13 @@ final selectedEffectiveLocationUuidProvider =
 final guaranteedLocationSelectionProvider =
     FutureProvider<LocationSelection>((ref) async {
   final locations = await ref.watch(availableLocationsProvider.future);
+  final user = Supabase.instance.client.auth.currentUser;
+  final userId = user?.id;
   final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getString('selected_location_display_id');
+  final saved = userId != null && userId.isNotEmpty
+      ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
+          prefs.getString('selected_location_display_id')
+      : prefs.getString('selected_location_display_id');
   String? displayId;
   String? uuid;
   final savedValid = saved != null && RegExp(r'^\d{5}$').hasMatch(saved);
@@ -263,6 +284,10 @@ final guaranteedLocationSelectionProvider =
     uuid = (row['id'] ?? '').toString();
     if (displayId.isNotEmpty) {
       await prefs.setString('selected_location_display_id', displayId);
+      if (userId != null && userId.isNotEmpty) {
+        await prefs.setString(
+            _selectedLocationDisplayKeyFor(userId), displayId);
+      }
     }
   } else {
     final fb = ref.read(userLocationIdProvider);
@@ -296,47 +321,63 @@ final availableLocationsProvider =
   final controller = StreamController<List<Map<String, dynamic>>>();
 
   // IMMEDIATE SYNC EMIT: Provide basic data from metadata/SharedPreferences as fast as possible
-  () async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedId = prefs.getString('selected_location_display_id');
-    final savedUuid = prefs.getString('selected_location_uuid');
-    final metadataId = user.userMetadata?['location_id']?.toString();
-    final metadataName =
-        user.userMetadata?['location_name']?.toString() ?? 'Lot';
+  final prefs = ref.read(sharedPreferencesProvider);
+  final savedId = prefs.getString(_selectedLocationDisplayKeyFor(user.id)) ??
+      prefs.getString('selected_location_display_id');
+  final savedUuid = prefs.getString(_selectedLocationUuidKeyFor(user.id)) ??
+      prefs.getString('selected_location_uuid');
+  final metadataId = user.userMetadata?['location_id']?.toString();
+  final metadataName = user.userMetadata?['location_name']?.toString() ?? 'Lot';
 
-    final initialList = <Map<String, dynamic>>[];
-    if (savedId != null && RegExp(r'^\d{5}$').hasMatch(savedId)) {
-      initialList.add({
-        'display_id': savedId,
-        'name': metadataId == savedId ? metadataName : 'Lot $savedId',
-        'id': savedUuid ?? '', // Use cached UUID if available
-        '_is_warm_initial': true,
-      });
-      // Also update selection immediately if it was null
-      if (ref.read(selectedLocationIdProvider) == null) {
-        ref.read(selectedLocationIdProvider.notifier).state = savedId;
-      }
-    } else if (metadataId != null && metadataId.isNotEmpty) {
-      final isDid = RegExp(r'^\d{5}$').hasMatch(metadataId);
-      initialList.add({
-        'display_id': isDid ? metadataId : '...',
-        'name': metadataName,
-        'id': isDid ? '' : metadataId,
-        '_is_warm_initial': true,
-      });
-      if (isDid && ref.read(selectedLocationIdProvider) == null) {
-        ref.read(selectedLocationIdProvider.notifier).state = metadataId;
-      }
+  final initialList = <Map<String, dynamic>>[];
+  if (savedId != null && RegExp(r'^\d{5}$').hasMatch(savedId)) {
+    initialList.add({
+      'display_id': savedId,
+      'name': metadataId == savedId ? metadataName : 'Lot $savedId',
+      'id': savedUuid ?? '', // Use cached UUID if available
+      '_is_warm_initial': true,
+    });
+    // Also update selection immediately if it was null
+    if (ref.read(selectedLocationIdProvider) == null) {
+      ref.read(selectedLocationIdProvider.notifier).state = savedId;
     }
+  } else if (metadataId != null && metadataId.isNotEmpty) {
+    final isDid = RegExp(r'^\d{5}$').hasMatch(metadataId);
+    initialList.add({
+      'display_id': isDid ? metadataId : '...',
+      'name': metadataName,
+      'id': isDid ? '' : metadataId,
+      '_is_warm_initial': true,
+    });
+    if (isDid && ref.read(selectedLocationIdProvider) == null) {
+      ref.read(selectedLocationIdProvider.notifier).state = metadataId;
+    }
+  }
 
-    if (initialList.isNotEmpty && !controller.isClosed) {
-      controller.add(initialList);
-    }
-  }();
+  // Also check if we have full cached list from previous session
+  final cachedJson = prefs.getString('cached_available_locations_${user.id}');
+  if (cachedJson != null) {
+    try {
+      final List<dynamic> decoded = jsonDecode(cachedJson);
+      final List<Map<String, dynamic>> cachedList =
+          List<Map<String, dynamic>>.from(decoded);
+      // Merge with initial if not already there
+      for (final item in cachedList) {
+        if (!initialList.any((l) => l['display_id'] == item['display_id'])) {
+          initialList.add(item);
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (initialList.isNotEmpty) {
+    controller.add(initialList);
+  }
 
   // Helper to fetch and add to stream
   Future<void> fetch({int attempt = 1}) async {
-    if (controller.isClosed) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || controller.isClosed) return;
 
     try {
       final queryTimeout = Duration(seconds: attempt == 1 ? 5 : 10);
@@ -377,63 +418,70 @@ final availableLocationsProvider =
         }
 
         final List<Map<String, dynamic>> mergedLocations = [];
+        final List<Future<void>> fetchFutures = [];
 
         if (ids.isNotEmpty) {
-          final filter = ids.map((id) => 'id.eq.$id').join(',');
-          final rows =
-              await SupabaseService.instance.executeQuery<List<dynamic>>(
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<List<dynamic>>(
             queryId: 'loc_details_${user.id}_att$attempt',
             timeout: queryTimeout,
-            query: () =>
-                Supabase.instance.client.from('locations').select().or(filter),
-          );
-          mergedLocations.addAll(List<Map<String, dynamic>>.from(rows));
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .or(ids.map((id) => 'id.eq.$id').join(',')),
+          )
+              .then((rows) {
+            mergedLocations.addAll(List<Map<String, dynamic>>.from(rows));
+          }));
         }
 
-        // Handle specific selections/fallbacks
         final selectedDisplayId = ref.read(selectedLocationIdProvider);
         final fallbackLocId = ref.read(userLocationIdProvider) ??
             user.userMetadata?['location_id'];
 
-        if (selectedDisplayId != null &&
-            !mergedLocations.any((l) => l['display_id'] == selectedDisplayId)) {
-          try {
-            final sel = await SupabaseService.instance
-                .executeQuery<Map<String, dynamic>?>(
-              queryId: 'loc_selected_${selectedDisplayId}_att$attempt',
-              timeout: queryTimeout,
-              query: () => Supabase.instance.client
-                  .from('locations')
-                  .select()
-                  .eq('display_id', selectedDisplayId)
-                  .maybeSingle(),
-            );
-            if (sel != null) mergedLocations.add(sel);
-          } catch (_) {}
+        if (selectedDisplayId != null) {
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<Map<String, dynamic>?>(
+            queryId: 'loc_selected_${selectedDisplayId}_att$attempt',
+            timeout: queryTimeout,
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq('display_id', selectedDisplayId)
+                .maybeSingle(),
+          )
+              .then((sel) {
+            if (sel != null &&
+                !mergedLocations.any((l) => l['id'] == sel['id'])) {
+              mergedLocations.add(sel);
+            }
+          }).catchError((_) {}));
         }
 
-        if (fallbackLocId != null &&
-            !mergedLocations.any((l) =>
-                l['id']?.toString() == fallbackLocId ||
-                l['display_id']?.toString() == fallbackLocId)) {
-          try {
-            final isUuid = RegExp(
-                    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-                    caseSensitive: false)
-                .hasMatch(fallbackLocId.toLowerCase());
-            final fb = await SupabaseService.instance
-                .executeQuery<Map<String, dynamic>?>(
-              queryId: 'loc_fallback_${fallbackLocId}_att$attempt',
-              timeout: queryTimeout,
-              query: () => Supabase.instance.client
-                  .from('locations')
-                  .select()
-                  .eq(isUuid ? 'id' : 'display_id', fallbackLocId)
-                  .maybeSingle(),
-            );
-            if (fb != null) mergedLocations.add(fb);
-          } catch (_) {}
+        if (fallbackLocId != null) {
+          final isUuid = RegExp(
+                  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+                  caseSensitive: false)
+              .hasMatch(fallbackLocId.toLowerCase());
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<Map<String, dynamic>?>(
+            queryId: 'loc_fallback_${fallbackLocId}_att$attempt',
+            timeout: queryTimeout,
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq(isUuid ? 'id' : 'display_id', fallbackLocId)
+                .maybeSingle(),
+          )
+              .then((fb) {
+            if (fb != null &&
+                !mergedLocations.any((l) => l['id'] == fb['id'])) {
+              mergedLocations.add(fb);
+            }
+          }).catchError((_) {}));
         }
+
+        await Future.wait(fetchFutures);
 
         if (mergedLocations.isEmpty &&
             (role == 'admin' || _isAdminOverrideEmail(email))) {
@@ -479,7 +527,9 @@ final availableLocationsProvider =
       // Restore persisted selection
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final prefs = await SharedPreferences.getInstance();
-      final savedId = prefs.getString('selected_location_display_id');
+      final savedId =
+          prefs.getString(_selectedLocationDisplayKeyFor(user.id)) ??
+              prefs.getString('selected_location_display_id');
       final bool savedValid =
           (savedId != null) && RegExp(r'^\d{5}$').hasMatch(savedId);
 
@@ -494,6 +544,7 @@ final availableLocationsProvider =
         final uuid = (row['id'] ?? '').toString();
         if (uuid.isNotEmpty) {
           await prefs.setString('selected_location_uuid', uuid);
+          await prefs.setString(_selectedLocationUuidKeyFor(user.id), uuid);
         }
       } else if (uniqueLocations.isNotEmpty &&
           (currentSelectedId == null ||
@@ -504,21 +555,46 @@ final availableLocationsProvider =
         if (firstId != null && firstId.isNotEmpty) {
           ref.read(selectedLocationIdProvider.notifier).state = firstId;
           await prefs.setString('selected_location_display_id', firstId);
+          await prefs.setString(
+              _selectedLocationDisplayKeyFor(user.id), firstId);
           if (firstUuid != null && firstUuid.isNotEmpty) {
             await prefs.setString('selected_location_uuid', firstUuid);
+            await prefs.setString(
+                _selectedLocationUuidKeyFor(user.id), firstUuid);
           }
         }
       }
 
-      if (!controller.isClosed) controller.add(uniqueLocations);
+      if (!controller.isClosed) {
+        controller.add(uniqueLocations);
+        // Save to cache
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_available_locations_${user.id}',
+              jsonEncode(uniqueLocations));
+        } catch (e) {
+          debugPrint('Error saving locations to cache: $e');
+        }
+      }
     } catch (e) {
       debugPrint('availableLocationsProvider fetch attempt $attempt error: $e');
-      if (attempt < 3 && !controller.isClosed) {
-        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('connection') ||
+          errorStr.contains('socket') ||
+          errorStr.contains('network') ||
+          errorStr.contains('failed to host');
+
+      if (attempt < 4 && isNetworkError && !controller.isClosed) {
+        await Future.delayed(Duration(seconds: attempt));
         return fetch(attempt: attempt + 1);
       }
+
+      // If we failed all retries, don't emit error, just return empty list or keep current
       if (!controller.isClosed) {
-        controller.add([]);
+        // Only add empty list if we don't have ANY data yet
+        // If we have some data (from initial emit), we'd rather keep it
+        debugPrint(
+            'availableLocationsProvider: failed all attempts, suppressing error.');
       }
     }
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
 import 'main_scaffold.dart';
 import 'screens/auth_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/update_password_screen.dart';
 import 'services/supabase_service.dart';
 import 'services/performance_monitor.dart';
 import 'config/app_config.dart';
+import 'logic/providers/auth_providers.dart';
 
 Future<void> main() async {
   debugPrint('--- MAIN STARTING ---');
@@ -36,7 +38,15 @@ Future<void> main() async {
     debugPrintStack(stackTrace: st);
   }
 
-  runApp(const ProviderScope(child: BootApp()));
+  // Pre-load SharedPreferences for instant warm start
+  final prefs = await SharedPreferences.getInstance();
+
+  runApp(ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ],
+    child: const BootApp(),
+  ));
 }
 
 class BootApp extends StatefulWidget {
@@ -67,13 +77,6 @@ class _BootAppState extends State<BootApp> {
     _addLog('App starting...');
     _logBuildInfo();
     _initFuture = _initWithGuard();
-  }
-
-  void _handleRetry() {
-    _addLog('Retry requested');
-    setState(() {
-      _initFuture = _initWithGuard();
-    });
   }
 
   Future<void> _initWithGuard() {
@@ -166,77 +169,9 @@ class _BootAppState extends State<BootApp> {
           return MaterialApp(
             title: 'payparq.ai',
             home: Scaffold(
-              backgroundColor: const Color(0xFFF9FAFB),
+              backgroundColor: Colors.black,
               body: Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(color: Colors.black),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Initializing App...',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'sans-serif',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Connecting to Supabase',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                          fontFamily: 'sans-serif',
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Startup Logs:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const Divider(),
-                            ..._logs.map((log) => Text(
-                                  log,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                    color: Colors.black87,
-                                  ),
-                                )),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextButton(
-                        onPressed: _handleRetry,
-                        child: const Text(
-                          'Force Refresh',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: const _PulsingBrandWordmark(),
               ),
             ),
             debugShowCheckedModeBanner: false,
@@ -318,6 +253,61 @@ class _BootAppState extends State<BootApp> {
         }
         return const PayParqApp();
       },
+    );
+  }
+}
+
+class _PulsingBrandWordmark extends StatefulWidget {
+  const _PulsingBrandWordmark();
+
+  @override
+  State<_PulsingBrandWordmark> createState() => _PulsingBrandWordmarkState();
+}
+
+class _PulsingBrandWordmarkState extends State<_PulsingBrandWordmark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.62, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: const Text(
+        'payparq.ai',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+          fontFamily: 'sans-serif',
+          shadows: [
+            Shadow(
+              color: Color(0x3DFFFFFF),
+              blurRadius: 12,
+              offset: Offset(0, 0),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
