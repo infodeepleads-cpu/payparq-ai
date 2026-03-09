@@ -14,13 +14,18 @@ class AppConfig {
 
   static const supabaseFunctionsBaseUrl =
       String.fromEnvironment('SUPABASE_FUNCTIONS_URL', defaultValue: '');
-  static const buildDate =
-      String.fromEnvironment('BUILD_DATE', defaultValue: '');
   static const env = String.fromEnvironment('ENV', defaultValue: 'dev');
   static const productionGuard =
       String.fromEnvironment('PROD_GUARD', defaultValue: '0');
   static const _rawRedirectUrl =
       String.fromEnvironment('SUPABASE_REDIRECT_URL', defaultValue: '');
+
+  static String get buildDate {
+    const fromEnv = String.fromEnvironment('BUILD_DATE',
+        defaultValue: '2026-03-09 20:30:00 (DEV)');
+    return fromEnv;
+  }
+
   static bool _isLocalHost(String host) {
     final value = host.toLowerCase();
     return value == 'localhost' || value == '127.0.0.1';
@@ -58,6 +63,7 @@ class AppConfig {
     }
     return 'io.supabase.flutter://reset-callback/';
   }
+
   static const zeroPriceSetupLink =
       String.fromEnvironment('ZERO_PRICE_SETUP_LINK', defaultValue: '');
 

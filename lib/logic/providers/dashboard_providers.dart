@@ -145,24 +145,19 @@ final unifiedDashboardProvider =
 
     final isPending =
         paymentStatus == 'pending' || status == 'pending' || status == 'open';
-    final isGuest = (item['ui_type'] ?? '').toString() == 'GUEST';
-    final isSub = (item['ui_type'] ?? '').toString() == 'SUB';
+    final isGuest = (item['ui_type'] ?? '').toString().toUpperCase() == 'GUEST';
 
+    // Session expiry logic: hide stale pending Stripe checkout session cards.
     if (isGuest && isPending && !isPaid) {
-      return false;
-    }
-
-    // Permit expiry logic: if status is pending and created_at is older than 60 mins, hide it.
-    if (isSub && isPending && !isPaid) {
       final createdAt = (item['ui_created_at'] as DateTime?) ?? DateTime(2000);
       final age = DateTime.now().difference(createdAt);
-      if (age.inMinutes > 60) {
+      if (age.inMinutes > 15) {
         return false;
       }
     }
 
-    if (filter == 'Active') return isPaid;
-    if (filter == 'Inactive') return !isPaid;
+    if (filter == 'Active') return isPaid || isPending;
+    if (filter == 'Inactive') return !isPaid && !isPending;
     return true;
   }).toList();
 

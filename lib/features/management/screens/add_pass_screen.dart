@@ -244,7 +244,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                       _isPaid = v;
                       _updateSubscriptionDates();
                     }),
-                    activeColor: Colors.black,
+                    activeThumbColor: Colors.black,
                   ),
                 ],
               ),

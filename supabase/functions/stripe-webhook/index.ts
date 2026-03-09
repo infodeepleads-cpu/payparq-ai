@@ -5,7 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  Deno.env.get("SERVICE_ROLE_KEY") ?? "";
 const stripeWebhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 
 const corsHeaders = {
@@ -47,8 +48,39 @@ async function resolveLocation(input: string): Promise<{ id: string; display_id?
 function extractMissingColumnName(message: string): string | null {
   const quoted = message.match(/column "([^"]+)"/i);
   if (quoted?.[1]) return quoted[1];
-  const plain = message.match(/column ([a-zA-Z0-9_]+) does not exist/i);
-  return plain?.[1] ?? null;
+  const singleQuoted = message.match(/column '([^']+)'/i);
+  if (singleQuoted?.[1]) return singleQuoted[1];
+  const postgrestPattern = message.match(/the '([^']+)' column/i);
+  if (postgrestPattern?.[1]) return postgrestPattern[1];
+  const plain = message.match(/column ([a-zA-Z0-9_.]+) does not exist/i);
+  const found = plain?.[1] ?? null;
+  if (found && found.includes(".")) {
+    return found.split(".").pop() ?? found;
+  }
+  return found;
+}
+
+function extractNotNullColumnName(message: string): string | null {
+  const quoted = message.match(/null value in column "([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const singleQuoted = message.match(/null value in column '([^']+)'/i);
+  return singleQuoted?.[1] ?? null;
+}
+
+function defaultValueForSessionColumn(column: string): unknown {
+  if (column === "entry_time" || column === "created_at" || column === "updated_at") return new Date().toISOString();
+  if (column === "plate") return "PENDING";
+  if (column === "email" || column === "mobile" || column === "contact_name" || column === "name") return "";
+  if (column === "type") return "hourly";
+  if (column === "currency") return "eur";
+  if (column === "payment_source") return "regular";
+  if (column === "ui_type") return "guest";
+  if (column === "is_lpr_scan" || column === "is_whatsapp_linked") return false;
+  if (column === "status" || column === "payment_status") return "pending";
+  if (column === "price" || column === "amount_cents" || column === "duration_minutes" || column === "quantity") return 0;
+  if (column.endsWith("_at") || column.endsWith("_time")) return new Date().toISOString();
+  if (column.startsWith("is_")) return false;
+  return undefined;
 }
 
 async function insertSessionWithSchemaFallback(insertData: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
@@ -56,6 +88,14 @@ async function insertSessionWithSchemaFallback(insertData: Record<string, unknow
   for (let i = 0; i < 20; i++) {
     const { error } = await admin.from("parking_sessions").insert(payload);
     if (!error || error.code === "23505") return { ok: true };
+    const notNullColumn = extractNotNullColumnName(error.message ?? "");
+    if (notNullColumn) {
+      const fallbackValue = defaultValueForSessionColumn(notNullColumn);
+      if (fallbackValue !== undefined) {
+        payload = { ...payload, [notNullColumn]: fallbackValue };
+        continue;
+      }
+    }
     const missingColumn = extractMissingColumnName(error.message ?? "");
     if (!missingColumn || !(missingColumn in payload)) return { ok: false, message: error.message };
     const { [missingColumn]: _removed, ...rest } = payload;
@@ -188,12 +228,18 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     mobile: phone,
     contact_name: name,
     type: type,
+    ui_type: "guest",
     status: "active",
     payment_status: "paid",
     price: Number(session.amount_total ?? 0) / 100,
     amount_cents: Number(session.amount_total ?? 0),
+    currency: "eur",
+    payment_source: "regular",
+    is_lpr_scan: false,
+    is_whatsapp_linked: false,
     stripe_session_id: session.id,
     created_at: entryTime.toISOString(),
+    updated_at: entryTime.toISOString(),
     entry_time: entryTime.toISOString(),
     exit_time: exitTime.toISOString(),
     end_time: exitTime.toISOString(),
@@ -229,6 +275,21 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   return { ok: false, status: 500, message: inserted.message };
 }
 
+async function cleanupExpiredCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
+  const { error: deletePendingSessionError } = await admin
+    .from("parking_sessions")
+    .delete()
+    .eq("stripe_session_id", session.id)
+    .eq("payment_status", "pending");
+  if (deletePendingSessionError) {
+    console.error(
+      `[V20] Failed to delete pending parking session for ${session.id}: ${deletePendingSessionError.message}`,
+    );
+  } else {
+    console.log(`[V20] Deleted pending parking session for ${session.id}`);
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   
@@ -246,6 +307,9 @@ serve(async (req: Request) => {
       const session = event.data.object as Stripe.Checkout.Session;
       const persisted = await persistCheckoutSession(session);
       if (!persisted.ok) return json({ error: persisted.message ?? "Failed persist" }, persisted.status ?? 500);
+    } else if (event.type === "checkout.session.expired") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await cleanupExpiredCheckoutSession(session);
     }
 
     return json({ received: true });

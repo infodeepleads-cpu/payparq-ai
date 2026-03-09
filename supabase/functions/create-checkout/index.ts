@@ -5,7 +5,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  Deno.env.get("SERVICE_ROLE_KEY") ?? "";
 const successUrl = Deno.env.get("STRIPE_SUCCESS_URL") ??
   "https://mobile-scanner-flax-static.vercel.app/#/dashboard";
 const cancelUrl = Deno.env.get("STRIPE_CANCEL_URL") ??
@@ -125,8 +126,14 @@ function extractMissingColumnName(message: string): string | null {
   if (quoted?.[1]) return quoted[1];
   const singleQuoted = message.match(/column '([^']+)'/i);
   if (singleQuoted?.[1]) return singleQuoted[1];
-  const plain = message.match(/column ([a-zA-Z0-9_]+) does not exist/i);
-  return plain?.[1] ?? null;
+  const postgrestPattern = message.match(/the '([^']+)' column/i);
+  if (postgrestPattern?.[1]) return postgrestPattern[1];
+  const plain = message.match(/column ([a-zA-Z0-9_.]+) does not exist/i);
+  const found = plain?.[1] ?? null;
+  if (found && found.includes(".")) {
+    return found.split(".").pop() ?? found;
+  }
+  return found;
 }
 
 function extractNotNullColumnName(message: string): string | null {
@@ -137,12 +144,18 @@ function extractNotNullColumnName(message: string): string | null {
 }
 
 function defaultValueForSessionColumn(column: string): unknown {
-  if (column === "entry_time" || column === "created_at") return new Date().toISOString();
+  if (column === "entry_time" || column === "created_at" || column === "updated_at") return new Date().toISOString();
   if (column === "plate") return "PENDING";
-  if (column === "email" || column === "mobile" || column === "contact_name") return "";
+  if (column === "email" || column === "mobile" || column === "contact_name" || column === "name") return "";
   if (column === "type") return "hourly";
+  if (column === "currency") return "eur";
+  if (column === "payment_source") return "regular";
+  if (column === "ui_type") return "guest";
+  if (column === "is_lpr_scan" || column === "is_whatsapp_linked") return false;
   if (column === "status" || column === "payment_status") return "pending";
-  if (column === "price" || column === "amount_cents" || column === "duration_minutes") return 0;
+  if (column === "price" || column === "amount_cents" || column === "duration_minutes" || column === "quantity") return 0;
+  if (column.endsWith("_at") || column.endsWith("_time")) return new Date().toISOString();
+  if (column.startsWith("is_")) return false;
   return undefined;
 }
 
@@ -379,6 +392,39 @@ async function locationPriceCents(
   return Math.round(euro * 100);
 }
 
+async function cleanupExpiredCheckoutSession(
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const { error: deletePendingSessionError } = await admin
+    .from("parking_sessions")
+    .delete()
+    .eq("stripe_session_id", session.id)
+    .eq("payment_status", "pending");
+  if (deletePendingSessionError) {
+    console.error(
+      `[V21] Failed to delete pending parking session for ${session.id}: ${deletePendingSessionError.message}`,
+    );
+  } else {
+    console.log(`[V21] Deleted pending parking session for ${session.id}`);
+  }
+}
+
+async function cleanupStalePendingGuestSessions(): Promise<void> {
+  const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  // We use permit_id is null to identify guest sessions, as permits should not be auto-deleted so quickly
+  const { error } = await admin
+    .from("parking_sessions")
+    .delete()
+    .eq("payment_status", "pending")
+    .is("permit_id", null)
+    .lt("created_at", cutoff);
+  if (error) {
+    console.error(`[V23] Failed to cleanup stale pending guest sessions: ${error.message}`);
+  } else {
+    console.log(`[V23] Cleaned stale pending guest sessions older than ${cutoff}`);
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   
@@ -407,6 +453,9 @@ serve(async (req: Request) => {
         if (!persisted.ok) {
           return json({ error: persisted.message ?? "Failed to persist parking session" }, persisted.status ?? 500);
         }
+      } else if (event.type === "checkout.session.expired") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await cleanupExpiredCheckoutSession(session);
       }
 
       return json({ received: true });
@@ -600,15 +649,13 @@ serve(async (req: Request) => {
 
     console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
 
-    // 60-minute expiry for permits
-    const sixtyMinutesFromNow = Math.floor(Date.now() / 1000) + 3600;
+    await cleanupStalePendingGuestSessions();
 
     const sessionOptions: any = {
       mode: "payment",
       payment_method_types: ["card"],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      expires_at: permitId ? sixtyMinutesFromNow : undefined,
       client_reference_id: locationUuid, // Use UUID if possible
       customer_email: email || undefined,
       phone_number_collection: {
@@ -719,9 +766,66 @@ serve(async (req: Request) => {
     // We do NOT use 'discounts' because we want the user to type it themselves.
     sessionOptions.allow_promotion_codes = allowPromotionCodes;
 
+    const expiresAtBufferSeconds = 10 * 60; // Increased to 10 mins for safer buffer
+    const minimumCheckoutLifetimeSeconds = (30 * 60) + expiresAtBufferSeconds;
+    const checkoutLifetimeSeconds = permitId ? 60 * 60 : minimumCheckoutLifetimeSeconds;
+    const expiryTimestamp = Math.floor(Date.now() / 1000) + checkoutLifetimeSeconds;
+    sessionOptions.expires_at = expiryTimestamp;
+
+    console.log(`[V13] Stripe Session Expiry: ${new Date(expiryTimestamp * 1000).toISOString()} (${checkoutLifetimeSeconds}s from now)`);
+
     const paymentSession = await stripe.checkout.sessions.create(sessionOptions);
     if (!paymentSession.url) {
       return json({ error: "Failed to create checkout session" }, 500);
+    }
+
+    let pendingSeeded = false;
+    let pendingSeedError = "";
+    // V20: Seeding pending session into database so it appears in the dashboard immediately
+    if (locationUuid) {
+      const pendingInsertData: any = {
+        location_id: locationUuid,
+        plate: plate || "PENDING",
+        email: email,
+        mobile: mobile,
+        contact_name: "",
+        type: type,
+        status: "pending",
+        payment_status: "pending",
+        ui_type: "guest", // Added for dashboard filtering
+        price: amountCents / 100,
+        amount_cents: amountCents,
+        quantity: 1,
+        currency: "eur",
+        payment_source: "regular",
+        is_lpr_scan: false,
+        is_whatsapp_linked: false,
+        stripe_session_id: paymentSession.id,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        entry_time: now.toISOString(),
+        // For pending, we don't know the final duration yet if it's adjustable, but we set a default
+        duration_minutes: type === "monthly" ? 43200 : type === "daily" ? 1440 : 60,
+        stripe_metadata: JSON.stringify({
+          ...sessionOptions.metadata,
+          stripe_id: paymentSession.id,
+        }),
+      };
+      
+      const exitTime = new Date(now.getTime() + pendingInsertData.duration_minutes * 60 * 1000);
+      pendingInsertData.exit_time = exitTime.toISOString();
+      pendingInsertData.end_time = exitTime.toISOString();
+
+      console.log(`[V20] Seeding pending session for stripe_id ${paymentSession.id}`);
+      const pendingInserted = await insertSessionWithSchemaFallback(pendingInsertData);
+      if (!pendingInserted.ok) {
+        pendingSeedError = pendingInserted.message ?? "unknown";
+        console.error(`[V20] Failed to seed pending session: ${pendingInserted.message}`);
+      } else {
+        pendingSeeded = true;
+      }
+    } else {
+      pendingSeedError = "location_uuid_not_resolved";
     }
 
     if (req.method === "GET") {
@@ -735,6 +839,8 @@ serve(async (req: Request) => {
       id: paymentSession.id,
       mode: "payment",
       amount_cents: amountCents,
+      pending_seeded: pendingSeeded,
+      pending_seed_error: pendingSeedError,
     });
   } catch (error) {
     console.error("[ERROR] Uncaught exception:", error);

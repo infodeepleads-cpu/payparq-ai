@@ -355,7 +355,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         icon = Icons.verified;
         break;
       case 'pending':
-        badgeColor = const Color(0xFF635BFF);
+        badgeColor = Colors.orange[400]!;
         label = Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
         icon = Icons.hourglass_bottom;
         break;
@@ -469,6 +469,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   Widget _buildStatusBadge(String status) {
+    final isHr = ref.watch(localeIsCroatianProvider);
+    final s = status.toUpperCase();
+    final dotColor = s == 'PENDING' ? Colors.orange[400] : Colors.green[400];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -476,13 +479,35 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.border),
       ),
-      child: Text(
-        status.toUpperCase(),
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            (() {
+              if (s == 'ACTIVE') {
+                return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
+              }
+              if (s == 'PENDING') {
+                return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              }
+              return s;
+            })(),
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ],
       ),
     );
   }

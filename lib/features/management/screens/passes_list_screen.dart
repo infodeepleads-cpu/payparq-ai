@@ -323,7 +323,10 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
   }
 
   Widget _buildStatusBadge(String status, bool isHr) {
-    bool isActive = status.toLowerCase() == 'active';
+    final s = status.toLowerCase();
+    final Color dotColor = s == 'active'
+        ? Colors.green[400]!
+        : (s == 'pending' ? Colors.orange[400]! : Colors.red[400]!);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -338,7 +341,7 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: isActive ? Colors.green[400] : Colors.red[400],
+              color: dotColor,
               shape: BoxShape.circle,
             ),
           ),

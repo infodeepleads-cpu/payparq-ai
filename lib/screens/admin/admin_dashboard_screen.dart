@@ -435,6 +435,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final paymentStatus =
         (s['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (s['status'] ?? '').toString().trim().toLowerCase();
+    final isPending = status == 'pending';
     final isPaid = paymentStatus == 'paid' ||
         paymentStatus == 'succeeded' ||
         paymentStatus == 'complete' ||
@@ -524,7 +525,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
+                    _buildStatusBadge(
+                        isPending
+                            ? 'PENDING'
+                            : (isPaid ? 'ACTIVE' : 'INACTIVE'),
+                        isPaid,
+                        isPending: isPending),
                     const SizedBox(height: 6),
                     SizedBox(
                       height: 26,
@@ -586,7 +592,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildStatusBadge(isPaid ? 'ACTIVE' : 'INACTIVE', isPaid),
+          _buildStatusBadge(
+              isPending ? 'PENDING' : (isPaid ? 'ACTIVE' : 'INACTIVE'), isPaid,
+              isPending: isPending),
           const SizedBox(width: 24),
           ElevatedButton(
             onPressed: () => _navigateToDetail(s),
@@ -860,9 +868,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status, bool isPaid) {
+  Widget _buildStatusBadge(String status, bool isPaid,
+      {bool isPending = false}) {
     final isHr = ref.watch(localeIsCroatianProvider);
-    final dotColor = isPaid ? Colors.green[400] : Colors.red[400];
+    final dotColor = isPending
+        ? Colors.orange[400]
+        : (isPaid ? Colors.green[400] : Colors.red[400]);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -890,6 +901,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               }
               if (s == 'INACTIVE') {
                 return Lang.sel(isHr, 'INACTIVE', 'NEAKTIVNO');
+              }
+              if (s == 'PENDING') {
+                return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
               }
               return s;
             })(),
