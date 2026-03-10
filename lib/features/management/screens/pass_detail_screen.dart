@@ -341,71 +341,78 @@ class PassDetailScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 64, color: AppTheme.border),
 
-                      Wrap(
-                        spacing: 64,
-                        runSpacing: 32,
-                        children: [
-                          _buildDetailItem(
-                              Lang.sel(
-                                  isCroatian, 'Location ID', 'ID lokacije'),
-                              locationId,
-                              Icons.map),
-                          _buildDetailItem(
-                              Lang.sel(isCroatian, 'Name', 'Ime'),
-                              contactName.isNotEmpty ? contactName : '—',
-                              Icons.person),
-                          _buildDetailItem(
-                              Lang.sel(isCroatian, 'Phone', 'Telefon'),
-                              contactPhone.isNotEmpty ? contactPhone : '—',
-                              Icons.phone),
-                          _buildDetailItem(
-                              Lang.sel(isCroatian, 'Email', 'Email'),
-                              contactEmail.isNotEmpty ? contactEmail : '—',
-                              Icons.email_outlined),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 64,
-                        runSpacing: 32,
-                        children: [
-                          _buildDetailItem(
-                              Lang.sel(
-                                  isCroatian, 'Entry Time', 'Vrijeme ulaza'),
-                              startTime != null ? _formatDate(startTime) : '—',
-                              Icons.login),
-                          _buildDetailItem(
-                              Lang.sel(
-                                  isCroatian, 'Exit Time', 'Vrijeme izlaza'),
-                              endTime != null ? _formatDate(endTime) : '—',
-                              Icons.logout),
-                          _buildDetailItem(
-                              Lang.sel(isCroatian, 'Duration', 'Trajanje'),
-                              durationString,
-                              Icons.timer),
-                          _buildDetailItem(
-                              Lang.sel(isCroatian, 'Price', 'Cijena'),
-                              '€${price.toStringAsFixed(2)}',
-                              Icons.attach_money),
-                          if (isSubscription)
+                      if (isDesktop && isSubscription) ...[
+                        Wrap(
+                          spacing: 64,
+                          runSpacing: 32,
+                          children: [
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Location ID', 'ID lokacije'),
+                                locationId,
+                                Icons.map),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Name', 'Ime'),
+                                contactName.isNotEmpty ? contactName : '—',
+                                Icons.person),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Phone', 'Telefon'),
+                                contactPhone.isNotEmpty ? contactPhone : '—',
+                                Icons.phone),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Email', 'Email'),
+                                contactEmail.isNotEmpty ? contactEmail : '—',
+                                Icons.email_outlined),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 64,
+                          runSpacing: 32,
+                          children: [
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Entry Time', 'Vrijeme ulaza'),
+                                startTime != null ? _formatDate(startTime) : '—',
+                                Icons.login),
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Exit Time', 'Vrijeme izlaza'),
+                                endTime != null ? _formatDate(endTime) : '—',
+                                Icons.logout),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Duration', 'Trajanje'),
+                                durationString,
+                                Icons.timer),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Price', 'Cijena'),
+                                '€${price.toStringAsFixed(2)}',
+                                Icons.attach_money),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 64,
+                          runSpacing: 32,
+                          children: [
                             _buildDetailItem(
                                 Lang.sel(
                                     isCroatian, 'Daily Limit', 'Dnevni limit'),
                                 '${(permit['daily_duration_hours'] ?? 24)} ${Lang.sel(isCroatian, 'Hours', 'Sati')}',
                                 Icons.timer_outlined),
-                          if (isSubscription && !is24_7)
                             _buildDetailItem(
                                 Lang.sel(isCroatian, 'Allowed Days',
                                     'Dozvoljeni dani'),
-                                _formatWeekdays(allowedWeekdays, isCroatian),
+                                is24_7
+                                    ? Lang.sel(isCroatian, 'Every day', 'Svaki dan')
+                                    : _formatWeekdays(
+                                        allowedWeekdays, isCroatian),
                                 Icons.calendar_today),
-                          if (isSubscription && !is24_7)
                             _buildDetailItem(
                                 Lang.sel(isCroatian, 'Access Time',
                                     'Vrijeme pristupa'),
-                                _formatAccessWindow(permit),
+                                is24_7 ? '24/7' : _formatAccessWindow(permit),
                                 Icons.schedule),
-                          if (isSubscription)
                             _buildDetailItem(
                                 Lang.sel(
                                     isCroatian, 'Active Now', 'Aktivno sada'),
@@ -417,8 +424,88 @@ class PassDetailScreen extends ConsumerWidget {
                                 accessAllowedNow
                                     ? Icons.verified
                                     : Icons.block_outlined),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ] else ...[
+                        Wrap(
+                          spacing: 64,
+                          runSpacing: 32,
+                          children: [
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Location ID', 'ID lokacije'),
+                                locationId,
+                                Icons.map),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Name', 'Ime'),
+                                contactName.isNotEmpty ? contactName : '—',
+                                Icons.person),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Phone', 'Telefon'),
+                                contactPhone.isNotEmpty ? contactPhone : '—',
+                                Icons.phone),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Email', 'Email'),
+                                contactEmail.isNotEmpty ? contactEmail : '—',
+                                Icons.email_outlined),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 64,
+                          runSpacing: 32,
+                          children: [
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Entry Time', 'Vrijeme ulaza'),
+                                startTime != null ? _formatDate(startTime) : '—',
+                                Icons.login),
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Exit Time', 'Vrijeme izlaza'),
+                                endTime != null ? _formatDate(endTime) : '—',
+                                Icons.logout),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Duration', 'Trajanje'),
+                                durationString,
+                                Icons.timer),
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Price', 'Cijena'),
+                                '€${price.toStringAsFixed(2)}',
+                                Icons.attach_money),
+                            if (isSubscription)
+                              _buildDetailItem(
+                                  Lang.sel(isCroatian, 'Daily Limit',
+                                      'Dnevni limit'),
+                                  '${(permit['daily_duration_hours'] ?? 24)} ${Lang.sel(isCroatian, 'Hours', 'Sati')}',
+                                  Icons.timer_outlined),
+                            if (isSubscription && !is24_7)
+                              _buildDetailItem(
+                                  Lang.sel(isCroatian, 'Allowed Days',
+                                      'Dozvoljeni dani'),
+                                  _formatWeekdays(allowedWeekdays, isCroatian),
+                                  Icons.calendar_today),
+                            if (isSubscription && !is24_7)
+                              _buildDetailItem(
+                                  Lang.sel(isCroatian, 'Access Time',
+                                      'Vrijeme pristupa'),
+                                  _formatAccessWindow(permit),
+                                  Icons.schedule),
+                            if (isSubscription)
+                              _buildDetailItem(
+                                  Lang.sel(
+                                      isCroatian, 'Active Now', 'Aktivno sada'),
+                                  accessAllowedNow
+                                      ? Lang.sel(
+                                          isCroatian, 'Allowed', 'Dozvoljeno')
+                                      : Lang.sel(isCroatian, 'Not Allowed',
+                                          'Nije dozvoljeno'),
+                                  accessAllowedNow
+                                      ? Icons.verified
+                                      : Icons.block_outlined),
+                          ],
+                        ),
+                      ],
 
                       if (isDesktop) ...[
                         const SizedBox(height: 24),

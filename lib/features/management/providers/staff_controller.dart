@@ -43,7 +43,7 @@ class StaffController {
       role: role,
       locationId: primaryLocationId,
     );
-    final newStaffId = response['user']?['id'];
+    final newStaffId = _extractStaffId(response);
     if (newStaffId == null) {
       throw const AppError('Staff creation failed');
     }
@@ -59,6 +59,30 @@ class StaffController {
     }
     _ref.invalidate(staffStreamProvider);
     _ref.invalidate(userProfileProvider);
+  }
+
+  String? _extractStaffId(Map<String, dynamic> response) {
+    final direct = response['id']?.toString();
+    if (direct != null && direct.isNotEmpty) return direct;
+
+    final user = response['user'];
+    if (user is Map) {
+      final userId = user['id']?.toString();
+      if (userId != null && userId.isNotEmpty) return userId;
+      final nestedUserId = user['user_id']?.toString();
+      if (nestedUserId != null && nestedUserId.isNotEmpty) return nestedUserId;
+    }
+
+    final userId = response['user_id']?.toString();
+    if (userId != null && userId.isNotEmpty) return userId;
+
+    final profile = response['profile'];
+    if (profile is Map) {
+      final profileId = profile['id']?.toString();
+      if (profileId != null && profileId.isNotEmpty) return profileId;
+    }
+
+    return null;
   }
 
   Future<void> deleteStaff(String id) async {

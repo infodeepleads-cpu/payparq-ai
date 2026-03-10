@@ -75,7 +75,7 @@ class _VerificationInboxScreenState
     final submittedAt = loc['verification_submitted_at'] != null
         ? DateTime.parse(loc['verification_submitted_at'])
         : null;
-    bool isRunByPayparq = false;
+    bool isRunByPayparq = loc['is_run_by_payparq'] == true;
 
     showDialog(
       context: context,
@@ -121,25 +121,45 @@ class _VerificationInboxScreenState
                             color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: const Column(
-                          children: [
-                            RadioListTile<bool>(
-                              title: Text('Regular Lot',
-                                  style: TextStyle(color: Colors.white)),
-                              subtitle: Text(
-                                  'Admin managed. Standard commissions apply.',
-                                  style: TextStyle(color: Colors.grey)),
-                              value: false,
-                            ),
-                            RadioListTile<bool>(
-                              title: Text('Run by Payparq',
-                                  style: TextStyle(color: Colors.white)),
-                              subtitle: Text(
-                                  'Payparq managed. 50% flat commission on all shared revenue.',
-                                  style: TextStyle(color: Colors.grey)),
-                              value: true,
-                            ),
-                          ],
+                        child: RadioGroup<bool>(
+                          groupValue: isRunByPayparq,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setDialogState(() {
+                              isRunByPayparq = value;
+                            });
+                          },
+                          child: Column(
+                            children: [
+                              RadioListTile<bool>(
+                                title: Text('Regular Lot',
+                                    style: TextStyle(color: Colors.white)),
+                                subtitle: Text(
+                                    'Safe Parking: manager gets 90% of shared revenue. Platform gets 10%.',
+                                    style: TextStyle(color: Colors.grey)),
+                                value: false,
+                                activeColor: Colors.white,
+                              ),
+                              RadioListTile<bool>(
+                                title: Text('Run by Payparq',
+                                    style: TextStyle(color: Colors.white)),
+                                subtitle: Text(
+                                    'Payparq managed. 50% flat commission on all shared revenue.',
+                                    style: TextStyle(color: Colors.grey)),
+                                value: true,
+                                activeColor: Colors.white,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Enforcement policy is identical for both lot types: 25% platform, 25% admin, 25% manager, and final 25% to the account that uploaded the winning evidence (or paid daily-ticket QR issuer when applicable).',
+                                style: GoogleFonts.inter(
+                                  color: Colors.grey[300],
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -233,7 +253,8 @@ class _VerificationInboxScreenState
                               context, 'Contact Required', Colors.blue,
                               () async {
                             await _updateStatus(
-                                rootContext, loc['id'], 'video_required');
+                                rootContext, loc['id'], 'video_required',
+                                isRunByPayparq: isRunByPayparq);
                             if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }

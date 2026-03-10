@@ -273,8 +273,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   child: _buildVerificationBadge(loc, isAdmin),
                                 ),
                                 const SizedBox(width: 12),
-                                _buildStatusBadge('ACTIVE'),
-                                const SizedBox(width: 12),
                                 ElevatedButton(
                                   onPressed: () => _showLocationDetail(
                                       loc, isSuperAdmin, isAdmin),
@@ -419,14 +417,16 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           : null,
       child: Container(
         constraints: BoxConstraints(
-          minWidth: (status == 'verified' || status == 'pending')
+          minWidth: (status == 'verified' ||
+                  status == 'pending' ||
+                  status == 'rejected')
               ? 0
               : (fixedWidthRequired ? 160 : 140),
           maxWidth: 160,
         ),
         padding: EdgeInsets.symmetric(
-          horizontal: status == 'pending' ? 10 : 12,
-          vertical: status == 'pending' ? 5 : 6,
+          horizontal: (status == 'pending' || status == 'rejected') ? 10 : 12,
+          vertical: (status == 'pending' || status == 'rejected') ? 5 : 6,
         ),
         decoration: BoxDecoration(
           color: badgeColor,
@@ -479,50 +479,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    final isHr = ref.watch(localeIsCroatianProvider);
-    final s = status.toUpperCase();
-    final dotColor = s == 'PENDING' ? Colors.orange[400] : Colors.green[400];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            (() {
-              if (s == 'ACTIVE') {
-                return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
-              }
-              if (s == 'PENDING') {
-                return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
-              }
-              return s;
-            })(),
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -737,6 +693,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final capacity = (effectiveLoc['capacity'] ?? 0) is int
             ? effectiveLoc['capacity'] as int
             : int.tryParse((effectiveLoc['capacity'] ?? '0').toString()) ?? 0;
+        final capacityCtrl = TextEditingController(text: '$capacity');
+        int currentCapacity = capacity;
+        bool saving = false;
         final Map<String, dynamic> meta =
             (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
         final bool isHub = meta['hub_enabled'] == true;
@@ -757,8 +716,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             width: 420,
             child: StatefulBuilder(
               builder: (context, setState) {
-                final capacityCtrl = TextEditingController(text: '$capacity');
-                bool saving = false;
                 final messenger = ScaffoldMessenger.of(dialogContext);
                 final navigator = Navigator.of(dialogContext);
                 Future<void> saveChanges() async {
@@ -766,7 +723,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   setState(() => saving = true);
                   try {
                     final newCapacity =
-                        int.tryParse(capacityCtrl.text.trim()) ?? capacity;
+                        int.tryParse(capacityCtrl.text.trim()) ??
+                            currentCapacity;
                     // Optimistically update override to prevent old value flicker
                     if (mounted) {
                       this.setState(() {
@@ -780,8 +738,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         .read(locationsControllerProvider)
                         .updateCapacity(loc['id'].toString(), newCapacity);
                     setState(() {
+                      currentCapacity = newCapacity;
                       loc['capacity'] = newCapacity;
                       loc['total_spots'] = newCapacity;
+                      capacityCtrl.text = '$newCapacity';
                     });
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
@@ -847,8 +807,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 Text(
                                   Lang.sel(
                                       ref.watch(localeIsCroatianProvider),
-                                      'Capacity: $capacity',
-                                      'Kapacitet: $capacity'),
+                                      'Capacity: $currentCapacity',
+                                      'Kapacitet: $currentCapacity'),
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: Colors.black,
@@ -1226,12 +1186,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           }
                         } catch (e) {
                           if (context.mounted) {
+                            final rawError = e.toString().toLowerCase();
+                            final isDuplicateName =
+                                rawError.contains('duplicate key') ||
+                                    rawError.contains('unique constraint') ||
+                                    rawError.contains('locations_name_key') ||
+                                    rawError.contains('name');
+                            final friendlyMessage = isDuplicateName
+                                ? Lang.sel(
+                                    ref.watch(localeIsCroatianProvider),
+                                    'This name is taken. Try another name :)',
+                                    'Ovaj naziv je zauzet. Pokušajte drugi naziv :)',
+                                  )
+                                : Lang.sel(
+                                    ref.watch(localeIsCroatianProvider),
+                                    'Error: ${ErrorMapper.message(e)}',
+                                    'Greška: ${ErrorMapper.message(e)}',
+                                  );
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text(Lang.sel(
-                                      ref.watch(localeIsCroatianProvider),
-                                      'Error: ${ErrorMapper.message(e)}',
-                                      'Greška: ${ErrorMapper.message(e)}'))),
+                              SnackBar(content: Text(friendlyMessage)),
                             );
                           }
                         } finally {

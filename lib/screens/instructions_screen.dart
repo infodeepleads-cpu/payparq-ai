@@ -192,6 +192,50 @@ class InstructionsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isCroatian ? 'Pravila podjele prihoda' : 'Revenue Split Rules',
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isCroatian
+                        ? 'Safe Parking: upravitelj 90%, platforma 10% od zajedničkog prihoda.'
+                        : 'Safe Parking: manager 90%, platform 10% of shared revenue.',
+                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isCroatian
+                        ? 'Hub (Run by Payparq): upravitelj 50%, platforma 50% od zajedničkog prihoda.'
+                        : 'Hub (Run by Payparq): manager 50%, platform 50% of shared revenue.',
+                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isCroatian
+                        ? 'Ista enforcement politika za oba modela: 25% platforma, 25% admin, 25% upravitelj, zadnjih 25% dobiva račun koji je učitao dokaz (ili izdavatelj dnevnog QR ticketa nakon plaćanja).'
+                        : 'Same enforcement policy for both models: 25% platform, 25% admin, 25% manager, final 25% goes to the account that uploaded winning evidence (or paid daily-ticket QR issuer).',
+                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
