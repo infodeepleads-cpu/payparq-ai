@@ -112,10 +112,10 @@ class PassDetailScreen extends ConsumerWidget {
       }
 
       // 3. Tertiary check: calculate from time difference
-      final start = DateTime.tryParse(
+      final start = _parseToCetDateTime(
           (item['entry_time'] ?? item['start_time'] ?? item['created_at'] ?? '')
               .toString());
-      final end = DateTime.tryParse(
+      final end = _parseToCetDateTime(
           (item['exit_time'] ?? item['end_time'] ?? '').toString());
 
       if (start != null && end != null && end.isAfter(start)) {
@@ -140,10 +140,10 @@ class PassDetailScreen extends ConsumerWidget {
     final quantity = resolveQuantity(permit, stripeMetadata);
 
     final normalizedType = type.toLowerCase();
-    final DateTime? startTime =
-        DateTime.tryParse((permit['start_time'] ?? '').toString());
-    DateTime? endTime =
-        DateTime.tryParse((permit['end_time'] ?? '').toString());
+    final startRaw = (permit['start_time'] ?? '').toString();
+    final endRaw = (permit['end_time'] ?? '').toString();
+    final DateTime? startTime = _parseToCetDateTime(startRaw);
+    DateTime? endTime = _parseToCetDateTime(endRaw);
 
     // If endTime is null, calculate it based on duration logic for paid permits
     if (endTime == null && startTime != null) {
@@ -198,13 +198,21 @@ class PassDetailScreen extends ConsumerWidget {
         billingType == 'hourly' ||
         metadataType == 'hourly' ||
         metadataUnit == 'hour') {
-      durationString = '$quantity ${quantity == 1 ? 'Hour' : 'Hours'}';
+      final Duration? duration = (startTime != null && endTime != null)
+          ? endTime.difference(startTime)
+          : null;
+      final hourlyQuantity = duration != null
+          ? ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round()
+          : quantity;
+      durationString =
+          '$hourlyQuantity ${hourlyQuantity == 1 ? 'Hour' : 'Hours'}';
     } else {
       final Duration? duration = (startTime != null && endTime != null)
           ? endTime.difference(startTime)
           : null;
       if (duration != null) {
-        final hours = duration.inHours;
+        final hours =
+            ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round();
         if (hours >= 24) {
           final days = (hours / 24).floor();
           durationString = '$days ${days == 1 ? 'Day' : 'Days'}';
@@ -514,8 +522,36 @@ class PassDetailScreen extends ConsumerWidget {
     );
   }
 
+  DateTime? _parseToCetDateTime(String raw) {
+    if (raw.isEmpty) return null;
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return null;
+    final hasOffset =
+        RegExp(r'(Z|[+-]\d{2}:\d{2})$', caseSensitive: false).hasMatch(raw);
+    if (!hasOffset) {
+      return DateTime(parsed.year, parsed.month, parsed.day, parsed.hour,
+          parsed.minute, parsed.second, parsed.millisecond, parsed.microsecond);
+    }
+    final utc = parsed.isUtc ? parsed : parsed.toUtc();
+    return _utcToCet(utc);
+  }
+
+  DateTime _utcToCet(DateTime utc) {
+    final startDst = _lastSundayUtc(utc.year, 3, 1);
+    final endDst = _lastSundayUtc(utc.year, 10, 1);
+    final isDst = !utc.isBefore(startDst) && utc.isBefore(endDst);
+    return utc.add(Duration(hours: isDst ? 2 : 1));
+  }
+
+  DateTime _lastSundayUtc(int year, int month, int hourUtc) {
+    var day = DateTime.utc(year, month + 1, 0);
+    while (day.weekday != DateTime.sunday) {
+      day = day.subtract(const Duration(days: 1));
+    }
+    return DateTime.utc(year, month, day.day, hourUtc);
+  }
+
   String _formatDate(DateTime date) {
-    final berlin = date.toUtc().add(const Duration(hours: 1));
-    return "${berlin.day.toString().padLeft(2, '0')}.${berlin.month.toString().padLeft(2, '0')}.${berlin.year} ${berlin.hour.toString().padLeft(2, '0')}:${berlin.minute.toString().padLeft(2, '0')}";
+    return "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
   }
 }

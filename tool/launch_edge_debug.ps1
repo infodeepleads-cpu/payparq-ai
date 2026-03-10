@@ -1,0 +1,1 @@
+Start-Process "msedge.exe" -ArgumentList "http://localhost:8086"

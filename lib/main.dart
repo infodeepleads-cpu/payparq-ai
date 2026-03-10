@@ -62,7 +62,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   final List<String> _logs = [];
 
   bool _isRecoveryMode = false;
-  late final StreamSubscription<AuthState> _authSubscription;
+  StreamSubscription<AuthState>? _authSubscription;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -82,23 +82,11 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     _initFuture = _initWithGuard();
 
     _isRecoveryMode = _isRecoveryRequestFromUrl();
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        setState(() => _isRecoveryMode = true);
-      } else if (data.event == AuthChangeEvent.signedIn ||
-          data.event == AuthChangeEvent.signedOut ||
-          data.event == AuthChangeEvent.userUpdated) {
-        if (_isRecoveryMode) {
-          setState(() => _isRecoveryMode = false);
-        }
-      }
-    });
   }
 
   @override
   void dispose() {
-    _authSubscription.cancel();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
@@ -162,12 +150,30 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
+      _attachAuthListener();
     } catch (e) {
       _addLog('Initialization ERROR: $e');
       rethrow;
     }
 
     _addLog('Initialization sequence complete');
+  }
+
+  void _attachAuthListener() {
+    if (_authSubscription != null) return;
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        setState(() => _isRecoveryMode = true);
+      } else if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.signedOut ||
+          data.event == AuthChangeEvent.userUpdated) {
+        if (_isRecoveryMode) {
+          setState(() => _isRecoveryMode = false);
+        }
+      }
+    });
   }
 
   @override
