@@ -66,6 +66,7 @@ class _VerificationInboxScreenState
         });
       },
     );
+    ref.invalidate(pendingVerificationsProvider);
   }
 
   void _showVerificationDetail(BuildContext context, Map<String, dynamic> loc) {
@@ -232,7 +233,7 @@ class _VerificationInboxScreenState
                               context, 'Contact Required', Colors.blue,
                               () async {
                             await _updateStatus(
-                                rootContext, loc['id'], 'contact_required');
+                                rootContext, loc['id'], 'video_required');
                             if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }

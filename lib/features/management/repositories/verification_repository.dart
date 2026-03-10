@@ -14,6 +14,19 @@ class VerificationRepository {
         .order('verification_submitted_at', ascending: false);
   }
 
+  Future<List<Map<String, dynamic>>> fetchPendingVerifications() async {
+    final data = await _client
+        .from('locations')
+        .select(
+            'id, name, display_id, verification_status, verification_photos, verification_submitted_at, is_run_by_payparq')
+        .eq('verification_status', 'pending')
+        .order('verification_submitted_at', ascending: false);
+    return (data as List)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
   Future<void> updateVerificationStatus(
     String locationId,
     Map<String, dynamic> updates,

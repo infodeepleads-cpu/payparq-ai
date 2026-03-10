@@ -391,28 +391,43 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
 
     return InkWell(
       onTap: showAction
-          ? () {
+          ? () async {
               if (status == 'contact_required') {
                 _showCallDialog(loc);
               } else if (status == 'unverified' ||
                   status == 'pending' ||
                   status == 'rejected') {
-                Navigator.push(
+                final result = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
                         VerificationUploadScreen(location: loc),
                   ),
                 );
+                if (result == true && mounted) {
+                  setState(() {
+                    _locOverrides[loc['id'].toString()] = {
+                      'verification_status': 'pending',
+                      'verification_submitted_at':
+                          DateTime.now().toIso8601String(),
+                    };
+                  });
+                  ref.invalidate(locationsStreamProvider);
+                }
               }
             }
           : null,
       child: Container(
         constraints: BoxConstraints(
-          minWidth: status == 'verified' ? 0 : (fixedWidthRequired ? 160 : 140),
+          minWidth: (status == 'verified' || status == 'pending')
+              ? 0
+              : (fixedWidthRequired ? 160 : 140),
           maxWidth: 160,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: status == 'pending' ? 10 : 12,
+          vertical: status == 'pending' ? 5 : 6,
+        ),
         decoration: BoxDecoration(
           color: badgeColor,
           borderRadius: BorderRadius.circular(20),

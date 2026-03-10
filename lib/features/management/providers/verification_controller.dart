@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import '../repositories/verification_repository.dart';
 import '../../../services/app_error.dart';
@@ -11,33 +9,28 @@ final verificationRepositoryProvider = Provider<VerificationRepository>((ref) {
   return VerificationRepository(Supabase.instance.client);
 });
 
-List<Map<String, dynamic>> _decodeInbox(String raw) {
-  final decoded = jsonDecode(raw);
-  if (decoded is! List) return [];
-  return decoded
-      .whereType<Map>()
-      .map((e) => Map<String, dynamic>.from(e))
-      .toList();
-}
-
-Stream<List<Map<String, dynamic>>> _cachedInboxStream(
-    String key, Stream<List<Map<String, dynamic>>> live) async* {
-  final prefs = await SharedPreferences.getInstance();
-  final cached = prefs.getString(key);
-  if (cached != null) {
-    yield _decodeInbox(cached);
-  }
-  yield* live.map((data) {
-    prefs.setString(key, jsonEncode(data));
-    return data;
-  });
-}
-
 final pendingVerificationsProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
-  final live =
-      ref.watch(verificationRepositoryProvider).streamPendingVerifications();
-  return _cachedInboxStream('verification_inbox', live);
+  final repo = ref.watch(verificationRepositoryProvider);
+  return (() async* {
+    List<Map<String, dynamic>> last = const [];
+    try {
+      last = await repo.fetchPendingVerifications();
+      yield last;
+    } catch (_) {}
+    while (true) {
+      await Future.delayed(const Duration(seconds: 3));
+      try {
+        final fresh = await repo.fetchPendingVerifications();
+        last = fresh;
+        yield fresh;
+      } catch (_) {
+        if (last.isNotEmpty) {
+          yield last;
+        }
+      }
+    }
+  })();
 });
 
 final verificationControllerProvider = Provider<VerificationController>((ref) {
