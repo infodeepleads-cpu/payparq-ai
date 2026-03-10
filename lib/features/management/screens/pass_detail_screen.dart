@@ -136,10 +136,29 @@ class PassDetailScreen extends ConsumerWidget {
       return parsed;
     }
 
-    final stripeMetadata = parseStripeMetadata(permit['stripe_metadata']);
-    final quantity = resolveQuantity(permit, stripeMetadata);
+    Map<String, dynamic> parseAccessMetadata(Map<String, dynamic> item) {
+      final stripe = parseStripeMetadata(item['stripe_metadata']);
+      final notes = parseStripeMetadata(item['notes']);
+      final access = notes['access_control'];
+      if (access is Map<String, dynamic>) {
+        return {...stripe, ...access};
+      }
+      if (access is Map) {
+        return {...stripe, ...Map<String, dynamic>.from(access)};
+      }
+      return stripe;
+    }
 
+    final stripeMetadata = parseAccessMetadata(permit);
+    final quantity = resolveQuantity(permit, stripeMetadata);
     final normalizedType = type.toLowerCase();
+    final allowedWeekdays = _resolveAllowedWeekdays(permit, stripeMetadata);
+    final bool isSubscription = normalizedType == 'subscription';
+    final rawIs24_7 = stripeMetadata['is_24_7'];
+    final bool is24_7 = rawIs24_7 is bool
+        ? rawIs24_7
+        : (permit['daily_start_time'] == null &&
+            permit['daily_end_time'] == null);
     final startRaw = (permit['start_time'] ?? '').toString();
     final endRaw = (permit['end_time'] ?? '').toString();
     final DateTime? startTime = _parseToCetDateTime(startRaw);
@@ -182,8 +201,27 @@ class PassDetailScreen extends ConsumerWidget {
         (stripeMetadata['type'] ?? '').toString().toLowerCase();
     final metadataUnit =
         (stripeMetadata['duration_unit'] ?? '').toString().toLowerCase();
+    final isGuestPass = normalizedType == 'pass';
+    final nowCet = _utcToCet(DateTime.now().toUtc());
+    final accessAllowedNow = _isPermitAllowedNow(
+      nowCet: nowCet,
+      startTime: startTime,
+      endTime: endTime,
+      permit: permit,
+      isSubscription: isSubscription,
+      is24_7: is24_7,
+      allowedWeekdays: allowedWeekdays,
+    );
 
-    if (normalizedType == 'monthly' ||
+    if (isGuestPass) {
+      final Duration? duration = (startTime != null && endTime != null)
+          ? endTime.difference(startTime)
+          : null;
+      final hours = duration != null
+          ? ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round()
+          : quantity;
+      durationString = '$hours ${hours == 1 ? 'Hour' : 'Hours'}';
+    } else if (normalizedType == 'monthly' ||
         normalizedType == 'subscription' ||
         billingType == 'monthly' ||
         metadataType == 'monthly' ||
@@ -349,6 +387,36 @@ class PassDetailScreen extends ConsumerWidget {
                               Lang.sel(isCroatian, 'Price', 'Cijena'),
                               '€${price.toStringAsFixed(2)}',
                               Icons.attach_money),
+                          if (isSubscription)
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Daily Limit', 'Dnevni limit'),
+                                '${(permit['daily_duration_hours'] ?? 24)} ${Lang.sel(isCroatian, 'Hours', 'Sati')}',
+                                Icons.timer_outlined),
+                          if (isSubscription && !is24_7)
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Allowed Days',
+                                    'Dozvoljeni dani'),
+                                _formatWeekdays(allowedWeekdays, isCroatian),
+                                Icons.calendar_today),
+                          if (isSubscription && !is24_7)
+                            _buildDetailItem(
+                                Lang.sel(isCroatian, 'Access Time',
+                                    'Vrijeme pristupa'),
+                                _formatAccessWindow(permit),
+                                Icons.schedule),
+                          if (isSubscription)
+                            _buildDetailItem(
+                                Lang.sel(
+                                    isCroatian, 'Active Now', 'Aktivno sada'),
+                                accessAllowedNow
+                                    ? Lang.sel(
+                                        isCroatian, 'Allowed', 'Dozvoljeno')
+                                    : Lang.sel(isCroatian, 'Not Allowed',
+                                        'Nije dozvoljeno'),
+                                accessAllowedNow
+                                    ? Icons.verified
+                                    : Icons.block_outlined),
                         ],
                       ),
 
@@ -553,5 +621,85 @@ class PassDetailScreen extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     return "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+  }
+
+  List<int> _resolveAllowedWeekdays(
+      Map<String, dynamic> permit, Map<String, dynamic> metadata) {
+    final raw = permit['allowed_weekdays'] ?? metadata['allowed_weekdays'];
+    if (raw is List) {
+      final values = raw
+          .map((e) => int.tryParse(e.toString()))
+          .whereType<int>()
+          .where((e) => e >= 1 && e <= 7)
+          .toSet()
+          .toList()
+        ..sort();
+      if (values.isNotEmpty) return values;
+    }
+    return [1, 2, 3, 4, 5, 6, 7];
+  }
+
+  bool _isPermitAllowedNow({
+    required DateTime nowCet,
+    required DateTime? startTime,
+    required DateTime? endTime,
+    required Map<String, dynamic> permit,
+    required bool isSubscription,
+    required bool is24_7,
+    required List<int> allowedWeekdays,
+  }) {
+    if (startTime != null && nowCet.isBefore(startTime)) return false;
+    if (endTime != null && nowCet.isAfter(endTime)) return false;
+    if (!isSubscription || is24_7) return true;
+    if (!allowedWeekdays.contains(nowCet.weekday)) return false;
+    final startRaw = (permit['daily_start_time'] ?? '').toString();
+    final endRaw = (permit['daily_end_time'] ?? '').toString();
+    final startMinute = _parseTimeToMinuteOfDay(startRaw);
+    final endMinute = _parseTimeToMinuteOfDay(endRaw);
+    if (startMinute == null || endMinute == null) return true;
+    final currentMinute = nowCet.hour * 60 + nowCet.minute;
+    if (startMinute == endMinute) return true;
+    if (startMinute < endMinute) {
+      return currentMinute >= startMinute && currentMinute <= endMinute;
+    }
+    return currentMinute >= startMinute || currentMinute <= endMinute;
+  }
+
+  int? _parseTimeToMinuteOfDay(String raw) {
+    if (raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.length < 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  }
+
+  String _formatWeekdays(List<int> weekdays, bool isCroatian) {
+    if (weekdays.length == 7) {
+      return Lang.sel(isCroatian, 'All Days', 'Svi dani');
+    }
+    const en = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const hr = ['Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub', 'Ned'];
+    final labels = weekdays
+        .where((d) => d >= 1 && d <= 7)
+        .map((d) => isCroatian ? hr[d - 1] : en[d - 1])
+        .toList();
+    return labels.isEmpty
+        ? Lang.sel(isCroatian, 'None', 'Nema')
+        : labels.join(', ');
+  }
+
+  String _formatAccessWindow(Map<String, dynamic> permit) {
+    final startRaw = (permit['daily_start_time'] ?? '').toString();
+    final endRaw = (permit['daily_end_time'] ?? '').toString();
+    if (startRaw.isEmpty || endRaw.isEmpty) return '—';
+    final s = startRaw.split(':');
+    final e = endRaw.split(':');
+    if (s.length < 2 || e.length < 2) return '—';
+    final start = '${s[0].padLeft(2, '0')}:${s[1].padLeft(2, '0')}';
+    final end = '${e[0].padLeft(2, '0')}:${e[1].padLeft(2, '0')}';
+    return '$start - $end';
   }
 }

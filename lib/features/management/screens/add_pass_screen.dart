@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
@@ -39,6 +40,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
   TimeOfDay _dailyStart = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _dailyEnd = const TimeOfDay(hour: 18, minute: 0);
   int _subscriptionDurationMonths = 1;
+  final List<int> _allowedWeekdays = [1, 2, 3, 4, 5, 6, 7];
 
   @override
   void initState() {
@@ -59,6 +61,12 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_type == 'subscription' && !_is24_7 && _allowedWeekdays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one allowed weekday')),
+      );
+      return;
+    }
 
     setState(() => _isProcessing = true);
 
@@ -111,6 +119,21 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
     if (_type == 'subscription' && !_is24_7) {
       data['daily_start_time'] = '${_dailyStart.hour}:${_dailyStart.minute}:00';
       data['daily_end_time'] = '${_dailyEnd.hour}:${_dailyEnd.minute}:00';
+    }
+    if (_type == 'subscription') {
+      final accessMetadata = {
+        'is_24_7': _is24_7,
+        'allowed_weekdays': _allowedWeekdays,
+        if (!_is24_7)
+          'access_window': {
+            'start':
+                '${_dailyStart.hour.toString().padLeft(2, '0')}:${_dailyStart.minute.toString().padLeft(2, '0')}',
+            'end':
+                '${_dailyEnd.hour.toString().padLeft(2, '0')}:${_dailyEnd.minute.toString().padLeft(2, '0')}',
+          },
+      };
+      data['stripe_metadata'] = jsonEncode(accessMetadata);
+      data['notes'] = jsonEncode({'access_control': accessMetadata});
     }
 
     if (!mounted) {
@@ -303,23 +326,6 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                             });
                           }),
                           const SizedBox(height: 24),
-                          Text(
-                              'Daily Limit: ${_dailyDurationHours.toInt()} Hours',
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 8),
-                          Slider(
-                            value: _dailyDurationHours,
-                            min: 1,
-                            max: 24,
-                            divisions: 23,
-                            label: '${_dailyDurationHours.toInt()} h',
-                            activeColor: Colors.black,
-                            inactiveColor: AppTheme.surface,
-                            onChanged: (v) =>
-                                setState(() => _dailyDurationHours = v),
-                          ),
-                          const SizedBox(height: 24),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -372,12 +378,37 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 14)),
                             value: _is24_7,
-                            onChanged: (v) => setState(() => _is24_7 = v!),
+                            onChanged: (v) => setState(() {
+                              _is24_7 = v!;
+                              if (_is24_7) {
+                                _dailyDurationHours = 24;
+                                _allowedWeekdays
+                                  ..clear()
+                                  ..addAll([1, 2, 3, 4, 5, 6, 7]);
+                              }
+                            }),
                             controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
                             activeColor: Colors.black,
                           ),
                           if (!_is24_7) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                                'Daily Limit: ${_dailyDurationHours.toInt()} Hours',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 8),
+                            Slider(
+                              value: _dailyDurationHours,
+                              min: 1,
+                              max: 24,
+                              divisions: 23,
+                              label: '${_dailyDurationHours.toInt()} h',
+                              activeColor: Colors.black,
+                              inactiveColor: AppTheme.surface,
+                              onChanged: (v) =>
+                                  setState(() => _dailyDurationHours = v),
+                            ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
@@ -392,6 +423,45 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                                     child: _buildTimePicker('To', _dailyEnd,
                                         (t) => setState(() => _dailyEnd = t))),
                               ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text('Allowed Days',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: List.generate(7, (index) {
+                                final weekday = index + 1;
+                                final isSelected =
+                                    _allowedWeekdays.contains(weekday);
+                                return FilterChip(
+                                  label: Text(_weekdayShortLabel(weekday)),
+                                  selected: isSelected,
+                                  selectedColor: Colors.black,
+                                  checkmarkColor: Colors.white,
+                                  labelStyle: GoogleFonts.inter(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppTheme.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        if (!_allowedWeekdays
+                                            .contains(weekday)) {
+                                          _allowedWeekdays.add(weekday);
+                                        }
+                                      } else {
+                                        _allowedWeekdays.remove(weekday);
+                                      }
+                                      _allowedWeekdays.sort();
+                                    });
+                                  },
+                                );
+                              }),
                             ),
                           ],
                         ],
@@ -570,6 +640,27 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
   String _toUtcIso(DateTime dt) {
     return dt.toUtc().toIso8601String();
+  }
+
+  String _weekdayShortLabel(int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return 'Mon';
+      case DateTime.tuesday:
+        return 'Tue';
+      case DateTime.wednesday:
+        return 'Wed';
+      case DateTime.thursday:
+        return 'Thu';
+      case DateTime.friday:
+        return 'Fri';
+      case DateTime.saturday:
+        return 'Sat';
+      case DateTime.sunday:
+        return 'Sun';
+      default:
+        return '';
+    }
   }
 
   Widget _buildDatePicker(

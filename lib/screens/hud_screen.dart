@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
@@ -406,10 +407,14 @@ class _HudScreenState extends ConsumerState<HudScreen>
         orElse: () => {},
       );
 
-      final activePermit = permits.firstWhere(
-        (p) => p['plate']?.toString().toUpperCase() == plate.toUpperCase(),
+      final platePermits = permits
+          .where((p) => p['plate']?.toString().toUpperCase() == plate.toUpperCase())
+          .toList();
+      final activePermit = platePermits.firstWhere(
+        (p) => _isPermitAllowedNow(p),
         orElse: () => {},
       );
+      final anyPermit = platePermits.isNotEmpty ? platePermits.first : <String, dynamic>{};
 
       final recentViolation = violations.firstWhere(
         (v) => v['plate']?.toString().toUpperCase() == plate.toUpperCase(),
@@ -427,6 +432,14 @@ class _HudScreenState extends ConsumerState<HudScreen>
           _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
               "VALID PERMIT FOUND", "VALJANA DOZVOLA PRONAĐENA");
           _statusColor = Colors.greenAccent;
+        });
+      } else if (anyPermit.isNotEmpty) {
+        setState(() {
+          _statusMessage = Lang.sel(
+              ref.read(localeIsCroatianProvider),
+              "PERMIT FOUND, OUTSIDE ACCESS WINDOW",
+              "DOZVOLA POSTOJI, IZVAN VREMENA PRISTUPA");
+          _statusColor = Colors.orangeAccent;
         });
       } else if (recentViolation.isNotEmpty) {
         setState(() {
@@ -463,6 +476,119 @@ class _HudScreenState extends ConsumerState<HudScreen>
         _showValidationPulse = false;
       });
     }
+  }
+
+  bool _isPermitAllowedNow(Map<String, dynamic> permit) {
+    final status = (permit['status'] ?? '').toString().toLowerCase();
+    if (status.isNotEmpty && status != 'active') return false;
+    final start = _parseToCetDateTime((permit['start_time'] ?? '').toString());
+    final end = _parseToCetDateTime((permit['end_time'] ?? '').toString());
+    final now = _utcToCet(DateTime.now().toUtc());
+    if (start != null && now.isBefore(start)) return false;
+    if (end != null && now.isAfter(end)) return false;
+    final type = (permit['type'] ?? '').toString().toLowerCase();
+    if (type != 'subscription') return true;
+    final metadata = _resolveAccessMetadata(permit);
+    final rawIs24_7 = metadata['is_24_7'];
+    final is24_7 = rawIs24_7 is bool
+        ? rawIs24_7
+        : (permit['daily_start_time'] == null && permit['daily_end_time'] == null);
+    if (is24_7) return true;
+    final allowedWeekdays = _resolveAllowedWeekdays(permit, metadata);
+    if (!allowedWeekdays.contains(now.weekday)) return false;
+    final startMinute =
+        _parseTimeToMinuteOfDay((permit['daily_start_time'] ?? '').toString());
+    final endMinute =
+        _parseTimeToMinuteOfDay((permit['daily_end_time'] ?? '').toString());
+    if (startMinute == null || endMinute == null) return true;
+    final currentMinute = now.hour * 60 + now.minute;
+    if (startMinute == endMinute) return true;
+    if (startMinute < endMinute) {
+      return currentMinute >= startMinute && currentMinute <= endMinute;
+    }
+    return currentMinute >= startMinute || currentMinute <= endMinute;
+  }
+
+  Map<String, dynamic> _parseMetadata(dynamic raw) {
+    try {
+      if (raw is Map<String, dynamic>) return raw;
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      if (raw is String && raw.isNotEmpty) {
+        final first = jsonDecode(raw);
+        if (first is Map<String, dynamic>) return first;
+        if (first is Map) return Map<String, dynamic>.from(first);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  Map<String, dynamic> _resolveAccessMetadata(Map<String, dynamic> permit) {
+    final stripe = _parseMetadata(permit['stripe_metadata']);
+    final notes = _parseMetadata(permit['notes']);
+    final access = notes['access_control'];
+    if (access is Map<String, dynamic>) {
+      return {...stripe, ...access};
+    }
+    if (access is Map) {
+      return {...stripe, ...Map<String, dynamic>.from(access)};
+    }
+    return stripe;
+  }
+
+  List<int> _resolveAllowedWeekdays(
+      Map<String, dynamic> permit, Map<String, dynamic> metadata) {
+    final raw = permit['allowed_weekdays'] ?? metadata['allowed_weekdays'];
+    if (raw is List) {
+      final values = raw
+          .map((e) => int.tryParse(e.toString()))
+          .whereType<int>()
+          .where((e) => e >= 1 && e <= 7)
+          .toSet()
+          .toList()
+        ..sort();
+      if (values.isNotEmpty) return values;
+    }
+    return [1, 2, 3, 4, 5, 6, 7];
+  }
+
+  int? _parseTimeToMinuteOfDay(String raw) {
+    if (raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.length < 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  }
+
+  DateTime? _parseToCetDateTime(String raw) {
+    if (raw.isEmpty) return null;
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return null;
+    final hasOffset =
+        RegExp(r'(Z|[+-]\d{2}:\d{2})$', caseSensitive: false).hasMatch(raw);
+    if (!hasOffset) {
+      return DateTime(parsed.year, parsed.month, parsed.day, parsed.hour,
+          parsed.minute, parsed.second, parsed.millisecond, parsed.microsecond);
+    }
+    final utc = parsed.isUtc ? parsed : parsed.toUtc();
+    return _utcToCet(utc);
+  }
+
+  DateTime _utcToCet(DateTime utc) {
+    final startDst = _lastSundayUtc(utc.year, 3, 1);
+    final endDst = _lastSundayUtc(utc.year, 10, 1);
+    final isDst = !utc.isBefore(startDst) && utc.isBefore(endDst);
+    return utc.add(Duration(hours: isDst ? 2 : 1));
+  }
+
+  DateTime _lastSundayUtc(int year, int month, int hourUtc) {
+    var day = DateTime.utc(year, month + 1, 0);
+    while (day.weekday != DateTime.sunday) {
+      day = day.subtract(const Duration(days: 1));
+    }
+    return DateTime.utc(year, month, day.day, hourUtc);
   }
 
   @override
