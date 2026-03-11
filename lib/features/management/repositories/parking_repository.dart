@@ -50,14 +50,25 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
 }
 
 String _normalizeRoleValue(String? rawRole) {
-  final role = (rawRole ?? '').toString().trim().toLowerCase();
-  if (role == 'super_admin' ||
-      role == 'admin' ||
-      role == 'manager' ||
-      role == 'officer') {
-    return role;
+  final role = (rawRole ?? '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replaceAll('-', '_')
+      .replaceAll(' ', '_');
+  if (role == 'superadmin' || role.startsWith('super_admin')) {
+    return 'super_admin';
   }
-  return 'admin';
+  if (role.startsWith('admin')) {
+    return 'admin';
+  }
+  if (role.startsWith('manager')) {
+    return 'manager';
+  }
+  if (role.startsWith('officer')) {
+    return 'officer';
+  }
+  return 'officer';
 }
 
 /// Repository for handling all parking-related data interactions with Supabase.
@@ -545,26 +556,137 @@ final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
     final selectedUuid = ref.watch(selectedLocationUuidProvider).value;
     final fallbackLocId =
         ref.watch(userLocationIdProvider) ?? user.userMetadata?['location_id'];
-    return _cachedStream(cacheKey, repo.getStaffStream()).map((items) {
-      final noFilters = ownedIds.isEmpty &&
-          selectedDisplayId == null &&
-          (selectedUuid == null || selectedUuid.isEmpty) &&
-          (fallbackLocId == null || fallbackLocId.toString().isEmpty);
-      if (noFilters) return items;
-      final filtered = items.where((it) {
-        final locId = (it['location_id'] ?? '').toString();
-        return ownedIds.contains(locId) ||
-            locId == (selectedUuid ?? '') ||
-            locId == (selectedDisplayId ?? '') ||
-            locId == (fallbackLocId?.toString() ?? '');
-      }).toList();
-      final canFallbackToAll = ownedIds.isEmpty &&
-          (selectedUuid == null || selectedUuid.isEmpty) &&
-          (fallbackLocId == null || fallbackLocId.toString().isEmpty);
-      if (filtered.isEmpty && items.isNotEmpty && canFallbackToAll) {
-        return items;
+    return _cachedStream(cacheKey, repo.getStaffStream())
+        .asyncMap((items) async {
+      final allowedLocationIds = <String>{...ownedIds};
+      if (selectedUuid != null && selectedUuid.isNotEmpty) {
+        allowedLocationIds.add(selectedUuid);
       }
-      return filtered;
+      if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
+        allowedLocationIds.add(selectedDisplayId);
+      }
+      final fallbackLoc = fallbackLocId?.toString() ?? '';
+      if (fallbackLoc.isNotEmpty) {
+        allowedLocationIds.add(fallbackLoc);
+      }
+
+      bool locationAllowed(Map<String, dynamic> item) {
+        if (allowedLocationIds.isEmpty) return true;
+        final locId = (item['location_id'] ?? '').toString();
+        return locId.isNotEmpty && allowedLocationIds.contains(locId);
+      }
+
+      if (isOfficer) {
+        return items
+            .where((it) => (it['id'] ?? '').toString() == user.id)
+            .toList();
+      }
+
+      List<Map<String, dynamic>> assignmentRows = const [];
+      try {
+        final data = await Supabase.instance.client
+            .from('officer_assignments')
+            .select('officer_id,assigned_by,location_id');
+        assignmentRows = List<Map<String, dynamic>>.from(data as List);
+      } catch (_) {
+        return items.where(locationAllowed).toList();
+      }
+
+      final assignmentLocationIdsByOfficer = <String, Set<String>>{};
+      for (final row in assignmentRows) {
+        final officerId = (row['officer_id'] ?? '').toString();
+        final locId = (row['location_id'] ?? '').toString();
+        if (officerId.isEmpty || locId.isEmpty) continue;
+        assignmentLocationIdsByOfficer
+            .putIfAbsent(officerId, () => <String>{})
+            .add(locId);
+      }
+
+      bool locationAllowedForStaff(Map<String, dynamic> item) {
+        if (allowedLocationIds.isEmpty) return true;
+        final locId = (item['location_id'] ?? '').toString();
+        if (locId.isNotEmpty && allowedLocationIds.contains(locId)) {
+          return true;
+        }
+        final id = (item['id'] ?? '').toString();
+        if (id.isEmpty) return false;
+        final assignmentLocs = assignmentLocationIdsByOfficer[id];
+        if (assignmentLocs == null || assignmentLocs.isEmpty) return false;
+        return assignmentLocs.any(allowedLocationIds.contains);
+      }
+
+      final itemById = <String, Map<String, dynamic>>{};
+      for (final item in items) {
+        final id = (item['id'] ?? '').toString();
+        if (id.isNotEmpty) {
+          itemById[id] = item;
+        }
+      }
+
+      if (isManager) {
+        final createdOfficerIds = assignmentRows
+            .where((row) => (row['assigned_by'] ?? '').toString() == user.id)
+            .map((row) => (row['officer_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        final visibleIds = <String>{user.id, ...createdOfficerIds};
+        return items.where((item) {
+          final id = (item['id'] ?? '').toString();
+          if (!visibleIds.contains(id)) return false;
+          if (id == user.id) return true;
+          if (id != user.id &&
+              _normalizeRoleValue(item['role']?.toString()) != 'officer') {
+            return false;
+          }
+          return locationAllowedForStaff(item);
+        }).toList();
+      }
+
+      if (isAdmin) {
+        final directlyCreatedIds = assignmentRows
+            .where((row) => (row['assigned_by'] ?? '').toString() == user.id)
+            .map((row) => (row['officer_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty)
+            .toSet();
+
+        final managerIds = directlyCreatedIds.where((id) {
+          final role = _normalizeRoleValue(itemById[id]?['role']?.toString());
+          return role == 'manager';
+        }).toSet();
+
+        final managerCreatedOfficerIds = assignmentRows
+            .where((row) =>
+                managerIds.contains((row['assigned_by'] ?? '').toString()))
+            .map((row) => (row['officer_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty)
+            .toSet();
+
+        final visibleIds = <String>{
+          user.id,
+          ...directlyCreatedIds,
+          ...managerCreatedOfficerIds,
+        };
+
+        final hasCreatorVisibilityData =
+            directlyCreatedIds.isNotEmpty || managerCreatedOfficerIds.isNotEmpty;
+
+        return items.where((item) {
+          final id = (item['id'] ?? '').toString();
+          if (id == user.id) return true;
+
+          final itemRole = _normalizeRoleValue(item['role']?.toString());
+          final isManagedRole = itemRole == 'manager' || itemRole == 'officer';
+          if (!isManagedRole) return false;
+
+          if (hasCreatorVisibilityData && !visibleIds.contains(id)) {
+            return false;
+          }
+
+          return locationAllowedForStaff(item);
+        }).toList();
+      }
+
+      return items.where(locationAllowedForStaff).toList();
     });
   }
 
@@ -598,10 +720,11 @@ final locationsStreamProvider =
   final user = Supabase.instance.client.auth.currentUser;
   final fallbackLocId =
       ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
-  final isSuperAdmin = profile['role'] == 'super_admin';
-  final isAdmin = profile['role'] == 'admin';
-  final isManager = profile['role'] == 'manager';
-  final isOfficer = profile['role'] == 'officer';
+  final role = _normalizeRoleValue(profile['role']?.toString());
+  final isSuperAdmin = role == 'super_admin';
+  final isAdmin = role == 'admin';
+  final isManager = role == 'manager';
+  final isOfficer = role == 'officer';
 
   Stream<List<Map<String, dynamic>>> getBaseStream() {
     if (isSuperAdmin) return repo.getLocationsStream();
@@ -613,7 +736,7 @@ final locationsStreamProvider =
   final cacheKey = isSuperAdmin
       ? 'locations_all'
       : (isAdmin || isManager || isOfficer)
-          ? 'locations_${profile['role']}_${profile['id']}'
+          ? 'locations_${role}_${profile['id']}'
           : 'locations_${locationUuid ?? displayId ?? profile['location_id'] ?? 'none'}';
   if (isSuperAdmin) return _cachedStream(cacheKey, getBaseStream());
 

@@ -584,16 +584,21 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       AsyncValue<List<Map<String, dynamic>>> availableLocsAsync,
       String? selectedLocId) {
     final user = ref.read(authControllerProvider).currentUser();
-    final roleRaw = (profile['role'] ?? user?.userMetadata?['role'] ?? 'admin')
+    final roleRaw = (profile['role'] ?? user?.userMetadata?['role'])
         .toString()
         .trim()
-        .toLowerCase();
-    final role = (roleRaw == 'super_admin' ||
-            roleRaw == 'admin' ||
-            roleRaw == 'manager' ||
-            roleRaw == 'officer')
-        ? roleRaw
-        : 'admin';
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+    final role = roleRaw == 'superadmin' || roleRaw.startsWith('super_admin')
+        ? 'super_admin'
+        : roleRaw.startsWith('admin')
+            ? 'admin'
+            : roleRaw.startsWith('manager')
+                ? 'manager'
+                : roleRaw.startsWith('officer')
+                    ? 'officer'
+                    : 'officer';
     final isOfficer = role == 'officer';
     final isManager = role == 'manager';
     final isSuperAdmin = role == 'super_admin';

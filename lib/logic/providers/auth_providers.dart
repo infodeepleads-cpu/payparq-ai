@@ -20,14 +20,25 @@ class LocationSelection {
 }
 
 String _normalizeRole(String? rawRole) {
-  final role = (rawRole ?? '').toString().trim().toLowerCase();
-  if (role == 'super_admin' ||
-      role == 'admin' ||
-      role == 'manager' ||
-      role == 'officer') {
-    return role;
+  final role = (rawRole ?? '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replaceAll('-', '_')
+      .replaceAll(' ', '_');
+  if (role == 'superadmin' || role.startsWith('super_admin')) {
+    return 'super_admin';
   }
-  return 'admin';
+  if (role.startsWith('admin')) {
+    return 'admin';
+  }
+  if (role.startsWith('manager')) {
+    return 'manager';
+  }
+  if (role.startsWith('officer')) {
+    return 'officer';
+  }
+  return 'officer';
 }
 
 bool _isAdminOverrideEmail(String? email) {
@@ -59,7 +70,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   final immediateFallback = {
     'id': user.id,
     'email': user.email,
-    'role': user.userMetadata?['role'] ?? 'admin',
+    'role': _normalizeRole(user.userMetadata?['role']?.toString()),
     'location_id': user.userMetadata?['location_id'],
     'full_name': user.userMetadata?['name'] ?? 'User',
     '_immediate': true,
@@ -120,7 +131,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         final fallback = {
           'id': user.id,
           'email': user.email,
-          'role': metadata['role'] ?? 'admin',
+          'role': _normalizeRole(metadata['role']?.toString()),
           'location_id': metadata['location_id'],
           'full_name': metadata['name'] ?? 'User',
           '_jwt_fallback_after_fail': true,

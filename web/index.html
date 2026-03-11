@@ -17,7 +17,70 @@
 <body>
   <div id="loading">
     <div class="loader">payparq.ai</div>
+    <div id="boot-status" style="margin-top:14px;color:#9ca3af;font-size:13px;text-align:center;"></div>
   </div>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    (function () {
+      var statusEl = document.getElementById('boot-status');
+      var loadingEl = document.getElementById('loading');
+      var didStartFlutter = false;
+      var setStatus = function (text) {
+        if (statusEl) statusEl.textContent = text || '';
+      };
+      var showRetry = function (text) {
+        setStatus(text);
+        if (!loadingEl) return;
+        if (document.getElementById('boot-retry')) return;
+        var btn = document.createElement('button');
+        btn.id = 'boot-retry';
+        btn.textContent = 'Reload';
+        btn.style.marginTop = '12px';
+        btn.style.padding = '10px 14px';
+        btn.style.border = '0';
+        btn.style.borderRadius = '8px';
+        btn.style.fontWeight = '700';
+        btn.style.cursor = 'pointer';
+        btn.onclick = function () {
+          var url = new URL(window.location.href);
+          url.searchParams.set('v', String(Date.now()));
+          window.location.replace(url.toString());
+        };
+        loadingEl.appendChild(btn);
+      };
+      setStatus('Starting app...');
+      var timeoutId = setTimeout(function () {
+        if (!didStartFlutter) {
+          showRetry('Startup is taking longer than expected.');
+        }
+      }, 15000);
+      var detectFlutterUi = function () {
+        if (didStartFlutter) return;
+        var hasFlutterSurface =
+          document.querySelector('flt-glass-pane') ||
+          document.querySelector('flutter-view');
+        if (hasFlutterSurface) {
+          didStartFlutter = true;
+          clearTimeout(timeoutId);
+          if (loadingEl) loadingEl.style.display = 'none';
+        }
+      };
+      var flutterUiPoll = setInterval(detectFlutterUi, 250);
+      window.addEventListener('flutter-first-frame', function () {
+        didStartFlutter = true;
+        clearTimeout(timeoutId);
+        clearInterval(flutterUiPoll);
+        if (loadingEl) loadingEl.style.display = 'none';
+      }, { once: true });
+      var script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js';
+      script.async = true;
+      script.onerror = function () {
+        clearTimeout(timeoutId);
+        clearInterval(flutterUiPoll);
+        showRetry('Failed to load app files.');
+      };
+      document.body.appendChild(script);
+    })();
+  </script>
 </body>
 </html>

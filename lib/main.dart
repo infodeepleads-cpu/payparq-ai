@@ -38,8 +38,7 @@ Future<void> main() async {
     debugPrintStack(stackTrace: st);
   }
 
-  // Pre-load SharedPreferences for instant warm start
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = await _loadSharedPreferencesSafely();
 
   runApp(ProviderScope(
     overrides: [
@@ -47,6 +46,17 @@ Future<void> main() async {
     ],
     child: const PayParqApp(),
   ));
+}
+
+Future<SharedPreferences> _loadSharedPreferencesSafely() async {
+  try {
+    return await SharedPreferences.getInstance()
+        .timeout(const Duration(seconds: 4));
+  } catch (e, st) {
+    debugPrint('SharedPreferences bootstrap failed: $e');
+    debugPrintStack(stackTrace: st);
+    return await SharedPreferences.getInstance();
+  }
 }
 
 class PayParqApp extends StatefulWidget {
@@ -59,10 +69,13 @@ class PayParqApp extends StatefulWidget {
 class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   late Future<void> _initFuture;
   static const Duration _initGuardTimeout = Duration(seconds: 20);
+  static const Duration _authGateFallbackDelay = Duration(seconds: 12);
   final List<String> _logs = [];
 
   bool _isRecoveryMode = false;
   StreamSubscription<AuthState>? _authSubscription;
+  Timer? _authGateFallbackTimer;
+  bool _forceAuthGate = false;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -80,12 +93,20 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     _addLog('App starting...');
     _logBuildInfo();
     _initFuture = _initWithGuard();
+    _authGateFallbackTimer = Timer(_authGateFallbackDelay, () {
+      if (!mounted) return;
+      if (_forceAuthGate) return;
+      setState(() {
+        _forceAuthGate = true;
+      });
+    });
 
     _isRecoveryMode = _isRecoveryRequestFromUrl();
   }
 
   @override
   void dispose() {
+    _authGateFallbackTimer?.cancel();
     _authSubscription?.cancel();
     super.dispose();
   }
@@ -186,6 +207,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         future: _initFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
+            if (_forceAuthGate) {
+              return const AuthScreen();
+            }
             return const Scaffold(
               backgroundColor: Colors.black,
               body: Center(

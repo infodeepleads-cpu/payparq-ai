@@ -34,28 +34,26 @@ class StaffController {
     if (requiresAssignment && locationIds.isEmpty) {
       throw const AppError('No locations selected');
     }
-    final primaryLocationId = requiresAssignment
-        ? (locationIds.isNotEmpty ? locationIds.first : null)
-        : null;
+    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedLocationIds = locationIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final primaryLocationId =
+        requiresAssignment && normalizedLocationIds.isNotEmpty
+            ? normalizedLocationIds.first
+            : null;
     final response = await _repo.createOfficer(
-      email: email,
+      email: normalizedEmail,
       name: name,
       role: role,
       locationId: primaryLocationId,
+      locationIds: requiresAssignment ? normalizedLocationIds : const [],
     );
     final newStaffId = _extractStaffId(response);
     if (newStaffId == null) {
       throw const AppError('Staff creation failed');
-    }
-    if (requiresAssignment && locationIds.length > 1) {
-      final assignments = locationIds.skip(1).map((lid) {
-        return {
-          'officer_id': newStaffId,
-          'location_id': lid,
-          'assigned_by': Supabase.instance.client.auth.currentUser?.id,
-        };
-      }).toList();
-      await _repo.insertAssignments(assignments);
     }
     _ref.invalidate(staffStreamProvider);
     _ref.invalidate(userProfileProvider);

@@ -29,6 +29,22 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
   final ScrollController _scrollController = ScrollController();
   int _visibleCount = 20;
 
+  String _normalizeRole(String? rawRole) {
+    final role = (rawRole ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+    if (role == 'superadmin' || role.startsWith('super_admin')) {
+      return 'super_admin';
+    }
+    if (role.startsWith('admin')) return 'admin';
+    if (role.startsWith('manager')) return 'manager';
+    if (role.startsWith('officer')) return 'officer';
+    return 'officer';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +99,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
         ),
       ),
       data: (profile) {
-        final role = profile?['role'];
+        final role = _normalizeRole(profile?['role']?.toString());
         final isSuperAdmin = role == 'super_admin';
         final isAdmin = role == 'admin';
         final isManager = role == 'manager';
@@ -249,7 +265,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         itemCount: visibleCount,
                         itemBuilder: (context, index) {
                           final user = filteredStaff[index];
-                          final isOfficer = (user['role'] == 'officer');
+                          final normalizedUserRole =
+                              _normalizeRole(user['role']?.toString());
+                          final isOfficer = normalizedUserRole == 'officer';
                           final id = user['id'].toString();
 
                           return AdminDataCard(
@@ -296,7 +314,7 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildStatusBadge(
-                                  (user['role'] ?? 'officer').toUpperCase(),
+                                  normalizedUserRole.toUpperCase(),
                                 ),
                                 const SizedBox(width: 24),
                                 ElevatedButton(
@@ -534,9 +552,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
     final emailCtrl = TextEditingController();
 
     final profile = ref.read(userProfileProvider).value;
-    final isSuperAdmin = profile?['role'] == 'super_admin';
-
-    final isManagerCreator = profile?['role'] == 'manager';
+    final normalizedRole = _normalizeRole(profile?['role']?.toString());
+    final isSuperAdmin = normalizedRole == 'super_admin';
+    final isManagerCreator = normalizedRole == 'manager';
 
     // Fetch locations owned or assigned to this user
     final locations = await ref.read(availableLocationsProvider.future);
