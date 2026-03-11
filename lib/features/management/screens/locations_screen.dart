@@ -386,6 +386,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     final bool fixedWidthRequired = status == 'contact_required' ||
         status == 'call_scheduled' ||
         status == 'unverified';
+    final bool isSetupRequired = status == 'unverified';
 
     return InkWell(
       onTap: showAction
@@ -421,8 +422,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   status == 'pending' ||
                   status == 'rejected')
               ? 0
-              : (fixedWidthRequired ? 160 : 140),
-          maxWidth: 160,
+              : (fixedWidthRequired
+                  ? (isSetupRequired ? 148 : 160)
+                  : 140),
+          maxWidth: isSetupRequired ? 148 : 160,
         ),
         padding: EdgeInsets.symmetric(
           horizontal: (status == 'pending' || status == 'rejected') ? 10 : 12,
