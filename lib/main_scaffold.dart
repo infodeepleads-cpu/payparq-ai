@@ -613,11 +613,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       if (isSuperAdmin || isAdmin) return true;
       if (isManager) {
         // Managers align with assigned-location data access
-        return [0, 1, 2, 3, 5, 8].contains(index);
+        return [0, 1, 2, 3, 5, 7, 8, 9].contains(index);
       }
       if (isOfficer) {
-        // Officers see: Cases (0), OCR (1), Dashboard (2), Settings (8)
-        return [0, 1, 2, 8].contains(index);
+        // Officers see: Cases (0), OCR (1), Dashboard (2), Settings (8), Finance (9)
+        return [0, 1, 2, 8, 9].contains(index);
       }
       return false;
     }
