@@ -15,8 +15,8 @@ class EnforcementRepository {
     final postgrestTheColumn =
         RegExp(r"the '([^']+)' column", caseSensitive: false).firstMatch(text);
     if (postgrestTheColumn != null) return postgrestTheColumn.group(1);
-    final unquoted = RegExp(r'column ([a-zA-Z0-9_]+)')
-        .firstMatch(text.toLowerCase());
+    final unquoted =
+        RegExp(r'column ([a-zA-Z0-9_]+)').firstMatch(text.toLowerCase());
     if (unquoted != null) return unquoted.group(1);
     return null;
   }
@@ -25,7 +25,9 @@ class EnforcementRepository {
     final text = error.toString().toLowerCase();
     if (text.contains('enforcement_pricing_mode')) return true;
     if (text.contains('enforcmetn') && text.contains('pricing')) return true;
-    if (text.contains('42703') && text.contains('pricing') && text.contains('mode')) {
+    if (text.contains('42703') &&
+        text.contains('pricing') &&
+        text.contains('mode')) {
       return true;
     }
     final missing = _extractMissingColumnName(error);
@@ -58,7 +60,7 @@ class EnforcementRepository {
 
   Future<double> getEnforcementFineAmount(String locationId) async {
     final baseSelect =
-        'base_price_daily_floor, rate_per_hour_floor, rate_per_hour';
+        'base_price_daily_floor, base_price_daily, rate_per_hour_floor, rate_per_hour';
     List<dynamic> rows = const [];
     try {
       rows = await _client
@@ -77,21 +79,21 @@ class EnforcementRepository {
     if (rows.isNotEmpty) {
       final row = rows.first;
       final dailyFloor = _toDouble(row['base_price_daily_floor']);
+      final dailyBase = _toDouble(row['base_price_daily']);
       final hourlyFloor = _toDouble(row['rate_per_hour_floor']);
       final hourlyBase = _toDouble(row['rate_per_hour']);
+      final dailyUnit = dailyFloor > 0 ? dailyFloor : dailyBase;
+      final hourlyUnit = hourlyFloor > 0 ? hourlyFloor : hourlyBase;
       final mode = (row['enforcement_pricing_mode'] ?? 'hourly')
           .toString()
           .toLowerCase();
       if (mode == 'daily') {
-        final hourly = hourlyFloor > 0 ? hourlyFloor : hourlyBase;
-        if (hourly > 0) {
-          return hourly * 24;
-        }
+        if (dailyUnit > 0) return dailyUnit;
       } else {
-        if (dailyFloor > 0) {
-          return dailyFloor;
-        }
+        if (hourlyUnit > 0) return hourlyUnit;
       }
+      if (dailyUnit > 0) return dailyUnit;
+      if (hourlyUnit > 0) return hourlyUnit;
     }
     return 20.0;
   }

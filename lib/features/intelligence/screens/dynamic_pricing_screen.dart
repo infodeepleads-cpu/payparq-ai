@@ -8,6 +8,7 @@ import '../../../logic/providers/auth_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../logic/providers/locale_provider.dart';
 import '../providers/dynamic_pricing_controller.dart';
+import '../../../screens/instructions_screen.dart';
 import '../../../services/error_mapper.dart';
 import '../../../config/app_config.dart';
 
@@ -62,6 +63,20 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   void initState() {
     super.initState();
     _fetchLocations();
+  }
+
+  String _resolveEnforcementPricingMode(Map<String, dynamic> source) {
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final mode = (source['enforcement_pricing_mode'] ??
+            source['enforcmetn_pricing_mode'] ??
+            metadata?['enforcement_pricing_mode'] ??
+            metadata?['enforcmetn_pricing_mode'] ??
+            'hourly')
+        .toString()
+        .toLowerCase();
+    return mode == 'daily' ? 'daily' : 'hourly';
   }
 
   Future<void> _fetchLocations() async {
@@ -193,10 +208,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       _dynamicEnabled = loc['dynamic_pricing_enabled'] ?? false;
       _surchargeEnabled = loc['surcharge_enabled'] ?? false;
       _autopilotEnabled = loc['autopilot_enabled'] ?? false;
-      final mode = (loc['enforcement_pricing_mode'] ?? 'hourly')
-          .toString()
-          .toLowerCase();
-      _enforcementPricingMode = mode == 'daily' ? 'daily' : 'hourly';
+      _enforcementPricingMode = _resolveEnforcementPricingMode(loc);
 
       _dynamicRatio = dynamicRatio;
       _surchargeMultiplier = surchargeMultiplier;
@@ -308,10 +320,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'dynamic_pricing_ratio': _dynamicRatio,
         'surcharge_multiplier': _surchargeMultiplier,
       };
-      if ((_selectedLocation ?? const <String, dynamic>{})
-          .containsKey('enforcement_pricing_mode')) {
-        flagsPayload['enforcement_pricing_mode'] = _enforcementPricingMode;
-      }
+      flagsPayload['enforcement_pricing_mode'] = _enforcementPricingMode;
+      flagsPayload['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      final metadataRaw = _selectedLocation?['verification_metadata'];
+      final metadata = metadataRaw is Map
+          ? Map<String, dynamic>.from(metadataRaw)
+          : <String, dynamic>{};
+      metadata['enforcement_pricing_mode'] = _enforcementPricingMode;
+      metadata['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      flagsPayload['verification_metadata'] = metadata;
 
       await ref.read(dynamicPricingControllerProvider).updatePricing(
             pricePayload: pricePayload,
@@ -350,11 +367,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             (data['base_price_daily_floor'] ?? 0.0).toString();
         _monthlyFloorController.text =
             (data['base_price_monthly_floor'] ?? 0.0).toString();
-        final mode = (data['enforcement_pricing_mode'] ?? 'hourly')
-            .toString()
-            .toLowerCase();
-        _enforcementPricingMode = mode == 'daily' ? 'daily' : 'hourly';
+        _enforcementPricingMode = _resolveEnforcementPricingMode(data);
       });
+      ref.invalidate(selectedDownloadLocationProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -526,11 +541,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final displayId = (_selectedLocation!['display_id'] ?? '').toString();
     final mode = _enforcementPricingMode == 'daily' ? 'daily' : 'hourly';
     final unitPrice = _priceForType(mode);
+    final quantity = _reservationQuantityForMode(
+      checkIn: _reserveCheckIn!,
+      checkOut: _reserveCheckOut!,
+      mode: mode,
+    );
+    final totalPrice = unitPrice * quantity;
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
       type: mode,
-      price: unitPrice,
+      price: totalPrice,
       allowPromotionCodes: _hourlyCouponFieldEnabled,
       promotionCodeLabel:
           _hourlyCouponFieldEnabled ? _couponNameController.text.trim() : null,
@@ -852,96 +873,96 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   Widget _buildCouponFieldToggle() {
     final isCroatian = ref.watch(localeIsCroatianProvider);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.card_giftcard,
-                  size: 20,
-                  color: Colors.black87,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      Lang.sel(
+                          isCroatian, 'Stripe Coupon Field', 'Polje kupona'),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      Lang.sel(
+                        isCroatian,
+                        'Enables "Add promotion code" on Stripe',
+                        'Omogućuje "Add promotion code" na Stripeu',
+                      ),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        Lang.sel(
-                            isCroatian, 'Stripe Coupon Field', 'Polje kupona'),
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        Lang.sel(
-                          isCroatian,
-                          'Enables "Add promotion code" on Stripe',
-                          'Omogućuje "Add promotion code" na Stripeu',
-                        ),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _couponNameController,
-                        enabled: _hourlyCouponFieldEnabled,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          labelText: Lang.sel(
-                            isCroatian,
-                            'Coupon name text',
-                            'Naziv kupona',
-                          ),
-                          hintText: 'FREE100',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey[400]!),
-                          ),
-                          focusedBorder: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                            borderSide: BorderSide(color: Colors.black),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+              const SizedBox(width: 8),
+              Switch.adaptive(
+                value: _hourlyCouponFieldEnabled,
+                onChanged: (val) =>
+                    setState(() => _hourlyCouponFieldEnabled = val),
+                activeThumbColor: Colors.black,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _couponNameController,
+            enabled: _hourlyCouponFieldEnabled,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              hintText: 'FREE100',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[400]!),
+              ),
+              focusedBorder: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderSide: BorderSide(color: Colors.black),
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          Switch.adaptive(
-            value: _hourlyCouponFieldEnabled,
-            onChanged: (val) => setState(() => _hourlyCouponFieldEnabled = val),
-            activeThumbColor: Colors.black,
+          const SizedBox(height: 4),
+          Text(
+            Lang.sel(
+              isCroatian,
+              'Coupon name text',
+              'Naziv kupona',
+            ),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
           ),
         ],
       ),
@@ -1111,8 +1132,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.event_available_outlined, color: Colors.black),
-              const SizedBox(width: 8),
               Text(
                 Lang.sel(
                   isCroatian,
@@ -1206,19 +1225,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: _generateReservationLink,
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: Text(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
                 Lang.sel(
                   isCroatian,
                   'Generate Reservation Link',
                   'Generiraj link za rezervaciju',
                 ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
               ),
             ),
           ),
@@ -1330,7 +1348,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   Widget _buildStripeLinksSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1340,30 +1358,19 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.link, color: Colors.black),
-              const SizedBox(width: 8),
-              Text(
-                Lang.sel(
-                  ref.watch(localeIsCroatianProvider),
-                  'Stripe Links',
-                  'Stripe linkovi',
-                ),
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Text(
-            'Build: ${AppConfig.buildDate}',
-            style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[400]),
+            Lang.sel(
+              ref.watch(localeIsCroatianProvider),
+              'Stripe Links',
+              'Stripe linkovi',
+            ),
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             Lang.sel(
               ref.watch(localeIsCroatianProvider),
@@ -1372,7 +1379,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             ),
             style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _buildCouponFieldToggle(),
           const SizedBox(height: 16),
           LayoutBuilder(

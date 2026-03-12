@@ -5,11 +5,118 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme.dart';
 import '../logic/providers/locale_provider.dart';
 import '../logic/providers/auth_providers.dart';
 import '../config/app_config.dart';
 import '../utils/web_download_helper.dart';
+
+final selectedDownloadLocationProvider =
+    FutureProvider<Map<String, dynamic>?>((ref) async {
+  final locations = ref.watch(availableLocationsProvider).value ?? const [];
+  final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+  Map<String, dynamic>? selected;
+  if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
+    for (final loc in locations) {
+      if ((loc['display_id'] ?? '').toString() == selectedDisplayId) {
+        selected = loc;
+        break;
+      }
+    }
+  }
+  selected ??= locations.isNotEmpty ? locations.first : null;
+
+  final selectedId = (selected?['id'] ?? '').toString();
+  final lookupDisplayId =
+      selectedDisplayId != null && selectedDisplayId.isNotEmpty
+          ? selectedDisplayId
+          : (selected?['display_id'] ?? '').toString();
+
+  Map<String, dynamic>? dbSelected;
+  Future<Map<String, dynamic>?> fetchDbLocation({
+    required String column,
+    required String value,
+  }) async {
+    if (value.isEmpty) return null;
+    final client = Supabase.instance.client;
+    try {
+      final withMode = await client
+          .from('locations')
+          .select(
+              'id, display_id, name, verification_metadata, enforcement_pricing_mode')
+          .eq(column, value)
+          .maybeSingle();
+      if (withMode != null) {
+        return Map<String, dynamic>.from(withMode);
+      }
+    } catch (_) {}
+    try {
+      final basic = await client
+          .from('locations')
+          .select('id, display_id, name, verification_metadata')
+          .eq(column, value)
+          .maybeSingle();
+      if (basic != null) {
+        return Map<String, dynamic>.from(basic);
+      }
+    } catch (_) {}
+    try {
+      final basicByDisplay = await client
+          .from('locations')
+          .select('id, display_id, name, verification_metadata')
+          .eq('display_id', value)
+          .maybeSingle();
+      if (basicByDisplay != null) {
+        return Map<String, dynamic>.from(basicByDisplay);
+      }
+    } catch (_) {}
+    if (column != 'id') {
+      return null;
+    }
+    final basicById = await client
+        .from('locations')
+        .select('id, display_id, name, verification_metadata')
+        .eq('id', value)
+        .maybeSingle();
+    if (basicById != null) {
+      return Map<String, dynamic>.from(basicById);
+    }
+    return null;
+  }
+
+  try {
+    if (selectedId.isNotEmpty) {
+      dbSelected = await fetchDbLocation(column: 'id', value: selectedId);
+    }
+    if (dbSelected == null && lookupDisplayId.isNotEmpty) {
+      dbSelected = await fetchDbLocation(
+        column: 'display_id',
+        value: lookupDisplayId,
+      );
+    }
+  } catch (_) {}
+
+  if (dbSelected != null) {
+    return {
+      ...?selected,
+      ...dbSelected,
+    };
+  }
+  if (selected != null) {
+    return {
+      ...selected,
+      if (lookupDisplayId.isNotEmpty) 'display_id': lookupDisplayId,
+    };
+  }
+  if (lookupDisplayId.isNotEmpty) {
+    return {
+      'display_id': lookupDisplayId,
+      'name': 'Lot $lookupDisplayId',
+    };
+  }
+  return null;
+});
 
 class InstructionsScreen extends ConsumerStatefulWidget {
   const InstructionsScreen({super.key});
@@ -21,6 +128,20 @@ class InstructionsScreen extends ConsumerStatefulWidget {
 class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
   final GlobalKey _instructionsSignKey = GlobalKey();
   final GlobalKey _instructionsTicketKey = GlobalKey();
+
+  String _resolvePricingMode(Map<String, dynamic> source) {
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final mode = (source['enforcement_pricing_mode'] ??
+            source['enforcmetn_pricing_mode'] ??
+            metadata?['enforcement_pricing_mode'] ??
+            metadata?['enforcmetn_pricing_mode'] ??
+            'hourly')
+        .toString()
+        .toLowerCase();
+    return mode == 'daily' ? 'daily' : 'hourly';
+  }
 
   Widget _buildStepTitle(String number, String title) {
     return Row(
@@ -122,34 +243,11 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
               fit: BoxFit.cover,
               errorBuilder: (context, error, stack) => Container(
                 color: Colors.white,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      Lang.sel(
-                        isCroatian,
-                        'Template not found',
-                        'Predložak nije pronađen',
-                      ),
-                      style: GoogleFonts.inter(
-                        color: Colors.grey,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      'assets/images/your_photo.png',
-                      style: GoogleFonts.inter(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                child: Image.asset(
+                  'assets/images/your_photo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) =>
+                      const SizedBox.shrink(),
                 ),
               ),
             ),
@@ -390,19 +488,22 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
   }
 
   Widget _buildDownloadAssets(bool isCroatian) {
-    final locationsAsync = ref.watch(availableLocationsProvider);
-    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final locations = locationsAsync.value ?? const <Map<String, dynamic>>[];
-    Map<String, dynamic>? selected;
-    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
-      for (final loc in locations) {
-        if ((loc['display_id'] ?? '').toString() == selectedDisplayId) {
-          selected = loc;
-          break;
-        }
-      }
+    final selectedAsync = ref.watch(selectedDownloadLocationProvider);
+    final selected = selectedAsync.value;
+    if (selectedAsync.isLoading && selected == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
-    selected ??= locations.isNotEmpty ? locations.first : null;
     if (selected == null) {
       return Container(
         width: double.infinity,
@@ -422,10 +523,7 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
 
     final locationId = (selected['id'] ?? '').toString();
     final displayId = (selected['display_id'] ?? selected['id']).toString();
-    final mode = (selected['enforcement_pricing_mode'] ?? 'hourly')
-        .toString()
-        .toLowerCase();
-    final signType = mode == 'daily' ? 'daily' : 'hourly';
+    final signType = _resolvePricingMode(selected);
     final signUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,

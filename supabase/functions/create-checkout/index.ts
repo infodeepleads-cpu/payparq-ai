@@ -621,6 +621,7 @@ serve(async (req: Request) => {
     const flow = String(
       body["flow"] ?? url.searchParams.get("flow") ?? "payment",
     ).trim().toLowerCase();
+    const isReservationFlow = flow === "reserve";
     const checkIn = String(
       body["check_in"] ?? url.searchParams.get("check_in") ?? "",
     ).trim();
@@ -686,8 +687,8 @@ serve(async (req: Request) => {
     };
 
     let reservationDescription = "";
-    if (hasReservationWindow) {
-      reservationDescription = `From: ${formatIso(checkIn)} To: ${formatIso(checkOut)}`;
+    if (isReservationFlow && hasReservationWindow) {
+      reservationDescription = `From: ${checkIn}\nTo: ${checkOut}`;
       if (displayId) {
         reservationDescription += `\nLocation ID: ${displayId}`;
       }
@@ -699,6 +700,12 @@ serve(async (req: Request) => {
       amountCents = await locationPriceCents(locationUuid, type);
     }
     if (amountCents < 50) amountCents = 50;
+    let unitAmountCents = amountCents;
+    if (!isReservationFlow && hasReservationWindow && explicitCents != null && quantity > 1) {
+      unitAmountCents = Math.round(amountCents / quantity);
+      if (unitAmountCents < 50) unitAmountCents = 50;
+    }
+    const checkoutQuantity = isReservationFlow ? 1 : quantity;
 
     console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
 
@@ -724,7 +731,7 @@ serve(async (req: Request) => {
       },
       custom_fields: checkoutCustomFields(),
       line_items: [{
-        quantity,
+        quantity: checkoutQuantity,
         adjustable_quantity: hasReservationWindow
           ? {
             enabled: false,
@@ -736,9 +743,11 @@ serve(async (req: Request) => {
           },
         price_data: {
           currency: "eur",
-          unit_amount: amountCents,
+          unit_amount: unitAmountCents,
           product_data: {
-            name: hasReservationWindow
+            name: isReservationFlow
+              ? "Parking Reservation"
+              : hasReservationWindow
               ? type === "daily"
                 ? quantity > 1
                   ? `Parking Session (${quantity} Days)`
@@ -751,7 +760,9 @@ serve(async (req: Request) => {
                 ? `Parking Session (${quantity} Hours)`
                 : "Parking Session (1 Hour)"
               : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
-            description: hasReservationWindow
+            description: isReservationFlow
+              ? reservationDescription
+              : hasReservationWindow
               ? reservationDescription
               : `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
           },
@@ -763,7 +774,7 @@ serve(async (req: Request) => {
         type,
         flow: flow || "payment",
         quantity: String(quantity),
-        amount_cents: String(amountCents),
+        amount_cents: String(unitAmountCents),
         purchase_time_berlin: purchaseTimeDisplay,
         plate: plate,
         mobile: mobile,
@@ -865,8 +876,8 @@ serve(async (req: Request) => {
         status: "pending",
         payment_status: "pending",
         ui_type: "guest", // Added for dashboard filtering
-        price: amountCents / 100,
-        amount_cents: amountCents,
+        price: unitAmountCents / 100,
+        amount_cents: unitAmountCents,
         quantity,
         currency: "eur",
         payment_source: "regular",
