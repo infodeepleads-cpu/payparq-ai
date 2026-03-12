@@ -140,8 +140,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   void _selectLocation(Map<String, dynamic> loc) {
     // 1. Extract raw values
     double dynamicRatio = (loc['dynamic_pricing_ratio'] ?? 1.0).toDouble();
-    double surchargeMultiplier = (loc['surcharge_multiplier'] ?? 1.0)
-        .toDouble();
+    double surchargeMultiplier =
+        (loc['surcharge_multiplier'] ?? 1.0).toDouble();
 
     // 2. Fix 10000% bug aggressively:
     // If the value is > 2, it's definitely stored as a whole percentage (e.g. 100)
@@ -173,8 +173,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
       final hourlyCeiling = (loc['rate_per_hour_ceiling'] ?? 0.0).toString();
       final dailyCeiling = (loc['base_price_daily_ceiling'] ?? 0.0).toString();
-      final monthlyCeiling = (loc['base_price_monthly_ceiling'] ?? 0.0)
-          .toString();
+      final monthlyCeiling =
+          (loc['base_price_monthly_ceiling'] ?? 0.0).toString();
       final hourlyFloor = (loc['rate_per_hour_floor'] ?? 0.0).toString();
       final dailyFloor = (loc['base_price_daily_floor'] ?? 0.0).toString();
       final monthlyFloor = (loc['base_price_monthly_floor'] ?? 0.0).toString();
@@ -313,9 +313,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         flagsPayload['enforcement_pricing_mode'] = _enforcementPricingMode;
       }
 
-      await ref
-          .read(dynamicPricingControllerProvider)
-          .updatePricing(
+      await ref.read(dynamicPricingControllerProvider).updatePricing(
             pricePayload: pricePayload,
             flagsPayload: flagsPayload,
             targetId: targetId,
@@ -338,20 +336,20 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
 
         _hourlyController.text = (data['rate_per_hour'] ?? 0.0).toString();
         _dailyController.text = (data['base_price_daily'] ?? 0.0).toString();
-        _monthlyController.text = (data['base_price_monthly'] ?? 0.0)
-            .toString();
-        _hourlyCeilingController.text = (data['rate_per_hour_ceiling'] ?? 0.0)
-            .toString();
-        _dailyCeilingController.text = (data['base_price_daily_ceiling'] ?? 0.0)
-            .toString();
+        _monthlyController.text =
+            (data['base_price_monthly'] ?? 0.0).toString();
+        _hourlyCeilingController.text =
+            (data['rate_per_hour_ceiling'] ?? 0.0).toString();
+        _dailyCeilingController.text =
+            (data['base_price_daily_ceiling'] ?? 0.0).toString();
         _monthlyCeilingController.text =
             (data['base_price_monthly_ceiling'] ?? 0.0).toString();
-        _hourlyFloorController.text = (data['rate_per_hour_floor'] ?? 0.0)
-            .toString();
-        _dailyFloorController.text = (data['base_price_daily_floor'] ?? 0.0)
-            .toString();
-        _monthlyFloorController.text = (data['base_price_monthly_floor'] ?? 0.0)
-            .toString();
+        _hourlyFloorController.text =
+            (data['rate_per_hour_floor'] ?? 0.0).toString();
+        _dailyFloorController.text =
+            (data['base_price_daily_floor'] ?? 0.0).toString();
+        _monthlyFloorController.text =
+            (data['base_price_monthly_floor'] ?? 0.0).toString();
         final mode = (data['enforcement_pricing_mode'] ?? 'hourly')
             .toString()
             .toLowerCase();
@@ -399,8 +397,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final initial = isCheckIn
         ? (_reserveCheckIn ?? now)
         : (_reserveCheckOut ??
-              (_reserveCheckIn?.add(const Duration(hours: 1)) ??
-                  now.add(const Duration(hours: 1))));
+            (_reserveCheckIn?.add(const Duration(hours: 1)) ??
+                now.add(const Duration(hours: 1))));
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -457,6 +455,43 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     return '$day $month $year, $hour:$minute';
   }
 
+  int _reservationQuantityForMode({
+    required DateTime checkIn,
+    required DateTime checkOut,
+    required String mode,
+  }) {
+    final diffMinutes = checkOut.difference(checkIn).inMinutes;
+    if (diffMinutes <= 0) return 1;
+    if (mode == 'daily') {
+      final quantity = (diffMinutes / (24 * 60)).ceil();
+      if (quantity < 1) return 1;
+      if (quantity > 9999) return 9999;
+      return quantity;
+    }
+    final quantity = (diffMinutes / 60).ceil();
+    if (quantity < 1) return 1;
+    if (quantity > 9999) return 9999;
+    return quantity;
+  }
+
+  Map<String, dynamic>? _reservationPreview() {
+    if (_reserveCheckIn == null || _reserveCheckOut == null) return null;
+    if (!_reserveCheckOut!.isAfter(_reserveCheckIn!)) return null;
+    final mode = _enforcementPricingMode == 'daily' ? 'daily' : 'hourly';
+    final quantity = _reservationQuantityForMode(
+      checkIn: _reserveCheckIn!,
+      checkOut: _reserveCheckOut!,
+      mode: mode,
+    );
+    final unitPrice = _priceForType(mode);
+    return {
+      'mode': mode,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'total_price': unitPrice * quantity,
+    };
+  }
+
   void _generateReservationLink() {
     if (_selectedLocation == null) return;
     if (_reserveCheckIn == null || _reserveCheckOut == null) {
@@ -489,15 +524,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     }
     final locationId = (_selectedLocation!['id']).toString();
     final displayId = (_selectedLocation!['display_id'] ?? '').toString();
+    final mode = _enforcementPricingMode == 'daily' ? 'daily' : 'hourly';
+    final unitPrice = _priceForType(mode);
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
-      type: 'hourly',
-      price: _priceForType('hourly'),
+      type: mode,
+      price: unitPrice,
       allowPromotionCodes: _hourlyCouponFieldEnabled,
-      promotionCodeLabel: _hourlyCouponFieldEnabled
-          ? _couponNameController.text.trim()
-          : null,
+      promotionCodeLabel:
+          _hourlyCouponFieldEnabled ? _couponNameController.text.trim() : null,
       checkIn: _reserveCheckIn!.toIso8601String(),
       checkOut: _reserveCheckOut!.toIso8601String(),
       flow: 'reserve',
@@ -524,9 +560,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final displayId = (_selectedLocation!['display_id'] ?? '').toString();
     final price = _priceForType(type);
     final allowPromotionCodes = _hourlyCouponFieldEnabled;
-    final promotionCodeLabel = allowPromotionCodes
-        ? _couponNameController.text.trim()
-        : null;
+    final promotionCodeLabel =
+        allowPromotionCodes ? _couponNameController.text.trim() : null;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     final checkoutUrl = AppConfig.createCheckoutUrl(
@@ -841,7 +876,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        Lang.sel(isCroatian, 'Stripe Coupon Field', 'Polje kupona'),
+                        Lang.sel(
+                            isCroatian, 'Stripe Coupon Field', 'Polje kupona'),
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -927,7 +963,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            Lang.sel(isCroatian, 'Enforcement Mode', 'Način enforcementa'),
+            Lang.sel(
+              isCroatian,
+              'Price Calculation Mode',
+              'Način izračuna cijene',
+            ),
             style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -975,11 +1015,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             Lang.sel(
               isCroatian,
               isDaily
-                  ? 'Cases use 24x hourly. Sign QR uses daily link.'
-                  : 'Cases use daily minimum. Sign QR uses hourly link.',
+                  ? 'Cases and reservations use daily unit pricing.'
+                  : 'Cases and reservations use hourly unit pricing.',
               isDaily
-                  ? 'Slučajevi koriste 24x satnu cijenu. QR znaka koristi dnevni link.'
-                  : 'Slučajevi koriste dnevni minimum. QR znaka koristi satni link.',
+                  ? 'Slučajevi i rezervacije koriste dnevnu jediničnu cijenu.'
+                  : 'Slučajevi i rezervacije koriste satnu jediničnu cijenu.',
             ),
             style: GoogleFonts.inter(fontSize: 11, color: Colors.black54),
           ),
@@ -994,6 +1034,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final durationHours = (_reserveCheckIn != null && _reserveCheckOut != null)
         ? _reserveCheckOut!.difference(_reserveCheckIn!).inMinutes / 60.0
         : null;
+    final preview = _reservationPreview();
+    final previewMode = (preview?['mode'] ?? 'hourly').toString();
+    final previewQuantity = (preview?['quantity'] as int?) ?? 1;
+    final previewUnitPrice = (preview?['unit_price'] as double?) ?? 0.0;
+    final previewTotalPrice = (preview?['total_price'] as double?) ?? 0.0;
+    final unitLabel = previewMode == 'daily'
+        ? Lang.sel(isCroatian, 'day', 'dan')
+        : Lang.sel(isCroatian, 'hour', 'sat');
+    final pluralUnitLabelEn =
+        previewQuantity == 1 ? unitLabel : '${unitLabel}s';
+    final pluralUnitLabelHr =
+        previewQuantity == 1 ? unitLabel : '${unitLabel}a';
 
     Widget reservationField({
       required IconData icon,
@@ -1123,6 +1175,30 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                   fontSize: 12,
                   color: Colors.black87,
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          if (preview != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
+              ),
+              child: Text(
+                Lang.sel(
+                  isCroatian,
+                  'Mode: ${previewMode == 'daily' ? 'Daily' : 'Hourly'} • $previewQuantity $pluralUnitLabelEn × €${previewUnitPrice.toStringAsFixed(2)} = €${previewTotalPrice.toStringAsFixed(2)}',
+                  'Način: ${previewMode == 'daily' ? 'Dnevni' : 'Satni'} • $previewQuantity $pluralUnitLabelHr × €${previewUnitPrice.toStringAsFixed(2)} = €${previewTotalPrice.toStringAsFixed(2)}',
+                ),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -1291,15 +1367,13 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           Text(
             Lang.sel(
               ref.watch(localeIsCroatianProvider),
-              'Generate payment links and reservation links for this location.',
-              'Generirajte payment i reservation linkove za ovu lokaciju.',
+              'Generate payment links for this location.',
+              'Generirajte payment linkove za ovu lokaciju.',
             ),
             style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           _buildCouponFieldToggle(),
-          const SizedBox(height: 12),
-          _buildEnforcementModeToggle(),
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1380,8 +1454,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               );
             },
           ),
-          const SizedBox(height: 16),
-          _buildReservationWidget(),
         ],
       ),
     );
@@ -1703,10 +1775,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                               inactiveColor: AppTheme.surface,
                               onChanged:
                                   (_surchargeEnabled && !_autopilotEnabled)
-                                  ? (val) => setState(
-                                      () => _surchargeMultiplier = val,
-                                    )
-                                  : null,
+                                      ? (val) => setState(
+                                            () => _surchargeMultiplier = val,
+                                          )
+                                      : null,
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -1739,7 +1811,30 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildStripeLinksSection(),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked = constraints.maxWidth < 1100;
+                if (stacked) {
+                  return Column(
+                    children: [
+                      _buildReservationWidget(),
+                      const SizedBox(height: 16),
+                      _buildStripeLinksSection(),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildReservationWidget()),
+                    const SizedBox(width: 32),
+                    Expanded(child: _buildStripeLinksSection()),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildEnforcementModeToggle(),
             const SizedBox(height: 32),
           ],
         ),

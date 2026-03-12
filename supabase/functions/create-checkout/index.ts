@@ -656,7 +656,13 @@ serve(async (req: Request) => {
       const end = new Date(checkOut);
       const diff = end.getTime() - start.getTime();
       if (Number.isFinite(diff) && diff > 0) {
-        quantity = Math.ceil(diff / (1000 * 60 * 60));
+        if (type === "daily") {
+          quantity = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        } else if (type === "monthly") {
+          quantity = Math.ceil(diff / (1000 * 60 * 60 * 24 * 30));
+        } else {
+          quantity = Math.ceil(diff / (1000 * 60 * 60));
+        }
       }
     }
     if (!Number.isFinite(quantity) || quantity < 1) {
@@ -733,7 +739,15 @@ serve(async (req: Request) => {
           unit_amount: amountCents,
           product_data: {
             name: hasReservationWindow
-              ? quantity > 1
+              ? type === "daily"
+                ? quantity > 1
+                  ? `Parking Session (${quantity} Days)`
+                  : "Parking Session (1 Day)"
+                : type === "monthly"
+                ? quantity > 1
+                  ? `Parking Session (${quantity} Months)`
+                  : "Parking Session (1 Month)"
+                : quantity > 1
                 ? `Parking Session (${quantity} Hours)`
                 : "Parking Session (1 Hour)"
               : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,

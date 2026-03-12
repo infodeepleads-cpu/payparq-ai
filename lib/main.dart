@@ -121,15 +121,35 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   bool _isRecoveryRequestFromUrl() {
     if (!kIsWeb) return false;
     final queryType = Uri.base.queryParameters['type']?.toLowerCase();
-    if (queryType == 'recovery') return true;
+    if (queryType == 'recovery') {
+      return _hasRecoveryTokenInUrl();
+    }
     final fragment = Uri.base.fragment;
     if (fragment.isEmpty) return false;
     final fragmentQuery = Uri.splitQueryString(fragment);
-    return fragmentQuery['type']?.toLowerCase() == 'recovery';
+    return fragmentQuery['type']?.toLowerCase() == 'recovery' &&
+        _hasRecoveryTokenInUrl();
+  }
+
+  bool _hasRecoveryTokenInUrl() {
+    if (!kIsWeb) return false;
+    final query = Uri.base.queryParameters;
+    if (query['access_token']?.isNotEmpty == true) return true;
+    if (query['refresh_token']?.isNotEmpty == true) return true;
+    if (query['token']?.isNotEmpty == true) return true;
+    final fragment = Uri.base.fragment;
+    if (fragment.isEmpty) return false;
+    final fragmentQuery = Uri.splitQueryString(fragment);
+    if (fragmentQuery['access_token']?.isNotEmpty == true) return true;
+    if (fragmentQuery['refresh_token']?.isNotEmpty == true) return true;
+    if (fragmentQuery['token']?.isNotEmpty == true) return true;
+    return false;
   }
 
   bool get _showResetPasswordScreen =>
-      _isRecoveryMode || _isResetPasswordPath() || _isRecoveryRequestFromUrl();
+      _isRecoveryMode ||
+      (_isResetPasswordPath() && _hasRecoveryTokenInUrl()) ||
+      _isRecoveryRequestFromUrl();
 
   Future<void> _initWithGuard() {
     _addLog('Initializing with watchdog (20s)...');
@@ -169,6 +189,15 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         timeout: const Duration(seconds: 15),
       );
 
+      if (kDebugMode && kIsWeb) {
+        try {
+          await Supabase.instance.client.auth.signOut();
+          _addLog('Debug web startup forced sign-out completed');
+        } catch (e) {
+          _addLog('Debug web startup sign-out skipped: $e');
+        }
+      }
+
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
       _attachAuthListener();
@@ -185,7 +214,8 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     _authSubscription =
         Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
-      if (data.event == AuthChangeEvent.passwordRecovery) {
+      if (data.event == AuthChangeEvent.passwordRecovery &&
+          _hasRecoveryTokenInUrl()) {
         setState(() => _isRecoveryMode = true);
       } else if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.signedOut ||
@@ -206,8 +236,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       home: FutureBuilder<void>(
         future: _initFuture,
         builder: (context, snapshot) {
+          final forceDebugAuth = kDebugMode && kIsWeb;
           if (snapshot.connectionState != ConnectionState.done) {
-            if (_forceAuthGate) {
+            if (_forceAuthGate || forceDebugAuth) {
               return const AuthScreen();
             }
             return const Scaffold(
@@ -219,6 +250,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
           }
 
           if (snapshot.hasError) {
+            if (forceDebugAuth) {
+              return const AuthScreen();
+            }
             return Scaffold(
               backgroundColor: const Color(0xFFF9FAFB),
               body: Center(

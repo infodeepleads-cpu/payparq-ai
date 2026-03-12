@@ -6,6 +6,32 @@ class EnforcementRepository {
 
   EnforcementRepository(this._client);
 
+  String? _extractMissingColumnName(Object error) {
+    final text = error.toString();
+    final quoted = RegExp(r'column "([^"]+)"').firstMatch(text);
+    if (quoted != null) return quoted.group(1);
+    final plain = RegExp(r"column '([^']+)'").firstMatch(text);
+    if (plain != null) return plain.group(1);
+    final postgrestTheColumn =
+        RegExp(r"the '([^']+)' column", caseSensitive: false).firstMatch(text);
+    if (postgrestTheColumn != null) return postgrestTheColumn.group(1);
+    final unquoted = RegExp(r'column ([a-zA-Z0-9_]+)')
+        .firstMatch(text.toLowerCase());
+    if (unquoted != null) return unquoted.group(1);
+    return null;
+  }
+
+  bool _isMissingPricingModeColumnError(Object error) {
+    final text = error.toString().toLowerCase();
+    if (text.contains('enforcement_pricing_mode')) return true;
+    if (text.contains('enforcmetn') && text.contains('pricing')) return true;
+    if (text.contains('42703') && text.contains('pricing') && text.contains('mode')) {
+      return true;
+    }
+    final missing = _extractMissingColumnName(error);
+    return missing == 'enforcement_pricing_mode';
+  }
+
   Future<void> deleteViolation(String id) async {
     await _client.from('violations').delete().eq('id', id);
   }
@@ -31,12 +57,23 @@ class EnforcementRepository {
   }
 
   Future<double> getEnforcementFineAmount(String locationId) async {
-    final rows = await _client
-        .from('locations')
-        .select(
-            'base_price_daily_floor, rate_per_hour_floor, rate_per_hour, enforcement_pricing_mode')
-        .eq('id', locationId)
-        .limit(1);
+    final baseSelect =
+        'base_price_daily_floor, rate_per_hour_floor, rate_per_hour';
+    List<dynamic> rows = const [];
+    try {
+      rows = await _client
+          .from('locations')
+          .select('$baseSelect, enforcement_pricing_mode')
+          .eq('id', locationId)
+          .limit(1);
+    } catch (error) {
+      if (!_isMissingPricingModeColumnError(error)) rethrow;
+      rows = await _client
+          .from('locations')
+          .select(baseSelect)
+          .eq('id', locationId)
+          .limit(1);
+    }
     if (rows.isNotEmpty) {
       final row = rows.first;
       final dailyFloor = _toDouble(row['base_price_daily_floor']);
