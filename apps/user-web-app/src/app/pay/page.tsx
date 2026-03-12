@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 type FlowType = "park_now" | "monthly" | "reserve";
 
 export default function PayPage() {
+  const autoRedirectTriggeredRef = useRef(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -27,7 +28,52 @@ export default function PayPage() {
     const loc = params.get("loc") || "";
     const inVal = params.get("in") || "";
     const outVal = params.get("out") || "";
-    
+    const compactLoc = params.get("l") || "";
+    const compactRateType = (params.get("rt") || "").toLowerCase();
+    const compactCheckIn = Number.parseInt(params.get("ci") || "", 10);
+    const compactCheckOut = Number.parseInt(params.get("co") || "", 10);
+    const compactAmountCents = Number.parseInt(params.get("p") || "", 10);
+    const auto = params.get("a") === "1";
+
+    if (
+      auto &&
+      compactLoc &&
+      Number.isFinite(compactCheckIn) &&
+      Number.isFinite(compactCheckOut) &&
+      compactCheckOut > compactCheckIn &&
+      Number.isFinite(compactAmountCents) &&
+      compactAmountCents > 0
+    ) {
+      const checkInIso = new Date(compactCheckIn * 1000).toISOString();
+      const checkOutIso = new Date(compactCheckOut * 1000).toISOString();
+      const rateType =
+        compactRateType === "d" || compactRateType === "daily"
+          ? "daily"
+          : "hourly";
+      if (!autoRedirectTriggeredRef.current) {
+        autoRedirectTriggeredRef.current = true;
+        const supabaseBase =
+          (process.env.NEXT_PUBLIC_SUPABASE_URL ||
+            "https://iafjygownkhedereaoxw.supabase.co").replace(/\/+$/, "");
+        const query = new URLSearchParams({
+          location_id: compactLoc,
+          type: rateType,
+          amount_cents: String(compactAmountCents),
+          check_in: checkInIso,
+          check_out: checkOutIso,
+          flow: "reserve",
+          t: String(Date.now()),
+        });
+        if (/^\d{5}$/.test(compactLoc)) {
+          query.set("display_id", compactLoc);
+        }
+        window.location.replace(
+          `${supabaseBase}/functions/v1/create-checkout?${query.toString()}`,
+        );
+      }
+      return;
+    }
+
     if (loc) {
       Promise.resolve().then(() => {
         setLocationId(loc);
