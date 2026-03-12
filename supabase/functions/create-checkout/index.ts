@@ -618,6 +618,15 @@ serve(async (req: Request) => {
     const permitId = String(
       body["permit_id"] ?? url.searchParams.get("permit_id") ?? "",
     ).trim();
+    const flow = String(
+      body["flow"] ?? url.searchParams.get("flow") ?? "payment",
+    ).trim().toLowerCase();
+    const checkIn = String(
+      body["check_in"] ?? url.searchParams.get("check_in") ?? "",
+    ).trim();
+    const checkOut = String(
+      body["check_out"] ?? url.searchParams.get("check_out") ?? "",
+    ).trim();
 
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
@@ -638,6 +647,44 @@ serve(async (req: Request) => {
       purchaseTimeDisplay = formatter.format(now);
     } catch (e) {
       purchaseTimeDisplay = now.toISOString().replace("T", " ").split(".")[0];
+    }
+
+    let quantity = 1;
+    const hasReservationWindow = checkIn.length > 0 && checkOut.length > 0;
+    if (hasReservationWindow) {
+      const start = new Date(checkIn);
+      const end = new Date(checkOut);
+      const diff = end.getTime() - start.getTime();
+      if (Number.isFinite(diff) && diff > 0) {
+        quantity = Math.ceil(diff / (1000 * 60 * 60));
+      }
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      quantity = 1;
+    }
+
+    const formatIso = (iso: string): string => {
+      if (!iso) return "";
+      try {
+        const [datePart, timePart] = iso.split("T");
+        const [y, m, d] = datePart.split("-");
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = Number.parseInt(m, 10);
+        if (month > 0 && month <= monthNames.length) {
+          return `${d} ${monthNames[month - 1]} ${y}, ${timePart}`;
+        }
+        return iso;
+      } catch {
+        return iso;
+      }
+    };
+
+    let reservationDescription = "";
+    if (hasReservationWindow) {
+      reservationDescription = `From: ${formatIso(checkIn)} To: ${formatIso(checkOut)}`;
+      if (displayId) {
+        reservationDescription += `\nLocation ID: ${displayId}`;
+      }
     }
 
     let amountCents = explicitCents;
@@ -671,19 +718,28 @@ serve(async (req: Request) => {
       },
       custom_fields: checkoutCustomFields(),
       line_items: [{
-        quantity: 1,
-        adjustable_quantity: {
-          enabled: true,
-          minimum: 1,
-          maximum: 99,
-        },
+        quantity,
+        adjustable_quantity: hasReservationWindow
+          ? {
+            enabled: false,
+          }
+          : {
+            enabled: true,
+            minimum: 1,
+            maximum: 99,
+          },
         price_data: {
           currency: "eur",
           unit_amount: amountCents,
           product_data: {
-            // V13: Exact description format requested by user
-            name: `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
-            description: `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
+            name: hasReservationWindow
+              ? quantity > 1
+                ? `Parking Session (${quantity} Hours)`
+                : "Parking Session (1 Hour)"
+              : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
+            description: hasReservationWindow
+              ? reservationDescription
+              : `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
           },
         },
       }],
@@ -691,14 +747,16 @@ serve(async (req: Request) => {
         location_id: locationUuid, // Use UUID
         display_id: displayId,
         type,
-        flow: "payment",
-        quantity: "1",
+        flow: flow || "payment",
+        quantity: String(quantity),
         amount_cents: String(amountCents),
         purchase_time_berlin: purchaseTimeDisplay,
         plate: plate,
         mobile: mobile,
         email: email,
         permit_id: permitId || undefined,
+        check_in: checkIn || undefined,
+        check_out: checkOut || undefined,
       },
     };
 
@@ -795,7 +853,7 @@ serve(async (req: Request) => {
         ui_type: "guest", // Added for dashboard filtering
         price: amountCents / 100,
         amount_cents: amountCents,
-        quantity: 1,
+        quantity,
         currency: "eur",
         payment_source: "regular",
         is_lpr_scan: false,
@@ -805,7 +863,7 @@ serve(async (req: Request) => {
         updated_at: now.toISOString(),
         entry_time: now.toISOString(),
         // For pending, we don't know the final duration yet if it's adjustable, but we set a default
-        duration_minutes: type === "monthly" ? 43200 : type === "daily" ? 1440 : 60,
+        duration_minutes: type === "monthly" ? (quantity * 43200) : type === "daily" ? (quantity * 1440) : (quantity * 60),
         stripe_metadata: JSON.stringify({
           ...sessionOptions.metadata,
           stripe_id: paymentSession.id,

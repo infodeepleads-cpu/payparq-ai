@@ -10,7 +10,21 @@ class DynamicPricingRepository {
     final quoted = RegExp(r'column "([^"]+)"').firstMatch(text);
     if (quoted != null) return quoted.group(1);
     final plain = RegExp(r"column '([^']+)'").firstMatch(text);
-    return plain?.group(1);
+    if (plain != null) return plain.group(1);
+    final postgrestTheColumn =
+        RegExp(r"the '([^']+)' column", caseSensitive: false).firstMatch(text);
+    if (postgrestTheColumn != null) return postgrestTheColumn.group(1);
+    final genericQuoted = RegExp(r"'([a-zA-Z0-9_]+)'").allMatches(text);
+    for (final match in genericQuoted) {
+      final token = match.group(1);
+      if (token != null &&
+          token != 'locations' &&
+          token != 'public' &&
+          token.contains('_')) {
+        return token;
+      }
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>?> _updateByIdOrDisplayId({
@@ -60,7 +74,7 @@ class DynamicPricingRepository {
     required Map<String, dynamic> data,
   }) async {
     final payload = Map<String, dynamic>.from(data);
-    for (var attempt = 0; attempt < 2; attempt++) {
+    for (var attempt = 0; attempt < 6; attempt++) {
       try {
         final updated = await _updateByIdOrDisplayId(
           id: id,
@@ -87,11 +101,7 @@ class DynamicPricingRepository {
   }
 
   Future<Map<String, dynamic>?> readLocationById(String id) async {
-    final rows = await _client
-        .from('locations')
-        .select('base_price_daily_floor')
-        .eq('id', id)
-        .limit(1);
+    final rows = await _client.from('locations').select().eq('id', id).limit(1);
     if (rows.isNotEmpty) {
       return Map<String, dynamic>.from(rows.first);
     }

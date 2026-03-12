@@ -1,11 +1,26 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../theme.dart';
 import '../logic/providers/locale_provider.dart';
+import '../logic/providers/auth_providers.dart';
+import '../config/app_config.dart';
+import '../utils/web_download_helper.dart';
 
-class InstructionsScreen extends ConsumerWidget {
+class InstructionsScreen extends ConsumerStatefulWidget {
   const InstructionsScreen({super.key});
+
+  @override
+  ConsumerState<InstructionsScreen> createState() => _InstructionsScreenState();
+}
+
+class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
+  final GlobalKey _instructionsSignKey = GlobalKey();
+  final GlobalKey _instructionsTicketKey = GlobalKey();
 
   Widget _buildStepTitle(String number, String title) {
     return Row(
@@ -60,8 +75,501 @@ class InstructionsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _downloadBoundary({
+    required GlobalKey key,
+    required String filenamePrefix,
+    required String locationLabel,
+    required String successMessage,
+  }) async {
+    try {
+      final boundary =
+          key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final ratio = kIsWeb ? (View.of(context).devicePixelRatio * 2) : 6.0;
+      final image = await boundary.toImage(pixelRatio: ratio);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final bytes = byteData.buffer.asUint8List();
+      if (kIsWeb) {
+        downloadFileWeb(bytes, '${filenamePrefix}_$locationLabel.png');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildExactSignContent({
+    required bool isCroatian,
+    required String locationName,
+    required String displayId,
+    required String stripeUrl,
+  }) {
+    return Container(
+      width: 400,
+      height: 600,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/sign_template_v2.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => Container(
+                color: Colors.white,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      Lang.sel(
+                        isCroatian,
+                        'Template not found',
+                        'Predložak nije pronađen',
+                      ),
+                      style: GoogleFonts.inter(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      'assets/images/your_photo.png',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 48,
+            left: 0,
+            right: 0,
+            height: 56,
+            child: Center(
+              child: Text(
+                locationName.toUpperCase(),
+                style: GoogleFonts.montserrat(
+                  color: Colors.black,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.8,
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: const Alignment(0, 0.24),
+            child: Transform.translate(
+              offset: const Offset(0, 12),
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    QrImageView(
+                      data: stripeUrl,
+                      version: QrVersions.auto,
+                      size: 120.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Colors.black,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'P',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 52, bottom: 16),
+                child: Text(
+                  displayId,
+                  style: GoogleFonts.inter(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExactTicketContent({
+    required bool isCroatian,
+    required String displayId,
+    required String ticketUrl,
+  }) {
+    return Container(
+      width: 400,
+      height: 600,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 96,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                Lang.sel(isCroatian, 'Daily Ticket', 'Dnevna karta'),
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 120,
+            left: 24,
+            right: 24,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 1.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        Lang.sel(
+                          isCroatian,
+                          'Scan to Cases',
+                          'Skenirajte za Cases',
+                        ),
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      QrImageView(
+                        data: ticketUrl,
+                        version: QrVersions.auto,
+                        size: 160.0,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: Colors.black,
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            Lang.sel(
+                              isCroatian,
+                              'Terms&Help ',
+                              'Uvjeti&Pomoć ',
+                            ),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: Image.asset(
+                              'assets/images/whatsapp.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Transform.translate(
+                            offset: Offset(isCroatian ? -5.0 : 0.0, 0.0),
+                            child: Text(
+                              '+385981974035  ID $displayId',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: isCroatian ? -0.1 : 0.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 24,
+            child: Text(
+              Lang.sel(
+                isCroatian,
+                'payparq.ai\nThis invoice is privately issued. Parking invoices are issued on private property. For help or to dispute, contact support via the payparq.ai support number.',
+                'payparq.ai\nOva faktura je privatno izdana. Parkirne fakture izdaju se na privatnom posjedu. Za pomoć ili prigovor, kontaktirajte podršku putem broja payparq.ai.',
+              ),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadAssets(bool isCroatian) {
+    final locationsAsync = ref.watch(availableLocationsProvider);
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    final locations = locationsAsync.value ?? const <Map<String, dynamic>>[];
+    Map<String, dynamic>? selected;
+    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
+      for (final loc in locations) {
+        if ((loc['display_id'] ?? '').toString() == selectedDisplayId) {
+          selected = loc;
+          break;
+        }
+      }
+    }
+    selected ??= locations.isNotEmpty ? locations.first : null;
+    if (selected == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Text(
+          Lang.sel(isCroatian, 'Select a location first.',
+              'Prvo odaberite lokaciju.'),
+          style: GoogleFonts.inter(fontSize: 14, color: Colors.black87),
+        ),
+      );
+    }
+
+    final locationId = (selected['id'] ?? '').toString();
+    final displayId = (selected['display_id'] ?? selected['id']).toString();
+    final mode = (selected['enforcement_pricing_mode'] ?? 'hourly')
+        .toString()
+        .toLowerCase();
+    final signType = mode == 'daily' ? 'daily' : 'hourly';
+    final signUrl = AppConfig.createCheckoutUrl(
+      locationId: locationId,
+      displayId: displayId,
+      type: signType,
+    );
+    const ticketUrl = 'https://www.payparq.com/cases';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            Lang.sel(isCroatian, 'Download Assets', 'Preuzmi materijale'),
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              SizedBox(
+                width: 420,
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: RepaintBoundary(
+                          key: _instructionsSignKey,
+                          child: _buildExactSignContent(
+                            isCroatian: isCroatian,
+                            locationName: (selected['name'] ?? '').toString(),
+                            displayId: displayId,
+                            stripeUrl: signUrl,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _downloadBoundary(
+                          key: _instructionsSignKey,
+                          filenamePrefix: 'parking_sign',
+                          locationLabel: displayId,
+                          successMessage: Lang.sel(
+                            isCroatian,
+                            'Sign downloaded.',
+                            'Znak je preuzet.',
+                          ),
+                        ),
+                        icon: const Icon(Icons.download),
+                        label: Text(
+                          Lang.sel(isCroatian, 'Download Sign', 'Preuzmi znak'),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 420,
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: RepaintBoundary(
+                          key: _instructionsTicketKey,
+                          child: _buildExactTicketContent(
+                            isCroatian: isCroatian,
+                            displayId: displayId,
+                            ticketUrl: ticketUrl,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _downloadBoundary(
+                          key: _instructionsTicketKey,
+                          filenamePrefix: 'daily_ticket',
+                          locationLabel: displayId,
+                          successMessage: Lang.sel(
+                            isCroatian,
+                            'Ticket downloaded.',
+                            'Karta je preuzeta.',
+                          ),
+                        ),
+                        icon: const Icon(Icons.download),
+                        label: Text(
+                          Lang.sel(
+                              isCroatian, 'Download Ticket', 'Preuzmi kartu'),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
@@ -205,7 +713,9 @@ class InstructionsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isCroatian ? 'Pravila podjele prihoda' : 'Revenue Split Rules',
+                    isCroatian
+                        ? 'Pravila podjele prihoda'
+                        : 'Revenue Split Rules',
                     style: GoogleFonts.inter(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
@@ -217,25 +727,30 @@ class InstructionsScreen extends ConsumerWidget {
                     isCroatian
                         ? 'Safe Parking: upravitelj 90%, platforma 10% od zajedničkog prihoda.'
                         : 'Safe Parking: manager 90%, platform 10% of shared revenue.',
-                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                    style:
+                        GoogleFonts.inter(color: Colors.black87, fontSize: 14),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     isCroatian
                         ? 'Hub (Run by Payparq): upravitelj 50%, platforma 50% od zajedničkog prihoda.'
                         : 'Hub (Run by Payparq): manager 50%, platform 50% of shared revenue.',
-                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                    style:
+                        GoogleFonts.inter(color: Colors.black87, fontSize: 14),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     isCroatian
                         ? 'Ista enforcement politika za oba modela: 25% platforma, 25% admin, 25% upravitelj, zadnjih 25% dobiva račun koji je učitao dokaz (ili izdavatelj dnevnog QR ticketa nakon plaćanja).'
                         : 'Same enforcement policy for both models: 25% platform, 25% admin, 25% manager, final 25% goes to the account that uploaded winning evidence (or paid daily-ticket QR issuer).',
-                    style: GoogleFonts.inter(color: Colors.black87, fontSize: 14),
+                    style:
+                        GoogleFonts.inter(color: Colors.black87, fontSize: 14),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            _buildDownloadAssets(isCroatian),
           ],
         ),
       ),

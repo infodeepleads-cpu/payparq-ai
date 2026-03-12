@@ -75,7 +75,7 @@ class EnforcementController {
         }
       }
       final dailyPrice =
-          isWarning ? 0.0 : await _repo.getDailyBasePrice(normalizedUuid);
+          isWarning ? 0.0 : await _repo.getEnforcementFineAmount(normalizedUuid);
       final dbRecord = {
         'plate': plate,
         'violation_type': isWarning ? 'Quick Warning' : 'Quick Ticket',
@@ -152,7 +152,7 @@ class EnforcementController {
         }
       }
     }
-    final dailyPrice = await _repo.getDailyBasePrice(normalizedUuid);
+    final dailyPrice = await _repo.getEnforcementFineAmount(normalizedUuid);
     final dbRecord = {
       'plate': plate,
       'violation_type': violationType,

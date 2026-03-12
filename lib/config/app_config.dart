@@ -103,6 +103,9 @@ class AppConfig {
     bool allowPromotionCodes = false,
     String? promotionCodeLabel,
     String? permitId,
+    String? checkIn,
+    String? checkOut,
+    String? flow,
   }) {
     final t = timestamp ?? DateTime.now().millisecondsSinceEpoch.toString();
     final base = supabaseFunctionsBaseUrl.isNotEmpty
@@ -114,6 +117,9 @@ class AppConfig {
       'type': type,
       't': t,
       if (permitId != null) 'permit_id': permitId,
+      if (checkIn != null && checkIn.isNotEmpty) 'check_in': checkIn,
+      if (checkOut != null && checkOut.isNotEmpty) 'check_out': checkOut,
+      if (flow != null && flow.isNotEmpty) 'flow': flow,
     };
     if (price != null) {
       final normalized = price < 0 ? 0.0 : price;
