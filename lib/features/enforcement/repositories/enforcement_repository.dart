@@ -55,6 +55,25 @@ class EnforcementRepository {
     return mode == 'daily' ? 'daily' : 'hourly';
   }
 
+  double _toPositiveNumber(dynamic value, double fallback) {
+    final parsed = _toDouble(value);
+    if (parsed < 0) return fallback;
+    return parsed;
+  }
+
+  double _resolveStripeUnitPrice({
+    required double base,
+    required double floor,
+    required double ceiling,
+    required double fallback,
+  }) {
+    var euro = base < 0 ? fallback : base;
+    if (floor > 0 && euro < floor) euro = floor;
+    if (ceiling > 0 && euro > ceiling) euro = ceiling;
+    if (euro < 0) return 0;
+    return euro;
+  }
+
   Future<void> deleteViolation(String id) async {
     await _client.from('violations').delete().eq('id', id);
   }
@@ -81,7 +100,7 @@ class EnforcementRepository {
 
   Future<double> getEnforcementFineAmount(String locationId) async {
     final baseSelect =
-        'base_price_daily_floor, base_price_daily, rate_per_hour_floor, rate_per_hour, verification_metadata';
+        'base_price_daily, base_price_daily_floor, base_price_daily_ceiling, rate_per_hour, rate_per_hour_floor, rate_per_hour_ceiling, verification_metadata';
     List<dynamic> rows = const [];
     try {
       rows = await _client
@@ -109,22 +128,35 @@ class EnforcementRepository {
     }
     if (rows.isNotEmpty) {
       final row = rows.first;
-      final dailyFloor = _toDouble(row['base_price_daily_floor']);
-      final dailyBase = _toDouble(row['base_price_daily']);
-      final hourlyFloor = _toDouble(row['rate_per_hour_floor']);
-      final hourlyBase = _toDouble(row['rate_per_hour']);
-      final dailyUnit = dailyFloor > 0 ? dailyFloor : dailyBase;
-      final hourlyUnit = hourlyFloor > 0 ? hourlyFloor : hourlyBase;
+      final dailyBase = _toPositiveNumber(row['base_price_daily'], 20);
+      final dailyFloor = _toPositiveNumber(row['base_price_daily_floor'], 0);
+      final dailyCeiling =
+          _toPositiveNumber(row['base_price_daily_ceiling'], 0);
+      final hourlyBase = _toPositiveNumber(row['rate_per_hour'], 5);
+      final hourlyFloor = _toPositiveNumber(row['rate_per_hour_floor'], 0);
+      final hourlyCeiling = _toPositiveNumber(row['rate_per_hour_ceiling'], 0);
+      final stripeDaily = _resolveStripeUnitPrice(
+        base: dailyBase,
+        floor: dailyFloor,
+        ceiling: dailyCeiling,
+        fallback: 20,
+      );
+      final stripeHourly = _resolveStripeUnitPrice(
+        base: hourlyBase,
+        floor: hourlyFloor,
+        ceiling: hourlyCeiling,
+        fallback: 5,
+      );
       final mode = _resolveEnforcementPricingMode(row);
       if (mode == 'daily') {
-        if (hourlyUnit > 0) return hourlyUnit * 24;
-        if (dailyUnit > 0) return dailyUnit;
+        if (stripeHourly > 0) return stripeHourly * 24;
+        if (stripeDaily > 0) return stripeDaily;
       } else {
-        if (dailyUnit > 0) return dailyUnit;
-        if (hourlyUnit > 0) return hourlyUnit * 24;
+        if (stripeDaily > 0) return stripeDaily;
+        if (stripeHourly > 0) return stripeHourly * 24;
       }
-      if (dailyUnit > 0) return dailyUnit;
-      if (hourlyUnit > 0) return hourlyUnit;
+      if (stripeDaily > 0) return stripeDaily;
+      if (stripeHourly > 0) return stripeHourly;
     }
     return 20.0;
   }

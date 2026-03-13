@@ -104,9 +104,9 @@ void main() {
     final content = await file.readAsString();
     final dailyBlockStart = content.indexOf('if (mode == \'daily\') {');
     final hourlyDailyCalcIndex =
-        content.indexOf('if (hourlyUnit > 0) return hourlyUnit * 24;');
+        content.indexOf('if (stripeHourly > 0) return stripeHourly * 24;');
     final dailyUnitFallbackIndex =
-        content.indexOf('if (dailyUnit > 0) return dailyUnit;');
+        content.indexOf('if (stripeDaily > 0) return stripeDaily;');
 
     expect(
       content.contains('if (mode == \'daily\')') &&
@@ -143,7 +143,7 @@ void main() {
     );
     final content = await file.readAsString();
     final hourlyBranchPattern = RegExp(
-      r'\}\s+else\s+\{\s+if \(dailyUnit > 0\) return dailyUnit;\s+if \(hourlyUnit > 0\) return hourlyUnit \* 24;',
+      r'\}\s+else\s+\{\s+if \(stripeDaily > 0\) return stripeDaily;\s+if \(stripeHourly > 0\) return stripeHourly \* 24;',
       multiLine: true,
     );
 
@@ -152,6 +152,22 @@ void main() {
       isTrue,
       reason:
           'When enforcement mode is hourly, ticket amount must use current daily ticket amount first, not raw 1-hour rate.',
+    );
+  });
+
+  test('Enforcement ticket pricing uses Stripe-style clamp inputs', () async {
+    final file = File(
+      'lib/features/enforcement/repositories/enforcement_repository.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('base_price_daily_ceiling') &&
+          content.contains('rate_per_hour_ceiling') &&
+          content.contains('_resolveStripeUnitPrice('),
+      isTrue,
+      reason:
+          'Cases pricing must use the same clamp inputs and calculation shape as Stripe link pricing source of truth.',
     );
   });
 }
