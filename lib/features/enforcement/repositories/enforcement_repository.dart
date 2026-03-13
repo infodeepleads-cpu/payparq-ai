@@ -34,6 +34,27 @@ class EnforcementRepository {
     return missing == 'enforcement_pricing_mode';
   }
 
+  bool _isMissingLegacyPricingModeColumnError(Object error) {
+    final text = error.toString().toLowerCase();
+    if (text.contains('enforcmetn_pricing_mode')) return true;
+    final missing = _extractMissingColumnName(error);
+    return missing == 'enforcmetn_pricing_mode';
+  }
+
+  String _resolveEnforcementPricingMode(Map<String, dynamic> row) {
+    final metadataRaw = row['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final mode = (row['enforcement_pricing_mode'] ??
+            row['enforcmetn_pricing_mode'] ??
+            metadata?['enforcement_pricing_mode'] ??
+            metadata?['enforcmetn_pricing_mode'] ??
+            'hourly')
+        .toString()
+        .toLowerCase();
+    return mode == 'daily' ? 'daily' : 'hourly';
+  }
+
   Future<void> deleteViolation(String id) async {
     await _client.from('violations').delete().eq('id', id);
   }
@@ -60,21 +81,31 @@ class EnforcementRepository {
 
   Future<double> getEnforcementFineAmount(String locationId) async {
     final baseSelect =
-        'base_price_daily_floor, base_price_daily, rate_per_hour_floor, rate_per_hour';
+        'base_price_daily_floor, base_price_daily, rate_per_hour_floor, rate_per_hour, verification_metadata';
     List<dynamic> rows = const [];
     try {
       rows = await _client
           .from('locations')
-          .select('$baseSelect, enforcement_pricing_mode')
+          .select(
+              '$baseSelect, enforcement_pricing_mode, enforcmetn_pricing_mode')
           .eq('id', locationId)
           .limit(1);
     } catch (error) {
       if (!_isMissingPricingModeColumnError(error)) rethrow;
-      rows = await _client
-          .from('locations')
-          .select(baseSelect)
-          .eq('id', locationId)
-          .limit(1);
+      try {
+        rows = await _client
+            .from('locations')
+            .select('$baseSelect, enforcmetn_pricing_mode')
+            .eq('id', locationId)
+            .limit(1);
+      } catch (legacyError) {
+        if (!_isMissingLegacyPricingModeColumnError(legacyError)) rethrow;
+        rows = await _client
+            .from('locations')
+            .select(baseSelect)
+            .eq('id', locationId)
+            .limit(1);
+      }
     }
     if (rows.isNotEmpty) {
       final row = rows.first;
@@ -84,13 +115,13 @@ class EnforcementRepository {
       final hourlyBase = _toDouble(row['rate_per_hour']);
       final dailyUnit = dailyFloor > 0 ? dailyFloor : dailyBase;
       final hourlyUnit = hourlyFloor > 0 ? hourlyFloor : hourlyBase;
-      final mode = (row['enforcement_pricing_mode'] ?? 'hourly')
-          .toString()
-          .toLowerCase();
+      final mode = _resolveEnforcementPricingMode(row);
       if (mode == 'daily') {
+        if (hourlyUnit > 0) return hourlyUnit * 24;
         if (dailyUnit > 0) return dailyUnit;
       } else {
-        if (hourlyUnit > 0) return hourlyUnit;
+        if (dailyUnit > 0) return dailyUnit;
+        if (hourlyUnit > 0) return hourlyUnit * 24;
       }
       if (dailyUnit > 0) return dailyUnit;
       if (hourlyUnit > 0) return hourlyUnit;

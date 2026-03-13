@@ -83,7 +83,8 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('final signPrice = _resolveSignPrice(selected, signType);') &&
+      content.contains(
+              'final signPrice = _resolveSignPrice(selected, signType);') &&
           content.contains('price: signPrice,') &&
           content.contains('rate_per_hour_floor') &&
           content.contains('base_price_daily_floor') &&
@@ -92,6 +93,65 @@ void main() {
       isTrue,
       reason:
           'Download sign QR must include floor/ceiling clamped amount so scanned checkout matches Stripe link pricing.',
+    );
+  });
+
+  test('Daily enforcement mode uses 24x hourly fine before daily value',
+      () async {
+    final file = File(
+      'lib/features/enforcement/repositories/enforcement_repository.dart',
+    );
+    final content = await file.readAsString();
+    final dailyBlockStart = content.indexOf('if (mode == \'daily\') {');
+    final hourlyDailyCalcIndex =
+        content.indexOf('if (hourlyUnit > 0) return hourlyUnit * 24;');
+    final dailyUnitFallbackIndex =
+        content.indexOf('if (dailyUnit > 0) return dailyUnit;');
+
+    expect(
+      content.contains('if (mode == \'daily\')') &&
+          hourlyDailyCalcIndex > dailyBlockStart &&
+          dailyUnitFallbackIndex > hourlyDailyCalcIndex,
+      isTrue,
+      reason:
+          'Case fines in daily pricing mode must calculate a full day from hourly rate (24h) before any daily fallback.',
+    );
+  });
+
+  test('Enforcement fine mode resolves from column typo and metadata fallback',
+      () async {
+    final file = File(
+      'lib/features/enforcement/repositories/enforcement_repository.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('row[\'enforcmetn_pricing_mode\']') &&
+          content.contains('metadata?[\'enforcement_pricing_mode\']') &&
+          content.contains('metadata?[\'enforcmetn_pricing_mode\']') &&
+          content.contains('enforcement_pricing_mode, enforcmetn_pricing_mode'),
+      isTrue,
+      reason:
+          'Quick Ticket mode must still resolve as daily even if DB has legacy typo column or metadata-only mode, otherwise fines fall back to 1-hour value.',
+    );
+  });
+
+  test('Hourly enforcement mode uses daily ticket amount before hourly value',
+      () async {
+    final file = File(
+      'lib/features/enforcement/repositories/enforcement_repository.dart',
+    );
+    final content = await file.readAsString();
+    final hourlyBranchPattern = RegExp(
+      r'\}\s+else\s+\{\s+if \(dailyUnit > 0\) return dailyUnit;\s+if \(hourlyUnit > 0\) return hourlyUnit \* 24;',
+      multiLine: true,
+    );
+
+    expect(
+      hourlyBranchPattern.hasMatch(content),
+      isTrue,
+      reason:
+          'When enforcement mode is hourly, ticket amount must use current daily ticket amount first, not raw 1-hour rate.',
     );
   });
 }
