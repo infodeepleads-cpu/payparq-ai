@@ -17,10 +17,12 @@
     supportEmail?: string;
     case?: {
       id?: string;
+      case_number?: string;
       notice_number?: string;
       plate?: string;
       location_id?: string;
       photo_url?: string;
+      evidence_photos?: string[];
       violation_time?: string;
       violation_type?: string;
       amount_due?: number;
@@ -31,6 +33,8 @@
       slug?: string | null;
       display_id?: string | null;
       photos?: string[] | null;
+      latitude?: number | null;
+      longitude?: number | null;
     };
     error?: string;
   }>(null);
@@ -67,6 +71,11 @@
     },
   ];
   const [open, setOpen] = useState<Record<number, boolean>>({});
+  const payeeName = "PayParq Global Inc.";
+  const payeeIban = "HR1210010051863000160";
+  const payeeModel = "HR00";
+  const payeePurpose = "NOVC";
+  const payeeDescription = "Parking notice settlement";
  
   async function handleLookup(event: React.FormEvent<HTMLFormElement>) {
      event.preventDefault();
@@ -92,6 +101,22 @@
       setLoading(false);
     }
    }
+
+  const amountDue = typeof result?.case?.amount_due === "number" ? result.case.amount_due : null;
+  const amountNow = amountDue !== null ? Number((amountDue * 0.5).toFixed(2)) : null;
+  const hubReference = result?.case?.case_number || result?.case?.notice_number || "000000000";
+  const hub3aText = [
+    "HUB3A",
+    payeeName,
+    payeeIban,
+    payeeModel,
+    hubReference,
+    amountNow !== null ? amountNow.toFixed(2) : "0.00",
+    "EUR",
+    payeePurpose,
+    payeeDescription,
+  ].join("|");
+  const euroQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(hub3aText)}`;
  
    return (
      <div className="min-h-screen bg-white text-black flex flex-col">
@@ -138,6 +163,13 @@
              >
                Find My Parking Case
              </button>
+            <p className="text-xs md:text-sm text-black/70">
+              Search by 9-digit case number instead on{" "}
+              <Link href="/payments" className="underline">
+                PayParq Payments
+              </Link>
+              .
+            </p>
            </form>
  
            <div className="mt-8">
@@ -160,108 +192,101 @@
                      </p>
                    </div>
                  ) : (
-                    <div className="grid gap-8 md:grid-cols-[1.5fr,1fr] items-start">
-                      <div className="space-y-4">
-                        {result.case?.photo_url ? (
-                          <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
-                            <Image
-                              src={result.case.photo_url}
-                              alt="Violation Evidence"
-                              fill
-                              className="object-contain"
-                            />
-                            <div className="absolute top-3 left-3 bg-black/60 text-white text-[11px] px-3 py-1.5 rounded-full font-medium backdrop-blur-sm">
-                              {new Date(result.case.violation_time || "").toLocaleString()}
+                  <div className="grid gap-8 md:grid-cols-[1.5fr,1fr] items-start">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(result.case?.evidence_photos?.length ? result.case.evidence_photos.slice(0, 2) : [result.case?.photo_url || "", ""]).map((photo, idx) => (
+                          photo ? (
+                            <div key={`${photo}-${idx}`} className="relative w-full aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
+                              <Image
+                                src={photo}
+                                alt={`Violation evidence ${idx + 1}`}
+                                fill
+                                className="object-contain"
+                              />
+                              <div className="absolute top-3 left-3 bg-black/60 text-white text-[11px] px-3 py-1.5 rounded-full font-medium backdrop-blur-sm">
+                                {new Date(result.case?.violation_time || "").toLocaleString()}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="w-full h-[200px] rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-500 text-sm">
-                            No evidence photo available
-                          </div>
-                        )}
-                        
-                        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                          <h3 className="font-semibold text-lg mb-4">Violation Details</h3>
-                          <div className="grid grid-cols-2 gap-y-4 text-sm">
-                            <div className="text-gray-500">Notice Number</div>
-                            <div className="font-mono">{result.case?.notice_number || "N/A"}</div>
-                            
-                            <div className="text-gray-500">License Plate</div>
-                            <div className="font-mono">{result.case?.plate || plate.toUpperCase()}</div>
-                            
-                            <div className="text-gray-500">Location ID</div>
-                            <div className="font-mono">{result.case?.location_id || locationId}</div>
-                            
-                            <div className="text-gray-500">Violation Type</div>
-                            <div>{result.case?.violation_type || "Parking Violation"}</div>
-                            
-                            <div className="text-gray-500">Status</div>
-                            <div className="capitalize">{result.case?.status || "Issued"}</div>
-                            
-                            <div className="text-gray-500 font-semibold pt-2">Amount Due</div>
-                            <div className="font-semibold text-lg pt-1">
-                              {result.case?.amount_due 
-                                ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(result.case.amount_due)
-                                : "Check status"}
+                          ) : (
+                            <div key={`empty-${idx}`} className="w-full aspect-video rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-500 text-sm">
+                              Evidence photo {idx + 1} unavailable
                             </div>
-                          </div>
-                        </div>
+                          )
+                        ))}
                       </div>
 
-                      <div className="space-y-6">
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                          <h3 className="font-semibold text-base mb-2">Location Verification</h3>
-                          <p className="text-sm text-gray-600 mb-4">
-                            Ensure the photos match where you parked.
-                          </p>
-                          {result.location?.photos?.[0] && (
-                            <div className="relative w-full h-32 mb-3 rounded-lg overflow-hidden bg-gray-100">
-                              <Image
-                                src={result.location.photos[0]}
-                                alt="Location preview"
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-2">
-                             {result.location?.slug ? (
-                              <Link
-                                href={`/locations/${result.location.slug}`}
-                                target="_blank"
-                                className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/80 transition-colors"
-                              >
-                                View Location Details
-                              </Link>
-                            ) : (
-                              <div className="text-xs text-gray-500 text-center py-2">
-                                Location details unavailable
-                              </div>
-                            )}
-                            
-                            <a 
-                              href={`mailto:payparq@outlook.com?subject=Location Mismatch Report - Notice ${result.case?.notice_number}&body=I am reporting a mismatch for Notice ${result.case?.notice_number} at Location ID ${locationId}.`}
-                              className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-                            >
-                              Report Location Mismatch
-                            </a>
-                          </div>
-                        </div>
+                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                        <h3 className="font-semibold text-lg mb-4">Legal Notice Details</h3>
+                        <div className="grid grid-cols-2 gap-y-4 text-sm">
+                          <div className="text-gray-500">Case Number</div>
+                          <div className="font-mono">{result.case?.case_number || result.case?.notice_number || "N/A"}</div>
 
-                        <div className="bg-[#5F3DFC]/5 rounded-xl border border-[#5F3DFC]/10 p-5">
-                          <h3 className="font-semibold text-[#5F3DFC] mb-2">Need to dispute?</h3>
-                          <p className="text-sm text-gray-700 mb-4">
-                            If you believe this notice was issued in error, you can submit a dispute with evidence.
-                          </p>
-                          <Link
-                             href="/contact"
-                             className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-[#5F3DFC] text-white text-sm font-medium hover:bg-[#4330c4] transition-colors"
-                          >
-                            Contact Support to Dispute
-                          </Link>
+                          <div className="text-gray-500">License Plate</div>
+                          <div className="font-mono">{result.case?.plate || plate.toUpperCase()}</div>
+
+                          <div className="text-gray-500">Location ID</div>
+                          <div className="font-mono">{result.case?.location_id || locationId}</div>
+
+                          <div className="text-gray-500">Violation Timestamp</div>
+                          <div>{result.case?.violation_time ? new Date(result.case.violation_time).toLocaleString() : "N/A"}</div>
+
+                          <div className="text-gray-500">GPS Coordinates</div>
+                          <div className="font-mono">
+                            {typeof result.location?.latitude === "number" && typeof result.location?.longitude === "number"
+                              ? `${result.location.latitude.toFixed(6)}, ${result.location.longitude.toFixed(6)}`
+                              : "N/A"}
+                          </div>
+
+                          <div className="text-gray-500">Violation Type</div>
+                          <div>{result.case?.violation_type || "Parking Violation"}</div>
+
+                          <div className="text-gray-500">Status</div>
+                          <div className="capitalize">{result.case?.status || "Issued"}</div>
+
+                          <div className="text-gray-500 font-semibold pt-2">Amount Due</div>
+                          <div className="font-semibold text-lg pt-1">
+                            {typeof result.case?.amount_due === "number"
+                              ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(result.case.amount_due)
+                              : "Check status"}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    <div className="space-y-6">
+                      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                        <h3 className="font-semibold text-base mb-2">Croatia Invoice HUB3A</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Pay 50% of the fine now using the invoice details or euro QR code.
+                        </p>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs space-y-2">
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">Primatelj</span><span className="font-medium text-right">{payeeName}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">IBAN</span><span className="font-mono text-right">{payeeIban}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">Model</span><span className="font-mono text-right">{payeeModel}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">Poziv na broj</span><span className="font-mono text-right">{hubReference}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">Svrha</span><span className="font-mono text-right">{payeePurpose}</span></div>
+                          <div className="flex justify-between gap-3"><span className="text-gray-500">Iznos za uplatu</span><span className="font-semibold text-right">{amountNow !== null ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(amountNow) : "N/A"}</span></div>
+                        </div>
+                        <div className="mt-4 flex justify-center">
+                          <img src={euroQrUrl} alt="Euro QR code" className="w-44 h-44 rounded-lg border border-gray-200 bg-white p-2" />
+                        </div>
+                      </div>
+
+                      <div className="bg-[#5F3DFC]/5 rounded-xl border border-[#5F3DFC]/10 p-5">
+                        <h3 className="font-semibold text-[#5F3DFC] mb-2">Need to dispute?</h3>
+                        <p className="text-sm text-gray-700 mb-4">
+                          If you believe this notice was issued in error, you can submit a dispute with evidence.
+                        </p>
+                        <Link
+                          href="/contact"
+                          className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-[#5F3DFC] text-white text-sm font-medium hover:bg-[#4330c4] transition-colors"
+                        >
+                          Contact Support to Dispute
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
                  )}
                </div>
              )}
