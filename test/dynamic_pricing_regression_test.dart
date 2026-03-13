@@ -60,4 +60,38 @@ void main() {
           'Instructions DB fetch must not request misspelled columns that may not exist, or mode refresh can silently fail.',
     );
   });
+
+  test('Checkout pricing applies floor and ceiling for QR default pricing',
+      () async {
+    final file = File('supabase/functions/create-checkout/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('rate_per_hour_floor,rate_per_hour_ceiling') &&
+          content.contains('base_price_daily_floor,base_price_daily_ceiling') &&
+          content.contains('if (floor > 0 && euro < floor) euro = floor;') &&
+          content
+              .contains('if (ceiling > 0 && euro > ceiling) euro = ceiling;'),
+      isTrue,
+      reason:
+          'QR fallback pricing in create-checkout must respect min (floor) and max (ceiling) so it matches Stripe link pricing behavior.',
+    );
+  });
+
+  test('Download sign QR passes clamped price in checkout URL', () async {
+    final file = File('lib/screens/instructions_screen.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final signPrice = _resolveSignPrice(selected, signType);') &&
+          content.contains('price: signPrice,') &&
+          content.contains('rate_per_hour_floor') &&
+          content.contains('base_price_daily_floor') &&
+          content.contains('rate_per_hour_ceiling') &&
+          content.contains('base_price_daily_ceiling'),
+      isTrue,
+      reason:
+          'Download sign QR must include floor/ceiling clamped amount so scanned checkout matches Stripe link pricing.',
+    );
+  });
 }

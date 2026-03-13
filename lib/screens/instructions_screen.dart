@@ -40,15 +40,31 @@ final selectedDownloadLocationProvider =
   }) async {
     if (value.isEmpty) return null;
     final client = Supabase.instance.client;
+    const withPricingAndMode =
+        'id, display_id, name, verification_metadata, enforcement_pricing_mode, '
+        'rate_per_hour, base_price_hourly, base_price_daily, base_price_monthly, '
+        'rate_per_hour_floor, rate_per_hour_ceiling, base_price_daily_floor, '
+        'base_price_daily_ceiling, base_price_monthly_floor, base_price_monthly_ceiling';
+    const withMode =
+        'id, display_id, name, verification_metadata, enforcement_pricing_mode';
     try {
-      final withMode = await client
+      final full = await client
           .from('locations')
-          .select(
-              'id, display_id, name, verification_metadata, enforcement_pricing_mode')
+          .select(withPricingAndMode)
           .eq(column, value)
           .maybeSingle();
-      if (withMode != null) {
-        return Map<String, dynamic>.from(withMode);
+      if (full != null) {
+        return Map<String, dynamic>.from(full);
+      }
+    } catch (_) {}
+    try {
+      final modeOnly = await client
+          .from('locations')
+          .select(withMode)
+          .eq(column, value)
+          .maybeSingle();
+      if (modeOnly != null) {
+        return Map<String, dynamic>.from(modeOnly);
       }
     } catch (_) {}
     try {
@@ -129,6 +145,12 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
   final GlobalKey _instructionsSignKey = GlobalKey();
   final GlobalKey _instructionsTicketKey = GlobalKey();
 
+  double _toDouble(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
   String _resolvePricingMode(Map<String, dynamic> source) {
     final metadataRaw = source['verification_metadata'];
     final metadata =
@@ -141,6 +163,36 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
         .toString()
         .toLowerCase();
     return mode == 'daily' ? 'daily' : 'hourly';
+  }
+
+  double? _resolveSignPrice(Map<String, dynamic> source, String type) {
+    double price = switch (type) {
+      'daily' => _toDouble(source['base_price_daily']),
+      'monthly' => _toDouble(source['base_price_monthly']),
+      _ => _toDouble(source['rate_per_hour']) > 0
+          ? _toDouble(source['rate_per_hour'])
+          : _toDouble(source['base_price_hourly']),
+    };
+    final floor = switch (type) {
+      'daily' => _toDouble(source['base_price_daily_floor']),
+      'monthly' => _toDouble(source['base_price_monthly_floor']),
+      _ => _toDouble(source['rate_per_hour_floor']),
+    };
+    final ceiling = switch (type) {
+      'daily' => _toDouble(source['base_price_daily_ceiling']),
+      'monthly' => _toDouble(source['base_price_monthly_ceiling']),
+      _ => _toDouble(source['rate_per_hour_ceiling']),
+    };
+    if (floor > 0 && price < floor) {
+      price = floor;
+    }
+    if (ceiling > 0 && price > ceiling) {
+      price = ceiling;
+    }
+    if (price <= 0) {
+      return null;
+    }
+    return price;
   }
 
   Widget _buildStepTitle(String number, String title) {
@@ -524,10 +576,12 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
     final locationId = (selected['id'] ?? '').toString();
     final displayId = (selected['display_id'] ?? selected['id']).toString();
     final signType = _resolvePricingMode(selected);
+    final signPrice = _resolveSignPrice(selected, signType);
     final signUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
       type: signType,
+      price: signPrice,
     );
     const ticketUrl = 'https://www.payparq.com/cases';
 

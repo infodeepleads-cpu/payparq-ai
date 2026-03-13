@@ -374,20 +374,40 @@ async function locationPriceCents(
   type: "hourly" | "daily" | "monthly",
 ): Promise<number> {
   const idColumn = isUuid(locationId) ? "id" : "display_id";
+  const selectColumns = type === "hourly"
+    ? "rate_per_hour,base_price_hourly,rate_per_hour_floor,rate_per_hour_ceiling"
+    : type === "daily"
+    ? "base_price_daily,base_price_daily_floor,base_price_daily_ceiling"
+    : "base_price_monthly,base_price_monthly_floor,base_price_monthly_ceiling";
   const { data, error } = await admin
     .from("locations")
-    .select("rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly")
+    .select(selectColumns)
     .eq(idColumn, locationId)
     .maybeSingle();
   if (error || !data) return 500;
+  const toPositiveNumber = (value: unknown, fallback = 0): number => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+    return parsed;
+  };
   let euro = 5;
+  let floor = 0;
+  let ceiling = 0;
   if (type === "hourly") {
-    euro = Number(data["rate_per_hour"] ?? data["base_price_hourly"] ?? 5);
+    euro = toPositiveNumber(data["rate_per_hour"] ?? data["base_price_hourly"], 5);
+    floor = toPositiveNumber(data["rate_per_hour_floor"]);
+    ceiling = toPositiveNumber(data["rate_per_hour_ceiling"]);
   } else if (type === "daily") {
-    euro = Number(data["base_price_daily"] ?? 20);
+    euro = toPositiveNumber(data["base_price_daily"], 20);
+    floor = toPositiveNumber(data["base_price_daily_floor"]);
+    ceiling = toPositiveNumber(data["base_price_daily_ceiling"]);
   } else {
-    euro = Number(data["base_price_monthly"] ?? 150);
+    euro = toPositiveNumber(data["base_price_monthly"], 150);
+    floor = toPositiveNumber(data["base_price_monthly_floor"]);
+    ceiling = toPositiveNumber(data["base_price_monthly_ceiling"]);
   }
+  if (floor > 0 && euro < floor) euro = floor;
+  if (ceiling > 0 && euro > ceiling) euro = ceiling;
   if (!Number.isFinite(euro) || euro < 0) euro = 0;
   return Math.round(euro * 100);
 }

@@ -189,12 +189,14 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         timeout: const Duration(seconds: 15),
       );
 
-      if (kDebugMode && kIsWeb) {
+      if (kIsWeb &&
+          AppConfig.forceWebSignOutOnStartup &&
+          !_hasRecoveryTokenInUrl()) {
         try {
           await Supabase.instance.client.auth.signOut();
-          _addLog('Debug web startup forced sign-out completed');
+          _addLog('Web startup forced sign-out completed');
         } catch (e) {
-          _addLog('Debug web startup sign-out skipped: $e');
+          _addLog('Web startup sign-out skipped: $e');
         }
       }
 

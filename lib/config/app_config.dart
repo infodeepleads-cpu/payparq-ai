@@ -19,6 +19,9 @@ class AppConfig {
       String.fromEnvironment('PROD_GUARD', defaultValue: '0');
   static const _rawRedirectUrl =
       String.fromEnvironment('SUPABASE_REDIRECT_URL', defaultValue: '');
+  static const _webSignOutStartupFlag = String.fromEnvironment(
+      'FORCE_WEB_SIGNOUT_ON_STARTUP',
+      defaultValue: '1');
 
   static String get buildDate {
     const fromEnv = String.fromEnvironment('BUILD_DATE',
@@ -63,6 +66,9 @@ class AppConfig {
     }
     return 'io.supabase.flutter://reset-callback/';
   }
+
+  static bool get forceWebSignOutOnStartup =>
+      _webSignOutStartupFlag.trim() != '0';
 
   static const zeroPriceSetupLink =
       String.fromEnvironment('ZERO_PRICE_SETUP_LINK', defaultValue: '');
