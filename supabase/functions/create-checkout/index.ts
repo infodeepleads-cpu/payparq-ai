@@ -650,24 +650,26 @@ serve(async (req: Request) => {
 
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
-    // V13: Exact description format requested by user
     const now = new Date();
-    let purchaseTimeDisplay = "";
-    try {
-      const formatter = new Intl.DateTimeFormat("de-DE", {
-        timeZone: "Europe/Berlin",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      // Keep the comma for "07.03.2026, 12:09:28" format
-      purchaseTimeDisplay = formatter.format(now);
-    } catch (e) {
-      purchaseTimeDisplay = now.toISOString().replace("T", " ").split(".")[0];
-    }
+    const formatBerlinDateTime = (value: Date): string => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Berlin",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).formatToParts(value);
+        const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+      } catch {
+        return value.toISOString().replace("T", " ").split(".")[0];
+      }
+    };
+    const purchaseTimeDisplay = formatBerlinDateTime(now);
 
     let quantity = 1;
     const hasReservationWindow = checkIn.length > 0 && checkOut.length > 0;
@@ -727,6 +729,21 @@ serve(async (req: Request) => {
     const reservationTitle = reservationName.length > 0
       ? reservationName
       : `Location ID: ${displayId}`;
+    const nonReservationTitle = type === "daily"
+      ? "Parking Session (Adjust Days)"
+      : type === "monthly"
+      ? "Parking Session (Adjust Months)"
+      : "Parking Session (Adjust Hours)";
+    const nonReservationUnit = type === "daily"
+      ? "days"
+      : type === "monthly"
+      ? "months"
+      : "hours";
+    const nonReservationStartTime = hasReservationWindow
+      ? formatIso(checkIn)
+      : purchaseTimeDisplay;
+    const nonReservationDescription =
+      `Start Time: ${nonReservationStartTime}\nLocation ID: ${displayId}\n(End time depends on selected ${nonReservationUnit})`;
     const lineItem: any = {
       quantity: checkoutQuantity,
       price_data: {
@@ -735,37 +752,19 @@ serve(async (req: Request) => {
         product_data: {
           name: isReservationFlow
             ? reservationTitle
-            : hasReservationWindow
-            ? type === "daily"
-              ? quantity > 1
-                ? `Parking Session (${quantity} Days)`
-                : "Parking Session (1 Day)"
-              : type === "monthly"
-              ? quantity > 1
-                ? `Parking Session (${quantity} Months)`
-                : "Parking Session (1 Month)"
-              : quantity > 1
-              ? `Parking Session (${quantity} Hours)`
-              : "Parking Session (1 Hour)"
-            : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
+            : nonReservationTitle,
           description: isReservationFlow
             ? reservationDescription
-            : hasReservationWindow
-            ? reservationDescription
-            : `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
+            : nonReservationDescription,
         },
       },
     };
     if (!isReservationFlow) {
-      lineItem.adjustable_quantity = hasReservationWindow
-        ? {
-          enabled: false,
-        }
-        : {
-          enabled: true,
-          minimum: 1,
-          maximum: 99,
-        };
+      lineItem.adjustable_quantity = {
+        enabled: true,
+        minimum: 1,
+        maximum: 99,
+      };
     }
 
     console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
