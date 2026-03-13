@@ -641,7 +641,6 @@ serve(async (req: Request) => {
     const flow = String(
       body["flow"] ?? url.searchParams.get("flow") ?? "payment",
     ).trim().toLowerCase();
-    const isReservationFlow = flow === "reserve";
     const checkIn = String(
       body["check_in"] ?? url.searchParams.get("check_in") ?? "",
     ).trim();
@@ -672,6 +671,7 @@ serve(async (req: Request) => {
 
     let quantity = 1;
     const hasReservationWindow = checkIn.length > 0 && checkOut.length > 0;
+    const isReservationFlow = flow === "reserve" || hasReservationWindow;
     if (hasReservationWindow) {
       const start = new Date(checkIn);
       const end = new Date(checkOut);
@@ -692,32 +692,24 @@ serve(async (req: Request) => {
 
     const formatIso = (iso: string): string => {
       if (!iso) return "";
-      try {
-        const [datePart, timePart] = iso.split("T");
-        const [y, m, d] = datePart.split("-");
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const month = Number.parseInt(m, 10);
-        if (month > 0 && month <= monthNames.length) {
-          return `${d} ${monthNames[month - 1]} ${y}, ${timePart}`;
-        }
-        return iso;
-      } catch {
-        return iso;
-      }
+      const trimmed = iso.trim();
+      const withSpace = trimmed.replace("T", " ");
+      const withoutMilliseconds = withSpace.replace(
+        /(\.\d+)(?=\s*(Z|[+-]\d{2}:?\d{2})?$)/,
+        "",
+      );
+      return withoutMilliseconds.replace(/Z$/, "");
     };
 
     let reservationDescription = "";
-    if (isReservationFlow && hasReservationWindow) {
-      reservationDescription = `From: ${checkIn}\nTo: ${checkOut}`;
-      if (displayId) {
-        reservationDescription += `\nLocation ID: ${displayId}`;
-      }
-    }
 
     let amountCents = explicitCents;
     if (amountCents == null) {
       // Use the fetched locData for price if available
       amountCents = await locationPriceCents(locationUuid, type);
+    }
+    if (isReservationFlow && explicitCents == null && quantity > 1) {
+      amountCents = amountCents * quantity;
     }
     if (amountCents < 50) amountCents = 50;
     let unitAmountCents = amountCents;
@@ -725,7 +717,56 @@ serve(async (req: Request) => {
       unitAmountCents = Math.round(amountCents / quantity);
       if (unitAmountCents < 50) unitAmountCents = 50;
     }
+    if (isReservationFlow && hasReservationWindow) {
+      const formattedCheckIn = formatIso(checkIn);
+      const formattedCheckOut = formatIso(checkOut);
+      reservationDescription = `Parking access at ID${displayId}\nFrom: ${formattedCheckIn}\nTo: ${formattedCheckOut}\nTotal: €${(unitAmountCents / 100).toFixed(2)}`;
+    }
     const checkoutQuantity = isReservationFlow ? 1 : quantity;
+    const reservationName = (locData?.name ?? "").toString().trim();
+    const reservationTitle = reservationName.length > 0
+      ? reservationName
+      : `Location ID: ${displayId}`;
+    const lineItem: any = {
+      quantity: checkoutQuantity,
+      price_data: {
+        currency: "eur",
+        unit_amount: unitAmountCents,
+        product_data: {
+          name: isReservationFlow
+            ? reservationTitle
+            : hasReservationWindow
+            ? type === "daily"
+              ? quantity > 1
+                ? `Parking Session (${quantity} Days)`
+                : "Parking Session (1 Day)"
+              : type === "monthly"
+              ? quantity > 1
+                ? `Parking Session (${quantity} Months)`
+                : "Parking Session (1 Month)"
+              : quantity > 1
+              ? `Parking Session (${quantity} Hours)`
+              : "Parking Session (1 Hour)"
+            : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
+          description: isReservationFlow
+            ? reservationDescription
+            : hasReservationWindow
+            ? reservationDescription
+            : `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
+        },
+      },
+    };
+    if (!isReservationFlow) {
+      lineItem.adjustable_quantity = hasReservationWindow
+        ? {
+          enabled: false,
+        }
+        : {
+          enabled: true,
+          minimum: 1,
+          maximum: 99,
+        };
+    }
 
     console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
 
@@ -750,44 +791,7 @@ serve(async (req: Request) => {
         },
       },
       custom_fields: checkoutCustomFields(),
-      line_items: [{
-        quantity: checkoutQuantity,
-        adjustable_quantity: hasReservationWindow
-          ? {
-            enabled: false,
-          }
-          : {
-            enabled: true,
-            minimum: 1,
-            maximum: 99,
-          },
-        price_data: {
-          currency: "eur",
-          unit_amount: unitAmountCents,
-          product_data: {
-            name: isReservationFlow
-              ? "Parking Reservation"
-              : hasReservationWindow
-              ? type === "daily"
-                ? quantity > 1
-                  ? `Parking Session (${quantity} Days)`
-                  : "Parking Session (1 Day)"
-                : type === "monthly"
-                ? quantity > 1
-                  ? `Parking Session (${quantity} Months)`
-                  : "Parking Session (1 Month)"
-                : quantity > 1
-                ? `Parking Session (${quantity} Hours)`
-                : "Parking Session (1 Hour)"
-              : `Location ID: ${displayId} - Parking ${type.toUpperCase()}`,
-            description: isReservationFlow
-              ? reservationDescription
-              : hasReservationWindow
-              ? reservationDescription
-              : `Parking access at ID${displayId} ${purchaseTimeDisplay} (Europe/Berlin)`,
-          },
-        },
-      }],
+      line_items: [lineItem],
       metadata: {
         location_id: locationUuid, // Use UUID
         display_id: displayId,
