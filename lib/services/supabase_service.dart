@@ -8,6 +8,7 @@ class SupabaseService {
   static SupabaseService get instance => _instance ??= SupabaseService._();
 
   SupabaseService._();
+  bool _isInitialized = false;
 
   /// Connection pool for managing concurrent requests
   final Map<String, Timer> _connectionTimers = {};
@@ -18,8 +19,9 @@ class SupabaseService {
   Future<void> initialize({
     required String url,
     required String anonKey,
-    Duration timeout = const Duration(seconds: 15),
+    Duration timeout = const Duration(seconds: 8),
   }) async {
+    if (_isInitialized) return;
     try {
       debugPrint('SupabaseService: About to initialize');
       debugPrint('SupabaseService: DEBUG url=$url');
@@ -34,29 +36,41 @@ class SupabaseService {
       final initFuture = Supabase.initialize(
         url: url,
         anonKey: anonKey,
-        debug: true,
+        debug: kDebugMode,
       );
 
       await initFuture.timeout(timeout, onTimeout: () {
         throw TimeoutException(
             'Supabase initialization timed out after ${timeout.inSeconds} seconds');
       });
+      _isInitialized = true;
       debugPrint('SupabaseService: Initialized successfully');
     } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('already initialized')) {
+        _isInitialized = true;
+        return;
+      }
       debugPrint('SupabaseService: Initialization failed: $e');
       try {
         debugPrint('SupabaseService: Retrying initialization once...');
         final retryFuture = Supabase.initialize(
           url: url,
           anonKey: anonKey,
-          debug: true,
+          debug: kDebugMode,
         );
-        await retryFuture.timeout(const Duration(seconds: 10), onTimeout: () {
+        await retryFuture.timeout(const Duration(seconds: 6), onTimeout: () {
           throw TimeoutException(
-              'Supabase retry timed out after 10 seconds');
+              'Supabase retry timed out after 6 seconds');
         });
+        _isInitialized = true;
         debugPrint('SupabaseService: Retry succeeded');
       } catch (e2) {
+        final retryMessage = e2.toString().toLowerCase();
+        if (retryMessage.contains('already initialized')) {
+          _isInitialized = true;
+          return;
+        }
         debugPrint('SupabaseService: Retry failed: $e2');
         rethrow;
       }

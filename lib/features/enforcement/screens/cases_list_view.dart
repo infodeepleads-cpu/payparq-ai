@@ -255,6 +255,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
   Future<void> _showEvidence(Map<String, dynamic> violation) async {
     final plate = violation['plate'] ?? 'UNKNOWN';
+    final caseNumber = (violation['case_number'] ?? '').toString();
     final evidenceUrl = violation['evidence_r2_url'];
     final issuedAtIso = (violation['issued_at'] ?? '').toString();
     final issuedAtDt = DateTime.tryParse(issuedAtIso);
@@ -372,6 +373,22 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                       style: GoogleFonts.inter(color: AppTheme.textSecondary)),
                   Text(violation['violation_type'] ?? 'General',
                       style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    Lang.sel(ref.read(localeIsCroatianProvider), 'Case Number:',
+                        'Broj slučaja:'),
+                    style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                  ),
+                  Text(
+                    caseNumber.isNotEmpty ? caseNumber : '—',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold, color: Colors.black),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -681,6 +698,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
   Widget _buildViolationItem(Map<String, dynamic> violation, bool isDesktop) {
     final status = violation['status'] ?? 'issued';
+    final caseNumber = (violation['case_number'] ?? '').toString();
     final issuedAtStr = violation['issued_at'];
     final issuedAt =
         issuedAtStr != null ? DateTime.parse(issuedAtStr) : DateTime.now();
@@ -721,6 +739,17 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (caseNumber.isNotEmpty)
+                        Text(
+                          '${Lang.sel(ref.read(localeIsCroatianProvider), 'Case', 'Slučaj')}: $caseNumber',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppTheme.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
@@ -771,6 +800,15 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               fontSize: 14,
             ),
           ),
+          if (caseNumber.isNotEmpty)
+            Text(
+              '${Lang.sel(ref.read(localeIsCroatianProvider), 'Case', 'Slučaj')}: $caseNumber',
+              style: GoogleFonts.inter(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         ],
       ),
       trailing: Row(

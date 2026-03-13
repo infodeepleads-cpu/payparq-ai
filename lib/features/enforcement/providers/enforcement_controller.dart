@@ -45,6 +45,7 @@ class EnforcementController {
   }) async {
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
     final issuedAt = DateTime.now().toIso8601String();
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     try {
       final uuidRegex = RegExp(
           r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
@@ -87,6 +88,7 @@ class EnforcementController {
         'location_id': normalizedUuid,
         'is_lpr_scan': isLprScan,
         if (issuerRole != null) 'issuer_role': issuerRole,
+        if (currentUserId != null) 'uploaded_by': currentUserId,
       };
       final uiRecord = {
         ...dbRecord,
@@ -127,6 +129,7 @@ class EnforcementController {
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$plate.jpg';
       final issuedAt = DateTime.now().toIso8601String();
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
       final uuidRegex = RegExp(
           r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
           caseSensitive: false);
@@ -165,6 +168,7 @@ class EnforcementController {
         'evidence_r2_url': fileName,
         'issued_at': issuedAt,
         'issuer_role': issuerRole,
+        if (currentUserId != null) 'uploaded_by': currentUserId,
       };
       final uiRecord = {
         ...dbRecord,

@@ -67,15 +67,13 @@ class PayParqApp extends StatefulWidget {
 }
 
 class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
-  late Future<void> _initFuture;
-  static const Duration _initGuardTimeout = Duration(seconds: 20);
-  static const Duration _authGateFallbackDelay = Duration(seconds: 12);
+  static const Duration _initGuardTimeout = Duration(seconds: 8);
   final List<String> _logs = [];
 
   bool _isRecoveryMode = false;
+  bool _supabaseReady = false;
+  bool _initLoopRunning = false;
   StreamSubscription<AuthState>? _authSubscription;
-  Timer? _authGateFallbackTimer;
-  bool _forceAuthGate = false;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -92,21 +90,12 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     super.initState();
     _addLog('App starting...');
     _logBuildInfo();
-    _initFuture = _initWithGuard();
-    _authGateFallbackTimer = Timer(_authGateFallbackDelay, () {
-      if (!mounted) return;
-      if (_forceAuthGate) return;
-      setState(() {
-        _forceAuthGate = true;
-      });
-    });
-
     _isRecoveryMode = _isRecoveryRequestFromUrl();
+    _startInitLoop();
   }
 
   @override
   void dispose() {
-    _authGateFallbackTimer?.cancel();
     _authSubscription?.cancel();
     super.dispose();
   }
@@ -151,13 +140,32 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       (_isResetPasswordPath() && _hasRecoveryTokenInUrl()) ||
       _isRecoveryRequestFromUrl();
 
-  Future<void> _initWithGuard() {
-    _addLog('Initializing with watchdog (20s)...');
-    return _initSupabase().timeout(_initGuardTimeout, onTimeout: () {
-      _addLog('Watchdog TIMEOUT triggered!');
-      _addLog('Continuing without timeout guard for stability...');
-      return;
-    });
+  Future<bool> _initWithGuard() async {
+    _addLog('Initializing with watchdog (8s)...');
+    try {
+      await _initSupabase().timeout(_initGuardTimeout);
+      return true;
+    } catch (e) {
+      _addLog('Init attempt failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> _startInitLoop() async {
+    if (_initLoopRunning) return;
+    _initLoopRunning = true;
+    while (mounted && !_supabaseReady) {
+      final ready = await _initWithGuard();
+      if (!mounted) return;
+      if (ready) {
+        setState(() {
+          _supabaseReady = true;
+        });
+        _addLog('Supabase ready');
+        break;
+      }
+      await Future.delayed(const Duration(seconds: 2));
+    }
   }
 
   Future<void> _logBuildInfo() async {
@@ -186,7 +194,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       await SupabaseService.instance.initialize(
         url: AppConfig.supabaseUrl,
         anonKey: AppConfig.supabaseAnonKey,
-        timeout: const Duration(seconds: 15),
+        timeout: const Duration(seconds: 8),
       );
 
       if (kIsWeb &&
@@ -235,97 +243,10 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       title: 'payparq.ai',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: FutureBuilder<void>(
-        future: _initFuture,
-        builder: (context, snapshot) {
-          final forceDebugAuth = kDebugMode && kIsWeb;
-          if (snapshot.connectionState != ConnectionState.done) {
-            if (_forceAuthGate || forceDebugAuth) {
-              return const AuthScreen();
-            }
-            return const Scaffold(
-              backgroundColor: Colors.black,
-              body: Center(
-                child: _PulsingBrandWordmark(),
-              ),
-            );
-          }
-
-          if (snapshot.hasError) {
-            if (forceDebugAuth) {
-              return const AuthScreen();
-            }
-            return Scaffold(
-              backgroundColor: const Color(0xFFF9FAFB),
-              body: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: Colors.red, size: 64),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Initialization Failed',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'sans-serif',
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '${snapshot.error}',
-                          style: const TextStyle(
-                            color: Color(0xFF4B5563),
-                            fontSize: 14,
-                            height: 1.5,
-                            fontFamily: 'sans-serif',
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _initFuture = _initWithGuard();
-                              });
-                            },
-                            child: const Text(
-                              'Retry Connection',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'sans-serif',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return _showResetPasswordScreen
-              ? const UpdatePasswordScreen()
+      home: _showResetPasswordScreen
+          ? const UpdatePasswordScreen()
+          : !_supabaseReady
+              ? const AuthScreen()
               : StreamBuilder<AuthState>(
                   stream: Supabase.instance.client.auth.onAuthStateChange,
                   builder: (context, snapshot) {
@@ -337,9 +258,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
                     }
                     return const AuthScreen();
                   },
-                );
-        },
-      ),
+                ),
     );
   }
 }
