@@ -22,9 +22,32 @@ type NavItemId =
 type AuthMode = "sign_in" | "sign_up";
 type FlowType = "park_now" | "monthly" | "reserve";
 
+function normalizeRole(value: unknown) {
+  const normalized = (value ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replaceAll("-", "_")
+    .replaceAll(" ", "_");
+  if (normalized === "superadmin" || normalized.startsWith("super_admin")) {
+    return "super_admin";
+  }
+  if (normalized.startsWith("admin")) {
+    return "admin";
+  }
+  if (normalized.startsWith("manager")) {
+    return "manager";
+  }
+  if (normalized.startsWith("officer")) {
+    return "officer";
+  }
+  return "officer";
+}
+
 export default function MembersPage() {
 
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("sign_in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,9 +75,35 @@ export default function MembersPage() {
 
   const isSignedIn = !!user || devSignedIn;
 
+  async function resolveIsAdmin(currentUser: User | null) {
+    if (!currentUser || !supabase) {
+      setIsAdmin(false);
+      return;
+    }
+    try {
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", currentUser.id)
+        .maybeSingle();
+      const role = normalizeRole(
+        (profileRow as { role?: unknown } | null)?.role ??
+          currentUser.user_metadata?.role ??
+          currentUser.app_metadata?.role
+      );
+      setIsAdmin(role === "admin" || role === "super_admin");
+    } catch {
+      const fallbackRole = normalizeRole(
+        currentUser.user_metadata?.role ?? currentUser.app_metadata?.role
+      );
+      setIsAdmin(fallbackRole === "admin" || fallbackRole === "super_admin");
+    }
+  }
+
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
       setUser(null);
+      setIsAdmin(false);
       return;
     }
 
@@ -62,17 +111,20 @@ export default function MembersPage() {
 
     supabase.auth
       .getUser()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (cancelled) return;
         if (!error && data.user) {
           setUser(data.user);
+          await resolveIsAdmin(data.user);
         } else {
           setUser(null);
+          setIsAdmin(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setUser(null);
+          setIsAdmin(false);
         }
       });
 
@@ -81,6 +133,11 @@ export default function MembersPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       setUser(session?.user ?? null);
+      if (!session?.user) {
+        setIsAdmin(false);
+      } else {
+        void resolveIsAdmin(session.user);
+      }
     });
 
     return () => {
@@ -91,7 +148,8 @@ export default function MembersPage() {
 
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       setAuthError("Enter your email and password.");
       return;
     }
@@ -107,7 +165,7 @@ export default function MembersPage() {
     try {
       if (authMode === "sign_in") {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (error) {
@@ -115,7 +173,7 @@ export default function MembersPage() {
         }
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (error) {
@@ -651,8 +709,8 @@ export default function MembersPage() {
                   Sign in to your Payparq account
                 </h1>
                 <p className="text-sm text-black/70 mb-6">
-                  Use your email to access member tools, subscriptions, and
-                  activity.
+                  Use the same email and password as Mobile Scanner to access
+                  member tools, subscriptions, and activity.
                 </p>
                 {!isSupabaseConfigured && (
                   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">
@@ -875,6 +933,14 @@ export default function MembersPage() {
                   >
                     <span>Help</span>
                   </button>
+                  {isAdmin && (
+                    <Link
+                      href="/resources"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 text-xs font-semibold whitespace-nowrap text-white/90 hover:bg-white/10 transition-colors"
+                    >
+                      <span>Resources</span>
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -1007,6 +1073,17 @@ export default function MembersPage() {
                       </span>
                       <span>Help</span>
                     </button>
+                    {isAdmin && (
+                      <Link
+                        href="/resources"
+                        className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          S
+                        </span>
+                        <span>Resources</span>
+                      </Link>
+                    )}
                   </nav>
                   <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
                     <div className="space-y-1 text-[11px] text-white/70">
