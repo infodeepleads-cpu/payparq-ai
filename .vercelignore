@@ -18,5 +18,4 @@ android/.gradle
 android/build
 .gradle-home
 .env.local
-web/app-release.apk
 **/*.log
