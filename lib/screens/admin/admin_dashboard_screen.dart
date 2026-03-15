@@ -300,8 +300,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: isDesktop ? 14 : 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: isDesktop ? 13 : 12,
+            fontWeight: FontWeight.w600,
             color: isSelected ? Colors.white : Colors.black,
           ),
         ),
@@ -489,23 +489,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              displayName,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        displayName,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         displayPhone,
                         style: GoogleFonts.inter(
@@ -515,43 +508,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      _buildDurationRow(s),
+                      _buildDurationRow(s, isDesktop: false),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _buildStatusBadge(
-                        isPending
-                            ? 'PENDING'
-                            : (isPaid ? 'ACTIVE' : 'INACTIVE'),
-                        isPaid,
-                        isPending: isPending),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 26,
-                      child: ElevatedButton(
-                        onPressed: () => _navigateToDetail(s),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          Lang.sel(isHr, 'View', 'Pogledaj'),
-                          style: const TextStyle(fontSize: 11),
-                        ),
+                SizedBox(
+                  height: 26,
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToDetail(s),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
                       ),
+                      elevation: 0,
                     ),
-                  ],
+                    child: Text(
+                      Lang.sel(isHr, 'View', 'Pogledaj'),
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -568,7 +547,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Text(
             displayName,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),
@@ -579,14 +558,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           Text(
             displayPhone,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 12,
               color: AppTheme.textSecondary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
-          _buildDurationRow(s),
+          _buildDurationRow(s, isDesktop: true),
         ],
       ),
       trailing: Row(
@@ -718,7 +696,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     return parsed;
   }
 
-  Widget _buildDurationRow(Map<String, dynamic> s) {
+  Widget _buildDurationRow(Map<String, dynamic> s, {required bool isDesktop}) {
     final isHr = ref.watch(localeIsCroatianProvider);
 
     // 1. Extract raw data
@@ -761,23 +739,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           '$quantity ${quantity == 1 ? (isHr ? 'Sat' : 'Hour') : (isHr ? 'Sati' : 'Hours')}';
     }
 
-    return Row(
-      children: [
-        Icon(
-          Icons.access_time,
-          size: 14,
-          color: AppTheme.textSecondary.withValues(alpha: 0.7),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          durationStr,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.textSecondary,
-          ),
-        ),
-      ],
+    return Text(
+      durationStr,
+      style: GoogleFonts.inter(
+        fontSize: isDesktop ? 12 : 10,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.textSecondary,
+      ),
     );
   }
 

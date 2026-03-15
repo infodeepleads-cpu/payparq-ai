@@ -24,42 +24,33 @@
     (function () {
       var statusEl = document.getElementById('boot-status');
       var loadingEl = document.getElementById('loading');
-      var didStartFlutter = false;
-      var isLoadingHidden = false;
-      var surfaceSeenAt = 0;
-      var retryStorageKey = 'pp_boot_retry_once';
-      var autoRetried = false;
-      try {
-        autoRetried = window.sessionStorage.getItem(retryStorageKey) === '1';
-      } catch (_) {}
+      var isHidden = false;
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          registrations.forEach(function (registration) {
+            registration.unregister();
+          });
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (key) {
+            caches.delete(key);
+          });
+        });
+      }
       var setStatus = function (text) {
         if (statusEl) statusEl.textContent = text || '';
       };
-      var reloadWithCacheBust = function () {
-        var url = new URL(window.location.href);
-        url.searchParams.set('v', String(Date.now()));
-        window.location.replace(url.toString());
-      };
       var hideLoading = function () {
-        if (isLoadingHidden) return;
-        isLoadingHidden = true;
+        if (isHidden) return;
+        isHidden = true;
         if (!loadingEl) return;
         loadingEl.style.opacity = '0';
         loadingEl.style.pointerEvents = 'none';
         setTimeout(function () {
           if (loadingEl) loadingEl.style.display = 'none';
         }, 180);
-      };
-      var markStarted = function () {
-        if (didStartFlutter) return;
-        didStartFlutter = true;
-        clearTimeout(hardTimeoutId);
-        clearInterval(flutterUiPoll);
-        if (mutationObserver) mutationObserver.disconnect();
-        try {
-          window.sessionStorage.removeItem(retryStorageKey);
-        } catch (_) {}
-        hideLoading();
       };
       var showRetry = function (text) {
         setStatus(text);
@@ -75,68 +66,65 @@
         btn.style.fontWeight = '700';
         btn.style.cursor = 'pointer';
         btn.onclick = function () {
-          reloadWithCacheBust();
+          window.location.reload();
         };
         loadingEl.appendChild(btn);
       };
       setStatus('Starting app...');
-      var hardTimeoutId = setTimeout(function () {
-        if (!didStartFlutter) {
-          if (!autoRetried) {
-            try {
-              window.sessionStorage.setItem(retryStorageKey, '1');
-            } catch (_) {}
-            setStatus('Refreshing app...');
-            reloadWithCacheBust();
-            return;
-          }
-          showRetry('Startup is taking longer than expected.');
-        }
-      }, 25000);
-      var detectFlutterUi = function () {
-        if (didStartFlutter) return;
-        var hasFlutterSurface =
+      var detectFlutterSurface = function () {
+        return Boolean(
           document.querySelector('flt-glass-pane') ||
           document.querySelector('flutter-view') ||
           document.querySelector('flt-scene-host') ||
-          document.querySelector('flt-semantics-host') ||
-          document.querySelector('canvas');
-        if (hasFlutterSurface) {
-          if (!surfaceSeenAt) {
-            surfaceSeenAt = Date.now();
-            setStatus('Initializing app...');
-          } else if (Date.now() - surfaceSeenAt > 10000) {
-            showRetry('UI initialization is delayed. Press Reload.');
-          }
-        }
+          document.querySelector('flt-semantics-host')
+        );
       };
-      var mutationObserver = new MutationObserver(function () {
-        detectFlutterUi();
-      });
-      mutationObserver.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-      });
-      var flutterUiPoll = setInterval(detectFlutterUi, 250);
-      window.addEventListener('load', detectFlutterUi, { once: true });
+      var hardTimeoutId = setTimeout(function () {
+        if (!isHidden) {
+          showRetry('Startup is taking longer than expected.');
+        }
+      }, 25000);
       window.addEventListener('flutter-first-frame', function () {
-        markStarted();
+        clearTimeout(hardTimeoutId);
+        hideLoading();
       }, { once: true });
+      var surfacePoll = setInterval(function () {
+        if (isHidden) {
+          clearInterval(surfacePoll);
+          return;
+        }
+        if (detectFlutterSurface()) {
+          setStatus('Initializing app...');
+          clearInterval(surfacePoll);
+        }
+      }, 250);
       var script = document.createElement('script');
       script.src = 'flutter_bootstrap.js?v=' + encodeURIComponent(String(Date.now()));
       script.async = true;
       script.onload = function () {
         setStatus('Loading UI...');
-        setTimeout(detectFlutterUi, 0);
-        setTimeout(detectFlutterUi, 1000);
       };
       script.onerror = function () {
         clearTimeout(hardTimeoutId);
-        clearInterval(flutterUiPoll);
-        if (mutationObserver) mutationObserver.disconnect();
+        clearInterval(surfacePoll);
         showRetry('Failed to load app files.');
       };
       document.body.appendChild(script);
+      window.addEventListener('error', function (event) {
+        clearTimeout(hardTimeoutId);
+        clearInterval(surfacePoll);
+        var message = (event && (event.message || (event.error && event.error.message))) || 'App failed during startup.';
+        showRetry(message + ' Reload.');
+      }, { once: true });
+      window.addEventListener('unhandledrejection', function (event) {
+        clearTimeout(hardTimeoutId);
+        clearInterval(surfacePoll);
+        var reason = event && event.reason;
+        var message = typeof reason === 'string'
+          ? reason
+          : (reason && reason.message) || 'App failed during startup.';
+        showRetry(message + ' Reload.');
+      }, { once: true });
     })();
   </script>
 </body>
