@@ -104,28 +104,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         backgroundColor: AppTheme.lightBackground,
         body: Row(
           children: [
-          // Left Side (Form)
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.lightBackground
-                                .withValues(alpha: 0.86),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppTheme.border),
-                          ),
-                          child: Row(
+            // Left Side (Form)
+            Expanded(
+              flex: 1,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
@@ -154,125 +145,124 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                        // Custom Tab Toggle
-                        Row(
-                          children: [
-                            _buildTabButton(_signInTab, true),
-                            const SizedBox(width: 24),
-                            _buildTabButton(_signUpTab, false),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          _subtitle(isCroatian),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                          const SizedBox(height: 32),
+                          // Custom Tab Toggle
+                          Row(
+                            children: [
+                              _buildTabButton(_signInTab, true),
+                              const SizedBox(width: 24),
+                              _buildTabButton(_signUpTab, false),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 32),
-                        _buildTextField(
-                            _emailLabel(isCroatian), _emailController),
-                        const SizedBox(height: 24),
-                        _buildTextField(
-                            _passwordLabel(isCroatian), _passwordController,
-                            isPassword: true),
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: _handleAuth,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              isSignIn ? _signInTab : _signUpTab,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (!isSignIn) ...[
                           const SizedBox(height: 24),
-                          Center(
-                            child: InkWell(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const TermsConditionsScreen(),
+                          Text(
+                            _subtitle(isCroatian),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          _buildTextField(
+                              _emailLabel(isCroatian), _emailController),
+                          const SizedBox(height: 24),
+                          _buildTextField(
+                              _passwordLabel(isCroatian), _passwordController,
+                              isPassword: true),
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _handleAuth,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
+                                elevation: 0,
                               ),
                               child: Text(
-                                _termsText(isCroatian),
-                                textAlign: TextAlign.center,
+                                isSignIn ? _signInTab : _signUpTab,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (!isSignIn) ...[
+                            const SizedBox(height: 24),
+                            Center(
+                              child: InkWell(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const TermsConditionsScreen(),
+                                  ),
+                                ),
+                                child: Text(
+                                  _termsText(isCroatian),
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          Center(
+                            child: TextButton(
+                              onPressed: _openResetPasswordPage,
+                              child: Text(
+                                _forgotPassword(isCroatian),
                                 style: GoogleFonts.inter(
-                                  color: Colors.grey[500],
-                                  fontSize: 12,
-                                  decoration: TextDecoration.underline,
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
                                 ),
                               ),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        Center(
-                          child: TextButton(
-                            onPressed: _openResetPasswordPage,
-                            child: Text(
-                              _forgotPassword(isCroatian),
-                              style: GoogleFonts.inter(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          // Right Side (Image - Desktop Only)
-          if (isDesktop)
-            Expanded(
-              flex: 1,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80', // Skyscraper worm's eye view
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+            // Right Side (Image - Desktop Only)
+            if (isDesktop)
+              Expanded(
+                flex: 1,
                 child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.2),
-                        Colors.black.withValues(alpha: 0.6),
-                      ],
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                    image: DecorationImage(
+                      image: NetworkImage(
+                        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80', // Skyscraper worm's eye view
+                      ),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.2),
+                          Colors.black.withValues(alpha: 0.6),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

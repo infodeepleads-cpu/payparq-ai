@@ -29,12 +29,20 @@ class _AnalyticsDashboardScreenState
   Widget build(BuildContext context) {
     final analyticsAsync = ref.watch(analyticsProvider);
     final isCroatian = ref.watch(localeIsCroatianProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
+    final isTablet = screenWidth >= 700 && screenWidth < 1100;
+    final pagePadding = isMobile ? 16.0 : (isTablet ? 24.0 : 48.0);
+    final metricColumns = isMobile ? 1 : (isTablet ? 2 : 4);
+    final metricSpacing = isMobile ? 12.0 : (isTablet ? 16.0 : 24.0);
+    final metricAspectRatio = isMobile ? 2.3 : (isTablet ? 1.9 : 1.6);
+    final graphHeight = isMobile ? 420.0 : (isTablet ? 480.0 : 520.0);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: analyticsAsync.when(
         data: (data) => SingleChildScrollView(
-          padding: const EdgeInsets.all(48),
+          padding: EdgeInsets.all(pagePadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -42,7 +50,7 @@ class _AnalyticsDashboardScreenState
               Text(
                 Lang.sel(isCroatian, 'Analytics', 'Analitika'),
                 style: GoogleFonts.inter(
-                  fontSize: 40,
+                  fontSize: isMobile ? 30 : 40,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   letterSpacing: -1,
@@ -55,54 +63,63 @@ class _AnalyticsDashboardScreenState
                     'Monitor performance, revenue, and system risks.',
                     'Pratite performanse, prihod i sustavne rizike.'),
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: isMobile ? 13 : 14,
                   color: AppTheme.textSecondary,
                 ),
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: isMobile ? 24 : 48),
 
               // Row 1: 4 Metric Cubicles
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 60),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 0 : (isTablet ? 20 : 60)),
                 child: GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 24,
-                  mainAxisSpacing: 24,
-                  childAspectRatio: 1.6,
+                  crossAxisCount: metricColumns,
+                  crossAxisSpacing: metricSpacing,
+                  mainAxisSpacing: metricSpacing,
+                  childAspectRatio: metricAspectRatio,
                   children: [
                     _buildMetricCard(
                       Lang.sel(isCroatian, 'DAILY REVENUE', 'DNEVNI PRIHOD'),
                       '€${data.dailyRevenue.toStringAsFixed(2)}',
                       Icons.euro,
+                      isMobile: isMobile,
+                      isTablet: isTablet,
                     ),
                     _buildMetricCard(
                       Lang.sel(isCroatian, 'MONTHLY REV AVG',
                           'MJESEČNI PROSJEČNI PRIHOD'),
                       '€${data.monthlyRevenueAvg.toStringAsFixed(2)}',
                       Icons.calendar_month,
+                      isMobile: isMobile,
+                      isTablet: isTablet,
                     ),
                     _buildMetricCard(
                       Lang.sel(
                           isCroatian, 'DAILY OCCUPANCY', 'DNEVNA POPUNJENOST'),
                       '${data.dailyOccupancy.toStringAsFixed(1)}%',
                       Icons.pie_chart_outline,
+                      isMobile: isMobile,
+                      isTablet: isTablet,
                     ),
                     _buildMetricCard(
                       Lang.sel(isCroatian, 'MONTHLY AVG OCCUPANCY',
                           'MJESEČNA PROSJEČNA POPUNJENOST'),
                       '${data.monthlyOccupancyAvg.toStringAsFixed(1)}%',
                       Icons.analytics_outlined,
+                      isMobile: isMobile,
+                      isTablet: isTablet,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: isMobile ? 24 : 48),
 
               // Row 2: 1/4 Graphs with Arrows
               SizedBox(
-                height: 520,
+                height: graphHeight,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -124,6 +141,8 @@ class _AnalyticsDashboardScreenState
                               isCroatian,
                               'Average daily revenue trends over the last 30 days.',
                               'Prosječni dnevni prihodi zadnjih 30 dana.'),
+                          isMobile: isMobile,
+                          isTablet: isTablet,
                         ),
                         _buildGraphCard(
                           Lang.sel(isCroatian, 'TOTAL NET', 'UKUPNO NETO'),
@@ -134,6 +153,8 @@ class _AnalyticsDashboardScreenState
                               isCroatian,
                               'Net earnings after processing fees and operational costs.',
                               'Neto zarada nakon troškova obrade i operativnih troškova.'),
+                          isMobile: isMobile,
+                          isTablet: isTablet,
                         ),
                         _buildGraphCard(
                           Lang.sel(isCroatian, 'AVG OCCUPANCY',
@@ -145,6 +166,8 @@ class _AnalyticsDashboardScreenState
                               isCroatian,
                               'Average parking lot occupancy rate distribution.',
                               'Prosječna popunjenost parkirališta.'),
+                          isMobile: isMobile,
+                          isTablet: isTablet,
                         ),
                       ],
                     ),
@@ -154,6 +177,7 @@ class _AnalyticsDashboardScreenState
                       child: _currentPage > 0
                           ? _buildArrowButton(
                               icon: Icons.arrow_back_ios_new,
+                              isMobile: isMobile,
                               onPressed: () {
                                 _pageController.previousPage(
                                   duration: const Duration(milliseconds: 300),
@@ -168,6 +192,7 @@ class _AnalyticsDashboardScreenState
                       child: _currentPage < 2
                           ? _buildArrowButton(
                               icon: Icons.arrow_forward_ios,
+                              isMobile: isMobile,
                               onPressed: () {
                                 _pageController.nextPage(
                                   duration: const Duration(milliseconds: 300),
@@ -211,24 +236,30 @@ class _AnalyticsDashboardScreenState
   }
 
   Widget _buildArrowButton(
-      {required IconData icon, required VoidCallback onPressed}) {
+      {required IconData icon,
+      required VoidCallback onPressed,
+      bool isMobile = false}) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: AppTheme.border),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.grey.shade700, size: 20),
+        icon: Icon(icon, color: Colors.grey.shade700, size: isMobile ? 18 : 20),
         onPressed: onPressed,
+        constraints: BoxConstraints(
+            minWidth: isMobile ? 36 : 44, minHeight: isMobile ? 36 : 44),
+        padding: EdgeInsets.all(isMobile ? 8 : 12),
       ),
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon) {
+  Widget _buildMetricCard(String title, String value, IconData icon,
+      {required bool isMobile, required bool isTablet}) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : (isTablet ? 20 : 24)),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
@@ -243,25 +274,31 @@ class _AnalyticsDashboardScreenState
             children: [
               Text(
                 title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: isMobile ? 13 : 12,
                   color: AppTheme.textSecondary,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: isMobile ? 8 : 4),
               Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 14, color: AppTheme.textSecondary),
+                  Icon(icon,
+                      size: isMobile ? 16 : 14, color: AppTheme.textSecondary),
                   const SizedBox(width: 8),
-                  Text(
-                    value,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textSecondary,
+                  Expanded(
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: isMobile ? 20 : (isTablet ? 16 : 14),
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -274,7 +311,8 @@ class _AnalyticsDashboardScreenState
   }
 
   Widget _buildGraphCard(String title, List<ChartPoint> points, Color color,
-      String unit, String description) {
+      String unit, String description,
+      {required bool isMobile, required bool isTablet}) {
     // Calculate rich data points
     final double currentVal = points.isNotEmpty ? points.last.y : 0;
     final double prevVal = points.length > 1 ? points[points.length - 2].y : 0;
@@ -282,8 +320,9 @@ class _AnalyticsDashboardScreenState
     final bool isUp = diff >= 0;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 60),
-      padding: const EdgeInsets.all(32),
+      margin:
+          EdgeInsets.symmetric(horizontal: isMobile ? 0 : (isTablet ? 20 : 60)),
+      padding: EdgeInsets.all(isMobile ? 16 : (isTablet ? 24 : 32)),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
@@ -292,69 +331,138 @@ class _AnalyticsDashboardScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    unit == '€'
-                        ? '€${currentVal.toStringAsFixed(2)}'
-                        : '${currentVal.toStringAsFixed(1)}%',
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Icon(
-                        isUp ? Icons.trending_up : Icons.trending_down,
-                        size: 16,
-                        color: isUp ? Colors.green : Colors.red,
+          isMobile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                        letterSpacing: -0.5,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${isUp ? '+' : ''}${diff.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isUp ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            unit == '€'
+                                ? '€${currentVal.toStringAsFixed(2)}'
+                                : '${currentVal.toStringAsFixed(1)}%',
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isUp ? Icons.trending_up : Icons.trending_down,
+                                size: 16,
+                                color: isUp ? Colors.green : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${isUp ? '+' : ''}${diff.toStringAsFixed(2)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isUp ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: isTablet ? 13 : 14,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          unit == '€'
+                              ? '€${currentVal.toStringAsFixed(2)}'
+                              : '${currentVal.toStringAsFixed(1)}%',
+                          style: GoogleFonts.inter(
+                            fontSize: isTablet ? 24 : 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 48),
+                        Row(
+                          children: [
+                            Icon(
+                              isUp ? Icons.trending_up : Icons.trending_down,
+                              size: 16,
+                              color: isUp ? Colors.green : Colors.red,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${isUp ? '+' : ''}${diff.toStringAsFixed(2)}',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isUp ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+          SizedBox(height: isMobile ? 20 : (isTablet ? 32 : 48)),
           Expanded(
             child: LineChart(
               LineChartData(
@@ -377,13 +485,13 @@ class _AnalyticsDashboardScreenState
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: isMobile ? 34 : 40,
                       getTitlesWidget: (v, meta) {
                         return Text(
                           v.toInt().toString(),
                           style: GoogleFonts.inter(
                             color: Colors.grey[400],
-                            fontSize: 10,
+                            fontSize: isMobile ? 9 : 10,
                             fontWeight: FontWeight.w500,
                           ),
                         );
@@ -411,9 +519,9 @@ class _AnalyticsDashboardScreenState
                       show: true,
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
-                        radius: 4,
+                        radius: isMobile ? 3 : 4,
                         color: Colors.grey.shade700,
-                        strokeWidth: 2,
+                        strokeWidth: isMobile ? 1.5 : 2,
                         strokeColor: Colors.white,
                       ),
                     ),
@@ -426,7 +534,7 @@ class _AnalyticsDashboardScreenState
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: isMobile ? 12 : 24),
         ],
       ),
     );
