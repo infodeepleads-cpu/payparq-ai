@@ -103,6 +103,9 @@ class _AnalyticsDashboardScreenState
                           isCroatian, 'DAILY OCCUPANCY', 'DNEVNA POPUNJENOST'),
                       '${data.dailyOccupancy.toStringAsFixed(1)}%',
                       Icons.pie_chart_outline,
+                      trailingValue: data.totalSpots > 0
+                          ? '${data.activeSpotsTaken}/${data.totalSpots}'
+                          : '—/—',
                       isMobile: isMobile,
                       isTablet: isTablet,
                     ),
@@ -259,7 +262,9 @@ class _AnalyticsDashboardScreenState
   }
 
   Widget _buildMetricCard(String title, String value, IconData icon,
-      {required bool isMobile, required bool isTablet}) {
+      {String? trailingValue,
+      required bool isMobile,
+      required bool isTablet}) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : (isTablet ? 20 : 24)),
       decoration: BoxDecoration(
@@ -303,6 +308,17 @@ class _AnalyticsDashboardScreenState
                       ),
                     ),
                   ),
+                  if (trailingValue != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      trailingValue,
+                      style: GoogleFonts.inter(
+                        fontSize: isMobile ? 12 : 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],

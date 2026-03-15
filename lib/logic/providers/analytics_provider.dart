@@ -7,6 +7,8 @@ class DashboardAnalytics {
   final double monthlyRevenueAvg;
   final double dailyOccupancy;
   final double monthlyOccupancyAvg;
+  final int activeSpotsTaken;
+  final int totalSpots;
   final double netDailyRevenue;
   final double netMonthlyRevenue;
   final double revenueFines;
@@ -21,6 +23,8 @@ class DashboardAnalytics {
     required this.monthlyRevenueAvg,
     required this.dailyOccupancy,
     required this.monthlyOccupancyAvg,
+    required this.activeSpotsTaken,
+    required this.totalSpots,
     required this.netDailyRevenue,
     required this.netMonthlyRevenue,
     required this.revenueFines,
@@ -216,18 +220,24 @@ final analyticsProvider =
   }
 
   // 3. OCCUPANCY CALCULATIONS
-  double totalSpots = 0;
+  int totalSpots = 0;
   for (var loc in locations) {
-    totalSpots += (loc['total_spots'] ?? 0).toDouble();
+    final rawSpots = loc['total_spots'] ?? loc['capacity'];
+    final parsedSpots = rawSpots is num
+        ? rawSpots.toInt()
+        : int.tryParse(rawSpots?.toString() ?? '') ?? 0;
+    if (parsedSpots > 0) {
+      totalSpots += parsedSpots;
+    }
   }
-  if (totalSpots == 0) totalSpots = 100; // Fallback
 
   int currentActiveSessions =
       sessions.where((s) => s['status'] == 'active').length;
   int currentActivePermits =
       permits.where((p) => p['status'] == 'active').length;
+  final activeSpotsTaken = currentActiveSessions + currentActivePermits;
   double dailyOcc =
-      ((currentActiveSessions + currentActivePermits) / totalSpots) * 100;
+      totalSpots > 0 ? (activeSpotsTaken / totalSpots) * 100 : 0;
   if (dailyOcc > 100) dailyOcc = 100;
 
   // Monthly average occupancy (simulated based on historical density if available, or current)
@@ -256,6 +266,8 @@ final analyticsProvider =
     monthlyRevenueAvg: monthlyRev / daysInMonth,
     dailyOccupancy: dailyOcc,
     monthlyOccupancyAvg: monthlyOccAvg,
+    activeSpotsTaken: activeSpotsTaken,
+    totalSpots: totalSpots,
     netDailyRevenue: netDaily,
     netMonthlyRevenue: netMonthly,
     revenueFines: finesRev,
