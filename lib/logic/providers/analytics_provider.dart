@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/management/repositories/parking_repository.dart';
+import 'auth_providers.dart';
 
 class DashboardAnalytics {
   final double dailyRevenue;
@@ -48,17 +49,21 @@ final analyticsProvider =
   final permitsAsync = ref.watch(permitsStreamProvider);
   final violationsAsync = ref.watch(violationsStreamProvider);
   final locationsAsync = ref.watch(locationsStreamProvider);
+  final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+  final selectedUuidAsync = ref.watch(selectedLocationUuidProvider);
 
   if (sessionsAsync.isLoading ||
       permitsAsync.isLoading ||
       violationsAsync.isLoading ||
-      locationsAsync.isLoading) {
+      locationsAsync.isLoading ||
+      selectedUuidAsync.isLoading) {
     return const AsyncValue.loading();
   }
 
   if (sessionsAsync.hasError ||
       permitsAsync.hasError ||
-      violationsAsync.hasError) {
+      violationsAsync.hasError ||
+      selectedUuidAsync.hasError) {
     return AsyncValue.error('Error loading analytics', StackTrace.current);
   }
 
@@ -66,6 +71,42 @@ final analyticsProvider =
   final permits = permitsAsync.value ?? [];
   final violations = violationsAsync.value ?? [];
   final locations = locationsAsync.value ?? [];
+  final selectedUuid = selectedUuidAsync.value;
+
+  final hasSelectedLocation = selectedUuid != null && selectedUuid.isNotEmpty;
+  bool belongsToSelectedLot(Map<String, dynamic> item) {
+    if (!hasSelectedLocation) return false;
+    final lotId = (item['location_id'] ?? '').toString();
+    if (lotId == selectedUuid) return true;
+    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
+      return lotId == selectedDisplayId;
+    }
+    return false;
+  }
+
+  bool isSelectedLocation(Map<String, dynamic> item) {
+    if (!hasSelectedLocation) return false;
+    final locationId = (item['id'] ?? '').toString();
+    final displayId = (item['display_id'] ?? '').toString();
+    if (locationId == selectedUuid) return true;
+    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
+      return displayId == selectedDisplayId;
+    }
+    return false;
+  }
+
+  final scopedSessions = hasSelectedLocation
+      ? sessions.where(belongsToSelectedLot).toList()
+      : <Map<String, dynamic>>[];
+  final scopedPermits = hasSelectedLocation
+      ? permits.where(belongsToSelectedLot).toList()
+      : <Map<String, dynamic>>[];
+  final scopedViolations = hasSelectedLocation
+      ? violations.where(belongsToSelectedLot).toList()
+      : <Map<String, dynamic>>[];
+  final scopedLocations = hasSelectedLocation
+      ? locations.where(isSelectedLocation).toList()
+      : <Map<String, dynamic>>[];
 
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
@@ -84,7 +125,7 @@ final analyticsProvider =
   int paidViolations = 0;
 
   // Guest Sessions Revenue
-  for (var s in sessions) {
+  for (var s in scopedSessions) {
     final date =
         DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
     final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
@@ -98,7 +139,7 @@ final analyticsProvider =
   }
 
   // Subscription Revenue (Estimated monthly)
-  for (var p in permits) {
+  for (var p in scopedPermits) {
     final price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
     final date =
         DateTime.tryParse(p['created_at']?.toString() ?? '') ?? DateTime(2000);
@@ -112,7 +153,7 @@ final analyticsProvider =
   }
 
   // Fines Revenue
-  for (var v in violations) {
+  for (var v in scopedViolations) {
     final date =
         DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
     final amount = double.tryParse(v['fine_amount']?.toString() ?? '0') ?? 0.0;
@@ -170,12 +211,12 @@ final analyticsProvider =
   double netDaily = 0;
   double netMonthly = 0;
 
-  for (var s in sessions) {
+  for (var s in scopedSessions) {
     if (s['payment_status'] != 'paid') continue;
     final date =
         DateTime.tryParse(s['created_at']?.toString() ?? '') ?? DateTime(2000);
     final price = double.tryParse(s['price']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere(
+    final loc = scopedLocations.firstWhere(
         (l) =>
             l['id'] == s['location_id'] || l['display_id'] == s['location_id'],
         orElse: () => {});
@@ -189,12 +230,12 @@ final analyticsProvider =
     if (date.isAfter(startOfMonth)) netMonthly += net;
   }
 
-  for (var v in violations) {
+  for (var v in scopedViolations) {
     if (v['status'] != 'paid') continue;
     final date =
         DateTime.tryParse(v['issued_at']?.toString() ?? '') ?? DateTime(2000);
     final amount = double.tryParse(v['fine_amount']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere((l) => l['id'] == v['location_id'],
+    final loc = scopedLocations.firstWhere((l) => l['id'] == v['location_id'],
         orElse: () => {});
 
     double comm = calculateItemCommission(amount, loc, 'violation',
@@ -205,10 +246,10 @@ final analyticsProvider =
     if (date.isAfter(startOfMonth)) netMonthly += net;
   }
 
-  for (var p in permits) {
+  for (var p in scopedPermits) {
     if (p['status'] != 'active') continue;
     final price = double.tryParse(p['price']?.toString() ?? '0') ?? 0.0;
-    final loc = locations.firstWhere((l) => l['id'] == p['location_id'],
+    final loc = scopedLocations.firstWhere((l) => l['id'] == p['location_id'],
         orElse: () => {});
 
     double comm = calculateItemCommission(price, loc, 'permit');
@@ -221,7 +262,7 @@ final analyticsProvider =
 
   // 3. OCCUPANCY CALCULATIONS
   int totalSpots = 0;
-  for (var loc in locations) {
+  for (var loc in scopedLocations) {
     final rawSpots = loc['total_spots'] ?? loc['capacity'];
     final parsedSpots = rawSpots is num
         ? rawSpots.toInt()
@@ -232,12 +273,11 @@ final analyticsProvider =
   }
 
   int currentActiveSessions =
-      sessions.where((s) => s['status'] == 'active').length;
+      scopedSessions.where((s) => s['status'] == 'active').length;
   int currentActivePermits =
-      permits.where((p) => p['status'] == 'active').length;
+      scopedPermits.where((p) => p['status'] == 'active').length;
   final activeSpotsTaken = currentActiveSessions + currentActivePermits;
-  double dailyOcc =
-      totalSpots > 0 ? (activeSpotsTaken / totalSpots) * 100 : 0;
+  double dailyOcc = totalSpots > 0 ? (activeSpotsTaken / totalSpots) * 100 : 0;
   if (dailyOcc > 100) dailyOcc = 100;
 
   // Monthly average occupancy (simulated based on historical density if available, or current)
