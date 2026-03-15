@@ -59,6 +59,84 @@ type SignWidget = {
   uploading: boolean;
   downloading: boolean;
 };
+const SIGN_WIDGETS_STORAGE_KEY = "resources-sign-widgets-v1";
+
+function createDefaultWidgets() {
+  const now = Date.now();
+  return [
+    {
+      id: `widget-${now}`,
+      templateUrl: "",
+      fileName: "Safe Parking Eng",
+      extraText: "",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-2`,
+      templateUrl: "",
+      fileName: "Safe Parking Eng Terms",
+      extraText: bilingualTermsText,
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-3`,
+      templateUrl: "",
+      fileName: "Safe Parking 3",
+      extraText: "",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-4`,
+      templateUrl: "",
+      fileName: "Safe Parking 4",
+      extraText: "",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+  ] satisfies SignWidget[];
+}
+
+function createInitialWidgets() {
+  const defaults = createDefaultWidgets();
+  if (typeof window === "undefined") {
+    return defaults;
+  }
+  try {
+    const raw = window.localStorage.getItem(SIGN_WIDGETS_STORAGE_KEY);
+    if (!raw) {
+      return defaults;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return defaults;
+    }
+    return parsed.map((item, index) => {
+      const id =
+        typeof item?.id === "string" && item.id.trim()
+          ? item.id
+          : `widget-${Date.now()}-${index + 1}`;
+      return {
+        id,
+        templateUrl: typeof item?.templateUrl === "string" ? item.templateUrl : "",
+        fileName: typeof item?.fileName === "string" ? item.fileName : `Safe Parking ${index + 1}`,
+        extraText: typeof item?.extraText === "string" ? item.extraText : "",
+        selectedLocationId:
+          typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
+        uploading: false,
+        downloading: false,
+      } satisfies SignWidget;
+    });
+  } catch {
+    return defaults;
+  }
+}
 
 function normalizeRole(value: string | null | undefined) {
   const normalized = (value ?? "")
@@ -186,26 +264,7 @@ export default function ResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [locations, setLocations] = useState<ResourceLocation[]>([]);
-  const [widgets, setWidgets] = useState<SignWidget[]>([
-    {
-      id: `widget-${Date.now()}`,
-      templateUrl: "",
-      fileName: "Safe Parking Eng",
-      extraText: "",
-      selectedLocationId: "",
-      uploading: false,
-      downloading: false,
-    },
-    {
-      id: `widget-${Date.now()}-2`,
-      templateUrl: "",
-      fileName: "Safe Parking Eng Terms",
-      extraText: bilingualTermsText,
-      selectedLocationId: "",
-      uploading: false,
-      downloading: false,
-    },
-  ]);
+  const [widgets, setWidgets] = useState<SignWidget[]>(() => createInitialWidgets());
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
@@ -383,6 +442,7 @@ export default function ResourcesPage() {
   }, [sortedLocations]);
   const firstWidgetTemplateUrl = widgets[0]?.templateUrl ?? "";
   const firstWidgetLocationId = widgets[0]?.selectedLocationId ?? "";
+  const firstWidgetFileName = widgets[0]?.fileName ?? "";
 
   useEffect(() => {
     if (sortedLocations.length === 0) {
@@ -424,9 +484,11 @@ export default function ResourcesPage() {
       const secondWidget = current[1];
       const nextSecondTemplateUrl = firstWidget.templateUrl || secondWidget.templateUrl;
       const nextSecondLocationId = firstWidget.selectedLocationId || secondWidget.selectedLocationId;
+      const nextSecondFileName = firstWidget.fileName || secondWidget.fileName;
       if (
         secondWidget.templateUrl === nextSecondTemplateUrl &&
-        secondWidget.selectedLocationId === nextSecondLocationId
+        secondWidget.selectedLocationId === nextSecondLocationId &&
+        secondWidget.fileName === nextSecondFileName
       ) {
         return current;
       }
@@ -435,10 +497,26 @@ export default function ResourcesPage() {
         ...secondWidget,
         templateUrl: nextSecondTemplateUrl,
         selectedLocationId: nextSecondLocationId,
+        fileName: nextSecondFileName,
       };
       return next;
     });
-  }, [firstWidgetLocationId, firstWidgetTemplateUrl]);
+  }, [firstWidgetFileName, firstWidgetLocationId, firstWidgetTemplateUrl]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const storedWidgets = widgets.map(
+      ({ id, templateUrl, fileName, extraText, selectedLocationId }) => ({
+        id,
+        templateUrl,
+        fileName,
+        extraText,
+        selectedLocationId,
+      })
+    );
+    window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, JSON.stringify(storedWidgets));
+  }, [widgets]);
 
   function createWidget() {
     setWidgets((current) => [
@@ -519,6 +597,14 @@ export default function ResourcesPage() {
       );
     }
   }
+  function handleRemoveWidgetTemplate(widgetId: string) {
+    setWidgets((current) =>
+      current.map((widget) =>
+        widget.id === widgetId ? { ...widget, templateUrl: "" } : widget
+      )
+    );
+    setError("");
+  }
 
   function loadImage(url: string) {
     return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -561,13 +647,22 @@ export default function ResourcesPage() {
     return [words.slice(0, bestIndex).join(" "), words.slice(bestIndex).join(" ")];
   }
 
-  async function handleDownloadSign(widget: SignWidget, resource: ResourceLocation | null) {
-    if (!resource) {
+  async function handleDownloadSign(
+    widget: SignWidget,
+    resource: ResourceLocation | null,
+    widgetIndex: number
+  ) {
+    const resourceForSign = resource;
+    if (widgetIndex < 2 && !resource) {
       setError("Select a location before downloading sign.");
       return;
     }
     const templateUrl =
-      widget.templateUrl || resource.payableSignTemplateUrl || resource.locationTemplateUrl;
+      widgetIndex >= 2
+        ? widget.templateUrl
+        : widget.templateUrl ||
+          resourceForSign?.payableSignTemplateUrl ||
+          resourceForSign?.locationTemplateUrl;
     if (!templateUrl) {
       setError("Upload a payable sign template before downloading sign.");
       return;
@@ -577,9 +672,248 @@ export default function ResourcesPage() {
     );
     setError("");
     try {
+      const normalizedBaseName = widget.fileName
+        .trim()
+        .replaceAll(/[\\/:*?"<>|]/g, "")
+        .replaceAll(/\s+/g, " ");
+      const fallbackBaseName = `parking_sign_${resource?.displayId ?? `widget_${widgetIndex + 1}`}`;
+      const finalBaseName = normalizedBaseName || fallbackBaseName;
+      const downloadBlob = (blob: Blob, extension: string) => {
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `${finalBaseName}.${extension}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(objectUrl);
+      };
+      const downloadCanvas = async (canvas: HTMLCanvasElement) => {
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((fileBlob) => {
+            if (!fileBlob) {
+              reject(new Error("Unable to export sign image."));
+              return;
+            }
+            resolve(fileBlob);
+          }, "image/png");
+        });
+        downloadBlob(blob, "png");
+      };
+      const drawStyledQr = (context: CanvasRenderingContext2D, qrImage: HTMLImageElement) => {
+        const qrBoxSize = 180;
+        const qrSize = 104;
+        const qrCenterX = width / 2;
+        const qrCenterY = 363;
+        const qrX = qrCenterX - qrBoxSize / 2;
+        const qrY = qrCenterY - qrBoxSize / 2;
+        const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
+        const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
+        const qrSampleSize = 300;
+        const qrCanvas = document.createElement("canvas");
+        qrCanvas.width = qrSampleSize;
+        qrCanvas.height = qrSampleSize;
+        const qrContext = qrCanvas.getContext("2d");
+        if (!qrContext) {
+          throw new Error("Unable to render QR canvas.");
+        }
+        qrContext.drawImage(qrImage, 0, 0, qrSampleSize, qrSampleSize);
+        const qrData = qrContext.getImageData(0, 0, qrSampleSize, qrSampleSize).data;
+        const isDark = (x: number, y: number) => {
+          const safeX = Math.max(0, Math.min(qrSampleSize - 1, x));
+          const safeY = Math.max(0, Math.min(qrSampleSize - 1, y));
+          const index = (safeY * qrSampleSize + safeX) * 4;
+          const r = qrData[index];
+          const g = qrData[index + 1];
+          const b = qrData[index + 2];
+          return (r + g + b) / 3 < 128;
+        };
+        let finderRun = 0;
+        while (finderRun < qrSampleSize && isDark(finderRun, 0)) {
+          finderRun += 1;
+        }
+        const modulePixels = Math.max(1, Math.round(finderRun / 7) || 1);
+        const inferredModuleCount = Math.round(qrSampleSize / modulePixels);
+        const moduleCount = Math.min(33, Math.max(21, inferredModuleCount));
+        const moduleDraw = qrSize / moduleCount;
+        const qrMarkColor = "#000000";
+        const finderMarkColor = qrMarkColor;
+        const markSize = Math.max(1, Math.round(moduleDraw * 0.66));
+        context.fillStyle = qrMarkColor;
+        for (let row = 0; row < moduleCount; row += 1) {
+          for (let column = 0; column < moduleCount; column += 1) {
+            const sampleX = Math.floor(((column + 0.5) * qrSampleSize) / moduleCount);
+            const sampleY = Math.floor(((row + 0.5) * qrSampleSize) / moduleCount);
+            if (!isDark(sampleX, sampleY)) {
+              continue;
+            }
+            const drawX = Math.round(qrDrawX + column * moduleDraw + (moduleDraw - markSize) / 2);
+            const drawY = Math.round(qrDrawY + row * moduleDraw + (moduleDraw - markSize) / 2);
+            context.fillRect(drawX, drawY, markSize, markSize);
+          }
+        }
+        const drawRoundedRect = (
+          x: number,
+          y: number,
+          size: number,
+          radius: number,
+          fillColor?: string,
+          strokeColor?: string,
+          strokeWidth = 0
+        ) => {
+          context.beginPath();
+          context.moveTo(x + radius, y);
+          context.lineTo(x + size - radius, y);
+          context.quadraticCurveTo(x + size, y, x + size, y + radius);
+          context.lineTo(x + size, y + size - radius);
+          context.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+          context.lineTo(x + radius, y + size);
+          context.quadraticCurveTo(x, y + size, x, y + size - radius);
+          context.lineTo(x, y + radius);
+          context.quadraticCurveTo(x, y, x + radius, y);
+          context.closePath();
+          if (fillColor) {
+            context.fillStyle = fillColor;
+            context.fill();
+          }
+          if (strokeColor && strokeWidth > 0) {
+            context.lineWidth = strokeWidth;
+            context.strokeStyle = strokeColor;
+            context.stroke();
+          }
+        };
+        const finderOuter = 12;
+        const finderInner = 5;
+        const finderRadiusOuter = 3;
+        const finderRadiusInner = 1.8;
+        const finderMask = 16;
+        const finderMaskRadius = 4;
+        const finderMaskInset = (finderMask - finderOuter) / 2;
+        const drawFinderReplacement = (x: number, y: number) => {
+          drawRoundedRect(
+            x - finderMaskInset,
+            y - finderMaskInset,
+            finderMask,
+            finderMaskRadius,
+            "#ffffff"
+          );
+          drawRoundedRect(x, y, finderOuter, finderRadiusOuter, "#ffffff", finderMarkColor, 2.4);
+          drawRoundedRect(
+            x + (finderOuter - finderInner) / 2,
+            y + (finderOuter - finderInner) / 2,
+            finderInner,
+            finderRadiusInner,
+            finderMarkColor
+          );
+        };
+        drawFinderReplacement(qrDrawX, qrDrawY);
+        drawFinderReplacement(qrDrawX + qrSize - finderOuter, qrDrawY);
+        drawFinderReplacement(qrDrawX, qrDrawY + qrSize - finderOuter);
+        const logoBgSize = 30;
+        context.fillStyle = "#ffffff";
+        context.fillRect(
+          qrCenterX - logoBgSize / 2,
+          qrCenterY - logoBgSize / 2,
+          logoBgSize,
+          logoBgSize
+        );
+        context.fillStyle = "#000000";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = "900 16.2px Montserrat, Inter, Arial, sans-serif";
+        context.fillText("P", qrCenterX, qrCenterY);
+      };
       const width = 400;
       const height = 600;
       const outputScale = 2;
+      const detectTemplateQrBounds = async (image: HTMLImageElement) => {
+        try {
+          if (!("BarcodeDetector" in window)) {
+            return null;
+          }
+          type BarcodeDetection = { boundingBox?: DOMRectReadOnly };
+          type BarcodeDetectorLike = {
+            detect: (source: ImageBitmapSource) => Promise<BarcodeDetection[]>;
+          };
+          type BarcodeDetectorConstructor = new (options: {
+            formats: string[];
+          }) => BarcodeDetectorLike;
+          const Detector = (
+            window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }
+          ).BarcodeDetector;
+          if (!Detector) {
+            return null;
+          }
+          const detector = new Detector({ formats: ["qr_code"] });
+          const detectionCanvas = document.createElement("canvas");
+          detectionCanvas.width = image.width;
+          detectionCanvas.height = image.height;
+          const detectionContext = detectionCanvas.getContext("2d");
+          if (!detectionContext) {
+            return null;
+          }
+          detectionContext.drawImage(image, 0, 0, image.width, image.height);
+          const bitmap = await createImageBitmap(detectionCanvas);
+          const detections = await detector.detect(bitmap);
+          if (typeof bitmap.close === "function") {
+            bitmap.close();
+          }
+          if (!detections?.length || !detections[0]?.boundingBox) {
+            return null;
+          }
+          const { x, y, width, height } = detections[0].boundingBox;
+          if (width <= 0 || height <= 0) {
+            return null;
+          }
+          return { x, y, width, height };
+        } catch {
+          return null;
+        }
+      };
+      if (widgetIndex >= 2) {
+        const templateImage = await loadImage(templateUrl);
+        const canvas = document.createElement("canvas");
+        canvas.width = templateImage.width * outputScale;
+        canvas.height = templateImage.height * outputScale;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          throw new Error("Unable to render sign canvas.");
+        }
+        context.scale(outputScale, outputScale);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
+        const qrImage = await loadImage(
+          `https://api.qrserver.com/v1/create-qr-code/?size=900x900&qzone=0&data=${encodeURIComponent("https://www.payparq.com/payments")}`
+        );
+        const fallbackX = (148 / width) * templateImage.width;
+        const fallbackY = (311 / height) * templateImage.height;
+        const fallbackWidth = (104 / width) * templateImage.width;
+        const fallbackHeight = (104 / height) * templateImage.height;
+        const detectedQrBounds = await detectTemplateQrBounds(templateImage);
+        const hasUsableDetection = Boolean(
+          detectedQrBounds &&
+            Math.abs((detectedQrBounds.x + detectedQrBounds.width / 2) - (fallbackX + fallbackWidth / 2)) <=
+              templateImage.width * 0.12 &&
+            Math.abs((detectedQrBounds.y + detectedQrBounds.height / 2) - (fallbackY + fallbackHeight / 2)) <=
+              templateImage.height * 0.12 &&
+            detectedQrBounds.width >= fallbackWidth * 0.7 &&
+            detectedQrBounds.width <= fallbackWidth * 1.5 &&
+            detectedQrBounds.height >= fallbackHeight * 0.7 &&
+            detectedQrBounds.height <= fallbackHeight * 1.5
+        );
+        const qrTargetX = hasUsableDetection ? (detectedQrBounds as { x: number }).x : fallbackX;
+        const qrTargetY = hasUsableDetection ? (detectedQrBounds as { y: number }).y : fallbackY;
+        const qrTargetWidth = hasUsableDetection
+          ? (detectedQrBounds as { width: number }).width
+          : fallbackWidth;
+        const qrTargetHeight = hasUsableDetection
+          ? (detectedQrBounds as { height: number }).height
+          : fallbackHeight;
+        context.drawImage(qrImage, qrTargetX, qrTargetY, qrTargetWidth, qrTargetHeight);
+        await downloadCanvas(canvas);
+        return;
+      }
       const canvas = document.createElement("canvas");
       canvas.width = width * outputScale;
       canvas.height = height * outputScale;
@@ -591,19 +925,7 @@ export default function ResourcesPage() {
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
 
-      const checkoutUrl = buildCheckoutQrUrl({
-        locationId: resource.id,
-        displayId: resource.displayId,
-        type: resource.pricingMode,
-        price: resource.signPrice,
-      });
-
-      const [templateImage, qrImage] = await Promise.all([
-        loadImage(templateUrl),
-        loadImage(
-          `https://api.qrserver.com/v1/create-qr-code/?size=300x300&qzone=0&data=${encodeURIComponent(checkoutUrl)}`
-        ),
-      ]);
+      const templateImage = await loadImage(templateUrl);
 
       const imageAspect = templateImage.width / templateImage.height;
       const canvasAspect = width / height;
@@ -621,8 +943,20 @@ export default function ResourcesPage() {
         offsetY = (height - drawHeight) / 2;
       }
       context.drawImage(templateImage, offsetX, offsetY, drawWidth, drawHeight);
+      if (!resourceForSign) {
+        throw new Error("Select a location before downloading sign.");
+      }
+      const checkoutUrl = buildCheckoutQrUrl({
+        locationId: resourceForSign.id,
+        displayId: resourceForSign.displayId,
+        type: resourceForSign.pricingMode,
+        price: resourceForSign.signPrice,
+      });
+      const qrImage = await loadImage(
+        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&qzone=0&data=${encodeURIComponent(checkoutUrl)}`
+      );
 
-      const titleLines = splitSignTitle(resource.name);
+      const titleLines = splitSignTitle(resourceForSign.name);
       context.fillStyle = "#111111";
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -639,134 +973,13 @@ export default function ResourcesPage() {
         context.fillText(titleLines[0], width / 2, titleCenterY);
       }
 
-      const qrBoxSize = 180;
-      const qrSize = 104;
-      const qrCenterX = width / 2;
-      const qrCenterY = 363;
-      const qrX = qrCenterX - qrBoxSize / 2;
-      const qrY = qrCenterY - qrBoxSize / 2;
-      const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
-      const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
-      const qrSampleSize = 300;
-      const qrCanvas = document.createElement("canvas");
-      qrCanvas.width = qrSampleSize;
-      qrCanvas.height = qrSampleSize;
-      const qrContext = qrCanvas.getContext("2d");
-      if (!qrContext) {
-        throw new Error("Unable to render QR canvas.");
-      }
-      qrContext.drawImage(qrImage, 0, 0, qrSampleSize, qrSampleSize);
-      const qrData = qrContext.getImageData(0, 0, qrSampleSize, qrSampleSize).data;
-      const isDark = (x: number, y: number) => {
-        const safeX = Math.max(0, Math.min(qrSampleSize - 1, x));
-        const safeY = Math.max(0, Math.min(qrSampleSize - 1, y));
-        const index = (safeY * qrSampleSize + safeX) * 4;
-        const r = qrData[index];
-        const g = qrData[index + 1];
-        const b = qrData[index + 2];
-        return (r + g + b) / 3 < 128;
-      };
-      let finderRun = 0;
-      while (finderRun < qrSampleSize && isDark(finderRun, 0)) {
-        finderRun += 1;
-      }
-      const modulePixels = Math.max(1, Math.round(finderRun / 7) || 1);
-      const inferredModuleCount = Math.round(qrSampleSize / modulePixels);
-      const moduleCount = Math.min(33, Math.max(21, inferredModuleCount));
-      const moduleDraw = qrSize / moduleCount;
-      const qrMarkColor = "#000000";
-      const finderMarkColor = qrMarkColor;
-      const markSize = Math.max(1, Math.round(moduleDraw * 0.66));
-      context.fillStyle = qrMarkColor;
-      for (let row = 0; row < moduleCount; row += 1) {
-        for (let column = 0; column < moduleCount; column += 1) {
-          const sampleX = Math.floor(((column + 0.5) * qrSampleSize) / moduleCount);
-          const sampleY = Math.floor(((row + 0.5) * qrSampleSize) / moduleCount);
-          if (!isDark(sampleX, sampleY)) {
-            continue;
-          }
-          const drawX = Math.round(qrDrawX + column * moduleDraw + (moduleDraw - markSize) / 2);
-          const drawY = Math.round(qrDrawY + row * moduleDraw + (moduleDraw - markSize) / 2);
-          context.fillRect(drawX, drawY, markSize, markSize);
-        }
-      }
-      const drawRoundedRect = (
-        x: number,
-        y: number,
-        size: number,
-        radius: number,
-        fillColor?: string,
-        strokeColor?: string,
-        strokeWidth = 0
-      ) => {
-        context.beginPath();
-        context.moveTo(x + radius, y);
-        context.lineTo(x + size - radius, y);
-        context.quadraticCurveTo(x + size, y, x + size, y + radius);
-        context.lineTo(x + size, y + size - radius);
-        context.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-        context.lineTo(x + radius, y + size);
-        context.quadraticCurveTo(x, y + size, x, y + size - radius);
-        context.lineTo(x, y + radius);
-        context.quadraticCurveTo(x, y, x + radius, y);
-        context.closePath();
-        if (fillColor) {
-          context.fillStyle = fillColor;
-          context.fill();
-        }
-        if (strokeColor && strokeWidth > 0) {
-          context.lineWidth = strokeWidth;
-          context.strokeStyle = strokeColor;
-          context.stroke();
-        }
-      };
-      const finderOuter = 12;
-      const finderInner = 5;
-      const finderRadiusOuter = 3;
-      const finderRadiusInner = 1.8;
-      const finderMask = 16;
-      const finderMaskRadius = 4;
-      const finderMaskInset = (finderMask - finderOuter) / 2;
-      const drawFinderReplacement = (x: number, y: number) => {
-        drawRoundedRect(
-          x - finderMaskInset,
-          y - finderMaskInset,
-          finderMask,
-          finderMaskRadius,
-          "#ffffff"
-        );
-        drawRoundedRect(x, y, finderOuter, finderRadiusOuter, "#ffffff", finderMarkColor, 2.4);
-        drawRoundedRect(
-          x + (finderOuter - finderInner) / 2,
-          y + (finderOuter - finderInner) / 2,
-          finderInner,
-          finderRadiusInner,
-          finderMarkColor
-        );
-      };
-      drawFinderReplacement(qrDrawX, qrDrawY);
-      drawFinderReplacement(qrDrawX + qrSize - finderOuter, qrDrawY);
-      drawFinderReplacement(qrDrawX, qrDrawY + qrSize - finderOuter);
-
-      const logoBgSize = 30;
-      context.fillStyle = "#ffffff";
-      context.fillRect(
-        qrCenterX - logoBgSize / 2,
-        qrCenterY - logoBgSize / 2,
-        logoBgSize,
-        logoBgSize
-      );
-      context.fillStyle = "#000000";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.font = "900 16.2px Montserrat, Inter, Arial, sans-serif";
-      context.fillText("P", qrCenterX, qrCenterY);
+      drawStyledQr(context, qrImage);
 
       context.fillStyle = "#111111";
       context.textAlign = "left";
       context.textBaseline = "alphabetic";
       context.font = "700 14px Inter, Arial, sans-serif";
-      context.fillText(resource.displayId, 34, 593);
+      context.fillText(resourceForSign.displayId, 34, 593);
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
       if (normalizedExtraText) {
         context.fillStyle = "#111111";
@@ -805,29 +1018,7 @@ export default function ResourcesPage() {
         }
       }
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((fileBlob) => {
-          if (!fileBlob) {
-            reject(new Error("Unable to export sign image."));
-            return;
-          }
-          resolve(fileBlob);
-        }, "image/png");
-      });
-      const normalizedBaseName = widget.fileName
-        .trim()
-        .replaceAll(/[\\/:*?"<>|]/g, "")
-        .replaceAll(/\s+/g, " ");
-      const fallbackBaseName = `parking_sign_${resource.displayId}`;
-      const finalBaseName = normalizedBaseName || fallbackBaseName;
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = `${finalBaseName}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
+      await downloadCanvas(canvas);
     } catch (unknownError) {
       setError(
         unknownError instanceof Error
@@ -907,10 +1098,12 @@ export default function ResourcesPage() {
               const selectedLocation =
                 sortedLocations.find((item) => item.id === widget.selectedLocationId) ?? null;
               const effectiveTemplateUrl =
-                widget.templateUrl ||
-                selectedLocation?.payableSignTemplateUrl ||
-                selectedLocation?.locationTemplateUrl ||
-                "";
+                index >= 2
+                  ? widget.templateUrl
+                  : widget.templateUrl ||
+                    selectedLocation?.payableSignTemplateUrl ||
+                    selectedLocation?.locationTemplateUrl ||
+                    "";
               return (
                 <div
                   key={widget.id}
@@ -918,16 +1111,28 @@ export default function ResourcesPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2 justify-between">
                     <p className="text-sm font-semibold text-white">Widget {index + 1}</p>
-                    <label className="inline-flex cursor-pointer items-center justify-center px-4 py-2 rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors">
-                      {widget.uploading ? "Uploading..." : "Upload Photo"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => handleWidgetTemplateUpload(widget.id, event)}
-                        disabled={widget.uploading}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="flex items-center gap-2">
+                      {widget.templateUrl && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveWidgetTemplate(widget.id)}
+                          disabled={widget.uploading || widget.downloading}
+                          className="inline-flex items-center justify-center rounded-full border border-white/25 px-4 py-2 text-xs font-semibold text-white/85 hover:bg-white/10 transition-colors disabled:opacity-60"
+                        >
+                          Delete Uploaded Photo
+                        </button>
+                      )}
+                      <label className="inline-flex cursor-pointer items-center justify-center px-4 py-2 rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors">
+                        {widget.uploading ? "Uploading..." : "Upload Photo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => handleWidgetTemplateUpload(widget.id, event)}
+                          disabled={widget.uploading}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
                   {effectiveTemplateUrl ? (
                     <div className="space-y-3">
@@ -1033,7 +1238,7 @@ export default function ResourcesPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => handleDownloadSign(widget, selectedLocation)}
+                        onClick={() => handleDownloadSign(widget, selectedLocation, index)}
                         disabled={widget.downloading}
                         className="inline-flex items-center rounded-full border border-white/25 px-4 py-2 text-xs font-semibold text-white/90 hover:bg-white/10 transition-colors disabled:opacity-60"
                       >
