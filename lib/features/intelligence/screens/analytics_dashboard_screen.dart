@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -31,6 +32,7 @@ class _AnalyticsDashboardScreenState
     final isCroatian = ref.watch(localeIsCroatianProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 700;
+    final isMobileWeb = kIsWeb && isMobile;
     final isTablet = screenWidth >= 700 && screenWidth < 1100;
     final pagePadding = isMobile ? 16.0 : (isTablet ? 24.0 : 48.0);
     final metricColumns = isMobile ? 1 : (isTablet ? 2 : 4);
@@ -50,7 +52,7 @@ class _AnalyticsDashboardScreenState
               Text(
                 Lang.sel(isCroatian, 'Analytics', 'Analitika'),
                 style: GoogleFonts.inter(
-                  fontSize: isMobile ? 30 : 40,
+                  fontSize: isMobileWeb ? 32 : (isMobile ? 30 : 40),
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   letterSpacing: -1,
@@ -314,6 +316,7 @@ class _AnalyticsDashboardScreenState
       String unit, String description,
       {required bool isMobile, required bool isTablet}) {
     // Calculate rich data points
+    final useWebMobileTitleTypography = kIsWeb && isMobile;
     final double currentVal = points.isNotEmpty ? points.last.y : 0;
     final double prevVal = points.length > 1 ? points[points.length - 2].y : 0;
     final double diff = currentVal - prevVal;
@@ -338,10 +341,10 @@ class _AnalyticsDashboardScreenState
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: useWebMobileTitleTypography ? 13 : 11,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade800,
-                        letterSpacing: -0.5,
+                        letterSpacing: useWebMobileTitleTypography ? 0.5 : -0.5,
                       ),
                     ),
                     const SizedBox(height: 4),

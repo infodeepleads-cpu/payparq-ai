@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,11 +25,13 @@ class LocationsHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
     final screenWidth = MediaQuery.of(context).size.width;
+    final isMobileWeb = kIsWeb && screenWidth < 700;
     final titleFontSize = screenWidth >= 1300
         ? 40.0
         : screenWidth >= 1024
             ? 34.0
             : 28.0;
+    final resolvedTitleFontSize = isMobileWeb ? 32.0 : titleFontSize;
     final compactHeader = screenWidth < 1180;
 
     return LayoutBuilder(
@@ -52,7 +55,7 @@ class LocationsHeader extends ConsumerWidget {
                           Lang.sel(isCroatian, 'Locations & Hubs',
                               'Lokacije i Hubovi'),
                           style: GoogleFonts.inter(
-                            fontSize: titleFontSize,
+                            fontSize: resolvedTitleFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                             letterSpacing: -1,
