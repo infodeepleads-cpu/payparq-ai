@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../instructions_screen.dart';
+import '../../config/app_config.dart';
 import '../../theme.dart';
 import '../../features/management/screens/pass_detail_screen.dart'
     as pass_detail;
@@ -145,8 +146,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         onTap: () async {
-                          final url = Uri.parse(
-                              'https://mobile-scanner-flax-static.vercel.app/app-release.apk');
+                          final url = Uri.parse(AppConfig.apkDownloadUrl);
                           if (await canLaunchUrl(url)) {
                             await launchUrl(url,
                                 mode: LaunchMode.externalApplication);

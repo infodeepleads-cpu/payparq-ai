@@ -22,6 +22,9 @@ class AppConfig {
   static const _webSignOutStartupFlag = String.fromEnvironment(
       'FORCE_WEB_SIGNOUT_ON_STARTUP',
       defaultValue: '0');
+  static const apkDownloadUrl =
+      String.fromEnvironment('APK_DOWNLOAD_URL',
+          defaultValue: 'https://mobile-scanner-ruddy.vercel.app/app-release.apk');
 
   static String get buildDate {
     const fromEnv = String.fromEnvironment('BUILD_DATE',

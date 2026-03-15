@@ -254,6 +254,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   }
 
   Future<void> _showEvidence(Map<String, dynamic> violation) async {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     final plate = violation['plate'] ?? 'UNKNOWN';
     final caseNumber = (violation['case_number'] ?? '').toString();
     final evidenceUrl = violation['evidence_r2_url'];
@@ -297,8 +298,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-            '${Lang.sel(ref.read(localeIsCroatianProvider), 'Evidence', 'Dokaz')}: $plate',
+        title: Text('${Lang.sel(isCroatian, 'Evidence', 'Dokaz')}: $plate',
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 500,
@@ -352,9 +352,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                                 size: 48, color: Colors.grey),
                             const SizedBox(height: 16),
                             Text(
-                              Lang.sel(
-                                  ref.read(localeIsCroatianProvider),
-                                  'No photo attached',
+                              Lang.sel(isCroatian, 'No photo attached',
                                   'Nema priložene fotografije'),
                               style: const TextStyle(
                                   color: Colors.grey, fontSize: 12),
@@ -367,11 +365,11 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                      Lang.sel(ref.read(localeIsCroatianProvider), 'Violation:',
-                          'Prekršaj:'),
+                  Text(Lang.sel(isCroatian, 'Violation:', 'Prekršaj:'),
                       style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-                  Text(violation['violation_type'] ?? 'General',
+                  Text(
+                      _localizedViolationType(
+                          violation['violation_type'], isCroatian),
                       style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -380,8 +378,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    Lang.sel(ref.read(localeIsCroatianProvider), 'Case Number:',
-                        'Broj slučaja:'),
+                    Lang.sel(isCroatian, 'Case Number:', 'Broj slučaja:'),
                     style: GoogleFonts.inter(color: AppTheme.textSecondary),
                   ),
                   Text(
@@ -396,8 +393,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    Lang.sel(ref.read(localeIsCroatianProvider), 'Fine Amount:',
-                        'Iznos kazne:'),
+                    Lang.sel(isCroatian, 'Fine Amount:', 'Iznos kazne:'),
                     style: GoogleFonts.inter(color: AppTheme.textSecondary),
                   ),
                   Text(
@@ -412,8 +408,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    Lang.sel(ref.read(localeIsCroatianProvider), 'Location ID:',
-                        'ID lokacije:'),
+                    Lang.sel(isCroatian, 'Location ID:', 'ID lokacije:'),
                     style: GoogleFonts.inter(color: AppTheme.textSecondary),
                   ),
                   Text(
@@ -430,11 +425,10 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                   child: Text(
                     issuedAtDt != null
                         ? Lang.sel(
-                            ref.read(localeIsCroatianProvider),
+                            isCroatian,
                             'Issued: ${issuedAtDt.day}/${issuedAtDt.month}/${issuedAtDt.year} ${issuedAtDt.hour}:${issuedAtDt.minute.toString().padLeft(2, '0')}',
                             'Izdano: ${issuedAtDt.day}/${issuedAtDt.month}/${issuedAtDt.year} ${issuedAtDt.hour}:${issuedAtDt.minute.toString().padLeft(2, '0')}')
-                        : Lang.sel(ref.read(localeIsCroatianProvider),
-                            'Issued: —', 'Izdano: —'),
+                        : Lang.sel(isCroatian, 'Issued: —', 'Izdano: —'),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Colors.black,
@@ -452,7 +446,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              Lang.sel(ref.read(localeIsCroatianProvider), 'Close', 'Zatvori'),
+              Lang.sel(isCroatian, 'Close', 'Zatvori'),
               style: GoogleFonts.inter(
                   color: Colors.black, fontWeight: FontWeight.bold),
             ),
@@ -466,6 +460,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 1100;
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     final violationsAsync = ref.watch(violationsStreamProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider) ??
         ref.watch(userLocationIdProvider);
@@ -517,7 +512,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ),
           Expanded(
             child: _buildDataList(
-                isDesktop, violationsAsync, optimisticViolations),
+                isDesktop, isCroatian, violationsAsync, optimisticViolations),
           ),
         ],
       ),
@@ -526,6 +521,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
 
   Widget _buildDataList(
       bool isDesktop,
+      bool isCroatian,
       AsyncValue<List<Map<String, dynamic>>> violationsAsync,
       List<Map<String, dynamic>> optimisticViolations) {
     return violationsAsync.when(
@@ -638,13 +634,9 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 const SizedBox(height: 16),
                 Text(
                     _searchQuery.isNotEmpty
-                        ? Lang.sel(
-                            ref.read(localeIsCroatianProvider),
-                            'No matches for "$_searchQuery"',
+                        ? Lang.sel(isCroatian, 'No matches for "$_searchQuery"',
                             'Nema podudaranja za "$_searchQuery"')
-                        : Lang.sel(
-                            ref.read(localeIsCroatianProvider),
-                            'No active cases found.',
+                        : Lang.sel(isCroatian, 'No active cases found.',
                             'Nema aktivnih predmeta.'),
                     style: TextStyle(color: Colors.grey[400])),
               ],
@@ -664,7 +656,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
             itemBuilder: (context, index) {
               final violation = allViolations[index];
 
-              return _buildViolationItem(violation, isDesktop);
+              return _buildViolationItem(violation, isDesktop, isCroatian);
             },
           ),
         );
@@ -696,7 +688,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
     );
   }
 
-  Widget _buildViolationItem(Map<String, dynamic> violation, bool isDesktop) {
+  Widget _buildViolationItem(
+      Map<String, dynamic> violation, bool isDesktop, bool isCroatian) {
     final status = violation['status'] ?? 'issued';
     final caseNumber = (violation['case_number'] ?? '').toString();
     final issuedAtStr = violation['issued_at'];
@@ -724,7 +717,8 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _highlightText(
-                        violation['violation_type'] ?? 'General',
+                        _localizedViolationType(
+                            violation['violation_type'], isCroatian),
                         _searchQuery,
                         Colors.black,
                         Colors.yellow,
@@ -741,7 +735,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                       ),
                       if (caseNumber.isNotEmpty)
                         Text(
-                          '${Lang.sel(ref.read(localeIsCroatianProvider), 'Case', 'Slučaj')}: $caseNumber',
+                          '${Lang.sel(isCroatian, 'Case', 'Slučaj')}: $caseNumber',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             color: AppTheme.textSecondary,
@@ -768,8 +762,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                       elevation: 0,
                     ),
                     child: Text(
-                      Lang.sel(ref.read(localeIsCroatianProvider), 'View',
-                          'Pogledaj'),
+                      Lang.sel(isCroatian, 'View', 'Pogledaj'),
                       style: const TextStyle(fontSize: 11),
                     ),
                   ),
@@ -787,7 +780,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _highlightText(
-            violation['violation_type'] ?? 'General',
+            _localizedViolationType(violation['violation_type'], isCroatian),
             _searchQuery,
             Colors.black,
             Colors.yellow,
@@ -802,7 +795,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
           ),
           if (caseNumber.isNotEmpty)
             Text(
-              '${Lang.sel(ref.read(localeIsCroatianProvider), 'Case', 'Slučaj')}: $caseNumber',
+              '${Lang.sel(isCroatian, 'Case', 'Slučaj')}: $caseNumber',
               style: GoogleFonts.inter(
                 color: AppTheme.textSecondary,
                 fontSize: 12,
@@ -829,8 +822,7 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            child: Text(Lang.sel(
-                ref.read(localeIsCroatianProvider), 'View', 'Pogledaj')),
+            child: Text(Lang.sel(isCroatian, 'View', 'Pogledaj')),
           ),
           const SizedBox(width: 12),
           if ((ref.watch(userProfileProvider).value?['role'] ?? '') ==
@@ -912,6 +904,20 @@ class _CasesListViewState extends ConsumerState<CasesListView> {
         children: spans,
       ),
     );
+  }
+
+  String _localizedViolationType(dynamic rawType, bool isCroatian) {
+    final normalized = (rawType ?? '').toString().trim().toLowerCase();
+    if (normalized == 'quick ticket') {
+      return Lang.sel(isCroatian, 'Quick Ticket', 'Brza kazna');
+    }
+    if (normalized == 'quick warning') {
+      return Lang.sel(isCroatian, 'Quick Warning', 'Brzo upozorenje');
+    }
+    if (normalized.isEmpty || normalized == 'general') {
+      return Lang.sel(isCroatian, 'General', 'Općenito');
+    }
+    return rawType.toString();
   }
 
   Widget _buildStatusBadge(String status) {

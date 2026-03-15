@@ -20,6 +20,7 @@ class PassDetailScreen extends ConsumerWidget {
     final isCroatian = ref.watch(localeIsCroatianProvider);
     // Calculate fields
     final String type = permit['type'] ?? 'pass';
+    final normalizedTypeForLabel = type.toLowerCase();
     final String plate = permit['plate'] ?? 'UNKNOWN';
     final String selectedDid = ref.watch(selectedLocationIdProvider) ?? 'N/A';
     final String rawLocId = (permit['location_id'] ?? '').toString();
@@ -203,6 +204,13 @@ class PassDetailScreen extends ConsumerWidget {
         (stripeMetadata['duration_unit'] ?? '').toString().toLowerCase();
     final isGuestPass = normalizedType == 'pass';
     final nowCet = _utcToCet(DateTime.now().toUtc());
+    final typeLabel = _localizedPermitType(
+      normalizedType: normalizedTypeForLabel,
+      billingType: billingType,
+      metadataType: metadataType,
+      metadataUnit: metadataUnit,
+      isCroatian: isCroatian,
+    );
     final accessAllowedNow = _isPermitAllowedNow(
       nowCet: nowCet,
       startTime: startTime,
@@ -220,18 +228,21 @@ class PassDetailScreen extends ConsumerWidget {
       final hours = duration != null
           ? ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round()
           : quantity;
-      durationString = '$hours ${hours == 1 ? 'Hour' : 'Hours'}';
+      durationString =
+          '$hours ${_localizedTimeUnit(hours, singularEn: 'Hour', pluralEn: 'Hours', singularHr: 'Sat', pluralHr: 'Sati', isCroatian: isCroatian)}';
     } else if (normalizedType == 'monthly' ||
         normalizedType == 'subscription' ||
         billingType == 'monthly' ||
         metadataType == 'monthly' ||
         metadataUnit == 'month') {
-      durationString = '$quantity ${quantity == 1 ? 'Month' : 'Months'}';
+      durationString =
+          '$quantity ${_localizedTimeUnit(quantity, singularEn: 'Month', pluralEn: 'Months', singularHr: 'Mjesec', pluralHr: 'Mjeseci', isCroatian: isCroatian)}';
     } else if (normalizedType == 'daily' ||
         billingType == 'daily' ||
         metadataType == 'daily' ||
         metadataUnit == 'day') {
-      durationString = '$quantity ${quantity == 1 ? 'Day' : 'Days'}';
+      durationString =
+          '$quantity ${_localizedTimeUnit(quantity, singularEn: 'Day', pluralEn: 'Days', singularHr: 'Dan', pluralHr: 'Dana', isCroatian: isCroatian)}';
     } else if (normalizedType == 'hourly' ||
         billingType == 'hourly' ||
         metadataType == 'hourly' ||
@@ -243,7 +254,7 @@ class PassDetailScreen extends ConsumerWidget {
           ? ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round()
           : quantity;
       durationString =
-          '$hourlyQuantity ${hourlyQuantity == 1 ? 'Hour' : 'Hours'}';
+          '$hourlyQuantity ${_localizedTimeUnit(hourlyQuantity, singularEn: 'Hour', pluralEn: 'Hours', singularHr: 'Sat', pluralHr: 'Sati', isCroatian: isCroatian)}';
     } else {
       final Duration? duration = (startTime != null && endTime != null)
           ? endTime.difference(startTime)
@@ -253,9 +264,11 @@ class PassDetailScreen extends ConsumerWidget {
             ((duration.inMinutes <= 0 ? 0 : duration.inMinutes) / 60).round();
         if (hours >= 24) {
           final days = (hours / 24).floor();
-          durationString = '$days ${days == 1 ? 'Day' : 'Days'}';
+          durationString =
+              '$days ${_localizedTimeUnit(days, singularEn: 'Day', pluralEn: 'Days', singularHr: 'Dan', pluralHr: 'Dana', isCroatian: isCroatian)}';
         } else {
-          durationString = '$hours ${hours == 1 ? 'Hour' : 'Hours'}';
+          durationString =
+              '$hours ${_localizedTimeUnit(hours, singularEn: 'Hour', pluralEn: 'Hours', singularHr: 'Sat', pluralHr: 'Sati', isCroatian: isCroatian)}';
         }
       }
     }
@@ -313,7 +326,7 @@ class PassDetailScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                type.toUpperCase(),
+                                typeLabel.toUpperCase(),
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: AppTheme.textSecondary,
@@ -776,6 +789,48 @@ class PassDetailScreen extends ConsumerWidget {
     return labels.isEmpty
         ? Lang.sel(isCroatian, 'None', 'Nema')
         : labels.join(', ');
+  }
+
+  String _localizedTimeUnit(
+    int quantity, {
+    required String singularEn,
+    required String pluralEn,
+    required String singularHr,
+    required String pluralHr,
+    required bool isCroatian,
+  }) {
+    if (isCroatian) {
+      return quantity == 1 ? singularHr : pluralHr;
+    }
+    return quantity == 1 ? singularEn : pluralEn;
+  }
+
+  String _localizedPermitType({
+    required String normalizedType,
+    required String? billingType,
+    required String metadataType,
+    required String metadataUnit,
+    required bool isCroatian,
+  }) {
+    final isMonthly = normalizedType == 'monthly' ||
+        normalizedType == 'subscription' ||
+        billingType == 'monthly' ||
+        metadataType == 'monthly' ||
+        metadataUnit == 'month';
+    final isDaily = normalizedType == 'daily' ||
+        billingType == 'daily' ||
+        metadataType == 'daily' ||
+        metadataUnit == 'day';
+    final isHourly = normalizedType == 'hourly' ||
+        billingType == 'hourly' ||
+        metadataType == 'hourly' ||
+        metadataUnit == 'hour' ||
+        normalizedType == 'pass';
+
+    if (isMonthly) return Lang.sel(isCroatian, 'Monthly', 'Mjesečno');
+    if (isDaily) return Lang.sel(isCroatian, 'Daily', 'Dnevno');
+    if (isHourly) return Lang.sel(isCroatian, 'Hourly', 'Satno');
+    return normalizedType.toUpperCase();
   }
 
   String _formatAccessWindow(Map<String, dynamic> permit) {

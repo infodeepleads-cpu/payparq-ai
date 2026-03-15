@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'terms_conditions_screen.dart';
+import '../config/app_config.dart';
 import '../theme.dart';
 import '../logic/providers/locale_provider.dart';
 
@@ -168,6 +170,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 48),
+            _buildSection(
+              title: isCroatian ? 'Aplikacija' : 'Application',
+              children: [
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: _downloadApk,
+                    icon: const Icon(Icons.android, size: 18),
+                    label: Text(
+                        isCroatian ? 'Preuzmi APK' : 'Download APK'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 48),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.push(
@@ -191,6 +216,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _downloadApk() async {
+                          final url = Uri.parse(AppConfig.apkDownloadUrl);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   Widget _buildSection(

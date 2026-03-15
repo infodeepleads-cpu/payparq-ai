@@ -94,6 +94,9 @@ fi
 
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
 mkdir -p build/web
+if [ -f web/app-release.apk ]; then
+  cp web/app-release.apk build/web/app-release.apk
+fi
 echo "{\"sha\":\"$COMMIT_SHA\"}" > build/web/version.json
 cat > build/web/_headers <<'EOF'
 /

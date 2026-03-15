@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'terms_conditions_screen.dart';
@@ -91,10 +92,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final isDesktop = size.width >= 800;
     final isCroatian = ref.watch(localeIsCroatianProvider);
 
-    return Scaffold(
-      backgroundColor: AppTheme.lightBackground,
-      body: Row(
-        children: [
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xD9FFFFFF),
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTheme.lightBackground,
+        body: Row(
+          children: [
           // Left Side (Form)
           Expanded(
             flex: 1,
@@ -107,34 +116,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _title,
-                              style: GoogleFonts.inter(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.lightBackground
+                                .withValues(alpha: 0.86),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _title,
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[600],
+                                ),
                               ),
-                            ),
-                            TextButton.icon(
-                              onPressed: () {
-                                final current =
-                                    ref.read(localeIsCroatianProvider);
-                                ref
-                                    .read(localeIsCroatianProvider.notifier)
-                                    .state = !current;
-                              },
-                              icon: const Icon(Icons.language,
-                                  size: 16, color: Colors.grey),
-                              label: Text(isCroatian ? 'EN' : 'HR',
-                                  style: GoogleFonts.inter(
-                                      color: Colors.grey[600],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
+                              TextButton.icon(
+                                onPressed: () {
+                                  final current =
+                                      ref.read(localeIsCroatianProvider);
+                                  ref
+                                      .read(localeIsCroatianProvider.notifier)
+                                      .state = !current;
+                                },
+                                icon: const Icon(Icons.language,
+                                    size: 16, color: Colors.grey),
+                                label: Text(isCroatian ? 'EN' : 'HR',
+                                    style: GoogleFonts.inter(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 32),
                         // Custom Tab Toggle
@@ -254,7 +273,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

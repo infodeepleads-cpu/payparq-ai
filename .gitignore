@@ -45,6 +45,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .vercel
+.env.local
+.gradle-home/
+web/app-release.apk
 CANONICAL_BACKUP_20260130/
 apps/
 apps 2/
