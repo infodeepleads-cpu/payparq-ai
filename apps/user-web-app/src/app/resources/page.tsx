@@ -993,7 +993,7 @@ export default function ResourcesPage() {
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
         context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         if (widgetIndex === 2) {
-          const stickerDiameter = pxPerCm * 1.449;
+          const stickerDiameter = pxPerCm * 1.52145;
           const stickerCenterX = stickerDiameter / 2 + pxPerCm * 0.55;
           const baseStickerCenterY = Math.min(
             templateImage.height - stickerDiameter / 2 - pxPerCm * 0.5,
