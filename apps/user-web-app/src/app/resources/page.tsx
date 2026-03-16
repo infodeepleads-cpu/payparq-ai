@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { supabase, supabaseUrl, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 type LocationRow = {
   id: string;
@@ -11,6 +11,7 @@ type LocationRow = {
   display_id: string | null;
   verification_metadata: Record<string, unknown> | null;
   enforcement_pricing_mode: string | null;
+  enforcmetn_pricing_mode?: string | null;
   rate_per_hour: number | null;
   base_price_hourly: number | null;
   base_price_daily: number | null;
@@ -36,6 +37,8 @@ type ResourceLocation = {
   displayId: string;
   pricingMode: "hourly" | "daily";
   signPrice: number | null;
+  allowPromotionCodes: boolean;
+  promotionCodeLabel: string;
   latestFineAmount: number | null;
   locationTemplateUrl: string;
   payableSignTemplateUrl: string;
@@ -55,6 +58,7 @@ type SignWidget = {
   templateUrl: string;
   fileName: string;
   extraText: string;
+  guestParkingMinutes: string;
   selectedLocationId: string;
   uploading: boolean;
   downloading: boolean;
@@ -69,6 +73,7 @@ function createDefaultWidgets() {
       templateUrl: "",
       fileName: "Safe Parking Eng",
       extraText: "",
+      guestParkingMinutes: "90",
       selectedLocationId: "",
       uploading: false,
       downloading: false,
@@ -78,6 +83,7 @@ function createDefaultWidgets() {
       templateUrl: "",
       fileName: "Safe Parking Eng Terms",
       extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
       selectedLocationId: "",
       uploading: false,
       downloading: false,
@@ -87,6 +93,7 @@ function createDefaultWidgets() {
       templateUrl: "",
       fileName: "Safe Parking 3",
       extraText: "",
+      guestParkingMinutes: "90",
       selectedLocationId: "",
       uploading: false,
       downloading: false,
@@ -96,6 +103,17 @@ function createDefaultWidgets() {
       templateUrl: "",
       fileName: "Safe Parking 4",
       extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-5`,
+      templateUrl: "",
+      fileName: "Safe Parking Guest Parking",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
       selectedLocationId: "",
       uploading: false,
       downloading: false,
@@ -117,7 +135,7 @@ function createInitialWidgets() {
     if (!Array.isArray(parsed) || parsed.length === 0) {
       return defaults;
     }
-    return parsed.map((item, index) => {
+    const parsedWidgets = parsed.map((item, index) => {
       const id =
         typeof item?.id === "string" && item.id.trim()
           ? item.id
@@ -127,12 +145,29 @@ function createInitialWidgets() {
         templateUrl: typeof item?.templateUrl === "string" ? item.templateUrl : "",
         fileName: typeof item?.fileName === "string" ? item.fileName : `Safe Parking ${index + 1}`,
         extraText: typeof item?.extraText === "string" ? item.extraText : "",
+        guestParkingMinutes:
+          typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
         selectedLocationId:
           typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
         uploading: false,
         downloading: false,
       } satisfies SignWidget;
     });
+    const withDefaults = defaults.map((defaultWidget, index) => {
+      const storedWidget = parsedWidgets[index];
+      if (!storedWidget) {
+        return defaultWidget;
+      }
+      return {
+        ...defaultWidget,
+        ...storedWidget,
+        guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
+        uploading: false,
+        downloading: false,
+      } satisfies SignWidget;
+    });
+    const extraWidgets = parsedWidgets.slice(defaults.length);
+    return [...withDefaults, ...extraWidgets];
   } catch {
     return defaults;
   }
@@ -178,6 +213,7 @@ function resolvePricingMode(source: LocationRow) {
 
   const modeRaw =
     source.enforcement_pricing_mode ??
+    source.enforcmetn_pricing_mode ??
     (metadata?.["enforcement_pricing_mode"] as string | undefined) ??
     (metadata?.["enforcmetn_pricing_mode"] as string | undefined) ??
     "hourly";
@@ -217,24 +253,33 @@ function buildCheckoutQrUrl(params: {
   displayId: string;
   type: "hourly" | "daily";
   price: number | null;
+  allowPromotionCodes?: boolean;
+  promotionCodeLabel?: string;
 }) {
-  if (!supabaseUrl) {
-    return "";
-  }
-  const base = `${supabaseUrl}/functions/v1/create-checkout`;
+  const functionsBase =
+    (process.env.NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL ?? "").trim().replace(/\/+$/, "") ||
+    `${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://iafjygownkhedereaoxw.supabase.co")
+      .trim()
+      .replace(/\/+$/, "")}/functions/v1`;
   const query = new URLSearchParams({
     location_id: params.locationId,
     display_id: params.displayId,
     type: params.type,
     t: Date.now().toString(),
   });
-  if (typeof params.price === "number") {
+  if (params.price !== null) {
     const normalized = params.price < 0 ? 0 : params.price;
     query.set("price", normalized.toFixed(2));
     query.set("amount", normalized.toFixed(2));
-    query.set("amount_cents", String(Math.round(normalized * 100)));
+    query.set("amount_cents", Math.round(normalized * 100).toString());
   }
-  return `${base}?${query.toString()}`;
+  const allowPromotionCodes = params.allowPromotionCodes !== false;
+  if (allowPromotionCodes) {
+    query.set("allow_promotion_codes", "1");
+    const trimmedLabel = (params.promotionCodeLabel ?? "").trim();
+    query.set("promotion_code_label", trimmedLabel || "FREE100");
+  }
+  return `${functionsBase}/create-checkout?${query.toString()}`;
 }
 
 function buildCasesQrUrl(displayId: string) {
@@ -256,6 +301,32 @@ function resolveMetadataString(
     }
   }
   return "";
+}
+
+function resolveMetadataBoolean(
+  metadata: Record<string, unknown> | null | undefined,
+  keys: string[],
+  fallback: boolean
+) {
+  for (const key of keys) {
+    const raw = metadata?.[key];
+    if (typeof raw === "boolean") {
+      return raw;
+    }
+    if (typeof raw === "number") {
+      return raw !== 0;
+    }
+    if (typeof raw === "string") {
+      const normalized = raw.trim().toLowerCase();
+      if (["1", "true", "yes", "on", "enabled"].includes(normalized)) {
+        return true;
+      }
+      if (["0", "false", "no", "off", "disabled"].includes(normalized)) {
+        return false;
+      }
+    }
+  }
+  return fallback;
 }
 
 export default function ResourcesPage() {
@@ -365,12 +436,31 @@ export default function ResourcesPage() {
             typeof row.verification_metadata === "object"
               ? row.verification_metadata
               : {};
+          const allowPromotionCodes = resolveMetadataBoolean(
+            metadata,
+            [
+              "allow_promotion_codes",
+              "allowPromotionCodes",
+              "hourly_coupon_field_enabled",
+              "coupon_enabled",
+            ],
+            true
+          );
+          const promotionCodeLabel =
+            resolveMetadataString(metadata, [
+              "promotion_code_label",
+              "promotionCodeLabel",
+              "coupon_name",
+              "coupon_label",
+            ]) || "FREE100";
           return {
             id: row.id,
             name: row.name || `Lot ${displayId}`,
             displayId,
             pricingMode,
             signPrice,
+            allowPromotionCodes,
+            promotionCodeLabel,
             latestFineAmount: latestFineByLocation.get(row.id) ?? null,
             locationTemplateUrl: resolveMetadataString(metadata, [
               "location_template_url",
@@ -385,6 +475,8 @@ export default function ResourcesPage() {
               displayId,
               type: pricingMode,
               price: signPrice,
+              allowPromotionCodes,
+              promotionCodeLabel,
             }),
             casesQrUrl: buildCasesQrUrl(displayId),
             metadata,
@@ -443,6 +535,15 @@ export default function ResourcesPage() {
   const firstWidgetTemplateUrl = widgets[0]?.templateUrl ?? "";
   const firstWidgetLocationId = widgets[0]?.selectedLocationId ?? "";
   const firstWidgetFileName = widgets[0]?.fileName ?? "";
+  const secondWidget = widgets[1] ?? null;
+  const secondWidgetLocation = secondWidget
+    ? sortedLocations.find((item) => item.id === secondWidget.selectedLocationId) ?? null
+    : null;
+  const secondWidgetEffectiveTemplateUrl =
+    secondWidget?.templateUrl ||
+    secondWidgetLocation?.payableSignTemplateUrl ||
+    secondWidgetLocation?.locationTemplateUrl ||
+    "";
 
   useEffect(() => {
     if (sortedLocations.length === 0) {
@@ -507,11 +608,12 @@ export default function ResourcesPage() {
       return;
     }
     const storedWidgets = widgets.map(
-      ({ id, templateUrl, fileName, extraText, selectedLocationId }) => ({
+      ({ id, templateUrl, fileName, extraText, guestParkingMinutes, selectedLocationId }) => ({
         id,
         templateUrl,
         fileName,
         extraText,
+        guestParkingMinutes,
         selectedLocationId,
       })
     );
@@ -526,6 +628,7 @@ export default function ResourcesPage() {
         templateUrl: "",
         fileName: `Safe Parking ${current.length + 1}`,
         extraText: "",
+        guestParkingMinutes: "90",
         selectedLocationId: sortedLocations[0]?.id ?? "",
         uploading: false,
         downloading: false,
@@ -653,12 +756,16 @@ export default function ResourcesPage() {
     widgetIndex: number
   ) {
     const resourceForSign = resource;
-    if (widgetIndex < 2 && !resource) {
+    const isWidgetFive = widgetIndex === 4;
+    if ((widgetIndex < 2 || isWidgetFive) && !resource) {
       setError("Select a location before downloading sign.");
       return;
     }
+    const isWidgetThreeOrFour = widgetIndex === 2 || widgetIndex === 3;
     const templateUrl =
-      widgetIndex >= 2
+      isWidgetFive
+        ? secondWidgetEffectiveTemplateUrl
+        : isWidgetThreeOrFour
         ? widget.templateUrl
         : widget.templateUrl ||
           resourceForSign?.payableSignTemplateUrl ||
@@ -722,15 +829,35 @@ export default function ResourcesPage() {
         context.font = `600 ${Math.max(6, diameter * 0.325)}px Montserrat, Inter, Arial, sans-serif`;
         context.fillText("P", centerX, centerY);
       };
-      const drawStyledQr = (context: CanvasRenderingContext2D, qrImage: HTMLImageElement) => {
+      const drawStyledQr = (
+        context: CanvasRenderingContext2D,
+        qrImage: HTMLImageElement,
+        includeTopSticker: boolean,
+        moduleCountHint?: number,
+        exactQrMode?: boolean
+      ) => {
         const qrBoxSize = 180;
-        const qrSize = 104;
+        const qrSize = exactQrMode ? 120 : 104;
         const qrCenterX = width / 2;
         const qrCenterY = 363;
         const qrX = qrCenterX - qrBoxSize / 2;
         const qrY = qrCenterY - qrBoxSize / 2;
         const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
         const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
+        if (exactQrMode) {
+          context.drawImage(qrImage, qrDrawX, qrDrawY, qrSize, qrSize);
+          const logoBgSize = 28;
+          context.fillStyle = "#ffffff";
+          context.beginPath();
+          context.arc(qrCenterX, qrCenterY, logoBgSize / 2, 0, Math.PI * 2);
+          context.fill();
+          context.fillStyle = "#000000";
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.font = "900 16px Montserrat, Inter, Arial, sans-serif";
+          context.fillText("P", qrCenterX, qrCenterY);
+          return;
+        }
         const qrSampleSize = 300;
         const qrCanvas = document.createElement("canvas");
         qrCanvas.width = qrSampleSize;
@@ -756,7 +883,7 @@ export default function ResourcesPage() {
         }
         const modulePixels = Math.max(1, Math.round(finderRun / 7) || 1);
         const inferredModuleCount = Math.round(qrSampleSize / modulePixels);
-        const moduleCount = Math.min(33, Math.max(21, inferredModuleCount));
+        const moduleCount = moduleCountHint && moduleCountHint >= 21 ? moduleCountHint : Math.min(33, Math.max(21, inferredModuleCount));
         const moduleDraw = qrSize / moduleCount;
         const qrMarkColor = "#000000";
         const finderMarkColor = qrMarkColor;
@@ -844,14 +971,32 @@ export default function ResourcesPage() {
         context.textBaseline = "middle";
         context.font = "900 16.2px Montserrat, Inter, Arial, sans-serif";
         context.fillText("P", qrCenterX, qrCenterY);
-        const stickerDiameter = 12;
-        const stickerCenterX = qrCenterX;
-        const stickerCenterY = qrCenterY - logoBgSize / 2 - stickerDiameter / 2 - 2;
-        drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
+        if (includeTopSticker) {
+          const stickerDiameter = 12;
+          const stickerCenterX = qrCenterX;
+          const stickerCenterY = qrCenterY - logoBgSize / 2 - stickerDiameter / 2 - 2;
+          drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
+        }
       };
       const width = 400;
       const height = 600;
       const outputScale = 2;
+      const buildQrDataUrl = async (value: string, width: number) => {
+        const QRCodeModule = await import("qrcode");
+        const qrModel = QRCodeModule.create(value, {
+          errorCorrectionLevel: "H",
+        });
+        const dataUrl = await QRCodeModule.toDataURL(value, {
+          errorCorrectionLevel: "H",
+          margin: 2,
+          width,
+          color: {
+            dark: "#000000",
+            light: "#FFFFFF",
+          },
+        });
+        return { dataUrl, moduleCount: qrModel.modules.size };
+      };
       const detectTemplateQrBounds = async (image: HTMLImageElement) => {
         try {
           if (!("BarcodeDetector" in window)) {
@@ -896,7 +1041,7 @@ export default function ResourcesPage() {
           return null;
         }
       };
-      if (widgetIndex >= 2) {
+      if (widgetIndex >= 2 && !isWidgetFive) {
         const templateImage = await loadImage(templateUrl);
         const canvas = document.createElement("canvas");
         canvas.width = templateImage.width * outputScale;
@@ -1046,12 +1191,20 @@ export default function ResourcesPage() {
         displayId: resourceForSign.displayId,
         type: resourceForSign.pricingMode,
         price: resourceForSign.signPrice,
+        allowPromotionCodes: resourceForSign.allowPromotionCodes,
+        promotionCodeLabel: resourceForSign.promotionCodeLabel,
       });
-      const qrImage = await loadImage(
-        `https://api.qrserver.com/v1/create-qr-code/?size=300x300&qzone=0&data=${encodeURIComponent(checkoutUrl)}`
-      );
+      const { dataUrl: qrDataUrl, moduleCount: qrModuleCount } = await buildQrDataUrl(checkoutUrl, 900);
+      const qrImage = await loadImage(qrDataUrl);
 
-      const titleLines = splitSignTitle(resourceForSign.name);
+      const normalizedGuestParkingMinutes =
+        widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
+      const titleName = isWidgetFive
+        ? `Besplatan Parking za Goste do ${normalizedGuestParkingMinutes} min.`
+        : resourceForSign.name;
+      const titleLines = isWidgetFive
+        ? ["Besplatan Parking za", `Goste do ${normalizedGuestParkingMinutes} min.`]
+        : splitSignTitle(titleName);
       context.fillStyle = "#111111";
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -1068,7 +1221,13 @@ export default function ResourcesPage() {
         context.fillText(titleLines[0], width / 2, titleCenterY);
       }
 
-      drawStyledQr(context, qrImage);
+      drawStyledQr(
+        context,
+        qrImage,
+        widgetIndex > 1 && widgetIndex !== 4,
+        qrModuleCount,
+        widgetIndex === 0
+      );
 
       context.fillStyle = "#111111";
       context.textAlign = "left";
@@ -1077,7 +1236,8 @@ export default function ResourcesPage() {
       context.fillText(resourceForSign.displayId, 34, 593);
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
       if (normalizedExtraText) {
-        context.fillStyle = "#111111";
+        const footerDescriptionColor = widgetIndex === 1 || widgetIndex === 4 ? "#6b7280" : "#111111";
+        context.fillStyle = footerDescriptionColor;
         context.textAlign = "left";
         context.textBaseline = "alphabetic";
         context.font = "600 7.2px Inter, Arial, sans-serif";
@@ -1190,10 +1350,17 @@ export default function ResourcesPage() {
               </button>
             </div>
             {widgets.map((widget, index) => {
+              const isWidgetFive = index === 4;
+              const isWidgetThreeOrFour = index === 2 || index === 3;
+              const normalizedGuestParkingMinutes =
+                widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
+              const widgetFiveTitle = `Besplatan Parking za Goste do ${normalizedGuestParkingMinutes} min.`;
               const selectedLocation =
                 sortedLocations.find((item) => item.id === widget.selectedLocationId) ?? null;
               const effectiveTemplateUrl =
-                index >= 2
+                isWidgetFive
+                  ? secondWidgetEffectiveTemplateUrl
+                  : isWidgetThreeOrFour
                   ? widget.templateUrl
                   : widget.templateUrl ||
                     selectedLocation?.payableSignTemplateUrl ||
@@ -1207,7 +1374,7 @@ export default function ResourcesPage() {
                   <div className="flex flex-wrap items-center gap-2 justify-between">
                     <p className="text-sm font-semibold text-white">Widget {index + 1}</p>
                     <div className="flex items-center gap-2">
-                      {widget.templateUrl && (
+                      {widget.templateUrl && !isWidgetFive && (
                         <button
                           type="button"
                           onClick={() => handleRemoveWidgetTemplate(widget.id)}
@@ -1217,18 +1384,29 @@ export default function ResourcesPage() {
                           Delete Uploaded Photo
                         </button>
                       )}
-                      <label className="inline-flex cursor-pointer items-center justify-center px-4 py-2 rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors">
+                      <label
+                        className={`inline-flex items-center justify-center px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                          isWidgetFive
+                            ? "cursor-not-allowed bg-white/20 text-white/60"
+                            : "cursor-pointer bg-white text-black hover:bg-white/90"
+                        }`}
+                      >
                         {widget.uploading ? "Uploading..." : "Upload Photo"}
                         <input
                           type="file"
                           accept="image/*"
                           onChange={(event) => handleWidgetTemplateUpload(widget.id, event)}
-                          disabled={widget.uploading}
+                          disabled={widget.uploading || isWidgetFive}
                           className="hidden"
                         />
                       </label>
                     </div>
                   </div>
+                  {isWidgetFive && (
+                    <p className="text-[11px] text-white/65">
+                      Widget 5 always uses Widget 2 template for the final output.
+                    </p>
+                  )}
                   {effectiveTemplateUrl ? (
                     <div className="space-y-3">
                       <img
@@ -1277,7 +1455,10 @@ export default function ResourcesPage() {
                       {selectedLocation && (
                         <div className="space-y-1 text-[11px] text-white/75">
                           <p>
-                            Top title: <span className="text-white">{selectedLocation.name}</span>
+                            Top title:{" "}
+                            <span className="text-white">
+                              {isWidgetFive ? widgetFiveTitle : selectedLocation.name}
+                            </span>
                           </p>
                           <p>
                             Bottom left:{" "}
@@ -1313,6 +1494,31 @@ export default function ResourcesPage() {
                           className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                         />
                       </label>
+                      {isWidgetFive && (
+                        <label className="space-y-1 block">
+                          <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                            Guest parking minutes
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={widget.guestParkingMinutes}
+                            onChange={(event) => {
+                              const nextValue =
+                                event.target.value.replace(/\D+/g, "").replace(/^0+/, "") || "90";
+                              setWidgets((current) =>
+                                current.map((item) =>
+                                  item.id === widget.id
+                                    ? { ...item, guestParkingMinutes: nextValue }
+                                    : item
+                                )
+                              );
+                            }}
+                            placeholder="90"
+                            className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          />
+                        </label>
+                      )}
                       <label className="space-y-1 block">
                         <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
                           Extra text

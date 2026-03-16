@@ -236,6 +236,7 @@ export async function GET(req: NextRequest) {
   const location_id = url.searchParams.get('loc') || '';
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
+  const pricing_type = url.searchParams.get('type') === 'daily' ? 'daily' : 'hourly';
   const customer_email = url.searchParams.get('email') || undefined;
 
   if (flow_type === 'setup') {
@@ -267,15 +268,36 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Supabase client is not configured.' }, { status: 500 });
     }
     const { data } = await supabase
-      .from('pricing_settings')
-      .select('rules_text')
-      .eq('location_id', location_id)
-      .eq('active', true)
-      .limit(1);
-    const rules = data?.[0]?.rules_text as string | undefined;
-    if (rules) {
-      const match = rules.match(/\$?(\d+)\s*\/\s*hr/i);
-      if (match) unitAmount = parseInt(match[1], 10) * 100;
+      .from('locations')
+      .select(
+        'rate_per_hour,base_price_hourly,base_price_daily,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling'
+      )
+      .eq('id', location_id)
+      .maybeSingle();
+    if (data) {
+      let resolvedPrice =
+        pricing_type === 'daily'
+          ? Number(data.base_price_daily ?? 0)
+          : Number(data.rate_per_hour ?? 0) > 0
+          ? Number(data.rate_per_hour ?? 0)
+          : Number(data.base_price_hourly ?? 0);
+      const floor =
+        pricing_type === 'daily'
+          ? Number(data.base_price_daily_floor ?? 0)
+          : Number(data.rate_per_hour_floor ?? 0);
+      const ceiling =
+        pricing_type === 'daily'
+          ? Number(data.base_price_daily_ceiling ?? 0)
+          : Number(data.rate_per_hour_ceiling ?? 0);
+      if (floor > 0 && resolvedPrice < floor) {
+        resolvedPrice = floor;
+      }
+      if (ceiling > 0 && resolvedPrice > ceiling) {
+        resolvedPrice = ceiling;
+      }
+      if (resolvedPrice > 0) {
+        unitAmount = Math.round(resolvedPrice * 100);
+      }
     }
   }
   try {
@@ -289,7 +311,9 @@ export async function GET(req: NextRequest) {
         {
           price_data: {
             currency: 'eur',
-            product_data: { name: 'Parking Session' },
+            product_data: {
+              name: pricing_type === 'daily' ? 'Parking Session (Daily)' : 'Parking Session (Hourly)',
+            },
             unit_amount: unitAmount,
           },
           quantity: 1,
@@ -300,6 +324,7 @@ export async function GET(req: NextRequest) {
           location_id,
           plate_number,
           flow_type,
+          pricing_type,
         },
       },
     });
