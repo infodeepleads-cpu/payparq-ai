@@ -717,10 +717,17 @@ export default function ResourcesPage() {
         context.fillStyle = "#020617";
         context.fill();
         context.fillStyle = "#ffffff";
-        context.textAlign = "center";
+        context.textAlign = "left";
         context.textBaseline = "middle";
-        context.font = `900 ${Math.max(8, diameter * 0.57)}px Montserrat, Inter, Arial, sans-serif`;
-        context.fillText("P", centerX, centerY + diameter * 0.02);
+        context.font = `500 ${Math.max(6, diameter * 0.4446)}px Montserrat, Inter, Arial, sans-serif`;
+        const pOffsetY = diameter * (0.1 / 1.52145);
+        context.save();
+        context.translate(centerX, centerY + pOffsetY);
+        context.scale(0.4, 1);
+        const pMetrics = context.measureText("P");
+        const pOffsetX = -(pMetrics.actualBoundingBoxLeft + pMetrics.actualBoundingBoxRight) / 2;
+        context.fillText("P", pOffsetX, 0);
+        context.restore();
       };
       const drawStyledQr = (context: CanvasRenderingContext2D, qrImage: HTMLImageElement) => {
         const qrBoxSize = 180;
