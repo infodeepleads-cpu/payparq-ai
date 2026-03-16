@@ -993,13 +993,13 @@ export default function ResourcesPage() {
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
         context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         if (widgetIndex === 2) {
-          const stickerDiameter = pxPerCm * 2;
-          const stickerCenterX = clampedX + clampedWidth / 2 - pxPerCm;
+          const stickerDiameter = pxPerCm * 1.449;
+          const stickerCenterX = stickerDiameter / 2 + pxPerCm * 0.55;
           const baseStickerCenterY = Math.min(
             templateImage.height - stickerDiameter / 2 - pxPerCm * 0.5,
             templateImage.height * 0.88
           );
-          const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 2);
+          const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 3.2);
           drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
         }
         if (qrObjectUrl) {
