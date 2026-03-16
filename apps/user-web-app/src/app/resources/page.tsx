@@ -883,9 +883,46 @@ export default function ResourcesPage() {
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
         context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
-        const qrImage = await loadImage(
-          `https://api.qrserver.com/v1/create-qr-code/?size=900x900&qzone=0&data=${encodeURIComponent("https://www.payparq.com/payments")}`
-        );
+        let qrObjectUrl = "";
+        let qrImage: HTMLImageElement;
+        if (widgetIndex === 2) {
+          const { default: QRCodeStyling } = await import("qr-code-styling");
+          const qrStyling = new QRCodeStyling({
+            width: 900,
+            height: 900,
+            type: "canvas",
+            data: "https://www.payparq.com/payments",
+            margin: 0,
+            dotsOptions: {
+              type: "dots",
+              color: "#000000",
+            },
+            cornersSquareOptions: {
+              type: "extra-rounded",
+              color: "#000000",
+            },
+            cornersDotOptions: {
+              type: "dot",
+              color: "#000000",
+            },
+            backgroundOptions: {
+              color: "#ffffff",
+            },
+            qrOptions: {
+              errorCorrectionLevel: "Q",
+            },
+          });
+          const rawData = await qrStyling.getRawData("png");
+          if (!(rawData instanceof Blob)) {
+            throw new Error("Unable to generate styled QR image.");
+          }
+          qrObjectUrl = URL.createObjectURL(rawData);
+          qrImage = await loadImage(qrObjectUrl);
+        } else {
+          qrImage = await loadImage(
+            `https://api.qrserver.com/v1/create-qr-code/?size=900x900&qzone=0&data=${encodeURIComponent("https://www.payparq.com/payments")}`
+          );
+        }
         const fallbackX = (148 / width) * templateImage.width;
         const fallbackY = (311 / height) * templateImage.height;
         const fallbackWidth = (104 / width) * templateImage.width;
@@ -915,17 +952,23 @@ export default function ResourcesPage() {
         const growLeftPx = pxPerCm * 0.3;
         const growRightPx = pxPerCm * 0.1;
         const growExtraWidthPx = pxPerCm * 1.5;
+        const widget3ExtraWidthPx = widgetIndex === 2 ? pxPerCm * 0.1 : 0;
         const trimTopPx = pxPerCm * 0.15;
         const moveDownPx = pxPerCm * 0.15;
-        const adjustedWidth = qrTargetWidth + growLeftPx + growRightPx + growExtraWidthPx;
+        const adjustedWidth =
+          qrTargetWidth + growLeftPx + growRightPx + growExtraWidthPx + widget3ExtraWidthPx;
         const adjustedHeight = qrTargetHeight - trimTopPx;
-        const adjustedX = qrTargetX - growLeftPx - growExtraWidthPx / 2;
+        const adjustedX =
+          qrTargetX - growLeftPx - (growExtraWidthPx + widget3ExtraWidthPx) / 2;
         const adjustedY = qrTargetY - moveUpPx + trimTopPx + moveDownPx;
         const clampedWidth = Math.max(1, Math.min(adjustedWidth, templateImage.width));
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
         context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
+        if (qrObjectUrl) {
+          URL.revokeObjectURL(qrObjectUrl);
+        }
         await downloadCanvas(canvas);
         return;
       }
