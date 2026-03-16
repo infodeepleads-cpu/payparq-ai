@@ -910,7 +910,22 @@ export default function ResourcesPage() {
         const qrTargetHeight = hasUsableDetection
           ? (detectedQrBounds as { height: number }).height
           : fallbackHeight;
-        context.drawImage(qrImage, qrTargetX, qrTargetY, qrTargetWidth, qrTargetHeight);
+        const pxPerCm = fallbackWidth / 4;
+        const moveUpPx = pxPerCm * 9.9;
+        const growLeftPx = pxPerCm * 0.3;
+        const growRightPx = pxPerCm * 0.1;
+        const growExtraWidthPx = pxPerCm * 1.5;
+        const trimTopPx = pxPerCm * 0.15;
+        const moveDownPx = pxPerCm * 0.15;
+        const adjustedWidth = qrTargetWidth + growLeftPx + growRightPx + growExtraWidthPx;
+        const adjustedHeight = qrTargetHeight - trimTopPx;
+        const adjustedX = qrTargetX - growLeftPx - growExtraWidthPx / 2;
+        const adjustedY = qrTargetY - moveUpPx + trimTopPx + moveDownPx;
+        const clampedWidth = Math.max(1, Math.min(adjustedWidth, templateImage.width));
+        const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
+        const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
+        const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
+        context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         await downloadCanvas(canvas);
         return;
       }
