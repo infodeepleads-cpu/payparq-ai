@@ -700,6 +700,28 @@ export default function ResourcesPage() {
         });
         downloadBlob(blob, "png");
       };
+      const drawPayparqSticker = (
+        context: CanvasRenderingContext2D,
+        centerX: number,
+        centerY: number,
+        diameter: number
+      ) => {
+        const outerRadius = diameter / 2;
+        const innerRadius = Math.max(1, outerRadius - diameter * 0.13);
+        context.beginPath();
+        context.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+        context.fillStyle = "#f8fafc";
+        context.fill();
+        context.beginPath();
+        context.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+        context.fillStyle = "#020617";
+        context.fill();
+        context.fillStyle = "#ffffff";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.font = `900 ${Math.max(8, diameter * 0.57)}px Montserrat, Inter, Arial, sans-serif`;
+        context.fillText("P", centerX, centerY + diameter * 0.02);
+      };
       const drawStyledQr = (context: CanvasRenderingContext2D, qrImage: HTMLImageElement) => {
         const qrBoxSize = 180;
         const qrSize = 104;
@@ -822,6 +844,10 @@ export default function ResourcesPage() {
         context.textBaseline = "middle";
         context.font = "900 16.2px Montserrat, Inter, Arial, sans-serif";
         context.fillText("P", qrCenterX, qrCenterY);
+        const stickerDiameter = 12;
+        const stickerCenterX = qrCenterX;
+        const stickerCenterY = qrCenterY - logoBgSize / 2 - stickerDiameter / 2 - 2;
+        drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
       };
       const width = 400;
       const height = 600;
@@ -966,6 +992,16 @@ export default function ResourcesPage() {
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
         context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
+        if (widgetIndex === 2) {
+          const stickerDiameter = pxPerCm * 2;
+          const stickerCenterX = clampedX + clampedWidth / 2 - pxPerCm;
+          const baseStickerCenterY = Math.min(
+            templateImage.height - stickerDiameter / 2 - pxPerCm * 0.5,
+            templateImage.height * 0.88
+          );
+          const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 2);
+          drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
+        }
         if (qrObjectUrl) {
           URL.revokeObjectURL(qrObjectUrl);
         }
