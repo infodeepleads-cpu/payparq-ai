@@ -911,7 +911,8 @@ export default function ResourcesPage() {
         context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
-        if (widgetIndex === 2) {
+        const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
+        if (shouldMatchWidget3Styling) {
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const qrStyling = new QRCodeStyling({
             width: 900,
@@ -978,7 +979,7 @@ export default function ResourcesPage() {
         const growLeftPx = pxPerCm * 0.3;
         const growRightPx = pxPerCm * 0.1;
         const growExtraWidthPx = pxPerCm * 1.5;
-        const widget3ExtraWidthPx = widgetIndex === 2 ? pxPerCm * 0.1 : 0;
+        const widget3ExtraWidthPx = shouldMatchWidget3Styling ? pxPerCm * 0.1 : 0;
         const trimTopPx = pxPerCm * 0.15;
         const moveDownPx = pxPerCm * 0.15;
         const adjustedWidth =
@@ -992,7 +993,7 @@ export default function ResourcesPage() {
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
         context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
-        if (widgetIndex === 2) {
+        if (shouldMatchWidget3Styling) {
           const stickerDiameter = pxPerCm * 1.52145;
           const stickerCenterX = stickerDiameter / 2 + pxPerCm * 0.55;
           const baseStickerCenterY = Math.min(
