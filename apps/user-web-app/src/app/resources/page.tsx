@@ -834,7 +834,8 @@ export default function ResourcesPage() {
         qrImage: HTMLImageElement,
         includeTopSticker: boolean,
         moduleCountHint?: number,
-        exactQrMode?: boolean
+        exactQrMode?: boolean,
+        hideCenterBadge?: boolean
       ) => {
         const qrBoxSize = 180;
         const qrSize = exactQrMode ? 120 : 104;
@@ -846,16 +847,14 @@ export default function ResourcesPage() {
         const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
         if (exactQrMode) {
           context.drawImage(qrImage, qrDrawX, qrDrawY, qrSize, qrSize);
-          const logoBgSize = 28;
-          context.fillStyle = "#ffffff";
+          if (hideCenterBadge) {
+            return;
+          }
           context.beginPath();
-          context.arc(qrCenterX, qrCenterY, logoBgSize / 2, 0, Math.PI * 2);
+          context.arc(qrCenterX, qrCenterY, 13, 0, Math.PI * 2);
+          context.fillStyle = "#ffffff";
           context.fill();
-          context.fillStyle = "#000000";
-          context.textAlign = "center";
-          context.textBaseline = "middle";
-          context.font = "900 16px Montserrat, Inter, Arial, sans-serif";
-          context.fillText("P", qrCenterX, qrCenterY);
+          drawPayparqSticker(context, qrCenterX, qrCenterY, 20);
           return;
         }
         const qrSampleSize = 300;
@@ -887,7 +886,8 @@ export default function ResourcesPage() {
         const moduleDraw = qrSize / moduleCount;
         const qrMarkColor = "#000000";
         const finderMarkColor = qrMarkColor;
-        const markSize = Math.max(1, Math.round(moduleDraw * 0.66));
+        const dotDiameter = Math.max(1, moduleDraw * 0.35);
+        const dotRadius = dotDiameter / 2;
         context.fillStyle = qrMarkColor;
         for (let row = 0; row < moduleCount; row += 1) {
           for (let column = 0; column < moduleCount; column += 1) {
@@ -896,9 +896,11 @@ export default function ResourcesPage() {
             if (!isDark(sampleX, sampleY)) {
               continue;
             }
-            const drawX = Math.round(qrDrawX + column * moduleDraw + (moduleDraw - markSize) / 2);
-            const drawY = Math.round(qrDrawY + row * moduleDraw + (moduleDraw - markSize) / 2);
-            context.fillRect(drawX, drawY, markSize, markSize);
+            const centerX = qrDrawX + column * moduleDraw + moduleDraw / 2;
+            const centerY = qrDrawY + row * moduleDraw + moduleDraw / 2;
+            context.beginPath();
+            context.arc(centerX, centerY, dotRadius, 0, Math.PI * 2);
+            context.fill();
           }
         }
         const drawRoundedRect = (
@@ -931,12 +933,13 @@ export default function ResourcesPage() {
             context.stroke();
           }
         };
-        const finderOuter = 12;
-        const finderInner = 5;
-        const finderRadiusOuter = 3;
-        const finderRadiusInner = 1.8;
-        const finderMask = 16;
-        const finderMaskRadius = 4;
+        const finderScale = 1;
+        const finderOuter = moduleDraw * 7 * finderScale;
+        const finderInner = moduleDraw * 3 * finderScale;
+        const finderRadiusOuter = Math.max(1, moduleDraw * 1.3 * finderScale);
+        const finderRadiusInner = Math.max(1, moduleDraw * 0.7 * finderScale);
+        const finderMask = finderOuter + moduleDraw * 1.2;
+        const finderMaskRadius = finderRadiusOuter + moduleDraw * 0.6;
         const finderMaskInset = (finderMask - finderOuter) / 2;
         const drawFinderReplacement = (x: number, y: number) => {
           drawRoundedRect(
@@ -946,7 +949,15 @@ export default function ResourcesPage() {
             finderMaskRadius,
             "#ffffff"
           );
-          drawRoundedRect(x, y, finderOuter, finderRadiusOuter, "#ffffff", finderMarkColor, 2.4);
+          drawRoundedRect(
+            x,
+            y,
+            finderOuter,
+            finderRadiusOuter,
+            "#ffffff",
+            finderMarkColor,
+            Math.max(1, moduleDraw * 1.2)
+          );
           drawRoundedRect(
             x + (finderOuter - finderInner) / 2,
             y + (finderOuter - finderInner) / 2,
@@ -958,7 +969,7 @@ export default function ResourcesPage() {
         drawFinderReplacement(qrDrawX, qrDrawY);
         drawFinderReplacement(qrDrawX + qrSize - finderOuter, qrDrawY);
         drawFinderReplacement(qrDrawX, qrDrawY + qrSize - finderOuter);
-        const logoBgSize = 30;
+        const logoBgSize = 24;
         context.fillStyle = "#ffffff";
         context.fillRect(
           qrCenterX - logoBgSize / 2,
@@ -988,7 +999,7 @@ export default function ResourcesPage() {
         });
         const dataUrl = await QRCodeModule.toDataURL(value, {
           errorCorrectionLevel: "H",
-          margin: 2,
+          margin: 0,
           width,
           color: {
             dark: "#000000",
@@ -1057,13 +1068,14 @@ export default function ResourcesPage() {
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
         const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
+        const qrDataValue = "https://www.payparq.com/payments";
         if (shouldMatchWidget3Styling) {
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const qrStyling = new QRCodeStyling({
             width: 900,
             height: 900,
             type: "canvas",
-            data: "https://www.payparq.com/payments",
+            data: qrDataValue,
             margin: 0,
             dotsOptions: {
               type: "dots",
@@ -1092,7 +1104,7 @@ export default function ResourcesPage() {
           qrImage = await loadImage(qrObjectUrl);
         } else {
           qrImage = await loadImage(
-            `https://api.qrserver.com/v1/create-qr-code/?size=900x900&qzone=0&data=${encodeURIComponent("https://www.payparq.com/payments")}`
+            `https://api.qrserver.com/v1/create-qr-code/?size=900x900&qzone=0&color=000000&data=${encodeURIComponent(qrDataValue)}`
           );
         }
         const fallbackX = (148 / width) * templateImage.width;
@@ -1194,8 +1206,50 @@ export default function ResourcesPage() {
         allowPromotionCodes: resourceForSign.allowPromotionCodes,
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
       });
-      const { dataUrl: qrDataUrl, moduleCount: qrModuleCount } = await buildQrDataUrl(checkoutUrl, 900);
-      const qrImage = await loadImage(qrDataUrl);
+      let qrImage: HTMLImageElement;
+      let qrModuleCount: number | undefined;
+      if (widgetIndex === 0) {
+        const { default: QRCodeStyling } = await import("qr-code-styling");
+        const qrStyling = new QRCodeStyling({
+          width: 900,
+          height: 900,
+          type: "canvas",
+          data: checkoutUrl,
+          margin: 0,
+          dotsOptions: {
+            type: "dots",
+            color: "#000000",
+          },
+          cornersSquareOptions: {
+            type: "extra-rounded",
+            color: "#000000",
+          },
+          cornersDotOptions: {
+            type: "dot",
+            color: "#000000",
+          },
+          backgroundOptions: {
+            color: "#ffffff",
+          },
+          qrOptions: {
+            errorCorrectionLevel: "Q",
+          },
+        });
+        const rawData = await qrStyling.getRawData("png");
+        if (!(rawData instanceof Blob)) {
+          throw new Error("Unable to generate styled QR image.");
+        }
+        const qrObjectUrl = URL.createObjectURL(rawData);
+        try {
+          qrImage = await loadImage(qrObjectUrl);
+        } finally {
+          URL.revokeObjectURL(qrObjectUrl);
+        }
+      } else {
+        const { dataUrl: qrDataUrl, moduleCount } = await buildQrDataUrl(checkoutUrl, 900);
+        qrImage = await loadImage(qrDataUrl);
+        qrModuleCount = moduleCount;
+      }
 
       const normalizedGuestParkingMinutes =
         widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
@@ -1226,7 +1280,8 @@ export default function ResourcesPage() {
         qrImage,
         widgetIndex > 1 && widgetIndex !== 4,
         qrModuleCount,
-        widgetIndex === 0
+        widgetIndex === 0,
+        false
       );
 
       context.fillStyle = "#111111";
