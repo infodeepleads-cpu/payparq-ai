@@ -128,6 +128,16 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-7`,
+      templateUrl: "",
+      fileName: "Safe Parking Parking from 0.1 €/h",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -768,7 +778,8 @@ export default function ResourcesPage() {
     const resourceForSign = resource;
     const isWidgetFive = widgetIndex === 4;
     const isWidgetSix = widgetIndex === 5;
-    const isGuestParkingWidget = isWidgetFive || isWidgetSix;
+    const isWidgetSeven = widgetIndex === 6;
+    const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
     if ((widgetIndex < 2 || isGuestParkingWidget) && !resource) {
       setError("Select a location before downloading sign.");
       return;
@@ -1162,7 +1173,9 @@ export default function ResourcesPage() {
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
-        context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
+        if (widgetIndex !== 7) {
+          context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
+        }
         if (shouldMatchWidget3Styling) {
           const stickerDiameter = pxPerCm * 1.52145;
           const stickerCenterX = stickerDiameter / 2 + pxPerCm * 0.55;
@@ -1172,6 +1185,31 @@ export default function ResourcesPage() {
           );
           const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 3.2);
           drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
+        }
+        if (widgetIndex === 7) {
+          const footerCutHeight = Math.max(1, Math.round((56 / height) * templateImage.height));
+          const croppedSourceHeight = Math.max(1, templateImage.height - footerCutHeight);
+          context.clearRect(0, 0, templateImage.width, templateImage.height);
+          context.drawImage(
+            templateImage,
+            0,
+            0,
+            templateImage.width,
+            croppedSourceHeight,
+            0,
+            0,
+            templateImage.width,
+            templateImage.height
+          );
+          context.fillStyle = "#111111";
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.font = `700 ${Math.max(18, Math.round(templateImage.height * 0.04))}px Montserrat, Inter, Arial, sans-serif`;
+          const priceLabelY = Math.min(
+            templateImage.height - 24,
+            templateImage.height * 0.12 + pxPerCm * 2
+          );
+          context.fillText("0.1€/h - 1.4€/h", templateImage.width / 2, priceLabelY);
         }
         if (qrObjectUrl) {
           URL.revokeObjectURL(qrObjectUrl);
@@ -1222,7 +1260,7 @@ export default function ResourcesPage() {
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
       const useExactQrMechanics =
-        widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5;
+        widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -1273,6 +1311,8 @@ export default function ResourcesPage() {
         ? `Gosti Besplatno ${normalizedGuestParkingMinutes} m. Guests Free ${normalizedGuestParkingMinutes} m.`
         : isWidgetSix
         ? "Parking za Goste Guests Only"
+        : isWidgetSeven
+        ? "Cijena:0.1€/sat-3.9€/sat Price:0.1€/h-3.9€/h"
         : resourceForSign.name;
       const titleLines = isWidgetFive
         ? [
@@ -1281,6 +1321,8 @@ export default function ResourcesPage() {
           ]
         : isWidgetSix
         ? ["Parking za Goste", "Guests Only"]
+        : isWidgetSeven
+        ? ["Cijena:0.1€/sat-3.9€/sat", "Price:0.1€/h-3.9€/h"]
         : splitSignTitle(titleName);
       context.fillStyle = "#111111";
       context.textAlign = "center";
@@ -1307,7 +1349,7 @@ export default function ResourcesPage() {
         qrModuleCount,
         useExactQrMechanics,
         false,
-        widgetIndex === 4 || widgetIndex === 5 ? 110 : undefined
+        widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 ? 110 : undefined
       );
 
       context.fillStyle = "#111111";
@@ -1318,7 +1360,9 @@ export default function ResourcesPage() {
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
       if (normalizedExtraText) {
         const footerDescriptionColor =
-          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 ? "#6b7280" : "#111111";
+          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
+            ? "#6b7280"
+            : "#111111";
         context.fillStyle = footerDescriptionColor;
         context.textAlign = "left";
         context.textBaseline = "alphabetic";
@@ -1350,7 +1394,9 @@ export default function ResourcesPage() {
           extraLines.push(currentLine);
         }
         const widgetTwoFooterLift =
-          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 ? (width / 10) * 0.15 : 0;
+          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
+            ? (width / 10) * 0.15
+            : 0;
         const extraStartY = footerTopY + extraLineHeight - widgetTwoFooterLift;
         for (let i = 0; i < extraLines.length; i += 1) {
           context.fillText(extraLines[i], textStartX, extraStartY + i * extraLineHeight);
@@ -1436,12 +1482,14 @@ export default function ResourcesPage() {
             {widgets.map((widget, index) => {
               const isWidgetFive = index === 4;
               const isWidgetSix = index === 5;
-              const isGuestParkingWidget = isWidgetFive || isWidgetSix;
+              const isWidgetSeven = index === 6;
+              const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
               const widgetFiveTitle = `Gosti Besplatno ${normalizedGuestParkingMinutes} m. / Guests Free ${normalizedGuestParkingMinutes} m.`;
               const widgetSixTitle = "Parking za Goste / Guests Only";
+              const widgetSevenTitle = "Cijena:0.1€/sat-3.9€/sat / Price:0.1€/h-3.9€/h";
               const selectedLocation =
                 sortedLocations.find((item) => item.id === widget.selectedLocationId) ?? null;
               const effectiveTemplateUrl =
@@ -1493,7 +1541,9 @@ export default function ResourcesPage() {
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
                         ? "Widget 5 always uses Widget 2 template for the final output."
-                        : "Widget 6 always uses Widget 2 template for the final output."}
+                        : isWidgetSix
+                        ? "Widget 6 always uses Widget 2 template for the final output."
+                        : "Widget 7 always uses Widget 2 template for the final output."}
                     </p>
                   )}
                   {effectiveTemplateUrl ? (
@@ -1550,6 +1600,8 @@ export default function ResourcesPage() {
                                 ? widgetFiveTitle
                                 : isWidgetSix
                                 ? widgetSixTitle
+                                : isWidgetSeven
+                                ? widgetSevenTitle
                                 : selectedLocation.name}
                             </span>
                           </p>
