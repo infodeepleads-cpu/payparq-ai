@@ -835,10 +835,11 @@ export default function ResourcesPage() {
         includeTopSticker: boolean,
         moduleCountHint?: number,
         exactQrMode?: boolean,
-        hideCenterBadge?: boolean
+        hideCenterBadge?: boolean,
+        exactQrSize?: number
       ) => {
         const qrBoxSize = 180;
-        const qrSize = exactQrMode ? 115 : 104;
+        const qrSize = exactQrMode ? exactQrSize ?? 115 : 104;
         const qrCenterX = width / 2;
         const qrCenterY = 363;
         const qrX = qrCenterX - qrBoxSize / 2;
@@ -1208,7 +1209,9 @@ export default function ResourcesPage() {
       });
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
-      if (widgetIndex === 0) {
+      const useExactQrMechanics = widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4;
+      if (useExactQrMechanics) {
+        const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
         const qrStyling = new QRCodeStyling({
           width: 900,
@@ -1218,15 +1221,15 @@ export default function ResourcesPage() {
           margin: 0,
           dotsOptions: {
             type: "dots",
-            color: "#000000",
+            color: exactQrColor,
           },
           cornersSquareOptions: {
             type: "extra-rounded",
-            color: "#000000",
+            color: exactQrColor,
           },
           cornersDotOptions: {
             type: "dot",
-            color: "#000000",
+            color: exactQrColor,
           },
           backgroundOptions: {
             color: "#ffffff",
@@ -1262,7 +1265,9 @@ export default function ResourcesPage() {
       context.fillStyle = "#111111";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      const titleFont = "900 34px Montserrat, Inter, Arial, sans-serif";
+      const titleFont = isWidgetFive
+        ? "600 34px Montserrat, Inter, Arial, sans-serif"
+        : "900 34px Montserrat, Inter, Arial, sans-serif";
       context.font = titleFont;
       const titleTop = 13;
       const titleBottom = 121;
@@ -1280,8 +1285,9 @@ export default function ResourcesPage() {
         qrImage,
         widgetIndex > 1 && widgetIndex !== 4,
         qrModuleCount,
-        widgetIndex === 0,
-        false
+        useExactQrMechanics,
+        false,
+        widgetIndex === 4 ? 110 : undefined
       );
 
       context.fillStyle = "#111111";
@@ -1322,7 +1328,8 @@ export default function ResourcesPage() {
         if (currentLine && extraLines.length < maxLines) {
           extraLines.push(currentLine);
         }
-        const extraStartY = footerTopY + extraLineHeight;
+        const widgetTwoFooterLift = widgetIndex === 1 || widgetIndex === 4 ? (width / 10) * 0.15 : 0;
+        const extraStartY = footerTopY + extraLineHeight - widgetTwoFooterLift;
         for (let i = 0; i < extraLines.length; i += 1) {
           context.fillText(extraLines[i], textStartX, extraStartY + i * extraLineHeight);
         }
