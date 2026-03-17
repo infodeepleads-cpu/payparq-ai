@@ -118,6 +118,16 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-6`,
+      templateUrl: "",
+      fileName: "Safe Parking Parking za Goste",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -757,13 +767,15 @@ export default function ResourcesPage() {
   ) {
     const resourceForSign = resource;
     const isWidgetFive = widgetIndex === 4;
-    if ((widgetIndex < 2 || isWidgetFive) && !resource) {
+    const isWidgetSix = widgetIndex === 5;
+    const isGuestParkingWidget = isWidgetFive || isWidgetSix;
+    if ((widgetIndex < 2 || isGuestParkingWidget) && !resource) {
       setError("Select a location before downloading sign.");
       return;
     }
     const isWidgetThreeOrFour = widgetIndex === 2 || widgetIndex === 3;
     const templateUrl =
-      isWidgetFive
+      isGuestParkingWidget
         ? secondWidgetEffectiveTemplateUrl
         : isWidgetThreeOrFour
         ? widget.templateUrl
@@ -1053,7 +1065,7 @@ export default function ResourcesPage() {
           return null;
         }
       };
-      if (widgetIndex >= 2 && !isWidgetFive) {
+      if (widgetIndex >= 2 && !isGuestParkingWidget) {
         const templateImage = await loadImage(templateUrl);
         const canvas = document.createElement("canvas");
         canvas.width = templateImage.width * outputScale;
@@ -1209,7 +1221,8 @@ export default function ResourcesPage() {
       });
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
-      const useExactQrMechanics = widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4;
+      const useExactQrMechanics =
+        widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -1257,15 +1270,22 @@ export default function ResourcesPage() {
       const normalizedGuestParkingMinutes =
         widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
       const titleName = isWidgetFive
-        ? `Besplatan Parking za Goste do ${normalizedGuestParkingMinutes} min.`
+        ? `Gosti Besplatno ${normalizedGuestParkingMinutes} m. Guests Free ${normalizedGuestParkingMinutes} m.`
+        : isWidgetSix
+        ? "Parking za Goste Guests Only"
         : resourceForSign.name;
       const titleLines = isWidgetFive
-        ? ["Besplatan Parking za", `Goste do ${normalizedGuestParkingMinutes} min.`]
+        ? [
+            `Gosti Besplatno ${normalizedGuestParkingMinutes} m.`,
+            `Guests Free ${normalizedGuestParkingMinutes} m.`,
+          ]
+        : isWidgetSix
+        ? ["Parking za Goste", "Guests Only"]
         : splitSignTitle(titleName);
       context.fillStyle = "#111111";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      const titleFont = isWidgetFive
+      const titleFont = isGuestParkingWidget
         ? "600 34px Montserrat, Inter, Arial, sans-serif"
         : "900 34px Montserrat, Inter, Arial, sans-serif";
       context.font = titleFont;
@@ -1287,7 +1307,7 @@ export default function ResourcesPage() {
         qrModuleCount,
         useExactQrMechanics,
         false,
-        widgetIndex === 4 ? 110 : undefined
+        widgetIndex === 4 || widgetIndex === 5 ? 110 : undefined
       );
 
       context.fillStyle = "#111111";
@@ -1297,7 +1317,8 @@ export default function ResourcesPage() {
       context.fillText(resourceForSign.displayId, 34, 593);
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
       if (normalizedExtraText) {
-        const footerDescriptionColor = widgetIndex === 1 || widgetIndex === 4 ? "#6b7280" : "#111111";
+        const footerDescriptionColor =
+          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 ? "#6b7280" : "#111111";
         context.fillStyle = footerDescriptionColor;
         context.textAlign = "left";
         context.textBaseline = "alphabetic";
@@ -1328,7 +1349,8 @@ export default function ResourcesPage() {
         if (currentLine && extraLines.length < maxLines) {
           extraLines.push(currentLine);
         }
-        const widgetTwoFooterLift = widgetIndex === 1 || widgetIndex === 4 ? (width / 10) * 0.15 : 0;
+        const widgetTwoFooterLift =
+          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 ? (width / 10) * 0.15 : 0;
         const extraStartY = footerTopY + extraLineHeight - widgetTwoFooterLift;
         for (let i = 0; i < extraLines.length; i += 1) {
           context.fillText(extraLines[i], textStartX, extraStartY + i * extraLineHeight);
@@ -1413,14 +1435,17 @@ export default function ResourcesPage() {
             </div>
             {widgets.map((widget, index) => {
               const isWidgetFive = index === 4;
+              const isWidgetSix = index === 5;
+              const isGuestParkingWidget = isWidgetFive || isWidgetSix;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
-              const widgetFiveTitle = `Besplatan Parking za Goste do ${normalizedGuestParkingMinutes} min.`;
+              const widgetFiveTitle = `Gosti Besplatno ${normalizedGuestParkingMinutes} m. / Guests Free ${normalizedGuestParkingMinutes} m.`;
+              const widgetSixTitle = "Parking za Goste / Guests Only";
               const selectedLocation =
                 sortedLocations.find((item) => item.id === widget.selectedLocationId) ?? null;
               const effectiveTemplateUrl =
-                isWidgetFive
+                isGuestParkingWidget
                   ? secondWidgetEffectiveTemplateUrl
                   : isWidgetThreeOrFour
                   ? widget.templateUrl
@@ -1436,7 +1461,7 @@ export default function ResourcesPage() {
                   <div className="flex flex-wrap items-center gap-2 justify-between">
                     <p className="text-sm font-semibold text-white">Widget {index + 1}</p>
                     <div className="flex items-center gap-2">
-                      {widget.templateUrl && !isWidgetFive && (
+                      {widget.templateUrl && !isGuestParkingWidget && (
                         <button
                           type="button"
                           onClick={() => handleRemoveWidgetTemplate(widget.id)}
@@ -1448,7 +1473,7 @@ export default function ResourcesPage() {
                       )}
                       <label
                         className={`inline-flex items-center justify-center px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
-                          isWidgetFive
+                          isGuestParkingWidget
                             ? "cursor-not-allowed bg-white/20 text-white/60"
                             : "cursor-pointer bg-white text-black hover:bg-white/90"
                         }`}
@@ -1458,15 +1483,17 @@ export default function ResourcesPage() {
                           type="file"
                           accept="image/*"
                           onChange={(event) => handleWidgetTemplateUpload(widget.id, event)}
-                          disabled={widget.uploading || isWidgetFive}
+                          disabled={widget.uploading || isGuestParkingWidget}
                           className="hidden"
                         />
                       </label>
                     </div>
                   </div>
-                  {isWidgetFive && (
+                  {isGuestParkingWidget && (
                     <p className="text-[11px] text-white/65">
-                      Widget 5 always uses Widget 2 template for the final output.
+                      {isWidgetFive
+                        ? "Widget 5 always uses Widget 2 template for the final output."
+                        : "Widget 6 always uses Widget 2 template for the final output."}
                     </p>
                   )}
                   {effectiveTemplateUrl ? (
@@ -1519,7 +1546,11 @@ export default function ResourcesPage() {
                           <p>
                             Top title:{" "}
                             <span className="text-white">
-                              {isWidgetFive ? widgetFiveTitle : selectedLocation.name}
+                              {isWidgetFive
+                                ? widgetFiveTitle
+                                : isWidgetSix
+                                ? widgetSixTitle
+                                : selectedLocation.name}
                             </span>
                           </p>
                           <p>
