@@ -838,7 +838,7 @@ export default function ResourcesPage() {
         hideCenterBadge?: boolean
       ) => {
         const qrBoxSize = 180;
-        const qrSize = exactQrMode ? 120 : 104;
+        const qrSize = exactQrMode ? 115 : 104;
         const qrCenterX = width / 2;
         const qrCenterY = 363;
         const qrX = qrCenterX - qrBoxSize / 2;
@@ -851,10 +851,10 @@ export default function ResourcesPage() {
             return;
           }
           context.beginPath();
-          context.arc(qrCenterX, qrCenterY, 13, 0, Math.PI * 2);
+          context.arc(qrCenterX, qrCenterY, 14, 0, Math.PI * 2);
           context.fillStyle = "#ffffff";
           context.fill();
-          drawPayparqSticker(context, qrCenterX, qrCenterY, 20);
+          drawPayparqSticker(context, qrCenterX, qrCenterY, 22);
           return;
         }
         const qrSampleSize = 300;
