@@ -79,6 +79,50 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     return mode == 'daily' ? 'daily' : 'hourly';
   }
 
+  bool _resolvePromotionToggle(Map<String, dynamic> source) {
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final raw = metadata?['allow_promotion_codes'] ??
+        metadata?['allowPromotionCodes'] ??
+        metadata?['hourly_coupon_field_enabled'] ??
+        metadata?['coupon_enabled'];
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    if (raw is String) {
+      final normalized = raw.trim().toLowerCase();
+      if (normalized == '1' ||
+          normalized == 'true' ||
+          normalized == 'yes' ||
+          normalized == 'on' ||
+          normalized == 'enabled') {
+        return true;
+      }
+      if (normalized == '0' ||
+          normalized == 'false' ||
+          normalized == 'no' ||
+          normalized == 'off' ||
+          normalized == 'disabled') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  String _resolvePromotionCodeLabel(Map<String, dynamic> source) {
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final raw = (metadata?['promotion_code_label'] ??
+            metadata?['promotionCodeLabel'] ??
+            metadata?['coupon_name'] ??
+            metadata?['coupon_label'] ??
+            '')
+        .toString()
+        .trim();
+    return raw.isEmpty ? 'FREE100' : raw;
+  }
+
   Future<void> _fetchLocations() async {
     try {
       if (mounted) {
@@ -209,6 +253,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       _surchargeEnabled = loc['surcharge_enabled'] ?? false;
       _autopilotEnabled = loc['autopilot_enabled'] ?? false;
       _enforcementPricingMode = _resolveEnforcementPricingMode(loc);
+      _hourlyCouponFieldEnabled = _resolvePromotionToggle(loc);
+      _couponNameController.text = _resolvePromotionCodeLabel(loc);
 
       _dynamicRatio = dynamicRatio;
       _surchargeMultiplier = surchargeMultiplier;
@@ -328,6 +374,13 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
           : <String, dynamic>{};
       metadata['enforcement_pricing_mode'] = _enforcementPricingMode;
       metadata['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      metadata['allow_promotion_codes'] = _hourlyCouponFieldEnabled;
+      metadata['allowPromotionCodes'] = _hourlyCouponFieldEnabled;
+      final promotionCodeLabel = _couponNameController.text.trim();
+      metadata['promotion_code_label'] =
+          promotionCodeLabel.isEmpty ? 'FREE100' : promotionCodeLabel;
+      metadata['promotionCodeLabel'] =
+          promotionCodeLabel.isEmpty ? 'FREE100' : promotionCodeLabel;
       flagsPayload['verification_metadata'] = metadata;
 
       await ref.read(dynamicPricingControllerProvider).updatePricing(

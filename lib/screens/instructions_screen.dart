@@ -577,11 +577,56 @@ class _InstructionsScreenState extends ConsumerState<InstructionsScreen> {
     final displayId = (selected['display_id'] ?? selected['id']).toString();
     final signType = _resolvePricingMode(selected);
     final signPrice = _resolveSignPrice(selected, signType);
+    final metadataRaw = selected['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final promoToggleRaw = metadata?['allow_promotion_codes'] ??
+        metadata?['allowPromotionCodes'] ??
+        metadata?['hourly_coupon_field_enabled'] ??
+        metadata?['coupon_enabled'];
+    bool allowPromotionCodes = true;
+    if (promoToggleRaw is bool) {
+      allowPromotionCodes = promoToggleRaw;
+    } else if (promoToggleRaw is num) {
+      allowPromotionCodes = promoToggleRaw != 0;
+    } else if (promoToggleRaw is String) {
+      final normalized = promoToggleRaw.trim().toLowerCase();
+      if (normalized == '0' ||
+          normalized == 'false' ||
+          normalized == 'no' ||
+          normalized == 'off' ||
+          normalized == 'disabled') {
+        allowPromotionCodes = false;
+      } else if (normalized == '1' ||
+          normalized == 'true' ||
+          normalized == 'yes' ||
+          normalized == 'on' ||
+          normalized == 'enabled') {
+        allowPromotionCodes = true;
+      }
+    }
+    final promotionCodeLabel = ((metadata?['promotion_code_label'] ??
+                metadata?['promotionCodeLabel'] ??
+                metadata?['coupon_name'] ??
+                metadata?['coupon_label'] ??
+                '')
+            .toString()
+            .trim())
+        .isEmpty
+        ? 'FREE100'
+        : (metadata?['promotion_code_label'] ??
+                metadata?['promotionCodeLabel'] ??
+                metadata?['coupon_name'] ??
+                metadata?['coupon_label'])
+            .toString()
+            .trim();
     final signUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
       type: signType,
       price: signPrice,
+      allowPromotionCodes: allowPromotionCodes,
+      promotionCodeLabel: allowPromotionCodes ? promotionCodeLabel : null,
     );
     const ticketUrl = 'https://www.payparq.com/cases';
 
