@@ -138,6 +138,26 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-8`,
+      templateUrl: "",
+      fileName: "Safe Parking Airport Arrow Right",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-9`,
+      templateUrl: "",
+      fileName: "Safe Parking Airport Arrow Left",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -564,6 +584,15 @@ export default function ResourcesPage() {
     secondWidgetLocation?.payableSignTemplateUrl ||
     secondWidgetLocation?.locationTemplateUrl ||
     "";
+  const eighthWidget = widgets[7] ?? null;
+  const eighthWidgetLocation = eighthWidget
+    ? sortedLocations.find((item) => item.id === eighthWidget.selectedLocationId) ?? null
+    : null;
+  const eighthWidgetEffectiveTemplateUrl =
+    eighthWidget?.templateUrl ||
+    eighthWidgetLocation?.payableSignTemplateUrl ||
+    eighthWidgetLocation?.locationTemplateUrl ||
+    "";
 
   useEffect(() => {
     if (sortedLocations.length === 0) {
@@ -779,6 +808,7 @@ export default function ResourcesPage() {
     const isWidgetFive = widgetIndex === 4;
     const isWidgetSix = widgetIndex === 5;
     const isWidgetSeven = widgetIndex === 6;
+    const isWidgetNine = widgetIndex === 8;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
     if ((widgetIndex < 2 || isGuestParkingWidget) && !resource) {
       setError("Select a location before downloading sign.");
@@ -788,6 +818,8 @@ export default function ResourcesPage() {
     const templateUrl =
       isGuestParkingWidget
         ? secondWidgetEffectiveTemplateUrl
+        : isWidgetNine
+        ? eighthWidgetEffectiveTemplateUrl
         : isWidgetThreeOrFour
         ? widget.templateUrl
         : widget.templateUrl ||
@@ -1173,7 +1205,7 @@ export default function ResourcesPage() {
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
-        if (widgetIndex !== 7) {
+        if (widgetIndex !== 7 && widgetIndex !== 8) {
           context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         }
         if (shouldMatchWidget3Styling) {
@@ -1186,7 +1218,7 @@ export default function ResourcesPage() {
           const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 3.2);
           drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
         }
-        if (widgetIndex === 7) {
+        if (widgetIndex === 7 || widgetIndex === 8) {
           const footerCutHeight = Math.max(1, Math.round((56 / height) * templateImage.height));
           const croppedSourceHeight = Math.max(1, templateImage.height - footerCutHeight);
           context.clearRect(0, 0, templateImage.width, templateImage.height);
@@ -1201,10 +1233,52 @@ export default function ResourcesPage() {
             templateImage.width,
             templateImage.height
           );
+          if (widgetIndex === 8) {
+            const mirroredCanvas = document.createElement("canvas");
+            mirroredCanvas.width = templateImage.width;
+            mirroredCanvas.height = templateImage.height;
+            const mirroredContext = mirroredCanvas.getContext("2d");
+            if (!mirroredContext) {
+              throw new Error("Unable to render mirrored template.");
+            }
+            mirroredContext.translate(templateImage.width, 0);
+            mirroredContext.scale(-1, 1);
+            mirroredContext.drawImage(
+              templateImage,
+              0,
+              0,
+              templateImage.width,
+              croppedSourceHeight,
+              0,
+              0,
+              templateImage.width,
+              templateImage.height
+            );
+            context.drawImage(mirroredCanvas, 0, 0, templateImage.width, templateImage.height);
+            const airportLabelX = Math.round(templateImage.width * 0.15);
+            const airportLabelY = Math.round(templateImage.height * 0.2);
+            const airportLabelWidth = Math.max(1, Math.round(templateImage.width * 0.7));
+            const airportLabelMaxHeight = Math.max(1, Math.round(templateImage.height * 0.2));
+            const airportLabelHeight = Math.max(
+              1,
+              Math.min(airportLabelMaxHeight, croppedSourceHeight - airportLabelY)
+            );
+            context.drawImage(
+              templateImage,
+              airportLabelX,
+              airportLabelY,
+              airportLabelWidth,
+              airportLabelHeight,
+              airportLabelX,
+              airportLabelY,
+              airportLabelWidth,
+              airportLabelHeight
+            );
+          }
           context.fillStyle = "#111111";
           context.textAlign = "center";
           context.textBaseline = "middle";
-          context.font = `700 ${Math.max(18, Math.round(templateImage.height * 0.04))}px Montserrat, Inter, Arial, sans-serif`;
+          context.font = `900 ${Math.max(18, Math.round(templateImage.height * 0.04))}px Montserrat, Inter, Arial, sans-serif`;
           const priceLabelY = Math.min(
             templateImage.height - 24,
             templateImage.height * 0.12 + pxPerCm * 2
@@ -1483,7 +1557,9 @@ export default function ResourcesPage() {
               const isWidgetFive = index === 4;
               const isWidgetSix = index === 5;
               const isWidgetSeven = index === 6;
+              const isWidgetNine = index === 8;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
+              const isUploadLocked = isGuestParkingWidget || isWidgetNine;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
@@ -1495,6 +1571,8 @@ export default function ResourcesPage() {
               const effectiveTemplateUrl =
                 isGuestParkingWidget
                   ? secondWidgetEffectiveTemplateUrl
+                  : isWidgetNine
+                  ? eighthWidgetEffectiveTemplateUrl
                   : isWidgetThreeOrFour
                   ? widget.templateUrl
                   : widget.templateUrl ||
@@ -1509,7 +1587,7 @@ export default function ResourcesPage() {
                   <div className="flex flex-wrap items-center gap-2 justify-between">
                     <p className="text-sm font-semibold text-white">Widget {index + 1}</p>
                     <div className="flex items-center gap-2">
-                      {widget.templateUrl && !isGuestParkingWidget && (
+                      {widget.templateUrl && !isUploadLocked && (
                         <button
                           type="button"
                           onClick={() => handleRemoveWidgetTemplate(widget.id)}
@@ -1521,7 +1599,7 @@ export default function ResourcesPage() {
                       )}
                       <label
                         className={`inline-flex items-center justify-center px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
-                          isGuestParkingWidget
+                          isUploadLocked
                             ? "cursor-not-allowed bg-white/20 text-white/60"
                             : "cursor-pointer bg-white text-black hover:bg-white/90"
                         }`}
@@ -1531,19 +1609,21 @@ export default function ResourcesPage() {
                           type="file"
                           accept="image/*"
                           onChange={(event) => handleWidgetTemplateUpload(widget.id, event)}
-                          disabled={widget.uploading || isGuestParkingWidget}
+                          disabled={widget.uploading || isUploadLocked}
                           className="hidden"
                         />
                       </label>
                     </div>
                   </div>
-                  {isGuestParkingWidget && (
+                  {(isGuestParkingWidget || isWidgetNine) && (
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
                         ? "Widget 5 always uses Widget 2 template for the final output."
                         : isWidgetSix
                         ? "Widget 6 always uses Widget 2 template for the final output."
-                        : "Widget 7 always uses Widget 2 template for the final output."}
+                        : isWidgetSeven
+                        ? "Widget 7 always uses Widget 2 template for the final output."
+                        : "Widget 9 always uses Widget 8 template for the final output."}
                     </p>
                   )}
                   {effectiveTemplateUrl ? (
