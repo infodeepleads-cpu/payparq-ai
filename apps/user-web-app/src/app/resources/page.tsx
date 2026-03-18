@@ -62,6 +62,9 @@ type SignWidget = {
   selectedLocationId: string;
   uploading: boolean;
   downloading: boolean;
+  userName?: string;
+  userIdNumber?: string;
+  userRole?: string;
 };
 const SIGN_WIDGETS_STORAGE_KEY = "resources-sign-widgets-v1";
 
@@ -158,6 +161,19 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+        id: `widget-${now}-10`,
+        templateUrl: "",
+        fileName: "Safe Parking High Res Sign",
+        extraText: "",
+        guestParkingMinutes: "90",
+        selectedLocationId: "",
+        uploading: false,
+        downloading: false,
+        userName: "",
+        userIdNumber: "",
+        userRole: "",
+      },
   ] satisfies SignWidget[];
 }
 
@@ -189,6 +205,9 @@ function createInitialWidgets() {
           typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
         selectedLocationId:
           typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
+        userName: typeof item?.userName === "string" ? item.userName : undefined,
+        userIdNumber: typeof item?.userIdNumber === "string" ? item.userIdNumber : undefined,
+        userRole: typeof item?.userRole === "string" ? item.userRole : undefined,
         uploading: false,
         downloading: false,
       } satisfies SignWidget;
@@ -202,6 +221,9 @@ function createInitialWidgets() {
         ...defaultWidget,
         ...storedWidget,
         guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
+        userName: storedWidget.userName ?? defaultWidget.userName,
+        userIdNumber: storedWidget.userIdNumber ?? defaultWidget.userIdNumber,
+        userRole: storedWidget.userRole ?? defaultWidget.userRole,
         uploading: false,
         downloading: false,
       } satisfies SignWidget;
@@ -657,13 +679,26 @@ export default function ResourcesPage() {
       return;
     }
     const storedWidgets = widgets.map(
-      ({ id, templateUrl, fileName, extraText, guestParkingMinutes, selectedLocationId }) => ({
+      ({
         id,
         templateUrl,
         fileName,
         extraText,
         guestParkingMinutes,
         selectedLocationId,
+        userName,
+        userIdNumber,
+        userRole,
+      }) => ({
+        id,
+        templateUrl,
+        fileName,
+        extraText,
+        guestParkingMinutes,
+        selectedLocationId,
+        userName,
+        userIdNumber,
+        userRole,
       })
     );
     window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, JSON.stringify(storedWidgets));
@@ -686,7 +721,7 @@ export default function ResourcesPage() {
   }
 
   async function uploadTemplateToStorage(
-    file: File,
+    file: File | Blob,
     storagePath: string
   ): Promise<string> {
     if (!supabase) {
@@ -696,7 +731,7 @@ export default function ResourcesPage() {
       .from("location-verification")
       .upload(storagePath, file, {
         upsert: true,
-        contentType: file.type || "application/octet-stream",
+        contentType: (file as File).type || "application/octet-stream",
       });
     if (uploadError) {
       throw new Error(uploadError.message);
@@ -706,6 +741,43 @@ export default function ResourcesPage() {
       throw new Error("Unable to resolve uploaded file URL.");
     }
     return data.publicUrl;
+  }
+
+  async function compressImage(file: File, maxDimension = 3072, quality = 0.8): Promise<Blob> {
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+
+    if (width > maxDimension || height > maxDimension) {
+      if (width > height) {
+        height = (height / width) * maxDimension;
+        width = maxDimension;
+      } else {
+        width = (width / height) * maxDimension;
+        height = maxDimension;
+      }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      throw new Error("Canvas context unavailable.");
+    }
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) reject(new Error("Compression failed."));
+          else resolve(blob);
+        },
+        "image/jpeg",
+        quality
+      );
+    });
   }
 
   async function handleWidgetTemplateUpload(widgetId: string, event: ChangeEvent<HTMLInputElement>) {
@@ -720,8 +792,19 @@ export default function ResourcesPage() {
     setError("");
     try {
       const safeName = file.name.replaceAll(/\s+/g, "_");
+      let fileToUpload: File | Blob = file;
+
+      // If file is very large or it's Widget 10, try to compress it to fit
+      if (file.size > 2 * 1024 * 1024 || widgetId.includes("-10")) {
+        try {
+          fileToUpload = await compressImage(file);
+        } catch (compressionError) {
+          console.warn("Image compression failed, trying original file:", compressionError);
+        }
+      }
+
       const uploadedUrl = await uploadTemplateToStorage(
-        file,
+        fileToUpload,
         `resources/payable-sign/${widgetId}-${Date.now()}-${safeName}`
       );
       setWidgets((current) => {
@@ -1124,7 +1207,7 @@ export default function ResourcesPage() {
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
         const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
-        const qrDataValue = "https://www.payparq.com/payments";
+        const qrDataValue = widgetIndex === 9 ? "https://www.payparq.com/support" : "https://www.payparq.com/payments";
         if (shouldMatchWidget3Styling) {
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const qrStyling = new QRCodeStyling({
@@ -1205,8 +1288,19 @@ export default function ResourcesPage() {
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
-        if (widgetIndex !== 7 && widgetIndex !== 8) {
+        if (widgetIndex !== 7 && widgetIndex !== 8 && widgetIndex !== 9) {
           context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
+        } else if (widgetIndex === 9) {
+          // For Widget 10, place the QR code 1.4cm down and 2.7cm to the right from original spot
+          // Cumulative shifts from previous 2.6cm right, 1.7cm down:
+          // +0.1R (New: 2.7R)
+          // -0.3D (New: 1.4D)
+          const pxPerCm = fallbackWidth / 4;
+          const qrX = qrTargetX + 2.7 * pxPerCm;
+          const qrY = qrTargetY + 1.4 * pxPerCm;
+          const qrWidth = qrTargetWidth * 0.9;
+          const qrHeight = qrTargetHeight * 0.9;
+          context.drawImage(qrImage, qrX, qrY, qrWidth, qrHeight);
         }
         if (shouldMatchWidget3Styling) {
           const stickerDiameter = pxPerCm * 1.52145;
@@ -1309,6 +1403,90 @@ export default function ResourcesPage() {
         if (qrObjectUrl) {
           URL.revokeObjectURL(qrObjectUrl);
         }
+
+        if (widgetIndex === 9) {
+          context.save();
+          const standardQrX = 148;
+          const standardQrY = 311;
+          const standardQrSize = 104;
+          let scaleX = templateImage.width / width;
+          let scaleY = templateImage.height / height;
+          let offsetX = 0;
+          let offsetY = 0;
+          if (detectedQrBounds) {
+            const qrScaleX = detectedQrBounds.width / standardQrSize;
+            const qrScaleY = detectedQrBounds.height / standardQrSize;
+            if (Number.isFinite(qrScaleX) && qrScaleX > 0 && Number.isFinite(qrScaleY) && qrScaleY > 0) {
+              scaleX = qrScaleX;
+              scaleY = qrScaleY;
+              offsetX = detectedQrBounds.x - standardQrX * scaleX;
+              offsetY = detectedQrBounds.y - standardQrY * scaleY;
+            }
+          }
+          const cmToPx = 104 / 4; // 104px is 4cm for the QR code in the template
+          const shiftUp = 10 * cmToPx; // Shifted an additional 1cm up (total 10cm)
+          const shiftLeft = 2 * cmToPx; // Total 2cm left shift remains unchanged
+
+          context.fillStyle = "#111111";
+          context.textBaseline = "alphabetic";
+          
+          // Role and Name: Shifted an additional 0.8cm right (total 2.5cm right from the center)
+          const xPos = (width / 2 + 2.5 * cmToPx) * scaleX + offsetX;
+          context.textAlign = "center";
+          
+          // Font sizes: Role is 2.0x, Name is 1.5x (between previous 2.0x and recent 1.0x)
+          const roleFontSize = 12 * scaleY * 2.0; 
+          const nameFontSize = 12 * scaleY * 1.5; 
+
+          // Vertical positions for multi-row layout (10cm shifted up)
+          // Increased spacing between role rows to 20 units (scaled)
+          // Added an additional 0.5cm (approx 13 scaled units) spacing between role and name
+          const spacing05cm = 0.5 * cmToPx;
+          const roleRow1Y = (540 - shiftUp) * scaleY + offsetY;
+          const roleRow2Y = (560 - shiftUp) * scaleY + offsetY;
+          const nameY = (580 - shiftUp + spacing05cm) * scaleY + offsetY;
+          
+          if (widget.userRole && widget.userRole.trim()) {
+            context.font = `600 ${roleFontSize}px Inter, Arial, sans-serif`;
+            const roleParts = widget.userRole.trim().split(/\s+/);
+            if (roleParts.length >= 2) {
+              context.fillText(roleParts[0], xPos, roleRow1Y);
+              context.fillText(roleParts.slice(1).join(" "), xPos, roleRow2Y);
+            } else {
+              context.fillText(widget.userRole.trim(), xPos, roleRow1Y);
+            }
+          }
+          if (widget.userName && widget.userName.trim()) {
+            context.font = `600 ${nameFontSize}px Inter, Arial, sans-serif`;
+            context.fillText(widget.userName.trim(), xPos, nameY);
+          }
+
+          // Draw the Payparq Logo (Sticker) across the photo area
+          // Logo Shift: 1.5cm right and 1cm down from its centered position
+          const logoDiameter = 80 * scaleX; 
+          const logoCenterX = (width / 2 + 1.5 * cmToPx) * scaleX + offsetX;
+          const logoCenterY = (150 + 1.0 * cmToPx) * scaleY + offsetY; 
+          
+          context.save();
+          context.globalAlpha = 0.85; // Slight transparency to look like a watermark/sticker
+          // drawPayparqSticker(context, logoCenterX, logoCenterY, logoDiameter); // Removed duplicate logo as requested
+          context.restore();
+
+          // ID: Shifted 2cm left from centered position below photo, and 0.5cm lower
+          const idFontSize = 12 * scaleY * 1.5; 
+          context.font = `600 ${idFontSize}px Inter, Arial, sans-serif`;
+          const idCenterX = (148 + 104 / 2 - 2 * cmToPx) * scaleX + offsetX;
+          const idY = (311 + 104 + 20 + 0.5 * cmToPx) * scaleY + offsetY;
+
+          if (widget.userIdNumber && widget.userIdNumber.trim()) {
+            context.save();
+            context.textAlign = "center";
+            context.fillText(`ID: ${widget.userIdNumber.trim()}`, idCenterX, idY);
+            context.restore();
+          }
+          context.restore();
+        }
+
         await downloadCanvas(canvas);
         return;
       }
@@ -1452,6 +1630,7 @@ export default function ResourcesPage() {
       context.textBaseline = "alphabetic";
       context.font = "700 14px Inter, Arial, sans-serif";
       context.fillText(resourceForSign.displayId, 34, 593);
+
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
       if (normalizedExtraText) {
         const footerDescriptionColor =
@@ -1579,6 +1758,7 @@ export default function ResourcesPage() {
               const isWidgetSix = index === 5;
               const isWidgetSeven = index === 6;
               const isWidgetNine = index === 8;
+              const isWidgetTen = index === 9;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isUploadLocked = isGuestParkingWidget || isWidgetNine;
               const isWidgetThreeOrFour = index === 2 || index === 3;
@@ -1636,6 +1816,11 @@ export default function ResourcesPage() {
                       </label>
                     </div>
                   </div>
+                  {isWidgetTen && (
+                    <p className="text-[11px] text-white/65">
+                      This widget is optimized for high-resolution images. Large files will be compressed to fit automatically.
+                    </p>
+                  )}
                   {(isGuestParkingWidget || isWidgetNine) && (
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
@@ -1740,6 +1925,70 @@ export default function ResourcesPage() {
                           className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                         />
                       </label>
+                      {isWidgetTen && (
+                        <>
+                          <label className="space-y-1 block">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                              User Name
+                            </span>
+                            <input
+                              type="text"
+                              value={widget.userName || ""}
+                              onChange={(event) =>
+                                setWidgets((current) =>
+                                  current.map((item) =>
+                                    item.id === widget.id
+                                      ? { ...item, userName: event.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="Luka Janić"
+                              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </label>
+                          <label className="space-y-1 block">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                              User ID
+                            </span>
+                            <input
+                              type="text"
+                              value={widget.userIdNumber || ""}
+                              onChange={(event) =>
+                                setWidgets((current) =>
+                                  current.map((item) =>
+                                    item.id === widget.id
+                                      ? { ...item, userIdNumber: event.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="98197"
+                              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </label>
+                          <label className="space-y-1 block">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                              Role
+                            </span>
+                            <input
+                              type="text"
+                              value={widget.userRole || ""}
+                              onChange={(event) =>
+                                setWidgets((current) =>
+                                  current.map((item) =>
+                                    item.id === widget.id
+                                      ? { ...item, userRole: event.target.value }
+                                      : item
+                                  )
+                                )
+                              }
+                              placeholder="Delivry Partner"
+                              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </label>
+                        </>
+                      )}
                       {isWidgetFive && (
                         <label className="space-y-1 block">
                           <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
