@@ -1263,16 +1263,37 @@ export default function ResourcesPage() {
               1,
               Math.min(airportLabelMaxHeight, croppedSourceHeight - airportLabelY)
             );
+            const airportLabelRenderHeight = Math.max(
+              1,
+              Math.min(
+                airportLabelHeight + Math.max(1, Math.round(templateImage.height * 0.012)),
+                croppedSourceHeight - airportLabelY
+              )
+            );
             context.drawImage(
               templateImage,
               airportLabelX,
               airportLabelY,
               airportLabelWidth,
-              airportLabelHeight,
+              airportLabelRenderHeight,
               airportLabelX,
               airportLabelY,
               airportLabelWidth,
-              airportLabelHeight
+              airportLabelRenderHeight
+            );
+            const seamCleanupY = airportLabelY + airportLabelRenderHeight - 1;
+            const seamCleanupHeight = Math.max(1, Math.round(templateImage.height * 0.006));
+            context.fillStyle = "#ffffff";
+            context.fillRect(airportLabelX, seamCleanupY, airportLabelWidth, seamCleanupHeight);
+            const parkingPCleanupX = airportLabelX + Math.round(airportLabelWidth * 0.01);
+            const parkingPCleanupY = airportLabelY + airportLabelRenderHeight - 3;
+            const parkingPCleanupWidth = Math.max(1, Math.round(airportLabelWidth * 0.25));
+            const parkingPCleanupHeight = Math.max(1, Math.round(templateImage.height * 0.012));
+            context.fillRect(
+              parkingPCleanupX,
+              parkingPCleanupY,
+              parkingPCleanupWidth,
+              parkingPCleanupHeight
             );
           }
           context.fillStyle = "#111111";
