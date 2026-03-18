@@ -23,7 +23,8 @@ class AppConfig {
       'FORCE_WEB_SIGNOUT_ON_STARTUP',
       defaultValue: '0');
   static const _rawApkDownloadUrl = String.fromEnvironment('APK_DOWNLOAD_URL',
-      defaultValue: 'https://mobile-scanner-ruddy.vercel.app/app-release.apk');
+      defaultValue:
+          'https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/app-release.apk');
   static String get apkDownloadUrl =>
       _rawApkDownloadUrl.trim().replaceAll('"', '').replaceAll("'", "");
 

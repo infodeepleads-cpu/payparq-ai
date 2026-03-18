@@ -39,6 +39,7 @@ SUPABASE_ANON_KEY_VALUE="${SUPABASE_ANON_KEY:-${CF_SUPABASE_ANON_KEY:-eyJhbGciOi
 SUPABASE_FUNCTIONS_URL_VALUE="${SUPABASE_FUNCTIONS_URL:-${CF_SUPABASE_FUNCTIONS_URL:-}}"
 DEFAULT_REDIRECT_HOST="${VERCEL_URL:-mobile-scanner-ruddy.vercel.app}"
 SUPABASE_REDIRECT_URL_VALUE="${SUPABASE_REDIRECT_URL:-https://${DEFAULT_REDIRECT_HOST}/reset-password}"
+APK_DOWNLOAD_URL_VALUE="${APK_DOWNLOAD_URL:-https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/app-release.apk}"
 
 echo "=== Resolved runtime config ==="
 echo "ENV=${ENV:-prod}"
@@ -47,6 +48,7 @@ echo "SUPABASE_URL=${SUPABASE_URL_VALUE}"
 echo "SUPABASE_ANON_KEY_LENGTH=${#SUPABASE_ANON_KEY_VALUE}"
 echo "SUPABASE_FUNCTIONS_URL=${SUPABASE_FUNCTIONS_URL_VALUE:-<empty>}"
 echo "SUPABASE_REDIRECT_URL=${SUPABASE_REDIRECT_URL_VALUE}"
+echo "APK_DOWNLOAD_URL=${APK_DOWNLOAD_URL_VALUE}"
 
 echo "=== Building Flutter web (release) ==="
 flutter build web --release --no-wasm-dry-run \
@@ -96,6 +98,8 @@ COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
 mkdir -p build/web
 if [ -f web/app-release.apk ]; then
   cp web/app-release.apk build/web/app-release.apk
+else
+  curl -fL --retry 3 --retry-delay 2 "${APK_DOWNLOAD_URL_VALUE}" -o build/web/app-release.apk || true
 fi
 echo "{\"sha\":\"$COMMIT_SHA\"}" > build/web/version.json
 cat > build/web/_headers <<'EOF'
