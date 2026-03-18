@@ -64,7 +64,11 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_type == 'subscription' && !_is24_7 && _allowedWeekdays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one allowed weekday')),
+        SnackBar(
+            content: Text(Lang.sel(
+                ref.read(localeIsCroatianProvider),
+                'Select at least one allowed weekday',
+                'Odaberite barem jedan dozvoljeni dan'))),
       );
       return;
     }
@@ -259,43 +263,56 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('User Details',
+                        Text(
+                            Lang.sel(
+                                isCroatian, 'User Details', 'Podaci korisnika'),
                             style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'License Plate',
+                          label: Lang.sel(
+                              isCroatian, 'License Plate', 'Registracija'),
                           controller: _plateController,
                           hint: 'ZG1234AB',
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                          validator: (v) => v!.isEmpty
+                              ? Lang.sel(isCroatian, 'Required', 'Obavezno')
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Location ID',
+                          label: Lang.sel(
+                              isCroatian, 'Location ID', 'ID lokacije'),
                           controller: _locationController,
                           hint: 'LOC-001',
                           enabled:
                               ref.read(userProfileProvider).value?['role'] ==
                                   'super_admin',
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                          validator: (v) => v!.isEmpty
+                              ? Lang.sel(isCroatian, 'Required', 'Obavezno')
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Name',
+                          label: Lang.sel(isCroatian, 'Name', 'Ime'),
                           controller: _nameController,
                           hint: 'John Doe',
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                          validator: (v) => v!.isEmpty
+                              ? Lang.sel(isCroatian, 'Required', 'Obavezno')
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Phone',
+                          label: Lang.sel(isCroatian, 'Phone', 'Telefon'),
                           controller: _phoneController,
                           hint: '+1 555 010 9999',
-                          validator: (v) => v!.isEmpty ? 'Required' : null,
+                          validator: (v) => v!.isEmpty
+                              ? Lang.sel(isCroatian, 'Required', 'Obavezno')
+                              : null,
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: 'Email (Optional)',
+                          label: Lang.sel(isCroatian, 'Email (Optional)',
+                              'E-pošta (opcionalno)'),
                           controller: _emailController,
                           hint: 'john@example.com',
                         ),
@@ -308,15 +325,21 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Access Control',
+                        Text(
+                            Lang.sel(isCroatian, 'Access Control',
+                                'Kontrola pristupa'),
                             style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 24),
                         if (_type == 'pass') ...[
-                          _buildDateTimePicker('Start Time', _startDate,
+                          _buildDateTimePicker(
+                              Lang.sel(isCroatian, 'Start Time', 'Početak'),
+                              _startDate,
                               (d) => setState(() => _startDate = d)),
                           const SizedBox(height: 24),
-                          _buildDateTimePicker('End Time', _endDate,
+                          _buildDateTimePicker(
+                              Lang.sel(isCroatian, 'End Time', 'Kraj'),
+                              _endDate,
                               (d) => setState(() => _endDate = d)),
                           const SizedBox(height: 16),
                           Builder(builder: (context) {
@@ -325,13 +348,20 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                             final hours =
                                 ((diffMinutes <= 0 ? 0 : diffMinutes) / 60)
                                     .round();
-                            return Text('Total Duration: $hours hours',
+                            return Text(
+                                Lang.sel(
+                                    isCroatian,
+                                    'Total Duration: $hours hours',
+                                    'Ukupno trajanje: $hours sati'),
                                 style: const TextStyle(
                                     color: AppTheme.textSecondary,
                                     fontSize: 13));
                           }),
                         ] else ...[
-                          _buildDatePicker('Start Date', _startDate, (d) {
+                          _buildDatePicker(
+                              Lang.sel(
+                                  isCroatian, 'Start Date', 'Datum početka'),
+                              _startDate, (d) {
                             setState(() {
                               _startDate = d;
                               _updateSubscriptionDates();
@@ -341,7 +371,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Duration',
+                              Text(Lang.sel(isCroatian, 'Duration', 'Trajanje'),
                                   style: GoogleFonts.inter(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14)),
@@ -365,8 +395,10 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                                     items: [1, 3, 6, 12]
                                         .map((m) => DropdownMenuItem(
                                             value: m,
-                                            child: Text(
-                                                '$m Month${m > 1 ? 's' : ''}')))
+                                            child: Text(Lang.sel(
+                                                isCroatian,
+                                                '$m Month${m > 1 ? 's' : ''}',
+                                                '$m mjesec${m > 1 ? 'a' : ''}'))))
                                         .toList(),
                                     onChanged: (v) {
                                       setState(() {
@@ -381,12 +413,17 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                              'Valid until: ${_endDate.toString().split(' ')[0]}',
+                              Lang.sel(
+                                  isCroatian,
+                                  'Valid until: ${_endDate.toString().split(' ')[0]}',
+                                  'Vrijedi do: ${_endDate.toString().split(' ')[0]}'),
                               style: const TextStyle(
                                   color: AppTheme.textSecondary, fontSize: 12)),
                           const SizedBox(height: 32),
                           CheckboxListTile(
-                            title: Text('24/7 Access',
+                            title: Text(
+                                Lang.sel(
+                                    isCroatian, '24/7 Access', '24/7 pristup'),
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 14)),
                             value: _is24_7,
@@ -406,7 +443,10 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           if (!_is24_7) ...[
                             const SizedBox(height: 16),
                             Text(
-                                'Daily Limit: ${_dailyDurationHours.toInt()} Hours',
+                                Lang.sel(
+                                    isCroatian,
+                                    'Daily Limit: ${_dailyDurationHours.toInt()} Hours',
+                                    'Dnevni limit: ${_dailyDurationHours.toInt()} sati'),
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 8),
@@ -426,18 +466,22 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                               children: [
                                 Expanded(
                                     child: _buildTimePicker(
-                                        'From',
+                                        Lang.sel(isCroatian, 'From', 'Od'),
                                         _dailyStart,
                                         (t) =>
                                             setState(() => _dailyStart = t))),
                                 const SizedBox(width: 24),
                                 Expanded(
-                                    child: _buildTimePicker('To', _dailyEnd,
+                                    child: _buildTimePicker(
+                                        Lang.sel(isCroatian, 'To', 'Do'),
+                                        _dailyEnd,
                                         (t) => setState(() => _dailyEnd = t))),
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Text('Allowed Days',
+                            Text(
+                                Lang.sel(isCroatian, 'Allowed Days',
+                                    'Dozvoljeni dani'),
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 12),
@@ -659,21 +703,22 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
   }
 
   String _weekdayShortLabel(int weekday) {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     switch (weekday) {
       case DateTime.monday:
-        return 'Mon';
+        return Lang.sel(isCroatian, 'Mon', 'Pon');
       case DateTime.tuesday:
-        return 'Tue';
+        return Lang.sel(isCroatian, 'Tue', 'Uto');
       case DateTime.wednesday:
-        return 'Wed';
+        return Lang.sel(isCroatian, 'Wed', 'Sri');
       case DateTime.thursday:
-        return 'Thu';
+        return Lang.sel(isCroatian, 'Thu', 'Čet');
       case DateTime.friday:
-        return 'Fri';
+        return Lang.sel(isCroatian, 'Fri', 'Pet');
       case DateTime.saturday:
-        return 'Sat';
+        return Lang.sel(isCroatian, 'Sat', 'Sub');
       case DateTime.sunday:
-        return 'Sun';
+        return Lang.sel(isCroatian, 'Sun', 'Ned');
       default:
         return '';
     }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../instructions_screen.dart';
 import '../../config/app_config.dart';
@@ -40,6 +41,28 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         });
       }
     });
+  }
+
+  Future<bool> _isApkUrlReachable(Uri url) async {
+    try {
+      final response = await http.get(url, headers: const {
+        'Range': 'bytes=0-7'
+      }).timeout(const Duration(seconds: 8));
+      final contentType =
+          (response.headers['content-type'] ?? '').toLowerCase();
+      final looksLikeHtml = response.bodyBytes.length >= 2 &&
+          response.bodyBytes[0] == 0x3C &&
+          response.bodyBytes[1] == 0x21;
+      final isApkContentType =
+          contentType.contains('application/vnd.android.package-archive') ||
+              contentType.contains('application/octet-stream');
+      return response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          !looksLikeHtml &&
+          (isApkContentType || url.path.toLowerCase().endsWith('.apk'));
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
@@ -146,8 +169,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         onTap: () async {
-                          final webUrl =
-                              Uri.parse('${Uri.base.origin}/app-release.apk');
+                          final ts = DateTime.now().millisecondsSinceEpoch;
+                          final webUrl = Uri.parse(
+                              '${Uri.base.origin}/app-release.apk?v=$ts');
                           final configuredUrl =
                               Uri.parse(AppConfig.apkDownloadUrl);
                           final urls = kIsWeb
@@ -157,6 +181,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                               ? LaunchMode.platformDefault
                               : LaunchMode.externalApplication;
                           for (final url in urls) {
+                            final isReachable = await _isApkUrlReachable(url);
+                            if (!isReachable) {
+                              continue;
+                            }
                             if (await launchUrl(url, mode: launchMode)) {
                               return;
                             }
