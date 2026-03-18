@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'terms_conditions_screen.dart';
@@ -219,10 +220,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _downloadApk() async {
-                          final url = Uri.parse(AppConfig.apkDownloadUrl);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    final isCroatian = ref.read(localeIsCroatianProvider);
+    final webUrl = Uri.parse('${Uri.base.origin}/app-release.apk');
+    final configuredUrl = Uri.parse(AppConfig.apkDownloadUrl);
+    final urls = kIsWeb ? [webUrl, configuredUrl] : [configuredUrl];
+    final launchMode =
+        kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication;
+
+    for (final url in urls) {
+      if (await launchUrl(url, mode: launchMode)) {
+        return;
+      }
     }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(Lang.sel(isCroatian, 'Failed to load APK',
+            'Došlo je do problema s učitavanjem APK-a')),
+      ),
+    );
   }
 
   Widget _buildSection(

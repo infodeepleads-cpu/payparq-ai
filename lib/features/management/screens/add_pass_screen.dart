@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../theme.dart';
 import '../../../logic/providers/auth_providers.dart';
+import '../../../logic/providers/locale_provider.dart';
 import '../providers/passes_controller.dart';
 import '../../../utils/async_action_handler.dart';
 import '../../../services/error_mapper.dart';
@@ -146,8 +147,11 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
         await ref.read(passesControllerProvider).createPermit(data);
         return true;
       },
-      successMessage:
-          '${_type == 'pass' ? 'Guest Pass' : 'Subscription'} Added!',
+      successMessage: _type == 'pass'
+          ? Lang.sel(ref.read(localeIsCroatianProvider), 'Guest Pass added!',
+              'Gostujuća dozvola dodana!')
+          : Lang.sel(ref.read(localeIsCroatianProvider), 'Subscription added!',
+              'Pretplata dodana!'),
       successColor: Colors.green,
       errorBuilder: ErrorMapper.message,
     );
@@ -172,6 +176,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     // Removed unused topPadding variable to eliminate analyzer warning.
 
     return Scaffold(
@@ -204,7 +209,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'New Access',
+                Lang.sel(isCroatian, 'New Access', 'Novi pristup'),
                 style: GoogleFonts.inter(
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
@@ -214,7 +219,10 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Issue temporary passes or ongoing subscriptions.',
+                Lang.sel(
+                    isCroatian,
+                    'Issue temporary passes or ongoing subscriptions.',
+                    'Izdajte privremene dozvole ili trajne pretplate.'),
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppTheme.textSecondary,
@@ -232,8 +240,12 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                 ),
                 child: Row(
                   children: [
-                    _buildTypeButton('Parking Pass', 'pass'),
-                    _buildTypeButton('Subscription', 'subscription'),
+                    _buildTypeButton(
+                        Lang.sel(isCroatian, 'Guest Pass', 'Gostujuća dozvola'),
+                        'pass'),
+                    _buildTypeButton(
+                        Lang.sel(isCroatian, 'Subscription', 'Pretplata'),
+                        'subscription'),
                   ],
                 ),
               ),
@@ -490,7 +502,11 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
                       : Text(
-                          'Issue ${_type == 'pass' ? 'Guest Pass' : 'Subscription'}',
+                          _type == 'pass'
+                              ? Lang.sel(isCroatian, 'Issue Guest Pass',
+                                  'Izdaj gostujuću dozvolu')
+                              : Lang.sel(isCroatian, 'Issue Subscription',
+                                  'Izdaj pretplatu'),
                           style: const TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                 ),

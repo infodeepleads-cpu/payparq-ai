@@ -98,7 +98,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json).*)",
+      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json|.*\\.apk).*)",
       "destination": "/"
     }
   ]

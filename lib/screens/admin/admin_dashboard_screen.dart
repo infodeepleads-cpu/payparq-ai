@@ -146,11 +146,29 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         onTap: () async {
-                          final url = Uri.parse(AppConfig.apkDownloadUrl);
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url,
-                                mode: LaunchMode.externalApplication);
+                          final webUrl =
+                              Uri.parse('${Uri.base.origin}/app-release.apk');
+                          final configuredUrl =
+                              Uri.parse(AppConfig.apkDownloadUrl);
+                          final urls = kIsWeb
+                              ? [webUrl, configuredUrl]
+                              : [configuredUrl];
+                          final launchMode = kIsWeb
+                              ? LaunchMode.platformDefault
+                              : LaunchMode.externalApplication;
+                          for (final url in urls) {
+                            if (await launchUrl(url, mode: launchMode)) {
+                              return;
+                            }
                           }
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(Lang.sel(
+                                    isHr,
+                                    'Failed to load APK',
+                                    'Došlo je do problema s učitavanjem APK-a'))),
+                          );
                         },
                         isDesktop: true,
                       ),
