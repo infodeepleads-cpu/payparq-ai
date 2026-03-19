@@ -742,8 +742,17 @@ serve(async (req: Request) => {
     const nonReservationStartTime = hasReservationWindow
       ? formatIso(checkIn)
       : purchaseTimeDisplay;
-    const nonReservationDescription =
+    const requestUrl = new URL(req.url);
+    const hourlySwitchUrl = new URL(requestUrl.pathname, requestUrl.origin);
+    hourlySwitchUrl.searchParams.set("location_id", locationUuid || locationId);
+    if (displayId) {
+      hourlySwitchUrl.searchParams.set("display_id", displayId);
+    }
+    hourlySwitchUrl.searchParams.set("type", "hourly");
+    const dailyHourlyCtaMessage = `Need hourly for this location? [Open hourly checkout](${hourlySwitchUrl.toString()})`;
+    const nonReservationDescriptionBase =
       `Start Time: ${nonReservationStartTime}\nLocation ID: ${displayId}\n(End time depends on selected ${nonReservationUnit})`;
+    const nonReservationDescription = nonReservationDescriptionBase;
     const lineItem: any = {
       quantity: checkoutQuantity,
       price_data: {
@@ -788,6 +797,13 @@ serve(async (req: Request) => {
         terms_of_service_acceptance: {
           message: "By paying, you agree to our [Terms of Service](https://payparq.ai/terms) and [Privacy Policy](https://payparq.ai/privacy).",
         },
+        ...(type === "daily"
+          ? {
+            submit: {
+              message: dailyHourlyCtaMessage,
+            },
+          }
+          : {}),
       },
       custom_fields: checkoutCustomFields(),
       line_items: [lineItem],

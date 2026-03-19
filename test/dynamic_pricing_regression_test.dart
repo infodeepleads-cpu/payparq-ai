@@ -78,6 +78,26 @@ void main() {
     );
   });
 
+  test('Daily checkout keeps hourly CTA only in submit text as hyperlink',
+      () async {
+    final file = File('supabase/functions/create-checkout/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('hourlySwitchUrl.searchParams.set("type", "hourly");') &&
+          content.contains('Need hourly for this location?') &&
+          content.contains('[Open hourly checkout](') &&
+          content.contains(
+              'const nonReservationDescription = nonReservationDescriptionBase;') &&
+          content.contains('submit: {') &&
+          content.contains('message: dailyHourlyCtaMessage') &&
+          content.contains('type === "daily"'),
+      isTrue,
+      reason:
+          'Daily flow must keep hourly CTA only above submit as hyperlink-style text, not in item description.',
+    );
+  });
+
   test('Download sign QR passes clamped price in checkout URL', () async {
     final file = File('lib/screens/instructions_screen.dart');
     final content = await file.readAsString();
