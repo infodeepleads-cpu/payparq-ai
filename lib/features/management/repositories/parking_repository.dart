@@ -366,9 +366,12 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
       final hasExplicitSelection =
           (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
               (effectiveUuid != null && effectiveUuid.isNotEmpty);
+      final shouldFallbackToRlsScopedItems =
+          (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
 
       final resultSet =
-          (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+          shouldFallbackToRlsScopedItems ||
+                  (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
               ? items
               : filtered;
 
@@ -501,9 +504,12 @@ final sessionsStreamProvider =
       final hasExplicitSelection =
           (selectedDisplayId != null && selectedDisplayId.isNotEmpty) ||
               (effectiveUuid != null && effectiveUuid.isNotEmpty);
+      final shouldFallbackToRlsScopedItems =
+          (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
 
       final resultSet =
-          (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+          shouldFallbackToRlsScopedItems ||
+                  (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
               ? items
               : filtered;
 

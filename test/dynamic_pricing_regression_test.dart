@@ -170,4 +170,73 @@ void main() {
           'Cases pricing must use the same clamp inputs and calculation shape as Stripe link pricing source of truth.',
     );
   });
+
+  test('RLS migration allows manager and officer location access for permits',
+      () async {
+    final file = File(
+      'supabase/migrations/20260319_fix_manager_officer_permit_rls.sql',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains("IF role_norm IN ('manager', 'officer') THEN") &&
+          content.contains("auth.jwt() ->> 'role'") &&
+          content.contains('FROM public.profiles p') &&
+          content.contains(
+              'CREATE POLICY parking_permits_insert_authenticated_location_scope') &&
+          content.contains(
+              'WITH CHECK (public.can_access_location(location_id::text));') &&
+          content.contains(
+              'CREATE POLICY parking_permits_select_authenticated_location_scope'),
+      isTrue,
+      reason:
+          'Manager/officer permit create and read must be scoped by can_access_location to avoid 42501 and empty manager data.',
+    );
+  });
+
+  test('RLS migration scopes session visibility with same location access rule',
+      () async {
+    final file = File(
+      'supabase/migrations/20260319_fix_manager_officer_permit_rls.sql',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'CREATE POLICY parking_sessions_select_authenticated_location_scope') &&
+          content.contains(
+              'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.parking_permits TO authenticated;') &&
+          content.contains(
+              'USING (public.can_access_location(location_id::text));'),
+      isTrue,
+      reason:
+          'Manager home checkout visibility must use the same location scope as permits.',
+    );
+  });
+
+  test('Manager/officer dashboard stream falls back to RLS scoped items',
+      () async {
+    final file = File('lib/features/management/repositories/parking_repository.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('shouldFallbackToRlsScopedItems') &&
+          content.contains('(isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty'),
+      isTrue,
+      reason:
+          'Manager and officer should still see RLS-authorized sessions/permits even when client-side location cache is stale.',
+    );
+  });
+
+  test('Officer sidebar keeps permits and pricing hidden', () async {
+    final file = File('lib/main_scaffold.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains("return [0, 1, 2, 8, 9].contains(index);"),
+      isTrue,
+      reason:
+          'Officer role should see home data but should not have direct permits/pricing tab access.',
+    );
+  });
 }
