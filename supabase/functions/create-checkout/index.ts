@@ -647,6 +647,9 @@ serve(async (req: Request) => {
     const checkOut = String(
       body["check_out"] ?? url.searchParams.get("check_out") ?? "",
     ).trim();
+    const hourlySwitchUrlParam = String(
+      body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ?? "",
+    ).trim();
 
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
@@ -743,13 +746,22 @@ serve(async (req: Request) => {
       ? formatIso(checkIn)
       : purchaseTimeDisplay;
     const requestUrl = new URL(req.url);
-    const hourlySwitchUrl = new URL(requestUrl.pathname, requestUrl.origin);
+    const hourlySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
     hourlySwitchUrl.searchParams.set("location_id", locationUuid || locationId);
     if (displayId) {
       hourlySwitchUrl.searchParams.set("display_id", displayId);
     }
     hourlySwitchUrl.searchParams.set("type", "hourly");
-    const dailyHourlyCtaMessage = `Need hourly for this location? [Open hourly checkout](${hourlySwitchUrl.toString()})`;
+    let resolvedHourlySwitchUrl = hourlySwitchUrl.toString();
+    if (hourlySwitchUrlParam) {
+      try {
+        const parsedHourlySwitchUrl = new URL(hourlySwitchUrlParam);
+        if (parsedHourlySwitchUrl.protocol === "https:" || parsedHourlySwitchUrl.protocol === "http:") {
+          resolvedHourlySwitchUrl = parsedHourlySwitchUrl.toString();
+        }
+      } catch (_) {}
+    }
+    const dailyHourlyCtaMessage = `Need hourly for this location? [Open hourly checkout](${resolvedHourlySwitchUrl})`;
     const nonReservationDescriptionBase =
       `Start Time: ${nonReservationStartTime}\nLocation ID: ${displayId}\n(End time depends on selected ${nonReservationUnit})`;
     const nonReservationDescription = nonReservationDescriptionBase;

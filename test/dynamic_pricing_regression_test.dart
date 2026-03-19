@@ -33,6 +33,45 @@ void main() {
     );
   });
 
+  test('Daily generated checkout carries exact hourly switch URL payload',
+      () async {
+    final appConfigFile = File('lib/config/app_config.dart');
+    final appConfigContent = await appConfigFile.readAsString();
+    final pricingScreenFile = File(
+      'lib/features/intelligence/screens/dynamic_pricing_screen.dart',
+    );
+    final pricingScreenContent = await pricingScreenFile.readAsString();
+
+    expect(
+      appConfigContent.contains("queryParams['hourly_switch_url']") &&
+          pricingScreenContent
+              .contains("final hourlySwitchUrl = type == 'daily'") &&
+          pricingScreenContent
+              .contains("final hourlySwitchUrl = mode == 'daily'") &&
+          pricingScreenContent.contains("type: 'hourly'") &&
+          pricingScreenContent.contains('hourlySwitchUrl: hourlySwitchUrl,') &&
+          pricingScreenContent.contains('timestamp: timestamp,'),
+      isTrue,
+      reason:
+          'Both daily Stripe-link and reservation-link generation must pass the exact app-generated hourly checkout URL so CTA behavior matches Generate Hourly Link.',
+    );
+  });
+
+  test('Dynamic pricing update avoids singular coercion on update response',
+      () async {
+    final file = File(
+      'lib/features/intelligence/repositories/dynamic_pricing_repository.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('_firstUpdatedRow') && !content.contains('.maybeSingle()'),
+      isTrue,
+      reason:
+          'Pricing updates must not use maybeSingle on update responses to avoid PostgREST PGRST116 406 errors.',
+    );
+  });
+
   test('Dynamic pricing save invalidates download location cache', () async {
     final file = File(
       'lib/features/intelligence/screens/dynamic_pricing_screen.dart',
@@ -85,8 +124,14 @@ void main() {
 
     expect(
       content.contains('hourlySwitchUrl.searchParams.set("type", "hourly");') &&
+          content.contains('hourlySwitchUrlParam') &&
+          content.contains('resolvedHourlySwitchUrl') &&
+          content.contains('new URL(hourlySwitchUrlParam)') &&
+          content.contains(
+              'new URL("/functions/v1/create-checkout", requestUrl.origin);') &&
           content.contains('Need hourly for this location?') &&
           content.contains('[Open hourly checkout](') &&
+          content.contains('(\${resolvedHourlySwitchUrl})') &&
           content.contains(
               'const nonReservationDescription = nonReservationDescriptionBase;') &&
           content.contains('submit: {') &&
@@ -236,12 +281,14 @@ void main() {
 
   test('Manager/officer dashboard stream falls back to RLS scoped items',
       () async {
-    final file = File('lib/features/management/repositories/parking_repository.dart');
+    final file =
+        File('lib/features/management/repositories/parking_repository.dart');
     final content = await file.readAsString();
 
     expect(
       content.contains('shouldFallbackToRlsScopedItems') &&
-          content.contains('(isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty'),
+          content.contains(
+              '(isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty'),
       isTrue,
       reason:
           'Manager and officer should still see RLS-authorized sessions/permits even when client-side location cache is stale.',

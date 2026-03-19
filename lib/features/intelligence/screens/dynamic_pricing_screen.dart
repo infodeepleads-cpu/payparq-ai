@@ -623,20 +623,36 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final displayId = (_selectedLocation!['display_id'] ?? '').toString();
     final mode = _enforcementPricingMode == 'daily' ? 'daily' : 'hourly';
     final unitPrice = _priceForType(mode);
+    final allowPromotionCodes = _hourlyCouponFieldEnabled;
+    final promotionCodeLabel =
+        allowPromotionCodes ? _couponNameController.text.trim() : null;
     final quantity = _reservationQuantityForMode(
       checkIn: _reserveCheckIn!,
       checkOut: _reserveCheckOut!,
       mode: mode,
     );
     final totalPrice = unitPrice * quantity;
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final hourlySwitchUrl = mode == 'daily'
+        ? AppConfig.createCheckoutUrl(
+            locationId: locationId,
+            displayId: displayId,
+            type: 'hourly',
+            timestamp: timestamp,
+            price: _priceForType('hourly'),
+            allowPromotionCodes: allowPromotionCodes,
+            promotionCodeLabel: promotionCodeLabel,
+          )
+        : null;
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
       type: mode,
+      timestamp: timestamp,
       price: totalPrice,
-      allowPromotionCodes: _hourlyCouponFieldEnabled,
-      promotionCodeLabel:
-          _hourlyCouponFieldEnabled ? _couponNameController.text.trim() : null,
+      allowPromotionCodes: allowPromotionCodes,
+      promotionCodeLabel: promotionCodeLabel,
+      hourlySwitchUrl: hourlySwitchUrl,
       checkIn: _reserveCheckIn!.toIso8601String(),
       checkOut: _reserveCheckOut!.toIso8601String(),
       flow: 'reserve',
@@ -667,6 +683,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         allowPromotionCodes ? _couponNameController.text.trim() : null;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final hourlySwitchUrl = type == 'daily'
+        ? AppConfig.createCheckoutUrl(
+            locationId: locationId,
+            displayId: displayId,
+            type: 'hourly',
+            timestamp: timestamp,
+            price: _priceForType('hourly'),
+            allowPromotionCodes: allowPromotionCodes,
+            promotionCodeLabel: promotionCodeLabel,
+          )
+        : null;
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
@@ -675,6 +702,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       price: price,
       allowPromotionCodes: allowPromotionCodes,
       promotionCodeLabel: promotionCodeLabel,
+      hourlySwitchUrl: hourlySwitchUrl,
     );
 
     // LOGGING TO VERIFY URL PARAMETERS

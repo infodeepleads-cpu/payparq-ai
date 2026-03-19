@@ -27,25 +27,33 @@ class DynamicPricingRepository {
     return null;
   }
 
+  Map<String, dynamic>? _firstUpdatedRow(dynamic rows) {
+    if (rows is List && rows.isNotEmpty) {
+      final first = rows.first;
+      if (first is Map<String, dynamic>) return first;
+      if (first is Map) return Map<String, dynamic>.from(first);
+    }
+    if (rows is Map<String, dynamic>) return rows;
+    if (rows is Map) return Map<String, dynamic>.from(rows);
+    return null;
+  }
+
   Future<Map<String, dynamic>?> _updateByIdOrDisplayId({
     required String id,
     required String? displayId,
     required Map<String, dynamic> data,
   }) async {
-    final resById = await _client
-        .from('locations')
-        .update(data)
-        .eq('id', id)
-        .select('id')
-        .maybeSingle();
+    final resByIdRows =
+        await _client.from('locations').update(data).eq('id', id).select('id');
+    final resById = _firstUpdatedRow(resByIdRows);
     if (resById != null) return resById;
     if (displayId == null || displayId.isEmpty) return null;
-    return await _client
+    final resByDisplayRows = await _client
         .from('locations')
         .update(data)
         .eq('display_id', displayId)
-        .select('id')
-        .maybeSingle();
+        .select('id');
+    return _firstUpdatedRow(resByDisplayRows);
   }
 
   Future<List<Map<String, dynamic>>> fetchLocations({
