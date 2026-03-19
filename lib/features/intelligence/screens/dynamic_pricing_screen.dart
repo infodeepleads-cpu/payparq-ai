@@ -5,6 +5,7 @@ import '../../../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../logic/providers/auth_providers.dart';
+import '../../../logic/providers/auth_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../logic/providers/locale_provider.dart';
 import '../providers/dynamic_pricing_controller.dart';
@@ -77,6 +78,30 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         .toString()
         .toLowerCase();
     return mode == 'daily' ? 'daily' : 'hourly';
+  }
+
+  String _normalizedRoleFromRaw(Object? rawRole) {
+    final roleRaw = rawRole
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+    if (roleRaw == 'superadmin' || roleRaw.startsWith('super_admin')) {
+      return 'super_admin';
+    }
+    if (roleRaw.startsWith('admin')) return 'admin';
+    if (roleRaw.startsWith('manager')) return 'manager';
+    if (roleRaw.startsWith('officer')) return 'officer';
+    return 'officer';
+  }
+
+  bool _canManageHourlyDailyCalculation() {
+    final profile = ref.read(userProfileProvider).value;
+    final user = ref.read(authControllerProvider).currentUser();
+    final role =
+        _normalizedRoleFromRaw(profile?['role'] ?? user?.userMetadata?['role']);
+    return role == 'admin' || role == 'super_admin';
   }
 
   bool _resolvePromotionToggle(Map<String, dynamic> source) {
@@ -348,6 +373,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final canManageHourlyDailyCalculation =
+          _canManageHourlyDailyCalculation();
       final pricePayload = {
         'rate_per_hour': newHourly,
         'base_price_daily': newDaily,
@@ -366,14 +393,16 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'dynamic_pricing_ratio': _dynamicRatio,
         'surcharge_multiplier': _surchargeMultiplier,
       };
-      flagsPayload['enforcement_pricing_mode'] = _enforcementPricingMode;
-      flagsPayload['enforcmetn_pricing_mode'] = _enforcementPricingMode;
       final metadataRaw = _selectedLocation?['verification_metadata'];
       final metadata = metadataRaw is Map
           ? Map<String, dynamic>.from(metadataRaw)
           : <String, dynamic>{};
-      metadata['enforcement_pricing_mode'] = _enforcementPricingMode;
-      metadata['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      if (canManageHourlyDailyCalculation) {
+        flagsPayload['enforcement_pricing_mode'] = _enforcementPricingMode;
+        flagsPayload['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+        metadata['enforcement_pricing_mode'] = _enforcementPricingMode;
+        metadata['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      }
       metadata['allow_promotion_codes'] = _hourlyCouponFieldEnabled;
       metadata['allowPromotionCodes'] = _hourlyCouponFieldEnabled;
       final promotionCodeLabel = _couponNameController.text.trim();
@@ -1522,6 +1551,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   @override
   Widget build(BuildContext context) {
     final isCroatian = ref.watch(localeIsCroatianProvider);
+    final canManageHourlyDailyCalculation = _canManageHourlyDailyCalculation();
     // Watch the global selection and trigger a re-fetch if it changes
     ref.listen(selectedLocationIdProvider, (previous, next) {
       if (next != null && next != previous) {
@@ -1894,8 +1924,10 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
               },
             ),
             const SizedBox(height: 16),
-            _buildEnforcementModeToggle(),
-            const SizedBox(height: 32),
+            if (canManageHourlyDailyCalculation) ...[
+              _buildEnforcementModeToggle(),
+              const SizedBox(height: 32),
+            ],
           ],
         ),
       ),

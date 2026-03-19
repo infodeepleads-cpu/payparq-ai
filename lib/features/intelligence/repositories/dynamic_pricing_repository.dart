@@ -57,6 +57,12 @@ class DynamicPricingRepository {
     if (role == 'super_admin') {
     } else if (role == 'admin') {
       query = query.eq('owner_id', userId);
+    } else if (role == 'manager') {
+      if (locationId != null && locationId.isNotEmpty) {
+        query = query.or('id.eq.$locationId,display_id.eq.$locationId');
+      } else {
+        return [];
+      }
     } else {
       if (locationId != null) {
         query = query.eq('display_id', locationId);
