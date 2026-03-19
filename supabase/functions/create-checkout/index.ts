@@ -39,6 +39,194 @@ function normalizeType(v: string | null): "hourly" | "daily" | "monthly" {
   return "hourly";
 }
 
+const supportedCheckoutLocales = new Set(["en", "hr", "de", "ru", "pl", "es"]);
+
+function normalizeCheckoutLocale(input: string | null | undefined): string | null {
+  const raw = String(input ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  const base = raw.split(",")[0]?.split(";")[0]?.trim() ?? "";
+  const token = base.split("-")[0]?.split("_")[0]?.trim() ?? "";
+  if (!token) return null;
+  if (!supportedCheckoutLocales.has(token)) return null;
+  return token;
+}
+
+function resolveCheckoutLocale(
+  requested: string | null | undefined,
+  acceptLanguageHeader: string | null | undefined,
+): string {
+  const direct = normalizeCheckoutLocale(requested);
+  if (direct) return direct;
+  const header = String(acceptLanguageHeader ?? "").trim();
+  if (header) {
+    const candidates = header
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+    for (const candidate of candidates) {
+      const normalized = normalizeCheckoutLocale(candidate);
+      if (normalized) return normalized;
+    }
+  }
+  return "en";
+}
+
+const checkoutTextByLocale: Record<string, {
+  reservationAdjustDays: string;
+  reservationAdjustMonths: string;
+  reservationAdjustHours: string;
+  unitDays: string;
+  unitMonths: string;
+  unitHours: string;
+  parkingAccessAtId: string;
+  from: string;
+  to: string;
+  total: string;
+  locationId: string;
+  startTime: string;
+  endTimeDependsOnSelected: string;
+  needHourly: string;
+  openHourlyCheckout: string;
+  termsPrefix: string;
+  termsLabel: string;
+  andWord: string;
+  privacyLabel: string;
+  termsSuffix: string;
+}> = {
+  en: {
+    reservationAdjustDays: "Parking Session (Adjust Days)",
+    reservationAdjustMonths: "Parking Session (Adjust Months)",
+    reservationAdjustHours: "Parking Session (Adjust Hours)",
+    unitDays: "days",
+    unitMonths: "months",
+    unitHours: "hours",
+    parkingAccessAtId: "Parking access at ID",
+    from: "From",
+    to: "To",
+    total: "Total",
+    locationId: "Location ID",
+    startTime: "Start Time",
+    endTimeDependsOnSelected: "End time depends on selected",
+    needHourly: "Need hourly for this location?",
+    openHourlyCheckout: "Open hourly checkout",
+    termsPrefix: "By paying, you agree to our",
+    termsLabel: "Terms of Service",
+    andWord: "and",
+    privacyLabel: "Privacy Policy",
+    termsSuffix: ".",
+  },
+  hr: {
+    reservationAdjustDays: "Parking sesija (Prilagodi dane)",
+    reservationAdjustMonths: "Parking sesija (Prilagodi mjesece)",
+    reservationAdjustHours: "Parking sesija (Prilagodi sate)",
+    unitDays: "dane",
+    unitMonths: "mjesece",
+    unitHours: "sate",
+    parkingAccessAtId: "Pristup parkingu na ID",
+    from: "Od",
+    to: "Do",
+    total: "Ukupno",
+    locationId: "ID lokacije",
+    startTime: "Vrijeme početka",
+    endTimeDependsOnSelected: "Vrijeme završetka ovisi o odabranim",
+    needHourly: "Trebate satni parking za ovu lokaciju?",
+    openHourlyCheckout: "Otvori satni checkout",
+    termsPrefix: "Plaćanjem prihvaćate naše",
+    termsLabel: "Uvjeti korištenja",
+    andWord: "i",
+    privacyLabel: "Pravila privatnosti",
+    termsSuffix: ".",
+  },
+  de: {
+    reservationAdjustDays: "Parkvorgang (Tage anpassen)",
+    reservationAdjustMonths: "Parkvorgang (Monate anpassen)",
+    reservationAdjustHours: "Parkvorgang (Stunden anpassen)",
+    unitDays: "Tage",
+    unitMonths: "Monate",
+    unitHours: "Stunden",
+    parkingAccessAtId: "Parkzugang bei ID",
+    from: "Von",
+    to: "Bis",
+    total: "Gesamt",
+    locationId: "Standort-ID",
+    startTime: "Startzeit",
+    endTimeDependsOnSelected: "Endzeit hängt von den ausgewählten",
+    needHourly: "Brauchen Sie stündlich für diesen Standort?",
+    openHourlyCheckout: "Stündlichen Checkout öffnen",
+    termsPrefix: "Mit der Zahlung stimmen Sie unseren",
+    termsLabel: "Nutzungsbedingungen",
+    andWord: "und",
+    privacyLabel: "Datenschutzbestimmungen",
+    termsSuffix: "zu.",
+  },
+  ru: {
+    reservationAdjustDays: "Парковка (Изменить дни)",
+    reservationAdjustMonths: "Парковка (Изменить месяцы)",
+    reservationAdjustHours: "Парковка (Изменить часы)",
+    unitDays: "дней",
+    unitMonths: "месяцев",
+    unitHours: "часов",
+    parkingAccessAtId: "Доступ к парковке на ID",
+    from: "С",
+    to: "По",
+    total: "Итого",
+    locationId: "ID локации",
+    startTime: "Время начала",
+    endTimeDependsOnSelected: "Время окончания зависит от выбранных",
+    needHourly: "Нужна почасовая оплата для этой локации?",
+    openHourlyCheckout: "Открыть почасовой checkout",
+    termsPrefix: "Оплачивая, вы соглашаетесь с нашими",
+    termsLabel: "Условиями использования",
+    andWord: "и",
+    privacyLabel: "Политикой конфиденциальности",
+    termsSuffix: ".",
+  },
+  pl: {
+    reservationAdjustDays: "Sesja parkingowa (Dostosuj dni)",
+    reservationAdjustMonths: "Sesja parkingowa (Dostosuj miesiące)",
+    reservationAdjustHours: "Sesja parkingowa (Dostosuj godziny)",
+    unitDays: "dni",
+    unitMonths: "miesięcy",
+    unitHours: "godzin",
+    parkingAccessAtId: "Dostęp do parkingu przy ID",
+    from: "Od",
+    to: "Do",
+    total: "Suma",
+    locationId: "ID lokalizacji",
+    startTime: "Czas rozpoczęcia",
+    endTimeDependsOnSelected: "Czas zakończenia zależy od wybranych",
+    needHourly: "Potrzebujesz opłaty godzinowej dla tej lokalizacji?",
+    openHourlyCheckout: "Otwórz checkout godzinowy",
+    termsPrefix: "Płacąc, akceptujesz nasze",
+    termsLabel: "Warunki korzystania",
+    andWord: "oraz",
+    privacyLabel: "Politykę prywatności",
+    termsSuffix: ".",
+  },
+  es: {
+    reservationAdjustDays: "Sesión de estacionamiento (Ajustar días)",
+    reservationAdjustMonths: "Sesión de estacionamiento (Ajustar meses)",
+    reservationAdjustHours: "Sesión de estacionamiento (Ajustar horas)",
+    unitDays: "días",
+    unitMonths: "meses",
+    unitHours: "horas",
+    parkingAccessAtId: "Acceso de estacionamiento en ID",
+    from: "Desde",
+    to: "Hasta",
+    total: "Total",
+    locationId: "ID de ubicación",
+    startTime: "Hora de inicio",
+    endTimeDependsOnSelected: "La hora de finalización depende de los",
+    needHourly: "¿Necesitas tarifa por hora para esta ubicación?",
+    openHourlyCheckout: "Abrir checkout por hora",
+    termsPrefix: "Al pagar, aceptas nuestros",
+    termsLabel: "Términos del servicio",
+    andWord: "y la",
+    privacyLabel: "Política de privacidad",
+    termsSuffix: ".",
+  },
+};
+
 function checkoutCustomFields(): any[] {
   return [
     {
@@ -650,6 +838,14 @@ serve(async (req: Request) => {
     const hourlySwitchUrlParam = String(
       body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ?? "",
     ).trim();
+    const localeParam = String(
+      body["locale"] ?? url.searchParams.get("locale") ?? "",
+    ).trim();
+    const checkoutLocale = resolveCheckoutLocale(
+      localeParam,
+      req.headers.get("accept-language"),
+    );
+    const checkoutText = checkoutTextByLocale[checkoutLocale] ?? checkoutTextByLocale.en;
 
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
@@ -725,23 +921,23 @@ serve(async (req: Request) => {
     if (isReservationFlow && hasReservationWindow) {
       const formattedCheckIn = formatIso(checkIn);
       const formattedCheckOut = formatIso(checkOut);
-      reservationDescription = `Parking access at ID${displayId}\nFrom: ${formattedCheckIn}\nTo: ${formattedCheckOut}\nTotal: €${(unitAmountCents / 100).toFixed(2)}`;
+      reservationDescription = `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${(unitAmountCents / 100).toFixed(2)}`;
     }
     const checkoutQuantity = isReservationFlow ? 1 : quantity;
     const reservationName = (locData?.name ?? "").toString().trim();
     const reservationTitle = reservationName.length > 0
       ? reservationName
-      : `Location ID: ${displayId}`;
+      : `${checkoutText.locationId}: ${displayId}`;
     const nonReservationTitle = type === "daily"
-      ? "Parking Session (Adjust Days)"
+      ? checkoutText.reservationAdjustDays
       : type === "monthly"
-      ? "Parking Session (Adjust Months)"
-      : "Parking Session (Adjust Hours)";
+      ? checkoutText.reservationAdjustMonths
+      : checkoutText.reservationAdjustHours;
     const nonReservationUnit = type === "daily"
-      ? "days"
+      ? checkoutText.unitDays
       : type === "monthly"
-      ? "months"
-      : "hours";
+      ? checkoutText.unitMonths
+      : checkoutText.unitHours;
     const nonReservationStartTime = hasReservationWindow
       ? formatIso(checkIn)
       : purchaseTimeDisplay;
@@ -761,9 +957,9 @@ serve(async (req: Request) => {
         }
       } catch (_) {}
     }
-    const dailyHourlyCtaMessage = `Need hourly for this location? [Open hourly checkout](${resolvedHourlySwitchUrl})`;
+    const dailyHourlyCtaMessage = `${checkoutText.needHourly} [${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
     const nonReservationDescriptionBase =
-      `Start Time: ${nonReservationStartTime}\nLocation ID: ${displayId}\n(End time depends on selected ${nonReservationUnit})`;
+      `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}\n(${checkoutText.endTimeDependsOnSelected} ${nonReservationUnit})`;
     const nonReservationDescription = nonReservationDescriptionBase;
     const lineItem: any = {
       quantity: checkoutQuantity,
@@ -807,7 +1003,7 @@ serve(async (req: Request) => {
       },
       custom_text: {
         terms_of_service_acceptance: {
-          message: "By paying, you agree to our [Terms of Service](https://payparq.ai/terms) and [Privacy Policy](https://payparq.ai/privacy).",
+          message: `${checkoutText.termsPrefix} [${checkoutText.termsLabel}](https://payparq.ai/terms) ${checkoutText.andWord} [${checkoutText.privacyLabel}](https://payparq.ai/privacy)${checkoutText.termsSuffix}`,
         },
         ...(type === "daily"
           ? {
@@ -818,6 +1014,7 @@ serve(async (req: Request) => {
           : {}),
       },
       custom_fields: checkoutCustomFields(),
+      locale: checkoutLocale,
       line_items: [lineItem],
       metadata: {
         location_id: locationUuid, // Use UUID

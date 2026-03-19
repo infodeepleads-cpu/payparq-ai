@@ -65,7 +65,8 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('_firstUpdatedRow') && !content.contains('.maybeSingle()'),
+      content.contains('_firstUpdatedRow') &&
+          !content.contains('.maybeSingle()'),
       isTrue,
       reason:
           'Pricing updates must not use maybeSingle on update responses to avoid PostgREST PGRST116 406 errors.',
@@ -129,8 +130,8 @@ void main() {
           content.contains('new URL(hourlySwitchUrlParam)') &&
           content.contains(
               'new URL("/functions/v1/create-checkout", requestUrl.origin);') &&
-          content.contains('Need hourly for this location?') &&
-          content.contains('[Open hourly checkout](') &&
+          content.contains('checkoutText.needHourly') &&
+          content.contains('checkoutText.openHourlyCheckout') &&
           content.contains('(\${resolvedHourlySwitchUrl})') &&
           content.contains(
               'const nonReservationDescription = nonReservationDescriptionBase;') &&
@@ -140,6 +141,28 @@ void main() {
       isTrue,
       reason:
           'Daily flow must keep hourly CTA only above submit as hyperlink-style text, not in item description.',
+    );
+  });
+
+  test('Checkout function supports localized Stripe text for key locales',
+      () async {
+    final file = File('supabase/functions/create-checkout/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('resolveCheckoutLocale') &&
+          content.contains('checkoutTextByLocale') &&
+          content.contains('supportedCheckoutLocales') &&
+          content.contains('locale: checkoutLocale') &&
+          content.contains('hr: {') &&
+          content.contains('de: {') &&
+          content.contains('ru: {') &&
+          content.contains('pl: {') &&
+          content.contains('es: {') &&
+          content.contains('terms_of_service_acceptance'),
+      isTrue,
+      reason:
+          'create-checkout must support locale resolution and translated checkout text for hr/de/ru/pl/es with Stripe locale forwarding.',
     );
   });
 
