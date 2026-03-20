@@ -526,6 +526,7 @@ async function persistCheckoutSession(
     price: Number(session.amount_total ?? 0) / 100,
     amount_cents: Number(session.amount_total ?? 0),
     stripe_session_id: session.id,
+    activation_at: metadata.activation_at || null,
     created_at: entryTime.toISOString(),
     entry_time: entryTime.toISOString(),
     exit_time: exitTime.toISOString(),
@@ -835,6 +836,10 @@ serve(async (req: Request) => {
     const checkOut = String(
       body["check_out"] ?? url.searchParams.get("check_out") ?? "",
     ).trim();
+    const parsedActivationAt = checkIn ? new Date(checkIn) : null;
+    const activationAt = parsedActivationAt && !Number.isNaN(parsedActivationAt.getTime())
+      ? parsedActivationAt.toISOString()
+      : "";
     const hourlySwitchUrlParam = String(
       body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ?? "",
     ).trim();
@@ -1030,6 +1035,7 @@ serve(async (req: Request) => {
         permit_id: permitId || undefined,
         check_in: checkIn || undefined,
         check_out: checkOut || undefined,
+        activation_at: activationAt || undefined,
       },
     };
 
@@ -1132,6 +1138,7 @@ serve(async (req: Request) => {
         is_lpr_scan: false,
         is_whatsapp_linked: false,
         stripe_session_id: paymentSession.id,
+        activation_at: activationAt || undefined,
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         entry_time: now.toISOString(),

@@ -210,8 +210,17 @@ class ParkingRepository {
 
   /// Deletes a staff member (Auth + Profile).
   Future<void> deleteStaff(String id) async {
-    // We must use an Edge Function to delete from Auth as well
-    await _client.functions.invoke('delete-staff', body: {'userId': id});
+    final response = await _client.functions.invoke(
+      'create-officer',
+      body: {'action': 'delete_staff', 'userId': id},
+    );
+    if (response.status < 200 || response.status >= 300) {
+      final data = response.data;
+      final message = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'Failed to delete staff account';
+      throw Exception(message);
+    }
   }
 
   /// Deletes a location.
@@ -369,11 +378,10 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
       final shouldFallbackToRlsScopedItems =
           (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
 
-      final resultSet =
-          shouldFallbackToRlsScopedItems ||
-                  (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
-              ? items
-              : filtered;
+      final resultSet = shouldFallbackToRlsScopedItems ||
+              (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+          ? items
+          : filtered;
 
       return resultSet.map((it) {
         final raw = (it['location_id'] ?? '').toString();
@@ -507,11 +515,10 @@ final sessionsStreamProvider =
       final shouldFallbackToRlsScopedItems =
           (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
 
-      final resultSet =
-          shouldFallbackToRlsScopedItems ||
-                  (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
-              ? items
-              : filtered;
+      final resultSet = shouldFallbackToRlsScopedItems ||
+              (filtered.isEmpty && items.isNotEmpty && !hasExplicitSelection)
+          ? items
+          : filtered;
 
       return resultSet.map((it) {
         final raw = (it['location_id'] ?? '').toString();
@@ -673,8 +680,8 @@ final staffStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
           ...managerCreatedOfficerIds,
         };
 
-        final hasCreatorVisibilityData =
-            directlyCreatedIds.isNotEmpty || managerCreatedOfficerIds.isNotEmpty;
+        final hasCreatorVisibilityData = directlyCreatedIds.isNotEmpty ||
+            managerCreatedOfficerIds.isNotEmpty;
 
         return items.where((item) {
           final id = (item['id'] ?? '').toString();

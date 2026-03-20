@@ -481,16 +481,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final paymentStatus =
         (s['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (s['status'] ?? '').toString().trim().toLowerCase();
-    final isPending = status == 'pending';
-    final isPaid = paymentStatus == 'paid' ||
+    final effectiveStatus =
+        (s['ui_effective_status'] ?? status).toString().trim().toLowerCase();
+    final isPending = effectiveStatus == 'pending' || status == 'pending';
+    final isExpired = effectiveStatus == 'expired';
+    final isPaid = effectiveStatus == 'active' ||
+        paymentStatus == 'paid' ||
         paymentStatus == 'succeeded' ||
         paymentStatus == 'complete' ||
         paymentStatus == 'completed' ||
-        status == 'active' ||
-        status == 'paid' ||
-        status == 'succeeded' ||
-        status == 'complete' ||
-        status == 'completed' ||
+        (effectiveStatus != 'inactive' && status == 'active') ||
         amount == 0.0;
 
     String? metadataEmail;
@@ -617,7 +617,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildStatusBadge(
-              isPending ? 'PENDING' : (isPaid ? 'ACTIVE' : 'INACTIVE'), isPaid,
+              isPending
+                  ? 'PENDING'
+                  : (isExpired ? 'EXPIRED' : (isPaid ? 'ACTIVE' : 'INACTIVE')),
+              isPaid,
               isPending: isPending),
           const SizedBox(width: 24),
           ElevatedButton(
@@ -885,9 +888,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildStatusBadge(String status, bool isPaid,
       {bool isPending = false}) {
     final isHr = ref.watch(localeIsCroatianProvider);
+    final normalized = status.toUpperCase();
     final dotColor = isPending
         ? Colors.orange[400]
-        : (isPaid ? Colors.green[400] : Colors.red[400]);
+        : (normalized == 'EXPIRED'
+            ? Colors.grey[500]
+            : (isPaid ? Colors.green[400] : Colors.red[400]));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -909,7 +915,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           const SizedBox(width: 8),
           Text(
             (() {
-              final s = status.toUpperCase();
+              final s = normalized;
               if (s == 'ACTIVE') {
                 return Lang.sel(isHr, 'ACTIVE', 'AKTIVNO');
               }
@@ -918,6 +924,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               }
               if (s == 'PENDING') {
                 return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              }
+              if (s == 'EXPIRED') {
+                return Lang.sel(isHr, 'EXPIRED', 'ISTEKLO');
               }
               return s;
             })(),

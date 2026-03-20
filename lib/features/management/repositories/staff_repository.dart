@@ -181,7 +181,20 @@ class StaffRepository {
     required String functionName,
     required Map<String, dynamic> body,
   }) async {
-    final first = await _client.functions.invoke(functionName, body: body);
+    FunctionResponse first;
+    try {
+      first = await _client.functions.invoke(functionName, body: body);
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      final isJwtOrAuthFailure = message.contains('401') ||
+          message.contains('invalid jwt') ||
+          message.contains('jwt') ||
+          message.contains('token') ||
+          message.contains('unauthorized');
+      if (!isJwtOrAuthFailure) rethrow;
+      await _refreshSessionIfPossible();
+      return _client.functions.invoke(functionName, body: body);
+    }
     if (first.status != 401 &&
         !_isInvalidJwtStatusOrPayload(first.status, first.data)) {
       return first;
@@ -287,7 +300,25 @@ class StaffRepository {
   }
 
   Future<void> deleteStaff(String id) async {
-    await _client.functions.invoke('delete-staff', body: {'userId': id});
+    final response = await _invokeWithSessionRecovery(
+      functionName: 'create-officer',
+      body: {'action': 'delete_staff', 'userId': id},
+    );
+    if (response.status >= 200 && response.status < 300) return;
+    var parsedError = _extractErrorMessage(response.data);
+    if (_isJwtAuthError(status: response.status, payload: response.data)) {
+      final fallbackResponse = await _invokeFunctionOverHttp(
+        'create-officer',
+        {'action': 'delete_staff', 'userId': id},
+        forceRefreshToken: true,
+      );
+      if (fallbackResponse.statusCode >= 200 &&
+          fallbackResponse.statusCode < 300) {
+        return;
+      }
+      parsedError = _extractErrorMessage(fallbackResponse.data);
+    }
+    throw Exception(parsedError);
   }
 
   Map<String, dynamic> _normalizeResponseData(dynamic rawData) {

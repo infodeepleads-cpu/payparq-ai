@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,8 +19,8 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  bool isSignIn = true;
   bool isObscured = true;
+  bool _resetStatusHandled = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -30,17 +31,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _emailLabel(bool isCroatian) => isCroatian ? 'E-pošta' : 'Email';
   String _passwordLabel(bool isCroatian) => isCroatian ? 'Lozinka' : 'Password';
   String get _signInTab => 'Sign In';
-  String get _signUpTab => 'Sign Up';
   String _forgotPassword(bool isCroatian) =>
       isCroatian ? 'Zaboravljena lozinka' : 'Forgot Password';
   String _termsText(bool isCroatian) => isCroatian
-      ? 'Registracijom prihvaćate naše Uvjete i pravila privatnosti.'
-      : 'By signing up, you agree to our Terms & Privacy Policy.';
+      ? 'Prijavom prihvaćate naše Uvjete i pravila privatnosti.'
+      : 'By signing in, you agree to our Terms & Privacy Policy.';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPasswordResetStatusIfPresent();
+    });
+  }
+
+  void _showPasswordResetStatusIfPresent() {
+    if (!mounted || _resetStatusHandled || !kIsWeb) return;
+    _resetStatusHandled = true;
+    final status = Uri.base.queryParameters['pw_reset']?.trim().toLowerCase();
+    if (status == null || status.isEmpty) return;
+    final isCroatian = ref.read(localeIsCroatianProvider);
+    if (status == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCroatian
+                ? 'Lozinka je uspješno promijenjena. Prijavite se s novom lozinkom.'
+                : 'Password was updated successfully. Sign in with your new password.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isCroatian
+              ? 'Link za promjenu lozinke nije valjan ili je istekao. Zatražite novi.'
+              : 'Password reset link is invalid or expired. Request a new one.',
+        ),
+      ),
+    );
+  }
 
   Future<void> _handleAuth() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    final messenger = ScaffoldMessenger.of(context);
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,27 +89,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final result = await AsyncActionHandler.run<AuthActionResult>(
       context: context,
       action: () => ref.read(authControllerProvider).handleAuth(
-            isSignIn: isSignIn,
+            isSignIn: true,
             email: email,
             password: password,
           ),
       errorBuilder: ErrorMapper.message,
     );
 
-    if (result?.requiresEmailVerification == true) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Signup successful! Please check your email to verify your account before logging in.'),
-          backgroundColor: Colors.blue,
-          duration: Duration(seconds: 10),
-        ),
-      );
-      if (!mounted) return;
-      setState(() => isSignIn = true);
-      return;
-    }
+    if (result?.requiresEmailVerification == true) return;
   }
 
   Future<void> _openResetPasswordPage() async {
@@ -146,14 +170,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ],
                           ),
                           const SizedBox(height: 32),
-                          // Custom Tab Toggle
-                          Row(
-                            children: [
-                              _buildTabButton(_signInTab, true),
-                              const SizedBox(width: 24),
-                              _buildTabButton(_signUpTab, false),
-                            ],
-                          ),
+                          _buildSignInHeader(),
                           const SizedBox(height: 24),
                           Text(
                             _subtitle(isCroatian),
@@ -184,7 +201,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 elevation: 0,
                               ),
                               child: Text(
-                                isSignIn ? _signInTab : _signUpTab,
+                                _signInTab,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -192,29 +209,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                             ),
                           ),
-                          if (!isSignIn) ...[
-                            const SizedBox(height: 24),
-                            Center(
-                              child: InkWell(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const TermsConditionsScreen(),
-                                  ),
+                          const SizedBox(height: 24),
+                          Center(
+                            child: InkWell(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const TermsConditionsScreen(),
                                 ),
-                                child: Text(
-                                  _termsText(isCroatian),
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                    decoration: TextDecoration.underline,
-                                  ),
+                              ),
+                              child: Text(
+                                _termsText(isCroatian),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
                                 ),
                               ),
                             ),
-                          ],
+                          ),
                           const SizedBox(height: 24),
                           Center(
                             child: TextButton(
@@ -240,26 +255,43 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               Expanded(
                 flex: 1,
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80', // Skyscraper worm's eye view
+                  color: Colors.black,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.network(
+                          'https://images.pexels.com/photos/417273/pexels-photo-417273.jpeg?auto=compress&cs=tinysrgb&w=2070',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0xFF2E2E2E),
+                                  Color(0xFF111111),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.2),
-                          Colors.black.withValues(alpha: 0.6),
-                        ],
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.2),
+                              Colors.black.withValues(alpha: 0.6),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -269,30 +301,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildTabButton(String title, bool isSelectedTab) {
-    final selected = isSignIn == isSelectedTab;
-    return GestureDetector(
-      onTap: () => setState(() => isSignIn = isSelectedTab),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? Colors.black : Colors.grey[400],
-            ),
+  Widget _buildSignInHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _signInTab,
+          style: GoogleFonts.inter(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
-          const SizedBox(height: 8),
-          if (selected)
-            Container(
-              height: 2,
-              width: 40,
-              color: AppTheme.primary,
-            ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 2,
+          width: 40,
+          color: AppTheme.primary,
+        ),
+      ],
     );
   }
 

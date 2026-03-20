@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+const bootstrapSecret = (Deno.env.get("BREAK_GLASS_BOOTSTRAP_SECRET") ?? "").trim();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,10 +13,6 @@ const corsHeaders = {
 };
 
 const admin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-const userClient = createClient(supabaseUrl, anonKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
@@ -60,6 +56,15 @@ function canCreate(callerRole: string, targetRole: string): boolean {
   return false;
 }
 
+async function hasPrivilegedProfile(): Promise<boolean> {
+  const { count, error } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .in("role", ["super_admin", "admin", "manager"]);
+  if (error) throw new Error(error.message);
+  return Number(count ?? 0) > 0;
+}
+
 async function findUserIdByEmail(email: string): Promise<string | null> {
   let page = 1;
   const needle = email.toLowerCase();
@@ -85,16 +90,85 @@ serve(async (req) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
-  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return json({ error: "Missing server configuration" }, 500);
   }
 
   try {
+    const body = await req.json();
+    const action = String(body?.action ?? "").trim().toLowerCase();
+    if (action === "bootstrap_super_admin") {
+      if (!bootstrapSecret) {
+        return json({ error: "Bootstrap secret not configured" }, 500);
+      }
+      const providedSecret = String(body?.secret ?? "").trim();
+      if (!providedSecret || providedSecret !== bootstrapSecret) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+      const privilegedExists = await hasPrivilegedProfile();
+      if (privilegedExists) {
+        return json({ error: "Bootstrap is allowed only when no privileged profiles exist" }, 409);
+      }
+      const email = String(body?.email ?? "").trim().toLowerCase();
+      const name = String(body?.name ?? "").trim();
+      const password = String(body?.password ?? "");
+      if (!isEmail(email)) return json({ error: "Invalid email" }, 400);
+      if (password.trim().length < 8) {
+        return json({ error: "Password must be at least 8 characters" }, 400);
+      }
+      let userId = await findUserIdByEmail(email);
+      if (!userId) {
+        const { data: created, error: createError } = await admin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            role: "super_admin",
+            name,
+          },
+        });
+        if (createError || !created.user?.id) {
+          return json({ error: createError?.message ?? "Failed to create bootstrap user" }, 500);
+        }
+        userId = created.user.id;
+      } else {
+        const { error: updateUserError } = await admin.auth.admin.updateUserById(userId, {
+          password,
+          user_metadata: {
+            role: "super_admin",
+            name,
+          },
+        });
+        if (updateUserError) return json({ error: updateUserError.message }, 500);
+      }
+
+      const { data: profileData, error: profileError } = await admin
+        .from("profiles")
+        .upsert({
+          id: userId,
+          email,
+          role: "super_admin",
+          full_name: name,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "id" })
+        .select("*")
+        .single();
+      if (profileError) return json({ error: profileError.message }, 500);
+      return json({
+        ok: true,
+        action: "bootstrap_super_admin",
+        id: userId,
+        email,
+        role: "super_admin",
+        profile: profileData,
+      });
+    }
+
     const authHeader = req.headers.get("Authorization") ?? "";
     const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!jwt) return json({ error: "Unauthorized" }, 401);
 
-    const { data: callerUserData, error: callerUserError } = await userClient.auth.getUser(jwt);
+    const { data: callerUserData, error: callerUserError } = await admin.auth.getUser(jwt);
     if (callerUserError || !callerUserData.user) {
       return json({ error: "Unauthorized" }, 401);
     }
@@ -108,7 +182,56 @@ serve(async (req) => {
     if (callerProfileError) return json({ error: callerProfileError.message }, 403);
     const callerRole = normalizeRole(callerProfile?.role);
 
-    const body = await req.json();
+    if (action === "delete_staff" || action === "delete") {
+      const targetUserId = String(body?.userId ?? body?.user_id ?? body?.id ?? "").trim();
+      if (!targetUserId) return json({ error: "Missing userId" }, 400);
+      if (targetUserId === callerUserId) {
+        return json({ error: "You cannot delete your own account" }, 400);
+      }
+
+      const { data: targetProfile, error: targetProfileError } = await admin
+        .from("profiles")
+        .select("id,role")
+        .eq("id", targetUserId)
+        .maybeSingle();
+      if (targetProfileError) return json({ error: targetProfileError.message }, 500);
+      const targetRole = normalizeRole(targetProfile?.role);
+      if (!canCreate(callerRole, targetRole)) {
+        return json({ error: "No permission to delete this role" }, 403);
+      }
+
+      const { error: assignmentDeleteError } = await admin
+        .from("officer_assignments")
+        .delete()
+        .eq("officer_id", targetUserId);
+      if (assignmentDeleteError) return json({ error: assignmentDeleteError.message }, 500);
+
+      const { error: assignerDeleteError } = await admin
+        .from("officer_assignments")
+        .delete()
+        .eq("assigned_by", targetUserId);
+      if (assignerDeleteError) return json({ error: assignerDeleteError.message }, 500);
+
+      const { error: locationsUpdateError } = await admin
+        .from("locations")
+        .update({ owner_id: callerUserId })
+        .eq("owner_id", targetUserId);
+      if (locationsUpdateError) return json({ error: locationsUpdateError.message }, 500);
+
+      const { error: profileDeleteError } = await admin
+        .from("profiles")
+        .delete()
+        .eq("id", targetUserId);
+      if (profileDeleteError) return json({ error: profileDeleteError.message }, 500);
+
+      const { error: authDeleteError } = await admin.auth.admin.deleteUser(targetUserId);
+      if (authDeleteError && !authDeleteError.message.toLowerCase().includes("not found")) {
+        return json({ error: authDeleteError.message }, 500);
+      }
+
+      return json({ ok: true, deleted_user_id: targetUserId });
+    }
+
     const email = String(body?.email ?? "").trim().toLowerCase();
     const name = String(body?.name ?? "").trim();
     const targetRole = normalizeRole(body?.role);
@@ -133,10 +256,9 @@ serve(async (req) => {
     }
 
     let userId = await findUserIdByEmail(email);
-    let generatedPassword: string | null = null;
+    const generatedPassword = randomPassword();
 
     if (!userId) {
-      generatedPassword = randomPassword();
       const { data: created, error: createError } = await admin.auth.admin.createUser({
         email,
         password: generatedPassword,
@@ -153,6 +275,7 @@ serve(async (req) => {
       userId = created.user.id;
     } else {
       const { error: updateUserError } = await admin.auth.admin.updateUserById(userId, {
+        password: generatedPassword,
         user_metadata: {
           role: targetRole,
           name,
@@ -169,10 +292,10 @@ serve(async (req) => {
       email,
       role: targetRole,
       full_name: name,
+      raw_password: generatedPassword,
       updated_at: new Date().toISOString(),
     };
     if (locationId) profilePayload.location_id = locationId;
-    if (generatedPassword) profilePayload.raw_password = generatedPassword;
 
     const { data: profileData, error: profileError } = await admin
       .from("profiles")
@@ -205,7 +328,7 @@ serve(async (req) => {
       user_id: userId,
       email,
       role: targetRole,
-      raw_password: generatedPassword ?? profileData?.raw_password ?? null,
+      raw_password: generatedPassword,
       user: { id: userId, email },
       profile: profileData,
     });

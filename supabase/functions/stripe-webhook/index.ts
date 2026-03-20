@@ -238,6 +238,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     is_lpr_scan: false,
     is_whatsapp_linked: false,
     stripe_session_id: session.id,
+    activation_at: metadata.activation_at || null,
     created_at: entryTime.toISOString(),
     updated_at: entryTime.toISOString(),
     entry_time: entryTime.toISOString(),

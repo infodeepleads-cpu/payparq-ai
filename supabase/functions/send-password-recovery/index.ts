@@ -7,8 +7,6 @@ const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
 const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL") ?? "team@info.payparq.com";
 const tokenSecret = (Deno.env.get("PASSWORD_CHANGE_TOKEN_SECRET") ?? "").trim() ||
   supabaseServiceRoleKey;
-const appLoginUrl = Deno.env.get("SUPABASE_REDIRECT_URL") ??
-  "https://mobile-scanner-ruddy.vercel.app/";
 const defaultRedirectTo = Deno.env.get("SUPABASE_REDIRECT_URL") ??
   "https://mobile-scanner-ruddy.vercel.app/";
 const functionsBaseUrl = (Deno.env.get("SUPABASE_FUNCTIONS_URL") ?? "").trim() ||
@@ -34,14 +32,18 @@ function json(data: Record<string, unknown>, status = 200): Response {
   });
 }
 
-function html(body: string, status = 200): Response {
-  return new Response(body, {
-    status,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
+function htmlMessage(message: string, status = 200): Response {
+  return new Response(
+    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payparq</title><style>body{margin:0;background:#000;color:#fff;font-family:Inter,Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px;font-weight:600}</style></head><body>${message}</body></html>`,
+    {
+      status,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
     },
-  });
+  );
 }
 
 function isEmailValid(value: string): boolean {
@@ -234,7 +236,7 @@ async function handleLegacyRecovery(req: Request): Promise<Response> {
   });
   if (error) return json({ error: error.message }, 500);
 
-  const actionLink = data?.properties?.action_link ?? data?.action_link;
+  const actionLink = data?.properties?.action_link ?? (data as { action_link?: string } | null)?.action_link;
   if (!actionLink) return json({ error: "Recovery link generation failed" }, 500);
   await sendResendEmail({
     to: email,
@@ -254,12 +256,12 @@ async function handleLegacyRecovery(req: Request): Promise<Response> {
 
 async function handleConfirmPasswordChange(req: Request): Promise<Response> {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return html("<h2>Configuration error</h2><p>Server is not configured.</p>", 500);
+    return htmlMessage("Password reset failed. Please request a new reset link.", 500);
   }
   const url = new URL(req.url);
   const token = url.searchParams.get("token") ?? "";
   if (!token) {
-    return html("<h2>Invalid link</h2><p>Missing token.</p>", 400);
+    return htmlMessage("Password reset failed. Please request a new reset link.", 400);
   }
   try {
     const payload = await parseSignedToken(token, tokenSecret);
@@ -275,22 +277,9 @@ async function handleConfirmPasswordChange(req: Request): Promise<Response> {
       password: newPassword,
     });
     if (error) throw new Error(error.message);
-    const body = `<html><body style="font-family:Inter,Arial,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto;text-align:center">` +
-      `<h2 style="margin:0 0 16px 0;color:#000">Your password is now reset.</h2>` +
-      `<p style="font-size:18px">You may log in now.</p>` +
-      `</body></html>`;
-    return html(body, 200);
+    return htmlMessage("Password changed successfully. You may now log in.");
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return html(
-      `<html><body style="font-family:Inter,Arial,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto;text-align:center">` +
-      `<div style="padding:24px;border:1px solid #fee;border-radius:12px;background:#fffafb">` +
-      `<h2 style="margin:0 0 16px 0;color:#c00">Activation Failed</h2>` +
-      `<p>${message}</p>` +
-      `<p style="color:#666;font-size:14px;margin-top:24px">Please try requesting a new reset link from the app.</p>` +
-      `</div></body></html>`,
-      400,
-    );
+    return htmlMessage("Password reset failed. Please request a new reset link.", 400);
   }
 }
 

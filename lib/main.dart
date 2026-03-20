@@ -246,7 +246,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       home: _showResetPasswordScreen
           ? const UpdatePasswordScreen()
           : !_supabaseReady
-              ? const AuthScreen()
+              ? const _StartupSplashScreen()
               : StreamBuilder<AuthState>(
                   stream: Supabase.instance.client.auth.onAuthStateChange,
                   builder: (context, snapshot) {
@@ -259,6 +259,20 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
                     return const AuthScreen();
                   },
                 ),
+    );
+  }
+}
+
+class _StartupSplashScreen extends StatelessWidget {
+  const _StartupSplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: _PulsingBrandWordmark(),
+      ),
     );
   }
 }

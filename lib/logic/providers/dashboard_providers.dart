@@ -24,6 +24,77 @@ final unifiedDashboardProvider =
   final filter = ref.watch(dashboardFilterProvider);
 
   // Helper to extract data or return empty list on error/loading
+  DateTime? parseAnyDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw.toUtc();
+    final parsed = DateTime.tryParse(raw.toString());
+    return parsed?.toUtc();
+  }
+
+  Map<String, dynamic> parseStripeMetadata(dynamic raw) {
+    try {
+      if (raw is Map<String, dynamic>) return raw;
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      if (raw is String && raw.trim().startsWith('{')) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  String deriveEffectiveStatus(Map<String, dynamic> item) {
+    final amount = double.tryParse((item['price'] ?? 0).toString()) ?? 0.0;
+    final paymentStatus =
+        (item['payment_status'] ?? '').toString().trim().toLowerCase();
+    final status = (item['status'] ?? '').toString().trim().toLowerCase();
+    final isPaid = paymentStatus == 'paid' ||
+        paymentStatus == 'succeeded' ||
+        paymentStatus == 'complete' ||
+        paymentStatus == 'completed' ||
+        status == 'active' ||
+        status == 'paid' ||
+        status == 'succeeded' ||
+        status == 'complete' ||
+        status == 'completed' ||
+        amount == 0.0 ||
+        (item['stripe_metadata'] != null &&
+            (item['stripe_metadata']
+                    .toString()
+                    .contains('"status":"complete"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"payment_status":"paid"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"checkout.session.completed"') ||
+                item['stripe_metadata']
+                    .toString()
+                    .contains('"checkout_session_id"')));
+
+    final isPending =
+        paymentStatus == 'pending' || status == 'pending' || status == 'open';
+    if (isPending) return 'pending';
+
+    final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
+    final nowUtc = DateTime.now().toUtc();
+    final activationAt = parseAnyDate(item['activation_at']) ??
+        parseAnyDate(item['start_time']) ??
+        parseAnyDate(stripeMeta['activation_at']) ??
+        parseAnyDate(stripeMeta['check_in']);
+    final endTime =
+        parseAnyDate(item['end_time']) ?? parseAnyDate(item['exit_time']);
+
+    if (endTime != null && nowUtc.isAfter(endTime)) {
+      return 'expired';
+    }
+    if (activationAt != null && nowUtc.isBefore(activationAt)) {
+      return 'inactive';
+    }
+    return isPaid ? 'active' : 'inactive';
+  }
+
   List<Map<String, dynamic>> extractData(
       AsyncValue<List<Map<String, dynamic>>> asyncVal, String type) {
     return asyncVal.maybeWhen(
@@ -34,7 +105,12 @@ final unifiedDashboardProvider =
           'ui_created_at',
           fallback: DateTime(2000),
         );
-        return {...item, 'ui_type': type};
+        final effectiveStatus = deriveEffectiveStatus(item);
+        return {
+          ...item,
+          'ui_type': type,
+          'ui_effective_status': effectiveStatus,
+        };
       }).toList(),
       orElse: () => [],
     );
@@ -115,40 +191,20 @@ final unifiedDashboardProvider =
 
     if (!matchesSearch) return false;
 
-    final amount = double.tryParse((item['price'] ?? 0).toString()) ?? 0.0;
     final paymentStatus =
         (item['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (item['status'] ?? '').toString().trim().toLowerCase();
-    final isPaid = paymentStatus == 'paid' ||
-        paymentStatus == 'succeeded' ||
-        paymentStatus == 'complete' ||
-        paymentStatus == 'completed' ||
-        status == 'active' ||
-        status == 'paid' ||
-        status == 'succeeded' ||
-        status == 'complete' ||
-        status == 'completed' ||
-        amount == 0.0 ||
-        (item['stripe_metadata'] != null &&
-            (item['stripe_metadata']
-                    .toString()
-                    .contains('"status":"complete"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"payment_status":"paid"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"checkout.session.completed"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"checkout_session_id"')));
-
-    final isPending =
-        paymentStatus == 'pending' || status == 'pending' || status == 'open';
+    final effectiveStatus =
+        (item['ui_effective_status'] ?? '').toString().toLowerCase();
+    final isPending = effectiveStatus == 'pending' ||
+        paymentStatus == 'pending' ||
+        status == 'pending' ||
+        status == 'open';
+    final isActive = effectiveStatus == 'active';
     final isGuest = (item['ui_type'] ?? '').toString().toUpperCase() == 'GUEST';
 
     // Session expiry logic: hide stale pending Stripe checkout session cards.
-    if (isGuest && isPending && !isPaid) {
+    if (isGuest && isPending && !isActive) {
       final createdAt = (item['ui_created_at'] as DateTime?) ?? DateTime(2000);
       final age = DateTime.now().difference(createdAt);
       if (age.inMinutes > 15) {
@@ -156,8 +212,10 @@ final unifiedDashboardProvider =
       }
     }
 
-    if (filter == 'Active') return isPaid || isPending;
-    if (filter == 'Inactive') return !isPaid && !isPending;
+    if (filter == 'Active') return isActive || isPending;
+    if (filter == 'Inactive') {
+      return effectiveStatus == 'inactive' || effectiveStatus == 'expired';
+    }
     return true;
   }).toList();
 

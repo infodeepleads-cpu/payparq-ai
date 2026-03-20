@@ -53,7 +53,7 @@ class AuthController {
       try {
         if (isSignIn) {
           final e = email.trim();
-          final p = password.trim();
+          final p = password;
           debugPrint(
               'AuthController: signInWithPassword attempt=${attempts + 1} emailLen=${e.length}');
 
@@ -66,31 +66,9 @@ class AuthController {
           debugPrint('AuthController: signInWithPassword success');
           return const AuthActionResult();
         } else {
-          final redirectBase = _validatedRedirectUrl();
-          final emailTrim = email.trim();
-          final passwordTrim = password.trim();
-
-          // Sign up usually involves more backend work, give it more time
-          final timeout = Duration(seconds: attempts == 0 ? 15 : 25);
-
-          final response = await (redirectBase != null
-                  ? _auth.signUp(
-                      email: emailTrim,
-                      password: passwordTrim,
-                      data: {'role': 'admin'},
-                      emailRedirectTo: redirectBase,
-                    )
-                  : _auth.signUp(
-                      email: emailTrim,
-                      password: passwordTrim,
-                      data: {'role': 'admin'},
-                    ))
-              .timeout(timeout);
-
-          if (response.user != null && response.session == null) {
-            return const AuthActionResult(requiresEmailVerification: true);
-          }
-          return const AuthActionResult();
+          throw AppError(
+            'Sign up is disabled. Ask an administrator to create your account.',
+          );
         }
       } catch (e) {
         attempts++;

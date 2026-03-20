@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,14 +29,19 @@ serve(async (req) => {
 
   try {
     const body = await req.text();
+    const incomingAuth = (req.headers.get("Authorization") ?? "").trim();
+    const incomingApiKey = (req.headers.get("apikey") ?? "").trim();
+    const headers: Record<string, string> = {
+      "Content-Type": req.headers.get("Content-Type") ?? "application/json",
+      apikey: incomingApiKey.length > 0 ? incomingApiKey : anonKey,
+    };
+    if (incomingAuth.length > 0) {
+      headers.Authorization = incomingAuth;
+    }
     const target = `${supabaseUrl}/functions/v1/create-officer`;
     const proxied = await fetch(target, {
       method: "POST",
-      headers: {
-        "Content-Type": req.headers.get("Content-Type") ?? "application/json",
-        "Authorization": req.headers.get("Authorization") ?? "",
-        "apikey": req.headers.get("apikey") ?? "",
-      },
+      headers,
       body,
     });
     const text = await proxied.text();
