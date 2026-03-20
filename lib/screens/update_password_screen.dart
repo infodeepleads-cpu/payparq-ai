@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers/auth_controller.dart';
+import '../logic/providers/locale_provider.dart';
 import '../services/error_mapper.dart';
 import '../utils/async_action_handler.dart';
 import '../theme.dart';
@@ -44,27 +45,42 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
   }
 
   Future<void> _handleUpdate() async {
+    final isCroatian = ref.read(localeIsCroatianProvider);
     final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
     final confirm = _confirmController.text.trim();
 
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email')),
+        SnackBar(
+          content: Text(
+            isCroatian ? 'Unesite svoju e-poštu' : 'Please enter your email',
+          ),
+        ),
       );
       return;
     }
 
     if (password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a new password')),
+        SnackBar(
+          content: Text(
+            isCroatian
+                ? 'Unesite novu lozinku'
+                : 'Please enter a new password',
+          ),
+        ),
       );
       return;
     }
 
     if (password != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
+        SnackBar(
+          content: Text(
+            isCroatian ? 'Lozinke se ne podudaraju' : 'Passwords do not match',
+          ),
+        ),
       );
       return;
     }
@@ -78,20 +94,27 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
               )
           : ref.read(authControllerProvider).updatePasswordAndSignOut(password),
       successMessage: widget.requestMode
-          ? 'Confirmation link sent. Open your email and click the link to activate your new password.'
-          : 'Password updated. Please sign in with your new password.',
+          ? (isCroatian
+              ? 'Link za potvrdu je poslan. Otvorite e-poštu i kliknite poveznicu za aktivaciju nove lozinke.'
+              : 'Confirmation link sent. Open your email and click the link to activate your new password.')
+          : (isCroatian
+              ? 'Lozinka je ažurirana. Prijavite se s novom lozinkom.'
+              : 'Password updated. Please sign in with your new password.'),
       errorBuilder: ErrorMapper.message,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isCroatian = ref.watch(localeIsCroatianProvider);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(widget.requestMode ? 'Reset Password' : 'Update Password',
+        title: Text(
+            widget.requestMode
+                ? (isCroatian ? 'Resetiranje lozinke' : 'Reset Password')
+                : (isCroatian ? 'Ažuriranje lozinke' : 'Update Password'),
             style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
@@ -107,8 +130,12 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                 children: [
                   Text(
                     widget.requestMode
-                        ? 'Reset your password'
-                        : 'Set your new password',
+                        ? (isCroatian
+                            ? 'Resetirajte lozinku'
+                            : 'Reset your password')
+                        : (isCroatian
+                            ? 'Postavite novu lozinku'
+                            : 'Set your new password'),
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -119,8 +146,12 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                   const SizedBox(height: 8),
                   Text(
                     widget.requestMode
-                        ? 'Enter your email and new password. We will email you a confirmation link.'
-                        : 'Enter your new password and confirm it.',
+                        ? (isCroatian
+                            ? 'Unesite e-poštu i novu lozinku. Poslat ćemo vam e-poruku s poveznicom za potvrdu.'
+                            : 'Enter your email and new password. We will email you a confirmation link.')
+                        : (isCroatian
+                            ? 'Unesite novu lozinku i potvrdite je.'
+                            : 'Enter your new password and confirm it.'),
                     style: GoogleFonts.inter(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
@@ -129,7 +160,7 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                     controller: _emailController,
                     readOnly: !widget.requestMode,
                     decoration: InputDecoration(
-                      labelText: 'Email',
+                      labelText: isCroatian ? 'E-pošta' : 'Email',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
@@ -139,7 +170,7 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                     controller: _passwordController,
                     obscureText: _isObscured,
                     decoration: InputDecoration(
-                      labelText: 'New Password',
+                      labelText: isCroatian ? 'Nova lozinka' : 'New Password',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
                       suffixIcon: IconButton(
@@ -156,7 +187,9 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                     controller: _confirmController,
                     obscureText: _isObscured,
                     decoration: InputDecoration(
-                      labelText: 'Repeat New Password',
+                      labelText: isCroatian
+                          ? 'Ponovite novu lozinku'
+                          : 'Repeat New Password',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
@@ -174,8 +207,12 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                       ),
                       child: Text(
                         widget.requestMode
-                            ? 'Send Confirmation Email'
-                            : 'Update Password',
+                            ? (isCroatian
+                                ? 'Pošalji e-poruku za potvrdu'
+                                : 'Send Confirmation Email')
+                            : (isCroatian
+                                ? 'Ažuriraj lozinku'
+                                : 'Update Password'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

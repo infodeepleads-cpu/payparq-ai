@@ -30,7 +30,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       : 'Let\'s get started by filling out the form below.';
   String _emailLabel(bool isCroatian) => isCroatian ? 'E-pošta' : 'Email';
   String _passwordLabel(bool isCroatian) => isCroatian ? 'Lozinka' : 'Password';
-  String get _signInTab => 'Sign In';
+  String _signInTab(bool isCroatian) => isCroatian ? 'Prijava' : 'Sign In';
   String _forgotPassword(bool isCroatian) =>
       isCroatian ? 'Zaboravljena lozinka' : 'Forgot Password';
   String _termsText(bool isCroatian) => isCroatian
@@ -170,7 +170,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ],
                           ),
                           const SizedBox(height: 32),
-                          _buildSignInHeader(),
+                          _buildSignInHeader(isCroatian),
                           const SizedBox(height: 24),
                           Text(
                             _subtitle(isCroatian),
@@ -201,7 +201,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 elevation: 0,
                               ),
                               child: Text(
-                                _signInTab,
+                                _signInTab(isCroatian),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -254,45 +254,38 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             if (isDesktop)
               Expanded(
                 flex: 1,
-                child: Container(
-                  color: Colors.black,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.network(
-                          'https://images.pexels.com/photos/417273/pexels-photo-417273.jpeg?auto=compress&cs=tinysrgb&w=2070',
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: Colors.black),
+                    Image.network(
+                      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.high,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Image.asset(
+                          'assets/images/auth_bg.jpg',
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Color(0xFF2E2E2E),
-                                  Color(0xFF111111),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.2),
-                              Colors.black.withValues(alpha: 0.6),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                          filterQuality: FilterQuality.high,
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.network(
+                          'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2070&q=80',
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Image.asset(
+                              'assets/images/auth_bg.jpg',
+                              fit: BoxFit.cover,
+                              filterQuality: FilterQuality.high,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -301,12 +294,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildSignInHeader() {
+  Widget _buildSignInHeader(bool isCroatian) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _signInTab,
+          _signInTab(isCroatian),
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.w600,

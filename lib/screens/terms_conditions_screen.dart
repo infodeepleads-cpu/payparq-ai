@@ -33,7 +33,7 @@ class TermsConditionsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              Lang.sel(isHr, 'payparq.ai terms & conditions', 'payparq.ai uvjeti i pravila'),
+              Lang.sel(isHr, 'General Partner Terms', 'Opći uvjeti suradnje'),
               style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -42,285 +42,147 @@ class TermsConditionsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              Lang.sel(isHr, 'Last updated: January 18, 2026', 'Posljednje ažuriranje: 18. siječnja 2026.'),
+              Lang.sel(isHr, 'Last updated: March 20, 2026', 'Posljednje ažuriranje: 20. ožujka 2026.'),
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
             ),
+            const SizedBox(height: 16),
+            Text(
+              Lang.sel(
+                isHr,
+                'If you want to learn more, visit us at www.payparq.com.',
+                'Ako želite znati više, posjetite nas na www.payparq.com.',
+              ),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.grey[700],
+              ),
+            ),
             const SizedBox(height: 32),
             _buildSection(
-              Lang.sel(isHr, '1. Subject and Scope of Service', '1. Predmet i opseg usluge'),
+              Lang.sel(isHr, '1. Core Cooperation Principles', '1. Temeljna načela suradnje'),
               Lang.sel(
                 isHr,
-                'These Terms of Use ("Terms") govern the relationship between the digital service provider ("Provider") and the end-user ("User") regarding the use of the platform for private parking management, digital protection, identification of unauthorized parking, and administrative processing of irregular parking reports. By using the service, the User confirms they have read, understood, and accepted these Terms.',
-                'Ovi Uvjeti korištenja ("Uvjeti") uređuju odnos između pružatelja digitalne usluge ("Pružatelj") i krajnjeg korisnika ("Korisnik") u vezi s korištenjem platforme za upravljanje privatnim parkiralištima, digitalnu zaštitu, identifikaciju neovlaštenog parkiranja te administrativnu obradu prijava nepravilnog parkiranja. Korištenjem usluge, Korisnik potvrđuje da je pročitao, razumio i prihvatio ove Uvjete.',
+                'This cooperation is based on a full-partnership model without financial burden for the Land Owner:\n'
+                    '• No Cost: PayParq covers all implementation, system digitalization, and marketing visibility costs\n'
+                    '• No Risk: The Owner does not invest their own funds. Earnings are generated exclusively from realized traffic\n'
+                    '• No Contract Lock-In: The partnership is flexible. The Owner may terminate cooperation at any time with prior notice, without exit fees',
+                'Ova suradnja temelji se na modelu potpunog partnerstva bez financijskog tereta za Vlasnika zemljišta:\n'
+                    '• Bez troška: PayParq snosi sve troškove implementacije sustava, digitalizacije i marketinške vidljivosti\n'
+                    '• Bez rizika: Vlasnik ne ulaže vlastita sredstva. Zarada se ostvaruje isključivo od realiziranog prometa\n'
+                    '• Bez ugovorne obveze: Partnerstvo je fleksibilno. Vlasnik može raskinuti suradnju u bilo kojem trenutku uz prethodnu najavu, bez izlaznih naknada',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '2. Service Content and Functionality', '2. Sadržaj i funkcionalnost usluge'),
+              Lang.sel(isHr, '2. Commission and Service Models', '2. Modeli provizija i usluga'),
               Lang.sel(
                 isHr,
-                'The Provider enables the User to:\n'
-                    '• Register and digitally verify private parking spaces\n'
-                    '• Generate and receive official identification tags (stickers) for physical marking\n'
-                    '• Access a user account to submit reports of unauthorized parking by third parties\n'
-                    '• Upload photographs and event data\n'
-                    '• Track the status of administrative processing\n'
-                    '• Communicate via digital channels with the Provider\n'
-                    '• Utilize technical and administrative report processing\n'
-                    '• Initiate informal debt collection processes against third parties on behalf of the User, where applicable\n\n'
-                    'The Provider does not assume the obligation of legal representation, judicial proceedings, nor does it provide public authority.',
-                'Pružatelj omogućuje Korisniku:\n'
-                    '• Registraciju i digitalnu verifikaciju privatnih parkirnih mjesta\n'
-                    '• Generiranje i zaprimanje službenih identifikacijskih oznaka (naljepnica) za fizičko označavanje\n'
-                    '• Pristup korisničkom računu radi slanja prijava neovlaštenog parkiranja trećih osoba\n'
-                    '• Učitavanje fotografija i podataka o događaju\n'
-                    '• Praćenje statusa administrativne obrade\n'
-                    '• Komunikaciju s Pružateljem putem digitalnih kanala\n'
-                    '• Korištenje tehničke i administrativne obrade prijava\n'
-                    '• Pokretanje neformalnog procesa naplate prema trećim osobama u ime Korisnika, gdje je primjenjivo\n\n'
-                    'Pružatelj ne preuzima obvezu pravnog zastupanja, sudskih postupaka niti pruža javne ovlasti.',
+                'PayParq offers two management models, depending on automation level and location:\n\n'
+                    'A. Safe Parking Model (Owner Earnings 90%)\n'
+                    'Purpose: For owners who want self-management with digital collection, security, and their own PayParq system.\n'
+                    'Service: QR-based digital payment system, customer support, and basic supervision system.\n'
+                    'Billing: PayParq retains the agreed percentage from each transaction completed through the platform.\n\n'
+                    'B. HUB Model (Owner Earnings Hour/Day 50% + 90% Month)\n'
+                    'Purpose: Fully automated Smart HUB system with high vehicle throughput.\n'
+                    'Service: Complete management, QR payment system, personalized signs, mobile LPR system, Google Maps listing, terrain marking and review management, SEO/GEO optimization, promotion on all relevant channels, and intensive social-media marketing for maximum occupancy.\n'
+                    'Billing: Higher commission covers advanced software equipment, risk assumption, and active location management.\n'
+                    'Improper-parking fee: 1/4 via Parq agent mediation or 50% with owner evidence after fee settlements.',
+                'PayParq nudi dva modela upravljanja, ovisno o razini automatizacije i lokaciji:\n\n'
+                    'A. Safe Parking Model (Zarada 90%)\n'
+                    'Namjena: Za vlasnike koji žele samoupravljanje uz digitalnu naplatu, sigurnost i vlastiti Payparq sustav.\n'
+                    'Usluga: Digitalni sustav naplate putem QR kodova, korisnička podrška i osnovni sustav nadzora.\n'
+                    'Naplata: PayParq zadržava dogovoreni postotak od svake transakcije izvršene putem platforme.\n\n'
+                    'B. HUB Model (Zarada Sat/Dan 50% + 90% Mjesec)\n'
+                    'Namjena: Potpuno automatizirani Smart HUB sustav s visokim protokom vozila.\n'
+                    'Usluga: Kompletno upravljanje (Management), QR platni sustav i personalizirani znakovi, mobilni LPR sustav, Google Maps izlistavanje, označavanje terena i upravljanje recenzijama, SEO/GEO optimizacija, oglašavanje na svim relevantnim stranicama i intenzivan digitalni marketing na društvenim mrežama za maksimalno popunjavanje kapaciteta.\n'
+                    'Naplata: Veća provizija pokriva troškove napredne softverske opreme, preuzimanja rizika i aktivnog upravljanja lokacijom.\n'
+                    'Naknada za nepropisno parkiranje: 1/4 uz posredništvo Parq agenta ili 50% uz vlastitu evidenciju nakon isplate naknada.',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '3. Subscription and Payment', '3. Pretplata i plaćanje'),
+              Lang.sel(isHr, '3. PayParq Obligations and Management', '3. Obveze i upravljanje (PayParq)'),
               Lang.sel(
                 isHr,
-                'The service is activated upon purchase of a monthly subscription. Subscriptions are:\n'
-                    '• Charged in advance\n'
-                    '• Automatically renewed\n'
-                    '• Cancellable at any time via the user interface\n\n'
-                    'Cancellation takes effect at the start of the next billing cycle. Funds paid for the current period are non-refundable.',
-                'Usluga se aktivira kupnjom mjesečne pretplate. Pretplate su:\n'
-                    '• Naplaćene unaprijed\n'
-                    '• Automatski se obnavljaju\n'
-                    '• Mogu se otkazati u bilo kojem trenutku putem korisničkog sučelja\n\n'
-                    'Otkazivanje stupa na snagu s početkom sljedećeg obračunskog razdoblja. Sredstva uplaćena za tekuće razdoblje nisu povratna.',
+                'PayParq undertakes complete technical and operational support:\n'
+                    '• Implementation: Placement of QR codes and terrain marking\n'
+                    '• Payment Processing: Secure collection from domestic and international users (cards, Apple Pay, Google Pay)\n'
+                    '• Transparency: Owner has 24/7 real-time traffic visibility through the partner interface\n'
+                    '• Maintenance: Regular software updates and system functionality maintenance',
+                'PayParq se obvezuje na potpunu tehničku i operativnu podršku:\n'
+                    '• Implementacija: Postavljanje QR kodova i označavanje terena\n'
+                    '• Obrada plaćanja: Sigurna naplata od domaćih i stranih korisnika (kartice, Apple Pay, Google Pay)\n'
+                    '• Transparentnost: Vlasnik ima 24/7 uvid u promet u realnom vremenu putem partnerskog sučelja\n'
+                    '• Održavanje: Redovito ažuriranje softvera i održavanje funkcionalnosti sustava',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '4. User Responsibilities and Obligations', '4. Odgovornosti i obveze korisnika'),
+              Lang.sel(isHr, '4. Land Owner Obligations', '4. Obveze vlasnika zemljišta'),
               Lang.sel(
                 isHr,
-                'The User agrees to:\n'
-                    '• Provide truthful, complete, and updated information\n'
-                    '• Use the service exclusively for managing their own parking spaces\n'
-                    '• Ensure photographs and information are accurate, clear, and time-relevant\n'
-                    '• Refrain from submitting reports not relating to actual irregular parking\n'
-                    '• Correctly place the official tag in a visible location\n'
-                    '• Not transfer the account or tag to third parties without approval\n\n'
-                    'The User bears sole responsibility for all actions taken via their account.',
-                'Korisnik se obvezuje:\n'
-                    '• Davati istinite, potpune i ažurne informacije\n'
-                    '• Koristiti uslugu isključivo za upravljanje vlastitim parkirnim mjestima\n'
-                    '• Osigurati da su fotografije i informacije točne, jasne i vremenski relevantne\n'
-                    '• Suzdržati se od podnošenja prijava koje se ne odnose na stvarno nepravilno parkiranje\n'
-                    '• Pravilno postaviti službenu oznaku na vidljivo mjesto\n'
-                    '• Ne prenositi račun ili oznaku na treće osobe bez odobrenja\n\n'
-                    'Korisnik snosi isključivu odgovornost za sve radnje poduzete putem njegovog računa.',
+                'The Land Owner agrees to:\n'
+                    '• Ensure access: Allow unobstructed access to the land for users who paid parking\n'
+                    '• Maintain order: Keep basic cleanliness and terrain accessibility\n'
+                    '• Priority: During cooperation, PayParq is the primary system for digital parking collection at the location',
+                'Vlasnik se obvezuje:\n'
+                    '• Osigurati pristup: Omogućiti nesmetan pristup zemljištu za korisnike koji su platili parking\n'
+                    '• Urednost: Održavati osnovnu čistoću i pristupačnost terena\n'
+                    '• Prvenstvo: Tijekom trajanja suradnje, PayParq je primarni sustav za digitalnu naplatu parkinga na predmetnoj lokaciji',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '5. Administrative Processing of Reports', '5. Administrativna obrada prijava'),
+              Lang.sel(isHr, '5. Partners and Responsibility', '5. Partneri i odgovornost'),
               Lang.sel(
                 isHr,
-                'The Provider verifies each submission to determine:\n'
-                    '• If evidence is complete and legible\n'
-                    '• If the event meets the criteria for action\n'
-                    '• If debt collection against a third party can be initiated\n\n'
-                    'The Provider may reject a report if it:\n'
-                    '• Violates rules\n'
-                    '• Lacks clear evidence\n'
-                    '• Involves abuse or irregularities\n'
-                    '• Lacks grounds for a procedure\n\n'
-                    'The Provider does not guarantee the outcome, the amount of potential recovery, or processing time.',
-                'Pružatelj provjerava svaku prijavu radi utvrđivanja:\n'
-                    '• Je li dokaz potpun i čitljiv\n'
-                    '• Udovoljava li događaj kriterijima za postupanje\n'
-                    '• Može li se pokrenuti naplata prema trećoj osobi\n\n'
-                    'Pružatelj može odbiti prijavu ako:\n'
-                    '• Krši pravila\n'
-                    '• Nedostaju jasni dokazi\n'
-                    '• Postoje zlouporabe ili nepravilnosti\n'
-                    '• Ne postoje osnove za postupak\n\n'
-                    'Pružatelj ne jamči ishod, iznos potencijalne naplate ni vrijeme obrade.',
+                'This platform is the result of cooperation between international and local experts:\n'
+                    '• Principal: Leadvex Group LLC\n'
+                    '• Croatian operating partners: Local expert team (PayParq team) responsible for direct communication, on-site technical support (Dalmatia and the rest of Croatia), and signalization setup',
+                'Ova platforma rezultat je suradnje međunarodnih i lokalnih stručnjaka:\n'
+                    '• Nositelj: Leadvex Group LLC\n'
+                    '• Hrvatski operativni partneri: Lokalni tim stručnjaka (PayParq tim) zadužen je za direktnu komunikaciju, tehničku podršku na terenu (Dalmacija i ostatak Hrvatske) te postavljanje signalizacije',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '6. Limitations of Service and Liability', '6. Ograničenja usluge i odgovornosti'),
+              Lang.sel(isHr, '6. Earnings Payout and Dispute Resolution', '6. Isplata zarade i rješavanje sporova'),
               Lang.sel(
                 isHr,
-                'The Provider is not responsible for:\n'
-                    '• Actions and conduct of third parties\n'
-                    '• The success of debt collection\n'
-                    '• Damage resulting from improper use of the service\n'
-                    '• Errors caused by incorrect User data\n'
-                    '• Decisions by authorities that no grounds for action exist\n\n'
-                    'The service is provided "as is" and "as available," without guarantees of continuous availability or error-free operation.',
-                'Pružatelj nije odgovoran za:\n'
-                    '• Radnje i ponašanje trećih osoba\n'
-                    '• Uspjeh naplate\n'
-                    '• Štetu nastalu nepravilnim korištenjem usluge\n'
-                    '• Pogreške uzrokovane netočnim podacima Korisnika\n'
-                    '• Odluke nadležnih tijela da ne postoje osnove za postupanje\n\n'
-                    'Usluga se pruža "takva kakva jest" i "u mjeri dostupnosti", bez jamstava o kontinuiranoj dostupnosti ili besprijekornom radu.',
+                'Payout: Earnings are calculated weekly and processed via the Stripe platform. PayParq does not manage the owner\'s money. Stripe pays the net amount to the Owner\'s account no later than the 15th of the month for the previous month. Earnings are calculated after processing fees and costs.\n\n'
+                    'Jurisdiction: All disputes will be resolved amicably. If needed, the court in Split has jurisdiction.\n\n'
+                    'Final note: This model enables the Owner to convert underutilized land into passive income without operational burden, while Leadvex Group LLC and local operating partners assume full system management and risk.',
+                'Isplata: Zarada se obračunava tjedno i radi se putem Stripe platforme. Payparq ne upravlja novcem vlasnika. Stripe isplaćuje neto iznos Vlasniku na žiro-račun najkasnije do 15. u mjesecu za prethodni mjesec. Zarada se računa nakon isplata procesnih naknada i troškova.\n\n'
+                    'Nadležnost: Svi sporovi rješavat će se sporazumno. U slučaju potrebe, nadležan je sud u Splitu.\n\n'
+                    'Zaključna napomena: Ovim modelom Vlasnik pretvara neiskorišteno zemljište u pasivni prihod bez ikakvih operativnih briga, dok kompletan sustav upravljanja i rizika preuzimaju Leadvex Group LLC i lokalni operativni partneri.',
               ),
             ),
             _buildSection(
-              Lang.sel(isHr, '7. Prohibition of Unauthorized Use', '7. Zabrana neovlaštenog korištenja'),
+              Lang.sel(isHr, '7. Addendum', '7. Addendum'),
               Lang.sel(
                 isHr,
-                'Users are strictly prohibited from:\n'
-                    '• Submitting fictitious or intentionally inaccurate reports\n'
-                    '• Manipulating photographs or data\n'
-                    '• Misusing tags or using them on third-party parking spaces\n'
-                    '• Interfering with platform operation\n'
-                    '• Attempting unauthorized access\n\n'
-                    'In case of abuse, the Provider may suspend or deactivate the account immediately without a refund.',
-                'Strogo je zabranjeno:\n'
-                    '• Podnositi izmišljene ili namjerno netočne prijave\n'
-                    '• Manipulirati fotografijama ili podacima\n'
-                    '• Zlouporabljati oznake ili ih koristiti na parkiralištima trećih osoba\n'
-                    '• Ommetati rad platforme\n'
-                    '• Pokušavati neovlašten pristup\n\n'
-                    'U slučaju zlouporabe, Pružatelj može odmah suspendirati ili deaktivirati račun bez povrata sredstava.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '8. Processing of Personal Data', '8. Obrada osobnih podataka'),
-              Lang.sel(
-                isHr,
-                'The Provider processes personal data exclusively for:\n'
-                    '• Service provision and report processing\n'
-                    '• Communication with involved parties\n'
-                    '• Technical and security optimization\n\n'
-                    'All data is stored in accordance with GDPR and national regulations. Users have rights to access, rectification, restriction, portability, and erasure.',
-                'Pružatelj obrađuje osobne podatke isključivo za:\n'
-                    '• Pružanje usluge i obradu prijava\n'
-                    '• Komunikaciju s uključenim stranama\n'
-                    '• Tehničku i sigurnosnu optimizaciju\n\n'
-                    'Svi podaci pohranjuju se u skladu s GDPR-om i nacionalnim propisima. Korisnici imaju prava na pristup, ispravak, ograničenje, prenosivost i brisanje.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '9. Amendments to Terms', '9. Izmjene Uvjeta'),
-              Lang.sel(
-                isHr,
-                'The Provider reserves the right to modify these Terms at any time. Users will be notified of significant changes via email or the application. Continued use constitutes acceptance of the new Terms.',
-                'Pružatelj zadržava pravo izmjene ovih Uvjeta u bilo kojem trenutku. Korisnici će o značajnim promjenama biti obaviješteni putem e-pošte ili aplikacije. Nastavak korištenja predstavlja prihvaćanje novih Uvjeta.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '10. Termination of Service', '10. Prestanak usluge'),
-              Lang.sel(
-                isHr,
-                'A User may request account deactivation at any time. The Provider may terminate the relationship in case of:\n'
-                    '• Terms violations\n'
-                    '• System abuse\n'
-                    '• Non-payment\n'
-                    '• Illegal activity',
-                'Korisnik može u bilo kojem trenutku zatražiti deaktivaciju računa. Pružatelj može raskinuti odnos u slučaju:\n'
-                    '• Kršenja Uvjeta\n'
-                    '• Zlouporabe sustava\n'
-                    '• Neplaćanja\n'
-                    '• Nezakonite aktivnosti',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '11. Applicable Law and Jurisdiction', '11. Mjerodavno pravo i nadležnost'),
-              Lang.sel(
-                isHr,
-                'The laws of the Republic of Croatia apply. Disputes shall be resolved amicably; otherwise, the court at the Provider\'s seat shall have jurisdiction.',
-                'Primjenjuju se zakoni Republike Hrvatske. Sporovi se nastoje riješiti mirnim putem; u protivnom je nadležan sud prema sjedištu Pružatelja.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '12. Entry into Force', '12. Stupanje na snagu'),
-              Lang.sel(
-                isHr,
-                'These Terms enter into force on the day of publication and remain valid until amended or revoked.',
-                'Ovi Uvjeti stupaju na snagu danom objave i ostaju važeći dok se ne izmijene ili ukinu.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '13. Limitation of Liability: Failure to Contact Vehicle Owner',
-                  '13. Ograničenje odgovornosti: Neuspjeh kontakta s vlasnikom vozila'),
-              Lang.sel(
-                isHr,
-                'The User acknowledges that the Provider does not guarantee the identification or contacting of the vehicle owner. The Provider is not liable for:\n'
-                    '• Failure to establish contact\n'
-                    '• Loss, damage, or missed collection due to non-contact\n'
-                    '• Decisions or actions of third parties\n'
-                    '• Financial or material damage regarding unidentified vehicles',
-                'Korisnik potvrđuje da Pružatelj ne jamči identifikaciju niti uspostavu kontakta s vlasnikom vozila. Pružatelj nije odgovoran za:\n'
-                    '• Neuspjeh uspostave kontakta\n'
-                    '• Gubitak, štetu ili propuštenu naplatu zbog neostvarenog kontakta\n'
-                    '• Odluke ili postupke trećih osoba\n'
-                    '• Financijsku ili materijalnu štetu vezanu uz neidentificirana vozila',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '14. General Limitation of Liability and Inclusion of Partners',
-                  '14. Opće ograničenje odgovornosti i uključivanje partnera'),
-              Lang.sel(
-                isHr,
-                'The User releases the Provider and its partners from liability for damages arising from service use, including technical failures or unsuccessful collections. Partners act as separate processors, and the Provider is not liable for their specific actions or errors.\n\n'
-                    'The User expressly releases the Provider and its partners from liability in an absolute sense, regardless of the circumstances or events connected with the use of the service.',
-                'Korisnik oslobađa Pružatelja i njegove partnere od odgovornosti za štetu nastalu korištenjem usluge, uključujući tehničke kvarove ili neuspješne naplate. Partneri djeluju kao zasebni izvršitelji obrade, a Pružatelj nije odgovoran za njihove pojedinačne radnje ili pogreške.\n\n'
-                    'Korisnik izričito oslobađa Pružatelja i njegove partnere od odgovornosti u apsolutnom smislu, bez obzira na okolnosti ili događaje povezane s korištenjem usluge.',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '15. Free Tier Model and Daily Parking Tickets',
-                  '15. Besplatni paket i dnevne parking-kazne'),
-              Lang.sel(
-                isHr,
-                'Users may opt for the "Free Tier" without a monthly fee under these rules:\n'
-                    '• Revenue Share: Revenue from successfully collected Daily Parking Tickets is split on predefined terms after transaction and administrative costs\n'
-                    '• Warning vs. Ticket: The User decides whether to issue a free Warning or a Daily Parking Ticket (initiating administrative collection, e.g., 20 EUR)\n'
-                    '• Burden of Proof: User must provide high-quality evidence (min. 2 photos, 5 mins apart)\n'
-                    '• Payout: User\'s share is paid to their IBAN only after successful and final collection from the third party',
-                'Korisnik može odabrati "Besplatni paket" bez mjesečne naknade uz sljedeća pravila:\n'
-                    '• Dijeljenje prihoda: Prihod od uspješno naplaćenih dnevnih parking-kazni dijeli se prema unaprijed definiranim uvjetima nakon transakcijskih i administrativnih troškova\n'
-                    '• Upozorenje vs. Kazna: Korisnik odlučuje hoće li izdati besplatno Upozorenje ili Dnevnu parking-kaznu (pokretanje administrativne naplate, npr. 20 EUR)\n'
-                    '• Teret dokaza: Korisnik mora dostaviti visokokvalitetne dokaze (min. 2 fotografije, razmak 5 min)\n'
-                    '• Isplata: Korisnikov udio isplaćuje se na IBAN tek nakon uspješne i konačne naplate od treće osobe',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '16. Absolute Indemnity Clause', '16. Klauzula o apsolutnom obeštećenju'),
-              Lang.sel(
-                isHr,
-                'The User (parking owner/manager) expressly accepts and agrees to the following:\n'
-                    '• Total independence: The Provider offers only a technological platform. Each individual decision is the sole and discretionary decision of the User\n'
-                    '• Release of liability: The User irrevocably waives any claims for any direct, indirect, incidental, or consequential damage\n'
-                    '• Legal protection of the Provider: If a third party initiates any procedure, the User agrees to fully indemnify the Provider for all costs\n'
-                    '• Force Majeure: The Provider is not liable for system failures caused by factors beyond its control',
-                'Korisnik (vlasnik/upravitelj parkirališta) izričito prihvaća i pristaje na sljedeće:\n'
-                    '• Potpuna neovisnost: Pružatelj nudi samo tehnološku platformu. Svaka pojedina odluka isključivo je i diskrecijska odluka Korisnika\n'
-                    '• Oslobađanje od odgovornosti: Korisnik neopozivo odustaje od bilo kakvih potraživanja za izravnu, neizravnu, slučajnu ili posljedičnu štetu\n'
-                    '• Pravna zaštita Pružatelja: Ako treća osoba pokrene bilo kakav postupak, Korisnik pristaje u cijelosti obeštetiti Pružatelja za sve troškove\n'
-                    '• Viša sila: Pružatelj ne odgovara za kvarove sustava uzrokovane čimbenicima izvan njegove kontrole',
-              ),
-            ),
-            _buildSection(
-              Lang.sel(isHr, '17. ISO/IEC 27001 & GDPR Strict Compliance Provision',
-                  '17. Stroga usklađenost s ISO/IEC 27001 i GDPR'),
-              Lang.sel(
-                isHr,
-                'This platform is engineered to adhere to the strictest global standards for Information Security Management (ISO/IEC 27001) and the General Data Protection Regulation (GDPR).\n'
-                    '• Data Minimization: Personal data is processed strictly for execution of the parking contract\n'
-                    '• Encryption & Integrity: All data is encrypted at rest and in transit\n'
-                    '• Zero-Knowledge Principle: The Provider implements strict access controls; staff access is logged and restricted\n'
-                    '• Data Subject Rights: The Provider facilitates the "Right to be Forgotten"\n'
-                    '• Third-Party Processing: All subprocessors (Stripe, Meta, Firebase) are vetted for equivalent high-level security certifications',
-                'Platforma je osmišljena u skladu s najstrožim globalnim standardima upravljanja sigurnošću informacija (ISO/IEC 27001) i Općom uredbom o zaštiti podataka (GDPR).\n'
-                    '• Minimizacija podataka: Osobni podaci obrađuju se isključivo radi izvršenja ugovora o parkiranju\n'
-                    '• Enkripcija i integritet: Svi podaci su šifrirani u mirovanju i prijenosu\n'
-                    '• Načelo ograničenog pristupa: Pružatelj primjenjuje stroge kontrole pristupa; pristup osoblja se bilježi i ograničava\n'
-                    '• Prava ispitanika: Pružatelj omogućuje pravo na zaborav\n'
-                    '• Obrada od trećih strana: Svi podizvršitelji (Stripe, Meta, Firebase) potvrđeni su za ekvivalentne visoke sigurnosne standarde',
+                '1) Exclusion of liability for failed collection (user risk)\n'
+                    'PayParq acts as an intermediary and management platform. Although the system uses advanced control methods (scanners, barriers), PayParq does not guarantee 100% collection from every individual user.\n'
+                    'The Land Owner accepts that commission is calculated exclusively on actually collected transactions. PayParq is not obliged to compensate potential lost profit for vehicles that used parking without a valid digital transaction, but will take all technical measures to minimize such cases.\n\n'
+                    '2) Protection against misdemeanor and criminal liability\n'
+                    'Under Croatian law, liability for illegal parking, parking non-payment, or traffic obstruction lies exclusively with the vehicle driver, not with the Land Owner or the platform operator.\n'
+                    'Where intervention by authorities is required, PayParq provides technical documentation, while all costs and procedural risks are borne by the vehicle owner.\n\n'
+                    '3) Exclusion of liability for vehicle damage\n'
+                    'Neither the Land Owner nor PayParq is liable for theft of valuables from vehicles, damage caused by third parties, or damage caused by force majeure.\n'
+                    'The Land Owner is released from user damage claims provided the damage occurred in the ordinary use of parking.\n\n'
+                    '4) Legal protection (Indemnification)\n'
+                    'Leadvex Group LLC and local operating partners undertake to defend the Land Owner against all unfounded legal claims arising from PayParq software operating errors.\n'
+                    'The Land Owner is protected from legal dispute costs arising exclusively from the operation method of the collection system.',
+                '1) Isključenje odgovornosti za nenaplatu (Rizik korisnika)\n'
+                    'PayParq djeluje kao platforma za posredovanje i upravljanje. Iako sustav koristi napredne metode kontrole (skeneri, barijere), PayParq ne jamči 100% naplatu od svakog pojedinog korisnika.\n'
+                    'Vlasnik zemljišta prihvaća da se provizija obračunava isključivo na stvarno naplaćene transakcije. PayParq nije dužan nadoknaditi potencijalno izgubljenu dobit za vozila koja su koristila parking bez valjane digitalne transakcije, ali će poduzeti sve tehničke mjere da takve slučajeve svede na minimum.\n\n'
+                    '2) Zaštita od prekršajne i kaznene odgovornosti\n'
+                    'Prema zakonima RH, za nepropisno parkiranje, neplaćanje parkinga ili ometanje prometa odgovoran je isključivo vozač vozila, a ne vlasnik zemljišta niti operater platforme.\n'
+                    'U slučaju potrebe za intervencijom nadležnih službi, PayParq pruža tehničku dokumentaciju, ali sve troškove i rizike postupka snosi vlasnik vozila.\n\n'
+                    '3) Isključenje odgovornosti za štetu na vozilima\n'
+                    'Ni Vlasnik zemljišta ni PayParq ne odgovaraju za krađu dragocjenosti iz vozila, oštećenja od trećih osoba ni štete nastale uslijed viših sila.\n'
+                    'Vlasnik zemljišta se oslobađa odštetnih zahtjeva korisnika pod uvjetom da je šteta nastala uobičajenim korištenjem parkinga.\n\n'
+                    '4) Pravna zaštita (Indemnifikacija)\n'
+                    'Leadvex Group LLC i lokalni operativni partneri obvezuju se braniti Vlasnika zemljišta od svih neosnovanih pravnih zahtjeva proizašlih iz grešaka u radu PayParq softvera.\n'
+                    'Vlasnik zemljišta je zaštićen od troškova pravnih sporova koji nastanu isključivo zbog načina rada sustava naplate.',
               ),
             ),
             const SizedBox(height: 32),
