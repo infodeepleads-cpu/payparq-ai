@@ -26,6 +26,22 @@ class EnforcementController {
 
   EnforcementController(this._ref, this._repo);
 
+  bool _isQuickTicketDuplicateError(Object error) {
+    final text = error.toString().toLowerCase();
+    final has23505 = text.contains('23505');
+    final hasDuplicateKey = text.contains('duplicate key');
+    final hasConstraintName =
+        text.contains('violations_quick_ticket_one_per_day_idx') ||
+            text.contains('violations__quickticket_one_per_day_idx') ||
+            text.contains('quickticket_one_per_day_idx') ||
+            text.contains('quick_ticket_one_per_day_idx');
+    final hasQuickTicketColumns = text.contains('location_id') &&
+        text.contains('plate_normalized') &&
+        text.contains('case_date_local');
+    return (has23505 && hasDuplicateKey && hasConstraintName) ||
+        (has23505 && hasDuplicateKey && hasQuickTicketColumns);
+  }
+
   Future<void> deleteViolation(String id) async {
     try {
       await _repo.deleteViolation(id);
@@ -112,6 +128,11 @@ class EnforcementController {
               (v['plate'] ?? '') != plate ||
               (v['evidence_r2_url'] ?? '') != fileName)
           .toList());
+      if (_isQuickTicketDuplicateError(e)) {
+        throw const AppError(
+          'Quick ticket already exists today for this plate at this location.',
+        );
+      }
       throw AppError('Issue failed: $e', cause: e);
     }
   }
@@ -196,6 +217,11 @@ class EnforcementController {
               : '${v['plate'] ?? ''}_${v['evidence_r2_url'] ?? ''}' !=
                   optimisticKey)
           .toList());
+      if (_isQuickTicketDuplicateError(e)) {
+        throw const AppError(
+          'Quick ticket already exists today for this plate at this location.',
+        );
+      }
       throw AppError('Case upload failed: $e', cause: e);
     } finally {
       _ref.read(isSubmittingCaseProvider.notifier).state = false;

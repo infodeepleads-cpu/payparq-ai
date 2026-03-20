@@ -259,6 +259,56 @@ void main() {
     );
   });
 
+  test('Quick ticket duplicate constraint is recognized and mapped', () async {
+    final file = File(
+      'lib/features/enforcement/providers/enforcement_controller.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('_isQuickTicketDuplicateError') &&
+          content.contains('23505') &&
+          content.contains('violations_quick_ticket_one_per_day_idx') &&
+          content.contains('violations__quickticket_one_per_day_idx') &&
+          content.contains('plate_normalized') &&
+          content.contains('case_date_local'),
+      isTrue,
+      reason:
+          'Quick ticket duplicate DB violations must be detected explicitly so users get a predictable message instead of raw Postgres errors.',
+    );
+  });
+
+  test('Quick action duplicate emits stable user-facing message', () async {
+    final file = File(
+      'lib/features/enforcement/providers/enforcement_controller.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+        'Quick ticket already exists today for this plate at this location.',
+      ),
+      isTrue,
+      reason:
+          'Duplicate quick-ticket attempts should return a stable message in APK instead of exposing SQL constraint details.',
+    );
+  });
+
+  test('Error mapper normalizes quick-ticket duplicate postgres payload', () async {
+    final file = File('lib/services/error_mapper.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('_isQuickTicketDuplicateError') &&
+          content.contains('_isQuickTicketDuplicatePostgrest') &&
+          content.contains('violations_quick_ticket_one_per_day_idx') &&
+          content.contains('Quick ticket already exists today for this plate at this location.'),
+      isTrue,
+      reason:
+          'ErrorMapper must normalize 23505 quick-ticket duplicate errors globally so raw Postgres text never reaches the snackbar.',
+    );
+  });
+
   test('RLS migration allows manager and officer location access for permits',
       () async {
     final file = File(

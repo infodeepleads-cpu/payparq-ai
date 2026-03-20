@@ -38,7 +38,7 @@ class DynamicPricingRepository {
     return null;
   }
 
-  Future<Map<String, dynamic>?> _updateByIdOrDisplayId({
+  Future<bool> _updateByIdOrDisplayId({
     required String id,
     required String? displayId,
     required Map<String, dynamic> data,
@@ -46,14 +46,21 @@ class DynamicPricingRepository {
     final resByIdRows =
         await _client.from('locations').update(data).eq('id', id).select('id');
     final resById = _firstUpdatedRow(resByIdRows);
-    if (resById != null) return resById;
-    if (displayId == null || displayId.isEmpty) return null;
+    if (resById != null) return true;
+    if (displayId == null || displayId.isEmpty) {
+      await _client.from('locations').update(data).eq('id', id);
+      return true;
+    }
     final resByDisplayRows = await _client
         .from('locations')
         .update(data)
         .eq('display_id', displayId)
         .select('id');
-    return _firstUpdatedRow(resByDisplayRows);
+    final resByDisplay = _firstUpdatedRow(resByDisplayRows);
+    if (resByDisplay != null) return true;
+    await _client.from('locations').update(data).eq('id', id);
+    await _client.from('locations').update(data).eq('display_id', displayId);
+    return true;
   }
 
   Future<List<Map<String, dynamic>>> fetchLocations({
@@ -95,7 +102,7 @@ class DynamicPricingRepository {
           displayId: displayId,
           data: payload,
         );
-        if (updated != null) return;
+        if (updated) return;
         break;
       } catch (error) {
         final missingColumn = _extractMissingColumnName(error);
