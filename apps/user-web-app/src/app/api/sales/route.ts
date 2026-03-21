@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabase } from "@/lib/supabase";
 
@@ -56,78 +57,141 @@ export async function POST(req: NextRequest) {
       console.warn("Supabase not configured. Skipping sales request recording.");
     }
 
-    // 2. Send Emails via Resend
-    // This is the "ground up" setup using Resend for better deliverability and custom domain support.
+    // 2. Email Sending logic
     const resendApiKey = process.env.RESEND_API_KEY;
-    
-    if (!resendApiKey) {
-      console.warn("RESEND_API_KEY is missing. Skipping email sending.");
-      // Return success to UI so the user isn't blocked, but log the warning
-      return NextResponse.json({ 
-        success: true, 
-        warning: "email_configuration_missing" 
-      });
+    const fromEmail = process.env.EMAIL_FROM || "PayParq Team <team@info.payparq.com>";
+    const adminEmail = process.env.EMAIL_TO || "payparq@outlook.com";
+    const adminRecipients = Array.from(
+      new Set(
+        adminEmail
+          .split(",")
+          .map((email) => email.trim())
+          .filter(Boolean)
+      )
+    );
+    if (adminRecipients.includes("paypar@outlook.com") && !adminRecipients.includes("payparq@outlook.com")) {
+      adminRecipients.push("payparq@outlook.com");
     }
 
-    const resend = new Resend(resendApiKey);
-    // Use configured From address or fallback to Resend's testing domain
-    // Using verified domain mail.payparq.com
-    const fromEmail = process.env.EMAIL_FROM || "PayParq Team <team@mail.payparq.com>";
-    
-    // Notification to Admin
+    const submittedAt = new Date().toISOString();
+
     const summaryLines = [
       `New "Talk to Sales" request from Discover How page`,
       "",
-      `Name: ${firstName} ${lastName}`,
-      `Email: ${workEmail}`,
+      `Submitted at (UTC): ${submittedAt}`,
+      `First name: ${firstName}`,
+      `Last name: ${lastName}`,
+      `Work email: ${workEmail}`,
       `Company: ${company}`,
       `Locations: ${locations || "Not provided"}`,
       `Explore options: ${exploreSummary || "No specific options selected"}`,
     ];
 
-    try {
-      console.log(`Attempting to send admin email via Resend from ${fromEmail}...`);
-      await resend.emails.send({
-        from: fromEmail,
-        to: [process.env.EMAIL_TO || "payparq@outlook.com"],
-        replyTo: workEmail,
-        subject: "New Payparq sales request",
-        text: summaryLines.join("\n"),
-      });
-      console.log("Admin email sent successfully.");
+    const confirmationLines = [
+      `Hi ${firstName},`,
+      "",
+      "Thanks for reaching out to Payparq.",
+      "Your request has been received and a member of our team will follow up",
+      "by the next business day, Monday through Saturday.",
+      "",
+      "We received the following details:",
+      `- First name: ${firstName}`,
+      `- Last name: ${lastName}`,
+      `- Work email: ${workEmail}`,
+      `- Company: ${company}`,
+      `- Locations: ${locations || "Not provided"}`,
+      `- Explore options: ${exploreSummary || "No specific options selected"}`,
+      "",
+      "If you have any additional context to share before then, you can reply",
+      "directly to this email.",
+      "",
+      "Best,",
+      "The Payparq Team",
+    ];
 
-      // Confirmation to User
-      if (workEmail) {
-        const confirmationLines = [
-          `Hi ${firstName},`,
-          "",
-          "Thanks for reaching out to Payparq.",
-          "Your request has been received and a member of our team will follow up",
-          "by the next business day, Monday through Saturday.",
-          "",
-          "If you have any additional context to share before then, you can reply",
-          "directly to this email.",
-          "",
-          "Best,",
-          "The Payparq Team",
-        ];
+    if (resendApiKey) {
+      console.log("Using Resend for email sending...");
+      const resend = new Resend(resendApiKey);
+      try {
+        // Admin notification
+        for (const recipient of adminRecipients) {
+          const adminSend = await resend.emails.send({
+            from: fromEmail,
+            to: recipient,
+            replyTo: workEmail,
+            subject: "New Payparq sales request",
+            text: summaryLines.join("\n"),
+          });
+          console.log("Admin email sent via Resend.", recipient, adminSend.data?.id ?? "no-id");
+        }
 
-        console.log(`Attempting to send confirmation email to ${workEmail}...`);
-        await resend.emails.send({
-          from: fromEmail,
-          to: workEmail,
-          subject: "We received your Payparq request",
-          text: confirmationLines.join("\n"),
-        });
-        console.log("Confirmation email sent successfully.");
+        // Confirmation to user
+        if (workEmail) {
+          const confirmationSend = await resend.emails.send({
+            from: fromEmail,
+            to: workEmail,
+            subject: "We received your Payparq request",
+            text: confirmationLines.join("\n"),
+          });
+          console.log("Confirmation email sent via Resend.", confirmationSend.data?.id ?? "no-id");
+        }
+        return NextResponse.json({ success: true });
+      } catch (err) {
+        console.error("Resend error:", err);
+        // Fallback or error
       }
-
-      return NextResponse.json({ success: true });
-    } catch (emailError) {
-      console.error("Error sending email via Resend:", emailError);
-      // Return success even if email fails, to avoid breaking the UI flow for the user
-      return NextResponse.json({ success: true, warning: "email_send_failed" });
     }
+
+    // Fallback to Nodemailer if SMTP is configured
+    const smtpHost = process.env.EMAIL_SERVER_HOST;
+    const smtpPort = process.env.EMAIL_SERVER_PORT;
+    const smtpUser = process.env.EMAIL_SERVER_USER;
+    const smtpPass = process.env.EMAIL_SERVER_PASSWORD;
+
+    if (smtpHost && smtpUser && smtpPass) {
+      console.log("Using SMTP (Nodemailer) for email sending...");
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(smtpPort) || 587,
+        secure: smtpPort === "465",
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      try {
+        // Admin notification
+        await transporter.sendMail({
+          from: fromEmail,
+          to: adminRecipients,
+          replyTo: workEmail,
+          subject: "New Payparq sales request",
+          text: summaryLines.join("\n"),
+        });
+        console.log("Admin email sent via SMTP.");
+
+        // Confirmation to user
+        if (workEmail) {
+          await transporter.sendMail({
+            from: fromEmail,
+            to: workEmail,
+            subject: "We received your Payparq request",
+            text: confirmationLines.join("\n"),
+          });
+          console.log("Confirmation email sent via SMTP.");
+        }
+        return NextResponse.json({ success: true });
+      } catch (err) {
+        console.error("SMTP error:", err);
+      }
+    }
+
+    console.error("No email service (Resend or SMTP) is correctly configured.");
+    return NextResponse.json(
+      { error: "Email configuration missing or incorrect.", warning: "email_not_sent" },
+      { status: 500 }
+    );
 
   } catch (error) {
     console.error("Unexpected error handling sales request:", error);

@@ -10,7 +10,7 @@ export default function DiscoverHowPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "config_error">("idle");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,11 +23,16 @@ export default function DiscoverHowPage() {
         body: formData,
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        // Log detailed error from server if available
-        const data = await res.json().catch(() => ({}));
         console.error("Submission error:", data);
-        throw new Error(data.error || "Submission failed");
+        if (data.warning === "email_not_sent" || data.error?.includes("configuration missing")) {
+          setStatus("config_error");
+        } else {
+          setStatus("error");
+        }
+        return;
       }
 
       setStatus("success");
@@ -462,6 +467,15 @@ export default function DiscoverHowPage() {
                 )}
                 {status === "error" && (
                   <p className="mt-2 text-xs text-red-600">Something went wrong. Please try again.</p>
+                )}
+                {status === "config_error" && (
+                  <div className="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                    <p className="text-xs text-red-600 font-semibold mb-1">Email Service Not Configured</p>
+                    <p className="text-[10px] text-red-500 leading-relaxed">
+                      Your request was saved to our database, but we couldn&apos;t send the notification email. 
+                      Please ensure <code className="bg-red-100 px-1 rounded">RESEND_API_KEY</code> is set in your environment.
+                    </p>
+                  </div>
                 )}
               </form>
             </div>
