@@ -6,6 +6,8 @@ import { useLocale } from "@/components/LocaleProvider";
 const translationCache = new Map<string, string>();
 const pendingCache = new Map<string, Promise<string>>();
 const TRANSLATE_BATCH_SIZE = 200;
+const TRANSLATE_BATCH_RETRIES = 3;
+const TRANSLATE_RETRY_DELAY_MS = 300;
 const localHrOverrides = new Map<string, string>([
   ["Experience", "Iskustvo"],
   ["payparq makes cities", "PayParq stvara svijet"],
@@ -14,7 +16,7 @@ const localHrOverrides = new Map<string, string>([
   ["The world’s first mobile software-only platform for frictionless urban mobility.", "Prva svjetska mobilna softverska platforma za urbanu mobilnost."],
   ["The world's first mobile software-only platform for frictionless urban mobility.", "Prva svjetska mobilna softverska platforma za urbanu mobilnost."],
   ["For drivers, operators, and cities", "Za vozače, operatere i gradove"],
-  ["Frictionless access to anywhere you want to be", "Pristup bilo gdje želite biti"],
+  ["Frictionless access to anywhere you want to be", "Pristup bilo gdje, gdje želite ići"],
   ["Using industry-leading Mobile LPR technology and advanced computer vision, we create a real-time digital map of physical spaces to provide frictionless, automated parking solutions that anticipate driver needs and maximize real estate asset value.", "Koristeći vodeću Mobile LPR tehnologiju i naprednu AI vidljivost, stvaramo digitalnu kartu fizičkih prostora u stvarnom vremenu kako bismo osigurali automatizirana rješenja za parkiranje koja predviđaju potrebe vozača i maksimiziraju vrijednost nekretnina."],
   ["The Intelligent Curb", "Inteligentni asfalt"],
   ["The Intelligent Curb: Mapped & Managed.", "Inteligentni asfalt: mapiran i upravljan."],
@@ -70,6 +72,8 @@ const localHrOverrides = new Map<string, string>([
   ["A comprehensive resource to help you with onboarding, parking, billing, and account management.", "Opsežan resurs koji će vam pomoći s prijavom, parkiranjem, naplatom i upravljanjem računom."],
   ["Software-first approach", "Softverski pristup"],
   ["Software-first deployment", "Softverski pristup"],
+  ["Payparq is building a software-only mobility platform that turns every space into a connected, data-driven asset. We use Mobile LPR, AI Computer Vision, and automation to make arrival effortless for drivers and operations simple for cities and operators.", "Payparq gradi softversku mobilnu platformu koja svaki prostor pretvara u povezanu imovinu vođenu podacima. Koristimo Mobile LPR, AI Computer Vision i automatizaciju kako bismo dolazak vozačima učinili lakšim, a operacije jednostavnim za gradove i operatere."],
+  ["Payparq combines Mobile License Plate Recognition with AI Computer Vision to turn every space, curb, and garage into a live digital asset. One cloud platform powers payments, enforcement, and analytics across cities and portfolios.", "Payparq kombinira mobilno prepoznavanje registarskih pločica s računalnim AI kako bi svaki prostor, rubnjak i garažu pretvorio u živu digitalnu imovinu. Jedna platforma u oblaku pokreće plaćanja, provedbu i analitiku u gradovima i portfeljima."],
   ["Payparq is building a software-only platform for parking and urban mobility. We are assembling a focused team across product, engineering, operations, and partnerships to redesign how parking portfolios are run.", "Payparq gradi softversku platformu za parkiranje i urbanu mobilnost. Okupljamo fokusirani tim kroz proizvod, inženjering, operacije i partnerstva kako bismo redizajnirali način upravljanja parkirnim portfeljima."],
   ["We review every introduction and follow up when there is a strong match.", "Pregledavamo svaki mail i odgovorimo kada postoji snažna sinergija."],
   ["Make an impact on how cities move and park.", "Utječite na to kako se gradovi kreću i parkiraju."],
@@ -126,6 +130,51 @@ function collectTranslatableAttributes(root: ParentNode) {
   return items;
 }
 
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function translateBatchWithRetry(batch: string[]) {
+  let remaining = [...batch];
+  const translatedByText = new Map<string, string>();
+
+  for (let attempt = 0; attempt < TRANSLATE_BATCH_RETRIES && remaining.length > 0; attempt += 1) {
+    const translatedList = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts: remaining, target: "hr" }),
+    })
+      .then(async (response) => {
+        if (!response.ok) return remaining.map(() => null);
+        const json = (await response.json()) as { translations?: Array<string | null> };
+        return Array.isArray(json.translations) ? json.translations : remaining.map(() => null);
+      })
+      .catch(() => remaining.map(() => null));
+
+    const nextRemaining: string[] = [];
+    remaining.forEach((text, index) => {
+      const translated = translatedList[index];
+      if (typeof translated === "string") {
+        const normalized = translated.trim();
+        if (normalized) {
+          translatedByText.set(text, normalized);
+          return;
+        }
+      }
+      nextRemaining.push(text);
+    });
+    remaining = nextRemaining;
+
+    if (remaining.length > 0 && attempt < TRANSLATE_BATCH_RETRIES - 1) {
+      await wait(TRANSLATE_RETRY_DELAY_MS * (attempt + 1));
+    }
+  }
+
+  return batch.map((text) => translatedByText.get(text) ?? null);
+}
+
 async function fetchTranslations(texts: string[]) {
   const uniqueTexts = Array.from(new Set(texts.filter(shouldTranslateText).map((text) => text.trim())));
   uniqueTexts.forEach((text) => {
@@ -139,23 +188,7 @@ async function fetchTranslations(texts: string[]) {
   if (unresolved.length > 0) {
     for (let start = 0; start < unresolved.length; start += TRANSLATE_BATCH_SIZE) {
       const batch = unresolved.slice(start, start + TRANSLATE_BATCH_SIZE);
-      const request = fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texts: batch, target: "hr" }),
-      })
-        .then(async (response) => {
-          if (!response.ok) return batch.map(() => null);
-          const json = (await response.json()) as { translations?: string[] };
-          const translatedList = Array.isArray(json.translations) ? json.translations : [];
-          return batch.map((_, index) => {
-            const translated = translatedList[index];
-            if (typeof translated !== "string") return null;
-            const normalized = translated.trim();
-            return normalized ? normalized : null;
-          });
-        })
-        .catch(() => batch.map(() => null));
+      const request = translateBatchWithRetry(batch);
 
       batch.forEach((text, index) => {
         const pending = request
