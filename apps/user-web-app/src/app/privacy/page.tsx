@@ -288,78 +288,78 @@ export default function Privacy() {
           <div className="space-y-10 text-sm md:text-base text-black/80 leading-relaxed">
             <section>
               <h2 className="text-base md:text-lg font-semibold text-black mb-3">
-                2. Types of Personal Data We Collect
+                1. Types of Personal Data We Collect
               </h2>
               <p className="mb-4">
                 Depending on your interaction with PayParq, we may collect the following types of personal data:
               </p>
               <div className="space-y-3">
                 <div>
-                  <h3 className="font-semibold text-black">2.1 Identifying Information</h3>
+                  <h3 className="font-semibold text-black">1.1 Identifying Information</h3>
                   <p>
                     Name, email, phone number, account credentials, vehicle license plate and type, and other
                     registration data.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.2 Vehicle Information</h3>
+                  <h3 className="font-semibold text-black">1.2 Vehicle Information</h3>
                   <p>
                     License plate and vehicle information collected via Automatic License Plate Recognition (ALPR) or
                     similar systems, including date, time, and location of parking.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.3 Device &amp; Technical Information</h3>
+                  <h3 className="font-semibold text-black">1.3 Device &amp; Technical Information</h3>
                   <p>
                     Device identifiers, IP address, cookies, pixels, beacons, mobile advertising IDs, browser type,
                     operating system, and other technical identifiers.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.4 Biometric Information</h3>
+                  <h3 className="font-semibold text-black">1.4 Biometric Information</h3>
                   <p>
                     Facial geometry or other biometric data captured through cameras at parking facilities or offices
                     where facial recognition technology is deployed. See Biometric Information Notice below.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.5 Location Data</h3>
+                  <h3 className="font-semibold text-black">1.5 Location Data</h3>
                   <p>Precise geolocation of your device if you grant permission.</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.6 Financial &amp; Payment Information</h3>
+                  <h3 className="font-semibold text-black">1.6 Financial &amp; Payment Information</h3>
                   <p>
                     Payment details processed via third-party payment providers; we do not store full card data on our
                     servers.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.7 Usage &amp; Interaction Data</h3>
+                  <h3 className="font-semibold text-black">1.7 Usage &amp; Interaction Data</h3>
                   <p>
                     Browsing activity, interactions with our websites or apps, search history, survey responses,
                     reviews, and other user-generated content.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.8 Audio/Visual Information</h3>
+                  <h3 className="font-semibold text-black">1.8 Audio/Visual Information</h3>
                   <p>
                     Video, audio, and photographic records of your vehicle, parking session, or interactions at
                     facilities.
                   </p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.9 Professional / Employment Data</h3>
+                  <h3 className="font-semibold text-black">1.9 Professional / Employment Data</h3>
                   <p>Resume, application materials, and personal data collected at job fairs or conferences.</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-black">2.10 Inferences</h3>
+                  <h3 className="font-semibold text-black">1.10 Inferences</h3>
                   <p>Insights derived from your activity, preferences, and other collected data.</p>
                 </div>
               </div>
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">3. How We Collect Personal Data</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">2. How We Collect Personal Data</h2>
               <p className="mb-3">We collect data in three ways:</p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
@@ -379,7 +379,7 @@ export default function Privacy() {
 
             <section>
               <h2 className="text-base md:text-lg font-semibold text-black mb-3">
-                4. Legal Bases for Processing (GDPR)
+                3. Legal Bases for Processing (GDPR)
               </h2>
               <p className="mb-3">We process personal data under the following legal bases:</p>
               <ul className="list-disc pl-5 space-y-2">
@@ -405,7 +405,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">5. How We Use Your Data</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">4. How We Use Your Data</h2>
               <p className="mb-3">PayParq uses personal data to:</p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>Operate, maintain, and improve Services.</li>
@@ -419,7 +419,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">6. How We Share Personal Data</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">5. How We Share Personal Data</h2>
               <p className="mb-3">We may share data with:</p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
@@ -451,7 +451,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">7. Cross-Border Data Transfers</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">6. Cross-Border Data Transfers</h2>
               <p>
                 Your data may be transferred outside the EU, for example to servers in the USA. Transfers are
                 safeguarded via Standard Contractual Clauses (SCCs) or other legally recognized safeguards.
@@ -459,7 +459,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">8. Retention of Personal Data</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">7. Retention of Personal Data</h2>
               <p className="mb-3">
                 PayParq retains personal data only as long as necessary to fulfill the purposes for which it was
                 collected, comply with legal obligations, resolve disputes, or enforce agreements, except where
@@ -495,7 +495,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">9. Your Rights (GDPR)</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">8. Your Rights (GDPR)</h2>
               <p className="mb-3">You have the following rights under EU law:</p>
               <ul className="list-disc pl-5 space-y-2 mb-3">
                 <li>
@@ -532,7 +532,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">10. Cookies and Tracking</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">9. Cookies and Tracking</h2>
               <p className="mb-3">PayParq uses cookies, pixels, and tracking tools to:</p>
               <ul className="list-disc pl-5 space-y-2 mb-3">
                 <li>Ensure website functionality.</li>
@@ -547,7 +547,7 @@ export default function Privacy() {
 
             <section>
               <h2 className="text-base md:text-lg font-semibold text-black mb-3">
-                11. Biometric Information Privacy Notice
+                10. Biometric Information Privacy Notice
               </h2>
               <p className="mb-3">We may collect facial geometry data for:</p>
               <ul className="list-disc pl-5 space-y-2 mb-3">
@@ -569,7 +569,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">12. Children</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">11. Children</h2>
               <p>
                 Our Services are not intended for persons under 16 years. We do not knowingly collect data from children
                 under this age.
@@ -577,7 +577,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">13. Data Security</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">12. Data Security</h2>
               <p className="mb-3">We implement state-of-the-art security measures, including:</p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>Encryption at rest and in transit.</li>
@@ -588,7 +588,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">14. Changes to This Privacy Policy</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">13. Changes to This Privacy Policy</h2>
               <p>
                 We may update this Policy. All updates will be posted here, with an updated effective date at the top of
                 this page.
@@ -596,7 +596,7 @@ export default function Privacy() {
             </section>
 
             <section>
-              <h2 className="text-base md:text-lg font-semibold text-black mb-3">15. Contact Us</h2>
+              <h2 className="text-base md:text-lg font-semibold text-black mb-3">14. Contact Us</h2>
               <p className="mb-3">For privacy inquiries or concerns:</p>
               <p>PayParq Global Inc.</p>
               <p>1309 Coffeen Avenue STE 1200</p>
