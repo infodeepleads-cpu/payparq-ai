@@ -141,7 +141,7 @@ async function translateBatchWithRetry(batch: string[]) {
   const translatedByText = new Map<string, string>();
 
   for (let attempt = 0; attempt < TRANSLATE_BATCH_RETRIES && remaining.length > 0; attempt += 1) {
-    const translatedList = await fetch("/api/translate", {
+    const translatedList = await fetch("/api/i18n/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texts: remaining, target: "hr" }),
