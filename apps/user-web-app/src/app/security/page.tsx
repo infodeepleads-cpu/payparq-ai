@@ -73,10 +73,10 @@ export default function Security() {
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">
                 Security engine
               </p>
-              <h2 className="text-xl md:text-2xl font-semibold tracking-tight mb-3">
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-3">
                 Enterprise-ready digitization.
               </h2>
-              <p className="text-sm md:text-base text-white/70">
+              <p className="text-sm md:text-base text-white">
                 Go live in hours, not months. Whether you manage a single garage or a global portfolio,
                 Payparq scales via Mobile LPR to protect and optimize every asset.
               </p>

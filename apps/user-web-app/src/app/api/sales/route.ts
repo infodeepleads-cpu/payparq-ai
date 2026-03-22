@@ -22,13 +22,21 @@ export async function POST(req: NextRequest) {
     const firstName = (formData.get("first_name") || "").toString().trim();
     const lastName = (formData.get("last_name") || "").toString().trim();
     const workEmail = (formData.get("work_email") || "").toString().trim();
+    const mobilePhone = (formData.get("mobile_phone") || "").toString().trim();
     const company = (formData.get("company") || "").toString().trim();
     const locations = (formData.get("locations") || "").toString().trim();
     const exploreSelections = formData.getAll("explore").map((value) => value.toString());
+    const mobilePhonePattern = /^\+?[0-9()\-\s]{7,20}$/;
 
-    if (!firstName || !lastName || !workEmail || !company) {
+    if (!firstName || !lastName || !workEmail || !company || !mobilePhone) {
       return NextResponse.json(
         { error: "Missing required fields." },
+        { status: 400 }
+      );
+    }
+    if (!mobilePhonePattern.test(mobilePhone)) {
+      return NextResponse.json(
+        { error: "Invalid mobile phone number." },
         { status: 400 }
       );
     }
@@ -82,6 +90,7 @@ export async function POST(req: NextRequest) {
       `First name: ${firstName}`,
       `Last name: ${lastName}`,
       `Work email: ${workEmail}`,
+      `Mobile phone: ${mobilePhone}`,
       `Company: ${company}`,
       `Locations: ${locations || "Not provided"}`,
       `Explore options: ${exploreSummary || "No specific options selected"}`,
@@ -98,6 +107,7 @@ export async function POST(req: NextRequest) {
       `- First name: ${firstName}`,
       `- Last name: ${lastName}`,
       `- Work email: ${workEmail}`,
+      `- Mobile phone: ${mobilePhone}`,
       `- Company: ${company}`,
       `- Locations: ${locations || "Not provided"}`,
       `- Explore options: ${exploreSummary || "No specific options selected"}`,

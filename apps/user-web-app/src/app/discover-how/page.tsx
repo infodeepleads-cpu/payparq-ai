@@ -11,12 +11,22 @@ export default function DiscoverHowPage() {
   const [businessOpen, setBusinessOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "config_error">("idle");
+  const [phoneError, setPhoneError] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("submitting");
+    setPhoneError("");
 
     const formData = new FormData(event.currentTarget);
+    const mobilePhone = (formData.get("mobile_phone") || "").toString().trim();
+    const mobilePhonePattern = /^\+?[0-9()\-\s]{7,20}$/;
+    if (!mobilePhonePattern.test(mobilePhone)) {
+      setPhoneError("Please enter a valid mobile phone number.");
+      setStatus("idle");
+      return;
+    }
+
     try {
       const res = await fetch("/api/sales", {
         method: "POST",
@@ -371,16 +381,32 @@ export default function DiscoverHowPage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-black/70 mb-1">
-                    Locations
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    name="locations"
-                    className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Mobile phone
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      name="mobile_phone"
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                    {phoneError ? (
+                      <p className="mt-1 text-[11px] text-red-600">{phoneError}</p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-black/70 mb-1">
+                      Locations
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      name="locations"
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-black/70 mb-1">
