@@ -5,6 +5,7 @@ import { useLocale } from "@/components/LocaleProvider";
 
 const translationCache = new Map<string, string>();
 const pendingCache = new Map<string, Promise<string>>();
+const TRANSLATE_BATCH_SIZE = 200;
 const localHrOverrides = new Map<string, string>([
   ["Experience", "Iskustvo"],
   ["payparq makes cities", "PayParq stvara svijet"],
@@ -136,31 +137,42 @@ async function fetchTranslations(texts: string[]) {
   const unresolved = uniqueTexts.filter((text) => !translationCache.has(text) && !pendingCache.has(text));
 
   if (unresolved.length > 0) {
-    const request = fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texts: unresolved, target: "hr" }),
-    })
-      .then(async (response) => {
-        if (!response.ok) return unresolved.map((text) => text);
-        const json = (await response.json()) as { translations?: string[] };
-        const translatedList = Array.isArray(json.translations) ? json.translations : [];
-        return unresolved.map((text, index) => translatedList[index] ?? text);
+    for (let start = 0; start < unresolved.length; start += TRANSLATE_BATCH_SIZE) {
+      const batch = unresolved.slice(start, start + TRANSLATE_BATCH_SIZE);
+      const request = fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: batch, target: "hr" }),
       })
-      .catch(() => unresolved.map((text) => text));
-
-    unresolved.forEach((text, index) => {
-      const pending = request
-        .then((translatedList) => {
-          const translated = translatedList[index] ?? text;
-          translationCache.set(text, translated);
-          return translated;
+        .then(async (response) => {
+          if (!response.ok) return batch.map(() => null);
+          const json = (await response.json()) as { translations?: string[] };
+          const translatedList = Array.isArray(json.translations) ? json.translations : [];
+          return batch.map((_, index) => {
+            const translated = translatedList[index];
+            if (typeof translated !== "string") return null;
+            const normalized = translated.trim();
+            return normalized ? normalized : null;
+          });
         })
-        .finally(() => {
-          pendingCache.delete(text);
-        });
-      pendingCache.set(text, pending);
-    });
+        .catch(() => batch.map(() => null));
+
+      batch.forEach((text, index) => {
+        const pending = request
+          .then((translatedList) => {
+            const translated = translatedList[index];
+            if (translated) {
+              translationCache.set(text, translated);
+              return translated;
+            }
+            return text;
+          })
+          .finally(() => {
+            pendingCache.delete(text);
+          });
+        pendingCache.set(text, pending);
+      });
+    }
   }
 
   const pairs = await Promise.all(
