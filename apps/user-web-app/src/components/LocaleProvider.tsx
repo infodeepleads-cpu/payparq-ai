@@ -27,7 +27,9 @@ export function LocaleProvider({
         document.cookie = `${LOCALE_COOKIE_NAME}=${nextLocale}; path=/; max-age=31536000; SameSite=Lax`;
         document.documentElement.lang = nextLocale;
         setLocaleState(nextLocale);
-        window.location.reload();
+        if (nextLocale === "en") {
+          window.location.reload();
+        }
       },
     }),
     [locale]
