@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import NextImage from "next/image";
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
@@ -68,6 +68,20 @@ type SignWidget = {
   userRole?: string;
 };
 const SIGN_WIDGETS_STORAGE_KEY = "resources-sign-widgets-v1";
+const RESOURCES_WIDGET_STATE_BUCKET = "location-verification";
+const RESOURCES_WIDGET_STATE_PATH_PREFIX = "resources/widget-state";
+type PersistedSignWidget = Pick<
+  SignWidget,
+  | "id"
+  | "templateUrl"
+  | "fileName"
+  | "extraText"
+  | "guestParkingMinutes"
+  | "selectedLocationId"
+  | "userName"
+  | "userIdNumber"
+  | "userRole"
+>;
 
 function createDefaultWidgets() {
   const now = Date.now();
@@ -198,6 +212,82 @@ function createDefaultWidgets() {
   ] satisfies SignWidget[];
 }
 
+function parsePersistedWidgets(raw: string) {
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return null;
+  }
+  return parsed.map((item, index) => {
+    const id =
+      typeof item?.id === "string" && item.id.trim()
+        ? item.id
+        : `widget-${Date.now()}-${index + 1}`;
+    return {
+      id,
+      templateUrl: typeof item?.templateUrl === "string" ? item.templateUrl : "",
+      fileName: typeof item?.fileName === "string" ? item.fileName : `Safe Parking ${index + 1}`,
+      extraText: typeof item?.extraText === "string" ? item.extraText : "",
+      guestParkingMinutes:
+        typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
+      selectedLocationId: typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
+      userName: typeof item?.userName === "string" ? item.userName : undefined,
+      userIdNumber: typeof item?.userIdNumber === "string" ? item.userIdNumber : undefined,
+      userRole: typeof item?.userRole === "string" ? item.userRole : undefined,
+      uploading: false,
+      downloading: false,
+    } satisfies SignWidget;
+  });
+}
+
+function mergeWithDefaultWidgets(parsedWidgets: SignWidget[]) {
+  const defaults = createDefaultWidgets();
+  const withDefaults = defaults.map((defaultWidget, index) => {
+    const storedWidget = parsedWidgets[index];
+    if (!storedWidget) {
+      return defaultWidget;
+    }
+    return {
+      ...defaultWidget,
+      ...storedWidget,
+      guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
+      userName: storedWidget.userName ?? defaultWidget.userName,
+      userIdNumber: storedWidget.userIdNumber ?? defaultWidget.userIdNumber,
+      userRole: storedWidget.userRole ?? defaultWidget.userRole,
+      uploading: false,
+      downloading: false,
+    } satisfies SignWidget;
+  });
+  const extraWidgets = parsedWidgets.slice(defaults.length);
+  return [...withDefaults, ...extraWidgets];
+}
+
+function serializeWidgetsForPersistence(widgets: SignWidget[]) {
+  return widgets.map(
+    ({
+      id,
+      templateUrl,
+      fileName,
+      extraText,
+      guestParkingMinutes,
+      selectedLocationId,
+      userName,
+      userIdNumber,
+      userRole,
+    }) =>
+      ({
+        id,
+        templateUrl,
+        fileName,
+        extraText,
+        guestParkingMinutes,
+        selectedLocationId,
+        userName,
+        userIdNumber,
+        userRole,
+      }) satisfies PersistedSignWidget
+  );
+}
+
 function createInitialWidgets() {
   const defaults = createDefaultWidgets();
   if (typeof window === "undefined") {
@@ -208,49 +298,11 @@ function createInitialWidgets() {
     if (!raw) {
       return defaults;
     }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
+    const parsedWidgets = parsePersistedWidgets(raw);
+    if (!parsedWidgets || parsedWidgets.length === 0) {
       return defaults;
     }
-    const parsedWidgets = parsed.map((item, index) => {
-      const id =
-        typeof item?.id === "string" && item.id.trim()
-          ? item.id
-          : `widget-${Date.now()}-${index + 1}`;
-      return {
-        id,
-        templateUrl: typeof item?.templateUrl === "string" ? item.templateUrl : "",
-        fileName: typeof item?.fileName === "string" ? item.fileName : `Safe Parking ${index + 1}`,
-        extraText: typeof item?.extraText === "string" ? item.extraText : "",
-        guestParkingMinutes:
-          typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
-        selectedLocationId:
-          typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
-        userName: typeof item?.userName === "string" ? item.userName : undefined,
-        userIdNumber: typeof item?.userIdNumber === "string" ? item.userIdNumber : undefined,
-        userRole: typeof item?.userRole === "string" ? item.userRole : undefined,
-        uploading: false,
-        downloading: false,
-      } satisfies SignWidget;
-    });
-    const withDefaults = defaults.map((defaultWidget, index) => {
-      const storedWidget = parsedWidgets[index];
-      if (!storedWidget) {
-        return defaultWidget;
-      }
-      return {
-        ...defaultWidget,
-        ...storedWidget,
-        guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
-        userName: storedWidget.userName ?? defaultWidget.userName,
-        userIdNumber: storedWidget.userIdNumber ?? defaultWidget.userIdNumber,
-        userRole: storedWidget.userRole ?? defaultWidget.userRole,
-        uploading: false,
-        downloading: false,
-      } satisfies SignWidget;
-    });
-    const extraWidgets = parsedWidgets.slice(defaults.length);
-    return [...withDefaults, ...extraWidgets];
+    return mergeWithDefaultWidgets(parsedWidgets);
   } catch {
     return defaults;
   }
@@ -419,6 +471,9 @@ export default function ResourcesPage() {
   const [error, setError] = useState("");
   const [locations, setLocations] = useState<ResourceLocation[]>([]);
   const [widgets, setWidgets] = useState<SignWidget[]>(() => createInitialWidgets());
+  const [hasLoadedRemoteWidgets, setHasLoadedRemoteWidgets] = useState(false);
+  const lastRemoteWidgetsJsonRef = useRef("");
+  const remoteSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
@@ -474,6 +529,32 @@ export default function ResourcesPage() {
         if (!canManageResources) {
           setLoading(false);
           return;
+        }
+
+        const widgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${currentUser.id}.json`;
+        try {
+          const { data: remoteWidgetFile, error: remoteWidgetError } = await client.storage
+            .from(RESOURCES_WIDGET_STATE_BUCKET)
+            .download(widgetStatePath);
+          if (!cancelled && !remoteWidgetError && remoteWidgetFile) {
+            const rawRemoteWidgets = await remoteWidgetFile.text();
+            const parsedRemoteWidgets = parsePersistedWidgets(rawRemoteWidgets);
+            if (parsedRemoteWidgets && parsedRemoteWidgets.length > 0) {
+              const mergedWidgets = mergeWithDefaultWidgets(parsedRemoteWidgets);
+              const serializedWidgets = JSON.stringify(
+                serializeWidgetsForPersistence(mergedWidgets)
+              );
+              lastRemoteWidgetsJsonRef.current = serializedWidgets;
+              setWidgets(mergedWidgets);
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, serializedWidgets);
+              }
+            }
+          }
+        } finally {
+          if (!cancelled) {
+            setHasLoadedRemoteWidgets(true);
+          }
         }
 
         const { data: locationRows, error: locationsError } = await client
@@ -699,31 +780,42 @@ export default function ResourcesPage() {
     if (typeof window === "undefined") {
       return;
     }
-    const storedWidgets = widgets.map(
-      ({
-        id,
-        templateUrl,
-        fileName,
-        extraText,
-        guestParkingMinutes,
-        selectedLocationId,
-        userName,
-        userIdNumber,
-        userRole,
-      }) => ({
-        id,
-        templateUrl,
-        fileName,
-        extraText,
-        guestParkingMinutes,
-        selectedLocationId,
-        userName,
-        userIdNumber,
-        userRole,
-      })
-    );
-    window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, JSON.stringify(storedWidgets));
-  }, [widgets]);
+    const storedWidgets = serializeWidgetsForPersistence(widgets);
+    const serializedWidgets = JSON.stringify(storedWidgets);
+    window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, serializedWidgets);
+
+    if (!supabase || !isSupabaseConfigured || !user?.id || !canAccess || !hasLoadedRemoteWidgets) {
+      return;
+    }
+    if (lastRemoteWidgetsJsonRef.current === serializedWidgets) {
+      return;
+    }
+    if (remoteSyncTimeoutRef.current) {
+      clearTimeout(remoteSyncTimeoutRef.current);
+    }
+    const supabaseClient = supabase;
+    const widgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${user.id}.json`;
+    remoteSyncTimeoutRef.current = setTimeout(() => {
+      void supabaseClient.storage
+        .from(RESOURCES_WIDGET_STATE_BUCKET)
+        .upload(widgetStatePath, new Blob([serializedWidgets], { type: "application/json" }), {
+          upsert: true,
+          contentType: "application/json",
+        })
+        .then(({ error: uploadError }) => {
+          if (!uploadError) {
+            lastRemoteWidgetsJsonRef.current = serializedWidgets;
+          }
+        });
+    }, 500);
+
+    return () => {
+      if (remoteSyncTimeoutRef.current) {
+        clearTimeout(remoteSyncTimeoutRef.current);
+        remoteSyncTimeoutRef.current = null;
+      }
+    };
+  }, [widgets, user?.id, canAccess, hasLoadedRemoteWidgets]);
 
   function createWidget() {
     setWidgets((current) => [
