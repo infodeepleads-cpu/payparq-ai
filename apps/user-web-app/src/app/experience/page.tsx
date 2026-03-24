@@ -11,8 +11,8 @@
        <main className="flex-1 bg-white pt-24 md:pt-28">
          <section className="max-w-6xl mx-auto px-6 md:px-12 py-16 md:py-20">
            <div className="max-w-2xl">
-             <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">Experience</p>
-             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
+            <p data-no-translate="true" className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">Experience</p>
+            <h1 data-no-translate="true" className="text-2xl md:text-3xl font-semibold tracking-tight mb-4 text-black">
                PayParq experience.
              </h1>
              <p className="text-sm md:text-base text-black/75 mb-6">

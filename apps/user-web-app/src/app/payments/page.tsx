@@ -255,7 +255,14 @@ export default function PaymentsPage() {
                           <div className="flex justify-between gap-3"><span className="text-gray-500">Iznos za uplatu</span><span className="font-semibold text-right">{amountNow !== null ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(amountNow) : "N/A"}</span></div>
                         </div>
                         <div className="mt-4 flex justify-center">
-                          <img src={euroQrUrl} alt="Euro QR code" className="w-44 h-44 rounded-lg border border-gray-200 bg-white p-2" />
+                          <Image
+                            src={euroQrUrl}
+                            alt="Euro QR code"
+                            width={176}
+                            height={176}
+                            unoptimized
+                            className="w-44 h-44 rounded-lg border border-gray-200 bg-white p-2"
+                          />
                         </div>
                       </div>
                     </div>
