@@ -1815,35 +1815,120 @@ export default function ResourcesPage() {
         context.fillStyle = "#111111";
         context.textAlign = "center";
         context.textBaseline = "alphabetic";
-        context.font = "900 19px Inter, Arial, sans-serif";
+        context.font = "900 17px Inter, Arial, sans-serif";
         const widgetTwelveIdY = 561;
-        context.fillText(`ID ${resourceForSign.displayId}`, width / 2, widgetTwelveIdY);
-        const normalizedHrFooterText = croatianTermsText.trim().replace(/\s+/g, " ");
-        context.font = "600 8.4px Inter, Arial, sans-serif";
+        const widgetTwelveIdText = `ID ${resourceForSign.displayId}`;
+        const widgetTwelveTargetIdWidthIncrease = 50;
+        const widgetTwelveIdBaseWidth = context.measureText(widgetTwelveIdText).width;
+        const widgetTwelveIdScaleX =
+          widgetTwelveIdBaseWidth > 0
+            ? (widgetTwelveIdBaseWidth + widgetTwelveTargetIdWidthIncrease) / widgetTwelveIdBaseWidth
+            : 1;
+        context.save();
+        context.translate(width / 2, widgetTwelveIdY);
+        context.scale(widgetTwelveIdScaleX, 1);
+        context.fillText(widgetTwelveIdText, 0, 0);
+        context.restore();
+        const widgetTwelveHrFooter = croatianTermsText
+          .replace(/Cijena\s+od\s*[\d.,]+\s*€?\s*do\s*[\d.,]+\s*€?\s*\/?\s*h\s*,?\s*/i, "")
+          .replace(/obvezna\s+autorizacija/gi, "Obvezna Autorizacija")
+          .trim()
+          .replace(/\s+/g, " ");
+        const widgetTwelveEngFooterRaw = englishTermsText
+          .replace(/Price\s+from\s*€?\s*[\d.,]+\s*to\s*€?\s*[\d.,]+\s*\/?\s*h\s*,?\s*/i, "")
+          .replace(/mandatory\.?\s+authorization\.?/gi, "Mandatory Auth")
+          .trim()
+          .replace(/\s+/g, " ");
+        const operatorFooterLabel = "Operator: Indirektno";
+        const hrFooterWithoutOperator = widgetTwelveHrFooter
+          .replace(/Operater:\s*Indirektno,?\s*/i, "")
+          .trim()
+          .replace(/\s+/g, " ");
+        const engFooterWithoutOperator = widgetTwelveEngFooterRaw
+          .replace(/Operator:\s*Indirektno,?\s*/i, "")
+          .trim()
+          .replace(/\s+/g, " ");
+        const normalizedHrFooterText = `${hrFooterWithoutOperator} ${engFooterWithoutOperator}`;
+        context.font = "600 6.2px Inter, Arial, sans-serif";
         const footerWords = normalizedHrFooterText.split(" ");
-        const footerLines: string[] = [];
-        let footerCurrentLine = "";
-        const footerLineHeight = 8.8;
-        const footerStartY = 579;
-        const footerMaxLines = 3;
+        const footerLineHeight = 6.8;
+        const footerStartY = 574;
         const footerMaxWidth = 360;
-        for (const word of footerWords) {
-          const candidate = footerCurrentLine ? `${footerCurrentLine} ${word}` : word;
-          if (context.measureText(candidate).width <= footerMaxWidth) {
-            footerCurrentLine = candidate;
-          } else {
-            if (footerCurrentLine) {
-              footerLines.push(footerCurrentLine);
+        const footerConsumeLine = (
+          words: string[],
+          startIndex: number,
+          preferredWidth: number
+        ) => {
+          let index = startIndex;
+          let line = "";
+          while (index < words.length) {
+            const candidate = line ? `${line} ${words[index]}` : words[index];
+            const candidateWidth = context.measureText(candidate).width;
+            if (!line) {
+              line = candidate;
+              index += 1;
+              continue;
             }
-            footerCurrentLine = word;
-          }
-          if (footerLines.length >= footerMaxLines) {
+            if (candidateWidth <= preferredWidth) {
+              line = candidate;
+              index += 1;
+              continue;
+            }
             break;
           }
+          return { line, nextIndex: index };
+        };
+        const firstLineTargetWidth = footerMaxWidth * 0.9;
+        const secondLineTargetWidth = footerMaxWidth * 0.84;
+        const firstLineChunk = footerConsumeLine(footerWords, 0, firstLineTargetWidth);
+        const secondLineChunk = footerConsumeLine(
+          footerWords,
+          firstLineChunk.nextIndex,
+          secondLineTargetWidth
+        );
+        let firstLine = firstLineChunk.line;
+        let secondLine = secondLineChunk.line;
+        let thirdLine = footerWords.slice(secondLineChunk.nextIndex).join(" ");
+        const removeMandatoryAuth = (line: string) =>
+          line
+            .replace(/\bMandatory\s+Auth\b/gi, "")
+            .trim()
+            .replace(/\s+/g, " ");
+        firstLine = removeMandatoryAuth(firstLine);
+        secondLine = removeMandatoryAuth(secondLine);
+        thirdLine = removeMandatoryAuth(thirdLine);
+        secondLine = `${secondLine} Mandatory Auth`.trim().replace(/\s+/g, " ");
+        thirdLine = `${operatorFooterLabel} ${thirdLine}`.trim().replace(/\s+/g, " ");
+        const moveLastWordToNextLine = (line: string, nextLine: string) => {
+          const words = line.split(" ").filter((word) => word.length > 0);
+          if (words.length <= 1) {
+            return { line, nextLine };
+          }
+          const shifted = words.pop() ?? "";
+          return {
+            line: words.join(" "),
+            nextLine: `${shifted} ${nextLine}`.trim().replace(/\s+/g, " "),
+          };
+        };
+        while (context.measureText(secondLine).width >= context.measureText(firstLine).width) {
+          const rebalanced = moveLastWordToNextLine(secondLine, thirdLine);
+          if (rebalanced.line === secondLine) {
+            break;
+          }
+          secondLine = rebalanced.line;
+          thirdLine = rebalanced.nextLine;
         }
-        if (footerCurrentLine && footerLines.length < footerMaxLines) {
-          footerLines.push(footerCurrentLine);
+        while (context.measureText(thirdLine).width >= context.measureText(secondLine).width) {
+          const thirdWords = thirdLine.split(" ").filter((word) => word.length > 0);
+          if (thirdWords.length <= 1) {
+            break;
+          }
+          const shifted = thirdWords.shift() ?? "";
+          secondLine = `${secondLine} ${shifted}`.trim().replace(/\s+/g, " ");
+          thirdLine = thirdWords.join(" ");
         }
+        const footerLines = [firstLine, secondLine, thirdLine].filter((line) => line.length > 0);
+        context.textAlign = "center";
         for (let i = 0; i < footerLines.length; i += 1) {
           context.fillText(footerLines[i], width / 2, footerStartY + i * footerLineHeight);
         }
