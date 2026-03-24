@@ -1805,8 +1805,8 @@ export default function ResourcesPage() {
           : undefined,
         widgetIndex === 11 ? 52 : 0,
         widgetIndex === 11 ? 52 : 0,
-        widgetIndex === 11 ? 10 : 0,
-        widgetIndex === 11 ? 5 : 0
+        widgetIndex === 11 ? 40 : 0,
+        widgetIndex === 11 ? 10 : 0
       );
 
       if (isWidgetTwelve) {
