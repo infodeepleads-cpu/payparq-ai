@@ -1129,6 +1129,71 @@ export default function ResourcesPage() {
         const qrY = qrCenterY - qrBoxSize / 2;
         const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
         const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
+
+        const drawRoundedRect = (
+          x: number,
+          y: number,
+          size: number,
+          radius: number,
+          fillColor?: string,
+          strokeColor?: string,
+          strokeWidth = 0
+        ) => {
+          context.beginPath();
+          context.moveTo(x + radius, y);
+          context.lineTo(x + size - radius, y);
+          context.quadraticCurveTo(x + size, y, x + size, y + radius);
+          context.lineTo(x + size, y + size - radius);
+          context.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
+          context.lineTo(x + radius, y + size);
+          context.quadraticCurveTo(x, y + size, x, y + size - radius);
+          context.lineTo(x, y + radius);
+          context.quadraticCurveTo(x, y, x + radius, y);
+          context.closePath();
+          if (fillColor) {
+            context.fillStyle = fillColor;
+            context.fill();
+          }
+          if (strokeColor && strokeWidth > 0) {
+            context.lineWidth = strokeWidth;
+            context.strokeStyle = strokeColor;
+            context.stroke();
+          }
+        };
+
+        const drawRoundedRectBox = (
+          x: number,
+          y: number,
+          boxWidth: number,
+          boxHeight: number,
+          radius: number,
+          fillColor?: string,
+          strokeColor?: string,
+          strokeWidth = 0
+        ) => {
+          const safeRadius = Math.max(0, Math.min(radius, boxWidth / 2, boxHeight / 2));
+          context.beginPath();
+          context.moveTo(x + safeRadius, y);
+          context.lineTo(x + boxWidth - safeRadius, y);
+          context.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + safeRadius);
+          context.lineTo(x + boxWidth, y + boxHeight - safeRadius);
+          context.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - safeRadius, y + boxHeight);
+          context.lineTo(x + safeRadius, y + boxHeight);
+          context.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - safeRadius);
+          context.lineTo(x, y + safeRadius);
+          context.quadraticCurveTo(x, y, x + safeRadius, y);
+          context.closePath();
+          if (fillColor) {
+            context.fillStyle = fillColor;
+            context.fill();
+          }
+          if (strokeColor && strokeWidth > 0) {
+            context.lineWidth = strokeWidth;
+            context.strokeStyle = strokeColor;
+            context.stroke();
+          }
+        };
+
         if (exactQrMode) {
           const qrRenderWidth = Math.max(1, qrSize + exactQrWidthDeltaPx);
           const qrRenderHeight = Math.max(1, qrSize - exactQrTrimBottomPx);
@@ -1142,15 +1207,18 @@ export default function ResourcesPage() {
             qrRenderWidth,
             qrRenderHeightWithTopGrow
           );
+
+          const moduleCount = moduleCountHint && moduleCountHint >= 21 ? moduleCountHint : 21;
+          
           if (hideCenterBadge) {
             return;
           }
           const qrBadgeCenterY = qrRenderY + qrRenderHeightWithTopGrow / 2;
           context.beginPath();
-          context.arc(qrCenterX, qrBadgeCenterY, 14, 0, Math.PI * 2);
+          context.arc(qrCenterX, qrBadgeCenterY, 18, 0, Math.PI * 2);
           context.fillStyle = "#ffffff";
           context.fill();
-          drawPayparqSticker(context, qrCenterX, qrBadgeCenterY, 22);
+          drawPayparqSticker(context, qrCenterX, qrBadgeCenterY, 29);
           return;
         }
         const qrSampleSize = 300;
@@ -1182,7 +1250,7 @@ export default function ResourcesPage() {
         const moduleDraw = qrSize / moduleCount;
         const qrMarkColor = "#000000";
         const finderMarkColor = qrMarkColor;
-        const dotDiameter = Math.max(1, moduleDraw * 0.35);
+        const dotDiameter = Math.max(1, moduleDraw * 0.8);
         const dotRadius = dotDiameter / 2;
         context.fillStyle = qrMarkColor;
         for (let row = 0; row < moduleCount; row += 1) {
@@ -1199,73 +1267,8 @@ export default function ResourcesPage() {
             context.fill();
           }
         }
-        const drawRoundedRect = (
-          x: number,
-          y: number,
-          size: number,
-          radius: number,
-          fillColor?: string,
-          strokeColor?: string,
-          strokeWidth = 0
-        ) => {
-          context.beginPath();
-          context.moveTo(x + radius, y);
-          context.lineTo(x + size - radius, y);
-          context.quadraticCurveTo(x + size, y, x + size, y + radius);
-          context.lineTo(x + size, y + size - radius);
-          context.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-          context.lineTo(x + radius, y + size);
-          context.quadraticCurveTo(x, y + size, x, y + size - radius);
-          context.lineTo(x, y + radius);
-          context.quadraticCurveTo(x, y, x + radius, y);
-          context.closePath();
-          if (fillColor) {
-            context.fillStyle = fillColor;
-            context.fill();
-          }
-          if (strokeColor && strokeWidth > 0) {
-            context.lineWidth = strokeWidth;
-            context.strokeStyle = strokeColor;
-            context.stroke();
-          }
-        };
         const finderScale = 1;
-        const finderOuter = moduleDraw * 7 * finderScale;
-        const finderInner = moduleDraw * 3 * finderScale;
-        const finderRadiusOuter = Math.max(1, moduleDraw * 1.3 * finderScale);
-        const finderRadiusInner = Math.max(1, moduleDraw * 0.7 * finderScale);
-        const finderMask = finderOuter + moduleDraw * 1.2;
-        const finderMaskRadius = finderRadiusOuter + moduleDraw * 0.6;
-        const finderMaskInset = (finderMask - finderOuter) / 2;
-        const drawFinderReplacement = (x: number, y: number) => {
-          drawRoundedRect(
-            x - finderMaskInset,
-            y - finderMaskInset,
-            finderMask,
-            finderMaskRadius,
-            "#ffffff"
-          );
-          drawRoundedRect(
-            x,
-            y,
-            finderOuter,
-            finderRadiusOuter,
-            "#ffffff",
-            finderMarkColor,
-            Math.max(1, moduleDraw * 1.2)
-          );
-          drawRoundedRect(
-            x + (finderOuter - finderInner) / 2,
-            y + (finderOuter - finderInner) / 2,
-            finderInner,
-            finderRadiusInner,
-            finderMarkColor
-          );
-        };
-        drawFinderReplacement(qrDrawX, qrDrawY);
-        drawFinderReplacement(qrDrawX + qrSize - finderOuter, qrDrawY);
-        drawFinderReplacement(qrDrawX, qrDrawY + qrSize - finderOuter);
-        const logoBgSize = 24;
+        const logoBgSize = 31;
         context.fillStyle = "#ffffff";
         context.fillRect(
           qrCenterX - logoBgSize / 2,
@@ -1276,7 +1279,7 @@ export default function ResourcesPage() {
         context.fillStyle = "#000000";
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.font = "900 16.2px Montserrat, Inter, Arial, sans-serif";
+        context.font = "900 21px Montserrat, Inter, Arial, sans-serif";
         context.fillText("P", qrCenterX, qrCenterY);
         if (includeTopSticker) {
           const stickerDiameter = 12;
@@ -1831,6 +1834,12 @@ export default function ResourcesPage() {
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
+        const QRCodeModule = await import("qrcode");
+        const qrModel = QRCodeModule.create(checkoutUrl, {
+          errorCorrectionLevel: "H",
+        });
+        qrModuleCount = qrModel.modules.size;
+
         const qrStyling = new QRCodeStyling({
           width: 900,
           height: 900,
@@ -1853,7 +1862,7 @@ export default function ResourcesPage() {
             color: "#ffffff",
           },
           qrOptions: {
-            errorCorrectionLevel: "Q",
+            errorCorrectionLevel: "H",
           },
         });
         const rawData = await qrStyling.getRawData("png");
