@@ -1000,26 +1000,42 @@ export default function ResourcesPage() {
         moduleCountHint?: number,
         exactQrMode?: boolean,
         hideCenterBadge?: boolean,
-        exactQrSize?: number
+        exactQrSize?: number,
+        qrCenterYOffset = 0,
+        exactQrTrimBottomPx = 0,
+        exactQrWidthDeltaPx = 0,
+        exactQrTopGrowPx = 0
       ) => {
         const qrBoxSize = 180;
         const qrSize = exactQrMode ? exactQrSize ?? 115 : 104;
         const qrCenterX = width / 2;
-        const qrCenterY = 363;
+        const qrCenterY = 363 + qrCenterYOffset;
         const qrX = qrCenterX - qrBoxSize / 2;
         const qrY = qrCenterY - qrBoxSize / 2;
         const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
         const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
         if (exactQrMode) {
-          context.drawImage(qrImage, qrDrawX, qrDrawY, qrSize, qrSize);
+          const qrRenderWidth = Math.max(1, qrSize + exactQrWidthDeltaPx);
+          const qrRenderHeight = Math.max(1, qrSize - exactQrTrimBottomPx);
+          const qrRenderX = qrDrawX - exactQrWidthDeltaPx / 2;
+          const qrRenderY = qrDrawY - exactQrTopGrowPx;
+          const qrRenderHeightWithTopGrow = Math.max(1, qrRenderHeight + exactQrTopGrowPx);
+          context.drawImage(
+            qrImage,
+            qrRenderX,
+            qrRenderY,
+            qrRenderWidth,
+            qrRenderHeightWithTopGrow
+          );
           if (hideCenterBadge) {
             return;
           }
+          const qrBadgeCenterY = qrRenderY + qrRenderHeightWithTopGrow / 2;
           context.beginPath();
-          context.arc(qrCenterX, qrCenterY, 14, 0, Math.PI * 2);
+          context.arc(qrCenterX, qrBadgeCenterY, 14, 0, Math.PI * 2);
           context.fillStyle = "#ffffff";
           context.fill();
-          drawPayparqSticker(context, qrCenterX, qrCenterY, 22);
+          drawPayparqSticker(context, qrCenterX, qrBadgeCenterY, 22);
           return;
         }
         const qrSampleSize = 300;
@@ -1784,19 +1800,23 @@ export default function ResourcesPage() {
         false,
         widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 || widgetIndex === 11
           ? widgetIndex === 11
-            ? 88
+            ? 140
             : 110
-          : undefined
+          : undefined,
+        widgetIndex === 11 ? 52 : 0,
+        widgetIndex === 11 ? 52 : 0,
+        widgetIndex === 11 ? 10 : 0,
+        widgetIndex === 11 ? 5 : 0
       );
 
       if (isWidgetTwelve) {
-        context.fillStyle = "#090909";
-        context.fillRect(0, 546, width, 54);
         context.fillStyle = "#ffffff";
+        context.fillRect(0, 546, width, 54);
+        context.fillStyle = "#111111";
         context.textAlign = "center";
         context.textBaseline = "alphabetic";
-        context.font = "700 15px Inter, Arial, sans-serif";
-        const widgetTwelveIdY = 566;
+        context.font = "900 19px Inter, Arial, sans-serif";
+        const widgetTwelveIdY = 561;
         context.fillText(`ID ${resourceForSign.displayId}`, width / 2, widgetTwelveIdY);
         const normalizedHrFooterText = croatianTermsText.trim().replace(/\s+/g, " ");
         context.font = "600 8.4px Inter, Arial, sans-serif";
