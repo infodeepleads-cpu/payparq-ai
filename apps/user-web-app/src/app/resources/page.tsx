@@ -1800,12 +1800,12 @@ export default function ResourcesPage() {
         false,
         widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 || widgetIndex === 11
           ? widgetIndex === 11
-            ? 140
+            ? 136
             : 110
           : undefined,
         widgetIndex === 11 ? 52 : 0,
         widgetIndex === 11 ? 52 : 0,
-        widgetIndex === 11 ? 40 : 0,
+        widgetIndex === 11 ? 30 : 0,
         widgetIndex === 11 ? 10 : 0
       );
 
