@@ -209,6 +209,26 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-13`,
+      templateUrl: "",
+      fileName: "Safe Parking 13",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-14`,
+      templateUrl: "",
+      fileName: "Safe Parking Guest Footer No Title 50x100",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -908,8 +928,9 @@ export default function ResourcesPage() {
       let fileToUpload: File | Blob = file;
 
       // If file is very large or it's Widget 10, try to compress it to fit
-      // Widget 12 stays at original dimensions for exact-size downloads
-      const shouldCompressLargeFile = file.size > 2 * 1024 * 1024 && !widgetId.endsWith("-12");
+      // Widget 12 and 14 stay at original dimensions for exact-size downloads
+      const shouldCompressLargeFile =
+        file.size > 2 * 1024 * 1024 && !widgetId.endsWith("-12") && !widgetId.endsWith("-14");
       if (shouldCompressLargeFile || widgetId.includes("-10")) {
         try {
           fileToUpload = await compressImage(file);
@@ -1009,8 +1030,10 @@ export default function ResourcesPage() {
     const isWidgetNine = widgetIndex === 8;
     const isWidgetEleven = widgetIndex === 10;
     const isWidgetTwelve = widgetIndex === 11;
+    const isWidgetFourteen = widgetIndex === 13;
+    const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
-    const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelve;
+    const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike;
     if (requiresLocationData && !resource) {
       setError("Select a location before downloading sign.");
       return;
@@ -1325,7 +1348,7 @@ export default function ResourcesPage() {
           return null;
         }
       };
-      if (widgetIndex >= 2 && !isGuestParkingWidget && !isWidgetTwelve) {
+      if (widgetIndex >= 2 && !isGuestParkingWidget && !isWidgetTwelveLike) {
         const templateImage = await loadImage(templateUrl);
         const canvas = document.createElement("canvas");
         canvas.width = templateImage.width * outputScale;
@@ -1746,8 +1769,12 @@ export default function ResourcesPage() {
       }
       const templateImage = await loadImage(templateUrl);
       const canvas = document.createElement("canvas");
-      const targetCanvasWidth = isWidgetTwelve ? templateImage.width : width;
-      const targetCanvasHeight = isWidgetTwelve ? templateImage.height : height;
+      const targetCanvasWidth = isWidgetTwelve
+        ? templateImage.width
+        : isWidgetFourteen
+        ? Math.max(1, Math.round(templateImage.height * 0.5))
+        : width;
+      const targetCanvasHeight = isWidgetTwelve || isWidgetFourteen ? templateImage.height : height;
       canvas.width = targetCanvasWidth * outputScale;
       canvas.height = targetCanvasHeight * outputScale;
       const context = canvas.getContext("2d");
@@ -1755,12 +1782,12 @@ export default function ResourcesPage() {
         throw new Error("Unable to render sign canvas.");
       }
       context.scale(outputScale, outputScale);
-      if (isWidgetTwelve) {
-        context.scale(templateImage.width / width, templateImage.height / height);
+      if (isWidgetTwelveLike) {
+        context.scale(targetCanvasWidth / width, targetCanvasHeight / height);
       }
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
-      if (isWidgetTwelve) {
+      if (isWidgetTwelveLike) {
         context.drawImage(templateImage, 0, 0, width, height);
       } else {
         const imageAspect = templateImage.width / templateImage.height;
@@ -1799,7 +1826,8 @@ export default function ResourcesPage() {
         widgetIndex === 4 ||
         widgetIndex === 5 ||
         widgetIndex === 6 ||
-        widgetIndex === 11;
+        widgetIndex === 11 ||
+        widgetIndex === 13;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -1846,7 +1874,7 @@ export default function ResourcesPage() {
 
       const normalizedGuestParkingMinutes =
         widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
-      if (!isWidgetTwelve) {
+      if (!isWidgetTwelveLike) {
         const titleName = isWidgetFive
           ? `Gosti Besplatno ${normalizedGuestParkingMinutes} m. Guests Free ${normalizedGuestParkingMinutes} m.`
           : isWidgetSix
@@ -1883,6 +1911,11 @@ export default function ResourcesPage() {
         }
       }
 
+      const widgetTwelveLikeQrSize = 136;
+      const widgetTwelveLikeQrCenterYOffset = 52;
+      const widgetTwelveLikeQrTrimBottomPx = 52;
+      const widgetTwelveLikeQrWidthDeltaPx = 30;
+      const widgetTwelveLikeQrTopGrowPx = 10;
       drawStyledQr(
         context,
         qrImage,
@@ -1890,18 +1923,22 @@ export default function ResourcesPage() {
         qrModuleCount,
         useExactQrMechanics,
         false,
-        widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 || widgetIndex === 11
-          ? widgetIndex === 11
-            ? 136
+        widgetIndex === 4 ||
+        widgetIndex === 5 ||
+        widgetIndex === 6 ||
+        widgetIndex === 11 ||
+        widgetIndex === 13
+          ? widgetIndex === 11 || widgetIndex === 13
+            ? widgetTwelveLikeQrSize
             : 110
           : undefined,
-        widgetIndex === 11 ? 52 : 0,
-        widgetIndex === 11 ? 52 : 0,
-        widgetIndex === 11 ? 30 : 0,
-        widgetIndex === 11 ? 10 : 0
+        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrCenterYOffset : 0,
+        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrTrimBottomPx : 0,
+        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrWidthDeltaPx : 0,
+        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrTopGrowPx : 0
       );
 
-      if (isWidgetTwelve) {
+      if (isWidgetTwelveLike) {
         context.fillStyle = "#ffffff";
         context.fillRect(0, 546, width, 54);
         context.fillStyle = "#111111";
@@ -2033,7 +2070,7 @@ export default function ResourcesPage() {
       }
 
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
-      if (normalizedExtraText && !isWidgetTwelve) {
+      if (normalizedExtraText && !isWidgetTwelveLike) {
         const footerDescriptionColor =
           widgetIndex === 1 ||
           widgetIndex === 4 ||
@@ -2170,6 +2207,8 @@ export default function ResourcesPage() {
               const isWidgetTen = index === 9;
               const isWidgetEleven = index === 10;
               const isWidgetTwelve = index === 11;
+              const isWidgetFourteen = index === 13;
+              const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isUploadLocked = isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
@@ -2232,7 +2271,7 @@ export default function ResourcesPage() {
                       This widget is optimized for high-resolution images. Large files will be compressed to fit automatically.
                     </p>
                   )}
-                  {(isGuestParkingWidget || isWidgetNine || isWidgetEleven || isWidgetTwelve) && (
+                  {(isGuestParkingWidget || isWidgetNine || isWidgetEleven || isWidgetTwelveLike) && (
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
                         ? "Widget 5 always uses Widget 2 template for the final output."
@@ -2242,6 +2281,8 @@ export default function ResourcesPage() {
                         ? "Widget 7 always uses Widget 2 template for the final output."
                         : isWidgetEleven
                         ? "Widget 11 always uses Widget 8 template and replaces Airport with Safe."
+                        : isWidgetFourteen
+                        ? "Widget 14 matches Widget 12 logic and output content, but exports in 50x100 ratio."
                         : isWidgetTwelve
                         ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
@@ -2307,7 +2348,7 @@ export default function ResourcesPage() {
                                 ? widgetSixTitle
                                 : isWidgetSeven
                                 ? widgetSevenTitle
-                                : isWidgetTwelve
+                                : isWidgetTwelveLike
                                 ? "No title"
                                 : selectedLocation.name}
                             </span>
