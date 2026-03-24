@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import NextImage from "next/image";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -174,6 +175,26 @@ function createDefaultWidgets() {
         userIdNumber: "",
         userRole: "",
       },
+    {
+      id: `widget-${now}-11`,
+      templateUrl: "",
+      fileName: "Safe Parking Safe Arrow Left",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-12`,
+      templateUrl: "",
+      fileName: "Safe Parking Guest Footer No Title",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -795,7 +816,9 @@ export default function ResourcesPage() {
       let fileToUpload: File | Blob = file;
 
       // If file is very large or it's Widget 10, try to compress it to fit
-      if (file.size > 2 * 1024 * 1024 || widgetId.includes("-10")) {
+      // Widget 12 stays at original dimensions for exact-size downloads
+      const shouldCompressLargeFile = file.size > 2 * 1024 * 1024 && !widgetId.endsWith("-12");
+      if (shouldCompressLargeFile || widgetId.includes("-10")) {
         try {
           fileToUpload = await compressImage(file);
         } catch (compressionError) {
@@ -892,8 +915,11 @@ export default function ResourcesPage() {
     const isWidgetSix = widgetIndex === 5;
     const isWidgetSeven = widgetIndex === 6;
     const isWidgetNine = widgetIndex === 8;
+    const isWidgetEleven = widgetIndex === 10;
+    const isWidgetTwelve = widgetIndex === 11;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
-    if ((widgetIndex < 2 || isGuestParkingWidget) && !resource) {
+    const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelve;
+    if (requiresLocationData && !resource) {
       setError("Select a location before downloading sign.");
       return;
     }
@@ -901,7 +927,7 @@ export default function ResourcesPage() {
     const templateUrl =
       isGuestParkingWidget
         ? secondWidgetEffectiveTemplateUrl
-        : isWidgetNine
+        : isWidgetNine || isWidgetEleven
         ? eighthWidgetEffectiveTemplateUrl
         : isWidgetThreeOrFour
         ? widget.templateUrl
@@ -1191,7 +1217,7 @@ export default function ResourcesPage() {
           return null;
         }
       };
-      if (widgetIndex >= 2 && !isGuestParkingWidget) {
+      if (widgetIndex >= 2 && !isGuestParkingWidget && !isWidgetTwelve) {
         const templateImage = await loadImage(templateUrl);
         const canvas = document.createElement("canvas");
         canvas.width = templateImage.width * outputScale;
@@ -1288,7 +1314,7 @@ export default function ResourcesPage() {
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
-        if (widgetIndex !== 7 && widgetIndex !== 8 && widgetIndex !== 9) {
+        if (widgetIndex !== 7 && widgetIndex !== 8 && widgetIndex !== 9 && widgetIndex !== 10) {
           context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         } else if (widgetIndex === 9) {
           // For Widget 10, place the QR code 1.4cm down and 2.7cm to the right from original spot
@@ -1312,7 +1338,7 @@ export default function ResourcesPage() {
           const stickerCenterY = Math.max(stickerDiameter / 2, baseStickerCenterY - pxPerCm * 3.2);
           drawPayparqSticker(context, stickerCenterX, stickerCenterY, stickerDiameter);
         }
-        if (widgetIndex === 7 || widgetIndex === 8) {
+        if (widgetIndex === 7 || widgetIndex === 8 || widgetIndex === 10) {
           const footerCutHeight = Math.max(1, Math.round((56 / height) * templateImage.height));
           const croppedSourceHeight = Math.max(1, templateImage.height - footerCutHeight);
           context.clearRect(0, 0, templateImage.width, templateImage.height);
@@ -1327,7 +1353,7 @@ export default function ResourcesPage() {
             templateImage.width,
             templateImage.height
           );
-          if (widgetIndex === 8) {
+          if (widgetIndex === 8 || widgetIndex === 10) {
             const mirroredCanvas = document.createElement("canvas");
             mirroredCanvas.width = templateImage.width;
             mirroredCanvas.height = templateImage.height;
@@ -1378,17 +1404,143 @@ export default function ResourcesPage() {
             const seamCleanupY = airportLabelY + airportLabelRenderHeight - 1;
             const seamCleanupHeight = Math.max(1, Math.round(templateImage.height * 0.006));
             context.fillStyle = "#ffffff";
-            context.fillRect(airportLabelX, seamCleanupY, airportLabelWidth, seamCleanupHeight);
+            if (widgetIndex === 8) {
+              context.fillRect(airportLabelX, seamCleanupY, airportLabelWidth, seamCleanupHeight);
+            }
             const parkingPCleanupX = airportLabelX + Math.round(airportLabelWidth * 0.01);
             const parkingPCleanupY = airportLabelY + airportLabelRenderHeight - 3;
             const parkingPCleanupWidth = Math.max(1, Math.round(airportLabelWidth * 0.25));
             const parkingPCleanupHeight = Math.max(1, Math.round(templateImage.height * 0.012));
-            context.fillRect(
-              parkingPCleanupX,
-              parkingPCleanupY,
-              parkingPCleanupWidth,
-              parkingPCleanupHeight
-            );
+            if (widgetIndex === 8) {
+              context.fillRect(
+                parkingPCleanupX,
+                parkingPCleanupY,
+                parkingPCleanupWidth,
+                parkingPCleanupHeight
+              );
+            }
+            if (widgetIndex === 10) {
+              const safeShiftLeftPx = Math.round(pxPerCm * 2.2);
+              const airportRowBaseX = airportLabelX + Math.round(airportLabelWidth * 0.43);
+              const airportRowX = Math.max(airportLabelX, airportRowBaseX - safeShiftLeftPx);
+              const airportRowY = airportLabelY + Math.round(airportLabelRenderHeight * 0.01);
+              const maxAirportRowWidth = airportLabelX + airportLabelWidth - airportRowX;
+              const airportRowWidth = Math.max(
+                1,
+                Math.min(Math.round(airportLabelWidth * 0.58), maxAirportRowWidth)
+              );
+              const airportRowHeight = Math.max(1, Math.round(airportLabelRenderHeight * 0.5));
+              context.fillStyle = "#ffffff";
+              context.fillRect(airportRowX, airportRowY, airportRowWidth, airportRowHeight);
+              const overflowCleanupX = Math.max(airportLabelX, airportRowX + airportRowWidth - Math.round(templateImage.width * 0.05));
+              const overflowCleanupWidth = Math.max(
+                1,
+                Math.min(Math.round(airportLabelWidth * 0.24), airportLabelX + airportLabelWidth - overflowCleanupX)
+              );
+              const overflowCleanupY = Math.max(airportLabelY, airportRowY - Math.round(templateImage.height * 0.006));
+              const overflowCleanupHeight = Math.max(
+                1,
+                Math.min(
+                  airportLabelRenderHeight,
+                  airportRowHeight + Math.round(templateImage.height * 0.004)
+                )
+              );
+              context.fillRect(
+                overflowCleanupX,
+                overflowCleanupY,
+                overflowCleanupWidth,
+                overflowCleanupHeight
+              );
+              const leftOverflowCleanupX = Math.max(
+                0,
+                airportRowX - Math.round(templateImage.width * 0.05)
+              );
+              const leftOverflowCleanupWidth = Math.max(
+                1,
+                Math.min(
+                  Math.round(airportLabelWidth * 0.28),
+                  templateImage.width - leftOverflowCleanupX
+                )
+              );
+              context.fillRect(
+                leftOverflowCleanupX,
+                overflowCleanupY,
+                leftOverflowCleanupWidth,
+                overflowCleanupHeight
+              );
+              const airportALeftCleanupX = Math.max(
+                airportLabelX,
+                airportRowX - Math.round(templateImage.width * 0.03)
+              );
+              const airportALeftCleanupY = Math.max(
+                airportLabelY,
+                airportRowY - Math.round(templateImage.height * 0.004)
+              );
+              const airportALeftCleanupWidth = Math.max(
+                1,
+                Math.round(airportLabelWidth * 0.12)
+              );
+              const airportALeftCleanupHeight = Math.max(
+                1,
+                Math.round(airportRowHeight * 0.92)
+              );
+              context.fillRect(
+                airportALeftCleanupX,
+                airportALeftCleanupY,
+                airportALeftCleanupWidth,
+                airportALeftCleanupHeight
+              );
+              const parkingBottomCleanupX = Math.max(0, parkingPCleanupX - Math.round(pxPerCm * 0.2));
+              const parkingBottomCleanupY = parkingPCleanupY + parkingPCleanupHeight;
+              const parkingBottomCleanupWidth = Math.max(1, Math.round(airportLabelWidth * 0.16));
+              const parkingBottomCleanupHeight = Math.max(
+                1,
+                Math.round(templateImage.height * 0.004)
+              );
+              context.fillRect(
+                parkingBottomCleanupX,
+                parkingBottomCleanupY,
+                parkingBottomCleanupWidth,
+                parkingBottomCleanupHeight
+              );
+              const parkingBottomFarCleanupY = Math.min(
+                templateImage.height - 1,
+                parkingBottomCleanupY + Math.round(pxPerCm * 1.45)
+              );
+              const parkingBottomFarCleanupHeight = Math.max(
+                1,
+                Math.round(pxPerCm * 0.55)
+              );
+              context.fillRect(
+                parkingBottomCleanupX,
+                parkingBottomFarCleanupY,
+                parkingBottomCleanupWidth,
+                Math.min(parkingBottomFarCleanupHeight, templateImage.height - parkingBottomFarCleanupY)
+              );
+              context.fillStyle = "#111111";
+              context.textAlign = "left";
+              context.textBaseline = "middle";
+              const airportFontSize = Math.max(18, Math.round(templateImage.height * 0.066));
+              context.font = `700 ${airportFontSize}px Montserrat, Inter, Arial, sans-serif`;
+              const safeTextX = airportRowX + Math.round(templateImage.width * 0.008);
+              const safeTextY = airportRowY + airportRowHeight / 2;
+              context.fillStyle = "#ffffff";
+              const safeLeftArtifactCleanupX = Math.max(0, safeTextX - Math.round(pxPerCm * 1.2));
+              const safeLeftArtifactCleanupY = Math.max(
+                airportLabelY,
+                airportRowY - Math.round(templateImage.height * 0.004)
+              );
+              const safeLeftArtifactCleanupWidth = Math.max(1, Math.round(pxPerCm * 0.9));
+              const safeLeftArtifactCleanupHeight = Math.max(1, Math.round(airportRowHeight * 0.95));
+              context.fillRect(
+                safeLeftArtifactCleanupX,
+                safeLeftArtifactCleanupY,
+                safeLeftArtifactCleanupWidth,
+                safeLeftArtifactCleanupHeight
+              );
+              context.fillStyle = "#111111";
+              context.fillText("Safe", safeTextX, safeTextY);
+            }
           }
           context.fillStyle = "#111111";
           context.textAlign = "center";
@@ -1425,7 +1577,6 @@ export default function ResourcesPage() {
           }
           const cmToPx = 104 / 4; // 104px is 4cm for the QR code in the template
           const shiftUp = 10 * cmToPx; // Shifted an additional 1cm up (total 10cm)
-          const shiftLeft = 2 * cmToPx; // Total 2cm left shift remains unchanged
 
           context.fillStyle = "#111111";
           context.textBaseline = "alphabetic";
@@ -1463,13 +1614,8 @@ export default function ResourcesPage() {
 
           // Draw the Payparq Logo (Sticker) across the photo area
           // Logo Shift: 1.5cm right and 1cm down from its centered position
-          const logoDiameter = 80 * scaleX; 
-          const logoCenterX = (width / 2 + 1.5 * cmToPx) * scaleX + offsetX;
-          const logoCenterY = (150 + 1.0 * cmToPx) * scaleY + offsetY; 
-          
           context.save();
           context.globalAlpha = 0.85; // Slight transparency to look like a watermark/sticker
-          // drawPayparqSticker(context, logoCenterX, logoCenterY, logoDiameter); // Removed duplicate logo as requested
           context.restore();
 
           // ID: Shifted 2cm left from centered position below photo, and 0.5cm lower
@@ -1490,35 +1636,42 @@ export default function ResourcesPage() {
         await downloadCanvas(canvas);
         return;
       }
+      const templateImage = await loadImage(templateUrl);
       const canvas = document.createElement("canvas");
-      canvas.width = width * outputScale;
-      canvas.height = height * outputScale;
+      const targetCanvasWidth = isWidgetTwelve ? templateImage.width : width;
+      const targetCanvasHeight = isWidgetTwelve ? templateImage.height : height;
+      canvas.width = targetCanvasWidth * outputScale;
+      canvas.height = targetCanvasHeight * outputScale;
       const context = canvas.getContext("2d");
       if (!context) {
         throw new Error("Unable to render sign canvas.");
       }
       context.scale(outputScale, outputScale);
+      if (isWidgetTwelve) {
+        context.scale(templateImage.width / width, templateImage.height / height);
+      }
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
-
-      const templateImage = await loadImage(templateUrl);
-
-      const imageAspect = templateImage.width / templateImage.height;
-      const canvasAspect = width / height;
-      let drawWidth = width;
-      let drawHeight = height;
-      let offsetX = 0;
-      let offsetY = 0;
-      if (imageAspect > canvasAspect) {
-        drawHeight = height;
-        drawWidth = drawHeight * imageAspect;
-        offsetX = (width - drawWidth) / 2;
+      if (isWidgetTwelve) {
+        context.drawImage(templateImage, 0, 0, width, height);
       } else {
-        drawWidth = width;
-        drawHeight = drawWidth / imageAspect;
-        offsetY = (height - drawHeight) / 2;
+        const imageAspect = templateImage.width / templateImage.height;
+        const canvasAspect = width / height;
+        let drawWidth = width;
+        let drawHeight = height;
+        let offsetX = 0;
+        let offsetY = 0;
+        if (imageAspect > canvasAspect) {
+          drawHeight = height;
+          drawWidth = drawHeight * imageAspect;
+          offsetX = (width - drawWidth) / 2;
+        } else {
+          drawWidth = width;
+          drawHeight = drawWidth / imageAspect;
+          offsetY = (height - drawHeight) / 2;
+        }
+        context.drawImage(templateImage, offsetX, offsetY, drawWidth, drawHeight);
       }
-      context.drawImage(templateImage, offsetX, offsetY, drawWidth, drawHeight);
       if (!resourceForSign) {
         throw new Error("Select a location before downloading sign.");
       }
@@ -1533,7 +1686,12 @@ export default function ResourcesPage() {
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
       const useExactQrMechanics =
-        widgetIndex === 0 || widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6;
+        widgetIndex === 0 ||
+        widgetIndex === 1 ||
+        widgetIndex === 4 ||
+        widgetIndex === 5 ||
+        widgetIndex === 6 ||
+        widgetIndex === 11;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -1580,61 +1738,111 @@ export default function ResourcesPage() {
 
       const normalizedGuestParkingMinutes =
         widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
-      const titleName = isWidgetFive
-        ? `Gosti Besplatno ${normalizedGuestParkingMinutes} m. Guests Free ${normalizedGuestParkingMinutes} m.`
-        : isWidgetSix
-        ? "Parking za Goste Guests Only"
-        : isWidgetSeven
-        ? "Cijena:0.1€/sat-3.9€/sat Price:0.1€/h-3.9€/h"
-        : resourceForSign.name;
-      const titleLines = isWidgetFive
-        ? [
-            `Gosti Besplatno ${normalizedGuestParkingMinutes} m.`,
-            `Guests Free ${normalizedGuestParkingMinutes} m.`,
-          ]
-        : isWidgetSix
-        ? ["Parking za Goste", "Guests Only"]
-        : isWidgetSeven
-        ? ["Cijena:0.1€/sat-3.9€/sat", "Price:0.1€/h-3.9€/h"]
-        : splitSignTitle(titleName);
-      context.fillStyle = "#111111";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      const titleFont = isGuestParkingWidget
-        ? "600 34px Montserrat, Inter, Arial, sans-serif"
-        : "900 34px Montserrat, Inter, Arial, sans-serif";
-      context.font = titleFont;
-      const titleTop = 13;
-      const titleBottom = 121;
-      const titleCenterY = (titleTop + titleBottom) / 2;
-      if (titleLines.length > 1) {
-        const gap = 36;
-        context.fillText(titleLines[0], width / 2, titleCenterY - gap / 2);
-        context.fillText(titleLines[1], width / 2, titleCenterY + gap / 2);
-      } else {
-        context.fillText(titleLines[0], width / 2, titleCenterY);
+      if (!isWidgetTwelve) {
+        const titleName = isWidgetFive
+          ? `Gosti Besplatno ${normalizedGuestParkingMinutes} m. Guests Free ${normalizedGuestParkingMinutes} m.`
+          : isWidgetSix
+          ? "Parking za Goste Guests Only"
+          : isWidgetSeven
+          ? "Cijena:0.1€/sat-3.9€/sat Price:0.1€/h-3.9€/h"
+          : resourceForSign.name;
+        const titleLines = isWidgetFive
+          ? [
+              `Gosti Besplatno ${normalizedGuestParkingMinutes} m.`,
+              `Guests Free ${normalizedGuestParkingMinutes} m.`,
+            ]
+          : isWidgetSix
+          ? ["Parking za Goste", "Guests Only"]
+          : isWidgetSeven
+          ? ["Cijena:0.1€/sat-3.9€/sat", "Price:0.1€/h-3.9€/h"]
+          : splitSignTitle(titleName);
+        context.fillStyle = "#111111";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        const titleFont = isGuestParkingWidget
+          ? "600 34px Montserrat, Inter, Arial, sans-serif"
+          : "900 34px Montserrat, Inter, Arial, sans-serif";
+        context.font = titleFont;
+        const titleTop = 13;
+        const titleBottom = 121;
+        const titleCenterY = (titleTop + titleBottom) / 2;
+        if (titleLines.length > 1) {
+          const gap = 36;
+          context.fillText(titleLines[0], width / 2, titleCenterY - gap / 2);
+          context.fillText(titleLines[1], width / 2, titleCenterY + gap / 2);
+        } else {
+          context.fillText(titleLines[0], width / 2, titleCenterY);
+        }
       }
 
       drawStyledQr(
         context,
         qrImage,
-        widgetIndex > 1 && widgetIndex !== 4,
+        widgetIndex > 1 && widgetIndex !== 4 && widgetIndex !== 11,
         qrModuleCount,
         useExactQrMechanics,
         false,
-        widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 ? 110 : undefined
+        widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6 || widgetIndex === 11
+          ? widgetIndex === 11
+            ? 88
+            : 110
+          : undefined
       );
 
-      context.fillStyle = "#111111";
-      context.textAlign = "left";
-      context.textBaseline = "alphabetic";
-      context.font = "700 14px Inter, Arial, sans-serif";
-      context.fillText(resourceForSign.displayId, 34, 593);
+      if (isWidgetTwelve) {
+        context.fillStyle = "#090909";
+        context.fillRect(0, 546, width, 54);
+        context.fillStyle = "#ffffff";
+        context.textAlign = "center";
+        context.textBaseline = "alphabetic";
+        context.font = "700 15px Inter, Arial, sans-serif";
+        const widgetTwelveIdY = 566;
+        context.fillText(`ID ${resourceForSign.displayId}`, width / 2, widgetTwelveIdY);
+        const normalizedHrFooterText = croatianTermsText.trim().replace(/\s+/g, " ");
+        context.font = "600 8.4px Inter, Arial, sans-serif";
+        const footerWords = normalizedHrFooterText.split(" ");
+        const footerLines: string[] = [];
+        let footerCurrentLine = "";
+        const footerLineHeight = 8.8;
+        const footerStartY = 579;
+        const footerMaxLines = 3;
+        const footerMaxWidth = 360;
+        for (const word of footerWords) {
+          const candidate = footerCurrentLine ? `${footerCurrentLine} ${word}` : word;
+          if (context.measureText(candidate).width <= footerMaxWidth) {
+            footerCurrentLine = candidate;
+          } else {
+            if (footerCurrentLine) {
+              footerLines.push(footerCurrentLine);
+            }
+            footerCurrentLine = word;
+          }
+          if (footerLines.length >= footerMaxLines) {
+            break;
+          }
+        }
+        if (footerCurrentLine && footerLines.length < footerMaxLines) {
+          footerLines.push(footerCurrentLine);
+        }
+        for (let i = 0; i < footerLines.length; i += 1) {
+          context.fillText(footerLines[i], width / 2, footerStartY + i * footerLineHeight);
+        }
+      } else {
+        context.fillStyle = "#111111";
+        context.textAlign = "left";
+        context.textBaseline = "alphabetic";
+        context.font = "700 14px Inter, Arial, sans-serif";
+        context.fillText(resourceForSign.displayId, 34, 593);
+      }
 
       const normalizedExtraText = widget.extraText.trim().replace(/\s+/g, " ");
-      if (normalizedExtraText) {
+      if (normalizedExtraText && !isWidgetTwelve) {
         const footerDescriptionColor =
-          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
+          widgetIndex === 1 ||
+          widgetIndex === 4 ||
+          widgetIndex === 5 ||
+          widgetIndex === 6 ||
+          widgetIndex === 11
             ? "#6b7280"
             : "#111111";
         context.fillStyle = footerDescriptionColor;
@@ -1668,7 +1876,11 @@ export default function ResourcesPage() {
           extraLines.push(currentLine);
         }
         const widgetTwoFooterLift =
-          widgetIndex === 1 || widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
+          widgetIndex === 1 ||
+          widgetIndex === 4 ||
+          widgetIndex === 5 ||
+          widgetIndex === 6 ||
+          widgetIndex === 11
             ? (width / 10) * 0.15
             : 0;
         const extraStartY = footerTopY + extraLineHeight - widgetTwoFooterLift;
@@ -1759,8 +1971,10 @@ export default function ResourcesPage() {
               const isWidgetSeven = index === 6;
               const isWidgetNine = index === 8;
               const isWidgetTen = index === 9;
+              const isWidgetEleven = index === 10;
+              const isWidgetTwelve = index === 11;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
-              const isUploadLocked = isGuestParkingWidget || isWidgetNine;
+              const isUploadLocked = isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
@@ -1772,7 +1986,7 @@ export default function ResourcesPage() {
               const effectiveTemplateUrl =
                 isGuestParkingWidget
                   ? secondWidgetEffectiveTemplateUrl
-                  : isWidgetNine
+                  : isWidgetNine || isWidgetEleven
                   ? eighthWidgetEffectiveTemplateUrl
                   : isWidgetThreeOrFour
                   ? widget.templateUrl
@@ -1821,7 +2035,7 @@ export default function ResourcesPage() {
                       This widget is optimized for high-resolution images. Large files will be compressed to fit automatically.
                     </p>
                   )}
-                  {(isGuestParkingWidget || isWidgetNine) && (
+                  {(isGuestParkingWidget || isWidgetNine || isWidgetEleven || isWidgetTwelve) && (
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
                         ? "Widget 5 always uses Widget 2 template for the final output."
@@ -1829,15 +2043,23 @@ export default function ResourcesPage() {
                         ? "Widget 6 always uses Widget 2 template for the final output."
                         : isWidgetSeven
                         ? "Widget 7 always uses Widget 2 template for the final output."
+                        : isWidgetEleven
+                        ? "Widget 11 always uses Widget 8 template and replaces Airport with Safe."
+                        : isWidgetTwelve
+                        ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
                     </p>
                   )}
                   {effectiveTemplateUrl ? (
                     <div className="space-y-3">
-                      <img
+                      <NextImage
                         src={effectiveTemplateUrl}
                         alt={`Uploaded photo for widget ${index + 1}`}
-                        className="w-full max-w-md rounded-xl border border-white/15"
+                        width={1200}
+                        height={800}
+                        loader={({ src }) => src}
+                        unoptimized
+                        className="w-full h-auto max-w-md rounded-xl border border-white/15"
                       />
                       <a
                         href={effectiveTemplateUrl}
@@ -1888,6 +2110,8 @@ export default function ResourcesPage() {
                                 ? widgetSixTitle
                                 : isWidgetSeven
                                 ? widgetSevenTitle
+                                : isWidgetTwelve
+                                ? "No title"
                                 : selectedLocation.name}
                             </span>
                           </p>
