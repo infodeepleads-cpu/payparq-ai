@@ -1913,9 +1913,9 @@ export default function ResourcesPage() {
 
       const widgetTwelveLikeQrSize = 136;
       const widgetTwelveLikeQrCenterYOffset = 52;
-      const widgetTwelveLikeQrTrimBottomPx = 52;
-      const widgetTwelveLikeQrWidthDeltaPx = 30;
-      const widgetTwelveLikeQrTopGrowPx = 10;
+      const widgetTwelveLikeQrTrimBottomPx = 53.3; // Increased height by 0.05cm (1.3px) from bottom
+      const widgetTwelveLikeQrWidthDeltaPx = 35.2; // Increased width by total 0.1cm (2.6px) on both sides (Total 0.2cm increase)
+      const widgetTwelveLikeQrTopGrowPx = 7.4; // Increased height by 0.05cm (1.3px) from top
       drawStyledQr(
         context,
         qrImage,
