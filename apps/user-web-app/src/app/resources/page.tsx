@@ -1802,44 +1802,48 @@ export default function ResourcesPage() {
       }
       const templateImage = await loadImage(templateUrl);
       const canvas = document.createElement("canvas");
+      const widgetTwelveBaseRenderWidth = isWidgetTwelve
+        ? templateImage.width
+        : Math.max(1, Math.round(templateImage.width * 1.1));
+      const widgetTwelveBaseRenderHeight = templateImage.height;
       const targetCanvasWidth = isWidgetTwelve
         ? templateImage.width
         : isWidgetFourteen
         ? Math.max(1, Math.round(templateImage.height * 0.5))
         : isWidgetFifteen
-        ? Math.max(1, Math.round(templateImage.width * 1.1))
+        ? widgetTwelveBaseRenderWidth
         : width;
       const targetCanvasHeight = isWidgetTwelveLike ? templateImage.height : height;
       canvas.width = targetCanvasWidth * outputScale;
       canvas.height = targetCanvasHeight * outputScale;
-      const context = canvas.getContext("2d");
-      if (!context) {
+      const exportContext = canvas.getContext("2d");
+      if (!exportContext) {
         throw new Error("Unable to render sign canvas.");
+      }
+      let widgetFourteenContentCanvas: HTMLCanvasElement | null = null;
+      let context = exportContext;
+      let renderCanvasWidth = targetCanvasWidth;
+      let renderCanvasHeight = targetCanvasHeight;
+      if (isWidgetFourteen) {
+        widgetFourteenContentCanvas = document.createElement("canvas");
+        widgetFourteenContentCanvas.width = widgetTwelveBaseRenderWidth * outputScale;
+        widgetFourteenContentCanvas.height = widgetTwelveBaseRenderHeight * outputScale;
+        const widgetFourteenContentContext = widgetFourteenContentCanvas.getContext("2d");
+        if (!widgetFourteenContentContext) {
+          throw new Error("Unable to render widget 14 canvas.");
+        }
+        context = widgetFourteenContentContext;
+        renderCanvasWidth = widgetTwelveBaseRenderWidth;
+        renderCanvasHeight = widgetTwelveBaseRenderHeight;
       }
       context.scale(outputScale, outputScale);
       if (isWidgetTwelveLike) {
-        context.scale(targetCanvasWidth / width, targetCanvasHeight / height);
+        context.scale(renderCanvasWidth / width, renderCanvasHeight / height);
       }
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
       if (isWidgetTwelveLike) {
-        if (isWidgetFourteen) {
-          const widgetFourteenTemplateWidthShrinkPx = 0;
-          const widgetFourteenTemplateShiftUpPx = 7.8;
-          const widgetFourteenTemplateWidthScale = Math.max(
-            0.01,
-            (width - widgetFourteenTemplateWidthShrinkPx) / width
-          );
-          context.save();
-          context.translate(width / 2, 0);
-          context.scale(widgetFourteenTemplateWidthScale, 1);
-          context.translate(-width / 2, 0);
-          context.translate(0, -widgetFourteenTemplateShiftUpPx);
-          context.drawImage(templateImage, 0, 0, width, height);
-          context.restore();
-        } else {
-          context.drawImage(templateImage, 0, 0, width, height);
-        }
+        context.drawImage(templateImage, 0, 0, width, height);
       } else {
         const imageAspect = templateImage.width / templateImage.height;
         const canvasAspect = width / height;
@@ -1976,7 +1980,8 @@ export default function ResourcesPage() {
       const widgetTwelveLikeQrTopGrowPx = 7.4; // Increased height by 0.05cm (1.3px) from top
       const widgetFourteenQrShellHeightDeltaPx = 7.8;
       const widgetFourteenQrWidthDeltaPx = 0;
-      const widgetFourteenQrWidthCompensationScale = (targetCanvasHeight / height) / (targetCanvasWidth / width);
+      const widgetFourteenQrWidthCompensationScale =
+        (renderCanvasHeight / height) / (renderCanvasWidth / width);
       drawStyledQr(
         context,
         qrImage,
@@ -2184,6 +2189,82 @@ export default function ResourcesPage() {
         for (let i = 0; i < extraLines.length; i += 1) {
           context.fillText(extraLines[i], textStartX, extraStartY + i * extraLineHeight);
         }
+      }
+
+      if (isWidgetFourteen && widgetFourteenContentCanvas) {
+        const cropTopRatio = 0.15;
+        const innerWidthRatio = 0.82;
+        const sourceWidth = widgetFourteenContentCanvas.width;
+        const sourceHeight = widgetFourteenContentCanvas.height;
+        const croppedTop = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * cropTopRatio)));
+        const sourceDrawHeight = Math.max(1, sourceHeight - croppedTop);
+        const innerWidth = Math.max(1, Math.round(canvas.width * innerWidthRatio));
+        let innerHeight = Math.max(1, Math.round((sourceDrawHeight * innerWidth) / sourceWidth));
+        if (innerHeight > canvas.height) {
+          innerHeight = canvas.height;
+        }
+        const innerX = Math.round((canvas.width - innerWidth) / 2);
+        const innerY = Math.round((canvas.height - innerHeight) / 2);
+        exportContext.clearRect(0, 0, canvas.width, canvas.height);
+        if (innerX > 0) {
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            0,
+            croppedTop,
+            1,
+            sourceDrawHeight,
+            0,
+            0,
+            innerX,
+            canvas.height
+          );
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            sourceWidth - 1,
+            croppedTop,
+            1,
+            sourceDrawHeight,
+            innerX + innerWidth,
+            0,
+            canvas.width - (innerX + innerWidth),
+            canvas.height
+          );
+        }
+        if (innerY > 0) {
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            0,
+            croppedTop,
+            sourceWidth,
+            1,
+            0,
+            0,
+            canvas.width,
+            innerY
+          );
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            0,
+            sourceHeight - 1,
+            sourceWidth,
+            1,
+            0,
+            innerY + innerHeight,
+            canvas.width,
+            canvas.height - (innerY + innerHeight)
+          );
+        }
+        exportContext.drawImage(
+          widgetFourteenContentCanvas,
+          0,
+          croppedTop,
+          sourceWidth,
+          sourceDrawHeight,
+          innerX,
+          innerY,
+          innerWidth,
+          innerHeight
+        );
       }
 
       await downloadCanvas(canvas);
