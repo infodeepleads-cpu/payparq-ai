@@ -61,6 +61,8 @@ type SignWidget = {
   extraText: string;
   guestParkingMinutes: string;
   selectedLocationId: string;
+  priceBottom?: string;
+  priceTop?: string;
   uploading: boolean;
   downloading: boolean;
   userName?: string;
@@ -78,6 +80,8 @@ type PersistedSignWidget = Pick<
   | "extraText"
   | "guestParkingMinutes"
   | "selectedLocationId"
+  | "priceBottom"
+  | "priceTop"
   | "userName"
   | "userIdNumber"
   | "userRole"
@@ -246,6 +250,8 @@ function createDefaultWidgets() {
       extraText: bilingualTermsText,
       guestParkingMinutes: "90",
       selectedLocationId: "",
+      priceBottom: "",
+      priceTop: "",
       uploading: false,
       downloading: false,
     },
@@ -270,6 +276,8 @@ function parsePersistedWidgets(raw: string) {
       guestParkingMinutes:
         typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
       selectedLocationId: typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
+      priceBottom: typeof item?.priceBottom === "string" ? item.priceBottom : "",
+      priceTop: typeof item?.priceTop === "string" ? item.priceTop : "",
       userName: typeof item?.userName === "string" ? item.userName : undefined,
       userIdNumber: typeof item?.userIdNumber === "string" ? item.userIdNumber : undefined,
       userRole: typeof item?.userRole === "string" ? item.userRole : undefined,
@@ -290,6 +298,8 @@ function mergeWithDefaultWidgets(parsedWidgets: SignWidget[]) {
       ...defaultWidget,
       ...storedWidget,
       guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
+      priceBottom: storedWidget.priceBottom ?? defaultWidget.priceBottom,
+      priceTop: storedWidget.priceTop ?? defaultWidget.priceTop,
       userName: storedWidget.userName ?? defaultWidget.userName,
       userIdNumber: storedWidget.userIdNumber ?? defaultWidget.userIdNumber,
       userRole: storedWidget.userRole ?? defaultWidget.userRole,
@@ -310,6 +320,8 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
       extraText,
       guestParkingMinutes,
       selectedLocationId,
+      priceBottom,
+      priceTop,
       userName,
       userIdNumber,
       userRole,
@@ -321,6 +333,8 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
         extraText,
         guestParkingMinutes,
         selectedLocationId,
+        priceBottom,
+        priceTop,
         userName,
         userIdNumber,
         userRole,
@@ -869,6 +883,8 @@ export default function ResourcesPage() {
         extraText: "",
         guestParkingMinutes: "90",
         selectedLocationId: sortedLocations[0]?.id ?? "",
+        priceBottom: "",
+        priceTop: "",
         uploading: false,
         downloading: false,
       },
@@ -2007,6 +2023,9 @@ export default function ResourcesPage() {
       const widgetFourteenQrWidthReducePx = qrPixelsPerCm * 0.8;
       const widgetFourteenQrShellHeightDeltaPx = 7.8;
       const widgetFourteenQrWidthDeltaPx = -widgetFourteenQrWidthReducePx;
+      const widgetSixteenQrExtraWidthReducePx = qrPixelsPerCm * 0.1;
+      const widgetSixteenQrWidthDeltaPx =
+        widgetFourteenQrWidthDeltaPx - widgetSixteenQrExtraWidthReducePx;
       const widgetFourteenQrWidthCompensationScale =
         (renderCanvasHeight / height) / (renderCanvasWidth / width);
       drawStyledQr(
@@ -2033,7 +2052,9 @@ export default function ResourcesPage() {
           : 0,
         isWidgetTwelveBaseLike || isWidgetFourteenFamily
           ? isWidgetFourteenFamily
-            ? widgetFourteenQrWidthDeltaPx
+            ? isWidgetSixteen
+              ? widgetSixteenQrWidthDeltaPx
+              : widgetFourteenQrWidthDeltaPx
             : widgetTwelveLikeQrWidthDeltaPx
           : 0,
         isWidgetTwelveBaseLike ? widgetTwelveLikeQrTopGrowPx : 0,
@@ -2061,105 +2082,123 @@ export default function ResourcesPage() {
         context.scale(widgetTwelveIdScaleX, 1);
         context.fillText(widgetTwelveIdText, 0, 0);
         context.restore();
-        const widgetTwelveHrFooter = croatianTermsText
-          .replace(/Cijena\s+od\s*[\d.,]+\s*€?\s*do\s*[\d.,]+\s*€?\s*\/?\s*h\s*,?\s*/i, "")
-          .replace(/obvezna\s+autorizacija/gi, "Obvezna Autorizacija")
-          .trim()
-          .replace(/\s+/g, " ");
-        const widgetTwelveEngFooterRaw = englishTermsText
-          .replace(/Price\s+from\s*€?\s*[\d.,]+\s*to\s*€?\s*[\d.,]+\s*\/?\s*h\s*,?\s*/i, "")
-          .replace(/mandatory\.?\s+authorization\.?/gi, "Mandatory Auth")
-          .trim()
-          .replace(/\s+/g, " ");
-        const operatorFooterLabel = "Operator: Indirektno";
-        const hrFooterWithoutOperator = widgetTwelveHrFooter
-          .replace(/Operater:\s*Indirektno,?\s*/i, "")
-          .trim()
-          .replace(/\s+/g, " ");
-        const engFooterWithoutOperator = widgetTwelveEngFooterRaw
-          .replace(/Operator:\s*Indirektno,?\s*/i, "")
-          .trim()
-          .replace(/\s+/g, " ");
-        const normalizedHrFooterText = `${hrFooterWithoutOperator} ${engFooterWithoutOperator}`;
         context.font = "600 6.2px Inter, Arial, sans-serif";
-        const footerWords = normalizedHrFooterText.split(" ");
         const footerLineHeight = 6.8;
         const footerStartY = 574;
-        const footerMaxWidth = 360;
-        const footerConsumeLine = (
-          words: string[],
-          startIndex: number,
-          preferredWidth: number
-        ) => {
-          let index = startIndex;
-          let line = "";
-          while (index < words.length) {
-            const candidate = line ? `${line} ${words[index]}` : words[index];
-            const candidateWidth = context.measureText(candidate).width;
-            if (!line) {
-              line = candidate;
-              index += 1;
-              continue;
-            }
-            if (candidateWidth <= preferredWidth) {
-              line = candidate;
-              index += 1;
-              continue;
-            }
-            break;
-          }
-          return { line, nextIndex: index };
-        };
-        const firstLineTargetWidth = footerMaxWidth * 0.9;
-        const secondLineTargetWidth = footerMaxWidth * 0.84;
-        const firstLineChunk = footerConsumeLine(footerWords, 0, firstLineTargetWidth);
-        const secondLineChunk = footerConsumeLine(
-          footerWords,
-          firstLineChunk.nextIndex,
-          secondLineTargetWidth
-        );
-        let firstLine = firstLineChunk.line;
-        let secondLine = secondLineChunk.line;
-        let thirdLine = footerWords.slice(secondLineChunk.nextIndex).join(" ");
-        const removeMandatoryAuth = (line: string) =>
-          line
-            .replace(/\bMandatory\s+Auth\b/gi, "")
-            .trim()
-            .replace(/\s+/g, " ");
-        firstLine = removeMandatoryAuth(firstLine);
-        secondLine = removeMandatoryAuth(secondLine);
-        thirdLine = removeMandatoryAuth(thirdLine);
-        secondLine = `${secondLine} Mandatory Auth`.trim().replace(/\s+/g, " ");
-        thirdLine = `${operatorFooterLabel} ${thirdLine}`.trim().replace(/\s+/g, " ");
-        const moveLastWordToNextLine = (line: string, nextLine: string) => {
-          const words = line.split(" ").filter((word) => word.length > 0);
-          if (words.length <= 1) {
-            return { line, nextLine };
-          }
-          const shifted = words.pop() ?? "";
-          return {
-            line: words.join(" "),
-            nextLine: `${shifted} ${nextLine}`.trim().replace(/\s+/g, " "),
-          };
-        };
-        while (context.measureText(secondLine).width >= context.measureText(firstLine).width) {
-          const rebalanced = moveLastWordToNextLine(secondLine, thirdLine);
-          if (rebalanced.line === secondLine) {
-            break;
-          }
-          secondLine = rebalanced.line;
-          thirdLine = rebalanced.nextLine;
-        }
-        while (context.measureText(thirdLine).width >= context.measureText(secondLine).width) {
-          const thirdWords = thirdLine.split(" ").filter((word) => word.length > 0);
-          if (thirdWords.length <= 1) {
-            break;
-          }
-          const shifted = thirdWords.shift() ?? "";
-          secondLine = `${secondLine} ${shifted}`.trim().replace(/\s+/g, " ");
-          thirdLine = thirdWords.join(" ");
-        }
-        const footerLines = [firstLine, secondLine, thirdLine].filter((line) => line.length > 0);
+        const widgetSixteenPriceBottom = (widget.priceBottom ?? "").trim();
+        const widgetSixteenPriceTop = (widget.priceTop ?? "").trim();
+        const hasWidgetSixteenPriceRange =
+          widgetSixteenPriceBottom.length > 0 && widgetSixteenPriceTop.length > 0;
+        const widgetSixteenHrPriceSegment = hasWidgetSixteenPriceRange
+          ? ` Cijena od ${widgetSixteenPriceBottom}€ do ${widgetSixteenPriceTop}€/h,`
+          : "";
+        const widgetSixteenEngPriceSegment = hasWidgetSixteenPriceRange
+          ? ` Price from €${widgetSixteenPriceBottom} to €${widgetSixteenPriceTop}/h,`
+          : "";
+        const footerLines = isWidgetSixteen
+          ? [
+              `HR: Ulaskom pristajete na uvjete.${widgetSixteenHrPriceSegment} obvezna autorizacija. Operater: Indirektno, OIB: 83928715622, Podrška: payparq@outlook.com.`,
+              `ENG: By entering, you agree to the terms.${widgetSixteenEngPriceSegment} mandatory authorization. Operator: Indirektno,`,
+              "OIB: 83928715622, Support: payparq@outlook.com.",
+            ]
+          : (() => {
+              const widgetTwelveHrFooter = croatianTermsText
+                .replace(/Cijena\s+od\s*[\d.,]+\s*€?\s*do\s*[\d.,]+\s*€?\s*\/?\s*h\s*,?\s*/i, "")
+                .replace(/obvezna\s+autorizacija/gi, "Obvezna Autorizacija")
+                .trim()
+                .replace(/\s+/g, " ");
+              const widgetTwelveEngFooterRaw = englishTermsText
+                .replace(/Price\s+from\s*€?\s*[\d.,]+\s*to\s*€?\s*[\d.,]+\s*\/?\s*h\s*,?\s*/i, "")
+                .replace(/mandatory\.?\s+authorization\.?/gi, "Mandatory Auth")
+                .trim()
+                .replace(/\s+/g, " ");
+              const operatorFooterLabel = "Operator: Indirektno";
+              const hrFooterWithoutOperator = widgetTwelveHrFooter
+                .replace(/Operater:\s*Indirektno,?\s*/i, "")
+                .trim()
+                .replace(/\s+/g, " ");
+              const engFooterWithoutOperator = widgetTwelveEngFooterRaw
+                .replace(/Operator:\s*Indirektno,?\s*/i, "")
+                .trim()
+                .replace(/\s+/g, " ");
+              const normalizedHrFooterText = `${hrFooterWithoutOperator} ${engFooterWithoutOperator}`;
+              const footerWords = normalizedHrFooterText.split(" ");
+              const footerMaxWidth = 360;
+              const footerConsumeLine = (
+                words: string[],
+                startIndex: number,
+                preferredWidth: number
+              ) => {
+                let index = startIndex;
+                let line = "";
+                while (index < words.length) {
+                  const candidate = line ? `${line} ${words[index]}` : words[index];
+                  const candidateWidth = context.measureText(candidate).width;
+                  if (!line) {
+                    line = candidate;
+                    index += 1;
+                    continue;
+                  }
+                  if (candidateWidth <= preferredWidth) {
+                    line = candidate;
+                    index += 1;
+                    continue;
+                  }
+                  break;
+                }
+                return { line, nextIndex: index };
+              };
+              const firstLineTargetWidth = footerMaxWidth * 0.9;
+              const secondLineTargetWidth = footerMaxWidth * 0.84;
+              const firstLineChunk = footerConsumeLine(footerWords, 0, firstLineTargetWidth);
+              const secondLineChunk = footerConsumeLine(
+                footerWords,
+                firstLineChunk.nextIndex,
+                secondLineTargetWidth
+              );
+              let firstLine = firstLineChunk.line;
+              let secondLine = secondLineChunk.line;
+              let thirdLine = footerWords.slice(secondLineChunk.nextIndex).join(" ");
+              const removeMandatoryAuth = (line: string) =>
+                line
+                  .replace(/\bMandatory\s+Auth\b/gi, "")
+                  .trim()
+                  .replace(/\s+/g, " ");
+              firstLine = removeMandatoryAuth(firstLine);
+              secondLine = removeMandatoryAuth(secondLine);
+              thirdLine = removeMandatoryAuth(thirdLine);
+              secondLine = `${secondLine} Mandatory Auth`.trim().replace(/\s+/g, " ");
+              thirdLine = `${operatorFooterLabel} ${thirdLine}`.trim().replace(/\s+/g, " ");
+              const moveLastWordToNextLine = (line: string, nextLine: string) => {
+                const words = line.split(" ").filter((word) => word.length > 0);
+                if (words.length <= 1) {
+                  return { line, nextLine };
+                }
+                const shifted = words.pop() ?? "";
+                return {
+                  line: words.join(" "),
+                  nextLine: `${shifted} ${nextLine}`.trim().replace(/\s+/g, " "),
+                };
+              };
+              while (context.measureText(secondLine).width >= context.measureText(firstLine).width) {
+                const rebalanced = moveLastWordToNextLine(secondLine, thirdLine);
+                if (rebalanced.line === secondLine) {
+                  break;
+                }
+                secondLine = rebalanced.line;
+                thirdLine = rebalanced.nextLine;
+              }
+              while (context.measureText(thirdLine).width >= context.measureText(secondLine).width) {
+                const thirdWords = thirdLine.split(" ").filter((word) => word.length > 0);
+                if (thirdWords.length <= 1) {
+                  break;
+                }
+                const shifted = thirdWords.shift() ?? "";
+                secondLine = `${secondLine} ${shifted}`.trim().replace(/\s+/g, " ");
+                thirdLine = thirdWords.join(" ");
+              }
+              return [firstLine, secondLine, thirdLine].filter((line) => line.length > 0);
+            })();
         context.textAlign = "center";
         for (let i = 0; i < footerLines.length; i += 1) {
           context.fillText(footerLines[i], width / 2, footerStartY + i * footerLineHeight);
@@ -2684,6 +2723,50 @@ export default function ResourcesPage() {
                             className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
                           />
                         </label>
+                      )}
+                      {isWidgetSixteen && (
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="space-y-1 block">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                              Price bottom
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={widget.priceBottom || ""}
+                              onChange={(event) => {
+                                const nextValue = event.target.value.replace(/[^0-9.,]/g, "");
+                                setWidgets((current) =>
+                                  current.map((item) =>
+                                    item.id === widget.id ? { ...item, priceBottom: nextValue } : item
+                                  )
+                                );
+                              }}
+                              placeholder="0.10"
+                              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </label>
+                          <label className="space-y-1 block">
+                            <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                              Price top
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={widget.priceTop || ""}
+                              onChange={(event) => {
+                                const nextValue = event.target.value.replace(/[^0-9.,]/g, "");
+                                setWidgets((current) =>
+                                  current.map((item) =>
+                                    item.id === widget.id ? { ...item, priceTop: nextValue } : item
+                                  )
+                                );
+                              }}
+                              placeholder="10.00"
+                              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                            />
+                          </label>
+                        </div>
                       )}
                       <label className="space-y-1 block">
                         <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
