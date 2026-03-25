@@ -229,6 +229,16 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-15`,
+      templateUrl: "",
+      fileName: "Safe Parking Guest Footer No Title 110w",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -380,9 +390,7 @@ function resolveSignPrice(source: LocationRow, type: "hourly" | "daily") {
   let price =
     type === "daily"
       ? toNumber(source.base_price_daily)
-      : toNumber(source.rate_per_hour) > 0
-      ? toNumber(source.rate_per_hour)
-      : toNumber(source.base_price_hourly);
+      : toNumber(source.rate_per_hour ?? source.base_price_hourly);
 
   const floor =
     type === "daily"
@@ -400,7 +408,11 @@ function resolveSignPrice(source: LocationRow, type: "hourly" | "daily") {
     price = ceiling;
   }
 
-  return price > 0 ? price : null;
+  if (!Number.isFinite(price) || price < 0) {
+    price = 0;
+  }
+
+  return price;
 }
 
 function buildCheckoutQrUrl(params: {
@@ -1031,7 +1043,9 @@ export default function ResourcesPage() {
     const isWidgetEleven = widgetIndex === 10;
     const isWidgetTwelve = widgetIndex === 11;
     const isWidgetFourteen = widgetIndex === 13;
-    const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen;
+    const isWidgetFifteen = widgetIndex === 14;
+    const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen || isWidgetFifteen;
+    const isWidgetTwelveBaseLike = isWidgetTwelve || isWidgetFifteen;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
     const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike;
     if (requiresLocationData && !resource) {
@@ -1119,7 +1133,9 @@ export default function ResourcesPage() {
         qrCenterYOffset = 0,
         exactQrTrimBottomPx = 0,
         exactQrWidthDeltaPx = 0,
-        exactQrTopGrowPx = 0
+        exactQrTopGrowPx = 0,
+        exactQrWidthCompensationScale = 1,
+        exactQrShellHeightDeltaPx = 0
       ) => {
         const qrBoxSize = 180;
         const qrSize = exactQrMode ? exactQrSize ?? 115 : 104;
@@ -1200,6 +1216,18 @@ export default function ResourcesPage() {
           const qrRenderX = qrDrawX - exactQrWidthDeltaPx / 2;
           const qrRenderY = qrDrawY - exactQrTopGrowPx;
           const qrRenderHeightWithTopGrow = Math.max(1, qrRenderHeight + exactQrTopGrowPx);
+          const qrShellHeight = Math.max(1, qrRenderHeightWithTopGrow + exactQrShellHeightDeltaPx);
+          const qrShellY = qrRenderY - exactQrShellHeightDeltaPx / 2;
+          context.save();
+          if (exactQrWidthCompensationScale !== 1) {
+            context.translate(qrCenterX, 0);
+            context.scale(exactQrWidthCompensationScale, 1);
+            context.translate(-qrCenterX, 0);
+          }
+          if (exactQrShellHeightDeltaPx > 0) {
+            context.fillStyle = "#ffffff";
+            context.fillRect(qrRenderX, qrShellY, qrRenderWidth, qrShellHeight);
+          }
           context.drawImage(
             qrImage,
             qrRenderX,
@@ -1211,6 +1239,7 @@ export default function ResourcesPage() {
           const moduleCount = moduleCountHint && moduleCountHint >= 21 ? moduleCountHint : 21;
           
           if (hideCenterBadge) {
+            context.restore();
             return;
           }
           const qrBadgeCenterY = qrRenderY + qrRenderHeightWithTopGrow / 2;
@@ -1219,6 +1248,7 @@ export default function ResourcesPage() {
           context.fillStyle = "#ffffff";
           context.fill();
           drawPayparqSticker(context, qrCenterX, qrBadgeCenterY, 29);
+          context.restore();
           return;
         }
         const qrSampleSize = 300;
@@ -1776,8 +1806,10 @@ export default function ResourcesPage() {
         ? templateImage.width
         : isWidgetFourteen
         ? Math.max(1, Math.round(templateImage.height * 0.5))
+        : isWidgetFifteen
+        ? Math.max(1, Math.round(templateImage.width * 1.1))
         : width;
-      const targetCanvasHeight = isWidgetTwelve || isWidgetFourteen ? templateImage.height : height;
+      const targetCanvasHeight = isWidgetTwelveLike ? templateImage.height : height;
       canvas.width = targetCanvasWidth * outputScale;
       canvas.height = targetCanvasHeight * outputScale;
       const context = canvas.getContext("2d");
@@ -1791,7 +1823,23 @@ export default function ResourcesPage() {
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
       if (isWidgetTwelveLike) {
-        context.drawImage(templateImage, 0, 0, width, height);
+        if (isWidgetFourteen) {
+          const widgetFourteenTemplateWidthShrinkPx = 0;
+          const widgetFourteenTemplateShiftUpPx = 7.8;
+          const widgetFourteenTemplateWidthScale = Math.max(
+            0.01,
+            (width - widgetFourteenTemplateWidthShrinkPx) / width
+          );
+          context.save();
+          context.translate(width / 2, 0);
+          context.scale(widgetFourteenTemplateWidthScale, 1);
+          context.translate(-width / 2, 0);
+          context.translate(0, -widgetFourteenTemplateShiftUpPx);
+          context.drawImage(templateImage, 0, 0, width, height);
+          context.restore();
+        } else {
+          context.drawImage(templateImage, 0, 0, width, height);
+        }
       } else {
         const imageAspect = templateImage.width / templateImage.height;
         const canvasAspect = width / height;
@@ -1830,7 +1878,8 @@ export default function ResourcesPage() {
         widgetIndex === 5 ||
         widgetIndex === 6 ||
         widgetIndex === 11 ||
-        widgetIndex === 13;
+        widgetIndex === 13 ||
+        widgetIndex === 14;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -1925,6 +1974,9 @@ export default function ResourcesPage() {
       const widgetTwelveLikeQrTrimBottomPx = 53.3; // Increased height by 0.05cm (1.3px) from bottom
       const widgetTwelveLikeQrWidthDeltaPx = 35.2; // Increased width by total 0.1cm (2.6px) on both sides (Total 0.2cm increase)
       const widgetTwelveLikeQrTopGrowPx = 7.4; // Increased height by 0.05cm (1.3px) from top
+      const widgetFourteenQrShellHeightDeltaPx = 7.8;
+      const widgetFourteenQrWidthDeltaPx = 0;
+      const widgetFourteenQrWidthCompensationScale = (targetCanvasHeight / height) / (targetCanvasWidth / width);
       drawStyledQr(
         context,
         qrImage,
@@ -1932,19 +1984,21 @@ export default function ResourcesPage() {
         qrModuleCount,
         useExactQrMechanics,
         false,
-        widgetIndex === 4 ||
-        widgetIndex === 5 ||
-        widgetIndex === 6 ||
-        widgetIndex === 11 ||
-        widgetIndex === 13
-          ? widgetIndex === 11 || widgetIndex === 13
-            ? widgetTwelveLikeQrSize
-            : 110
+        isWidgetTwelveBaseLike
+          ? widgetTwelveLikeQrSize
+          : widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
+          ? 110
           : undefined,
-        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrCenterYOffset : 0,
-        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrTrimBottomPx : 0,
-        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrWidthDeltaPx : 0,
-        widgetIndex === 11 || widgetIndex === 13 ? widgetTwelveLikeQrTopGrowPx : 0
+        isWidgetTwelveBaseLike ? widgetTwelveLikeQrCenterYOffset : 0,
+        isWidgetTwelveBaseLike ? widgetTwelveLikeQrTrimBottomPx : 0,
+        isWidgetTwelveBaseLike || widgetIndex === 13
+          ? widgetIndex === 13
+            ? widgetFourteenQrWidthDeltaPx
+            : widgetTwelveLikeQrWidthDeltaPx
+          : 0,
+        isWidgetTwelveBaseLike ? widgetTwelveLikeQrTopGrowPx : 0,
+        widgetIndex === 13 ? widgetFourteenQrWidthCompensationScale : 1,
+        widgetIndex === 13 ? widgetFourteenQrShellHeightDeltaPx : 0
       );
 
       if (isWidgetTwelveLike) {
@@ -2217,7 +2271,8 @@ export default function ResourcesPage() {
               const isWidgetEleven = index === 10;
               const isWidgetTwelve = index === 11;
               const isWidgetFourteen = index === 13;
-              const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen;
+              const isWidgetFifteen = index === 14;
+              const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen || isWidgetFifteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isUploadLocked = isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
@@ -2292,6 +2347,8 @@ export default function ResourcesPage() {
                         ? "Widget 11 always uses Widget 8 template and replaces Airport with Safe."
                         : isWidgetFourteen
                         ? "Widget 14 matches Widget 12 logic and output content, but exports in 50x100 ratio."
+                        : isWidgetFifteen
+                        ? "Widget 15 matches Widget 12 logic and output content, but exports with +10% width and same height."
                         : isWidgetTwelve
                         ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
