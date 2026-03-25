@@ -1978,8 +1978,12 @@ export default function ResourcesPage() {
       const widgetTwelveLikeQrTrimBottomPx = 53.3; // Increased height by 0.05cm (1.3px) from bottom
       const widgetTwelveLikeQrWidthDeltaPx = 35.2; // Increased width by total 0.1cm (2.6px) on both sides (Total 0.2cm increase)
       const widgetTwelveLikeQrTopGrowPx = 7.4; // Increased height by 0.05cm (1.3px) from top
+      const qrPixelsPerCm = 26;
+      const widgetFourteenQrCenterYOffset = qrPixelsPerCm * 1.3;
+      const widgetFourteenQrHeightReducePx = qrPixelsPerCm;
+      const widgetFourteenQrWidthReducePx = qrPixelsPerCm * 0.8;
       const widgetFourteenQrShellHeightDeltaPx = 7.8;
-      const widgetFourteenQrWidthDeltaPx = 0;
+      const widgetFourteenQrWidthDeltaPx = -widgetFourteenQrWidthReducePx;
       const widgetFourteenQrWidthCompensationScale =
         (renderCanvasHeight / height) / (renderCanvasWidth / width);
       drawStyledQr(
@@ -1994,8 +1998,16 @@ export default function ResourcesPage() {
           : widgetIndex === 4 || widgetIndex === 5 || widgetIndex === 6
           ? 110
           : undefined,
-        isWidgetTwelveBaseLike ? widgetTwelveLikeQrCenterYOffset : 0,
-        isWidgetTwelveBaseLike ? widgetTwelveLikeQrTrimBottomPx : 0,
+        isWidgetTwelveBaseLike
+          ? widgetTwelveLikeQrCenterYOffset
+          : widgetIndex === 13
+          ? widgetFourteenQrCenterYOffset
+          : 0,
+        isWidgetTwelveBaseLike
+          ? widgetTwelveLikeQrTrimBottomPx
+          : widgetIndex === 13
+          ? widgetFourteenQrHeightReducePx
+          : 0,
         isWidgetTwelveBaseLike || widgetIndex === 13
           ? widgetIndex === 13
             ? widgetFourteenQrWidthDeltaPx
