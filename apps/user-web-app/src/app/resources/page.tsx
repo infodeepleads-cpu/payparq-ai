@@ -2194,6 +2194,8 @@ export default function ResourcesPage() {
       if (isWidgetFourteen && widgetFourteenContentCanvas) {
         const cropTopRatio = 0.15;
         const innerWidthRatio = 0.82;
+        const downShiftCm = 2;
+        const pixelsPerCmAtBase = 26;
         const sourceWidth = widgetFourteenContentCanvas.width;
         const sourceHeight = widgetFourteenContentCanvas.height;
         const croppedTop = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * cropTopRatio)));
@@ -2203,9 +2205,41 @@ export default function ResourcesPage() {
         if (innerHeight > canvas.height) {
           innerHeight = canvas.height;
         }
-        const innerX = Math.round((canvas.width - innerWidth) / 2);
-        const innerY = Math.round((canvas.height - innerHeight) / 2);
+        const innerX = Math.floor((canvas.width - innerWidth) / 2);
+        const rightWidth = Math.max(0, canvas.width - innerWidth - innerX);
+        const downShiftPx = Math.round(downShiftCm * pixelsPerCmAtBase * outputScale);
+        const centeredY = Math.floor((canvas.height - innerHeight) / 2);
+        const innerY = Math.max(0, Math.min(canvas.height - innerHeight, centeredY + downShiftPx));
+        const topHeight = Math.max(0, innerY);
+        const bottomStartY = innerY + innerHeight;
+        const bottomHeight = Math.max(0, canvas.height - bottomStartY);
         exportContext.clearRect(0, 0, canvas.width, canvas.height);
+        if (topHeight > 0) {
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            0,
+            croppedTop,
+            sourceWidth,
+            1,
+            0,
+            0,
+            canvas.width,
+            topHeight
+          );
+        }
+        if (bottomHeight > 0) {
+          exportContext.drawImage(
+            widgetFourteenContentCanvas,
+            0,
+            sourceHeight - 1,
+            sourceWidth,
+            1,
+            0,
+            bottomStartY,
+            canvas.width,
+            bottomHeight
+          );
+        }
         if (innerX > 0) {
           exportContext.drawImage(
             widgetFourteenContentCanvas,
@@ -2214,10 +2248,12 @@ export default function ResourcesPage() {
             1,
             sourceDrawHeight,
             0,
-            0,
+            innerY,
             innerX,
-            canvas.height
+            innerHeight
           );
+        }
+        if (rightWidth > 0) {
           exportContext.drawImage(
             widgetFourteenContentCanvas,
             sourceWidth - 1,
@@ -2225,33 +2261,9 @@ export default function ResourcesPage() {
             1,
             sourceDrawHeight,
             innerX + innerWidth,
-            0,
-            canvas.width - (innerX + innerWidth),
-            canvas.height
-          );
-        }
-        if (innerY > 0) {
-          exportContext.drawImage(
-            widgetFourteenContentCanvas,
-            0,
-            croppedTop,
-            sourceWidth,
-            1,
-            0,
-            0,
-            canvas.width,
-            innerY
-          );
-          exportContext.drawImage(
-            widgetFourteenContentCanvas,
-            0,
-            sourceHeight - 1,
-            sourceWidth,
-            1,
-            0,
-            innerY + innerHeight,
-            canvas.width,
-            canvas.height - (innerY + innerHeight)
+            innerY,
+            rightWidth,
+            innerHeight
           );
         }
         exportContext.drawImage(
