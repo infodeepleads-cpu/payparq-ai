@@ -239,6 +239,16 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-16`,
+      templateUrl: "",
+      fileName: "Safe Parking Guest Footer No Title 50x100 Price Header",
+      extraText: bilingualTermsText,
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
 }
 
@@ -1044,7 +1054,10 @@ export default function ResourcesPage() {
     const isWidgetTwelve = widgetIndex === 11;
     const isWidgetFourteen = widgetIndex === 13;
     const isWidgetFifteen = widgetIndex === 14;
-    const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen || isWidgetFifteen;
+    const isWidgetSixteen = widgetIndex === 15;
+    const isWidgetFourteenFamily = isWidgetFourteen || isWidgetSixteen;
+    const isWidgetTwelveLike =
+      isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
     const isWidgetTwelveBaseLike = isWidgetTwelve || isWidgetFifteen;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
     const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike;
@@ -1806,14 +1819,23 @@ export default function ResourcesPage() {
         ? templateImage.width
         : Math.max(1, Math.round(templateImage.width * 1.1));
       const widgetTwelveBaseRenderHeight = templateImage.height;
+      const widgetFourteenBaseCanvasWidth = Math.max(1, Math.round(templateImage.height * 0.5));
+      const widgetSixteenWidthAddPx = 13;
+      const widgetSixteenHeightAddPx = 26;
       const targetCanvasWidth = isWidgetTwelve
         ? templateImage.width
         : isWidgetFourteen
-        ? Math.max(1, Math.round(templateImage.height * 0.5))
+        ? widgetFourteenBaseCanvasWidth
+        : isWidgetSixteen
+        ? widgetFourteenBaseCanvasWidth + widgetSixteenWidthAddPx
         : isWidgetFifteen
         ? widgetTwelveBaseRenderWidth
         : width;
-      const targetCanvasHeight = isWidgetTwelveLike ? templateImage.height : height;
+      const targetCanvasHeight = isWidgetSixteen
+        ? templateImage.height + widgetSixteenHeightAddPx
+        : isWidgetTwelveLike
+        ? templateImage.height
+        : height;
       canvas.width = targetCanvasWidth * outputScale;
       canvas.height = targetCanvasHeight * outputScale;
       const exportContext = canvas.getContext("2d");
@@ -1824,7 +1846,7 @@ export default function ResourcesPage() {
       let context = exportContext;
       let renderCanvasWidth = targetCanvasWidth;
       let renderCanvasHeight = targetCanvasHeight;
-      if (isWidgetFourteen) {
+      if (isWidgetFourteenFamily) {
         widgetFourteenContentCanvas = document.createElement("canvas");
         widgetFourteenContentCanvas.width = widgetTwelveBaseRenderWidth * outputScale;
         widgetFourteenContentCanvas.height = widgetTwelveBaseRenderHeight * outputScale;
@@ -1883,7 +1905,8 @@ export default function ResourcesPage() {
         widgetIndex === 6 ||
         widgetIndex === 11 ||
         widgetIndex === 13 ||
-        widgetIndex === 14;
+        widgetIndex === 14 ||
+        widgetIndex === 15;
       if (useExactQrMechanics) {
         const exactQrColor = "#000000";
         const { default: QRCodeStyling } = await import("qr-code-styling");
@@ -2000,22 +2023,22 @@ export default function ResourcesPage() {
           : undefined,
         isWidgetTwelveBaseLike
           ? widgetTwelveLikeQrCenterYOffset
-          : widgetIndex === 13
+          : isWidgetFourteenFamily
           ? widgetFourteenQrCenterYOffset
           : 0,
         isWidgetTwelveBaseLike
           ? widgetTwelveLikeQrTrimBottomPx
-          : widgetIndex === 13
+          : isWidgetFourteenFamily
           ? widgetFourteenQrHeightReducePx
           : 0,
-        isWidgetTwelveBaseLike || widgetIndex === 13
-          ? widgetIndex === 13
+        isWidgetTwelveBaseLike || isWidgetFourteenFamily
+          ? isWidgetFourteenFamily
             ? widgetFourteenQrWidthDeltaPx
             : widgetTwelveLikeQrWidthDeltaPx
           : 0,
         isWidgetTwelveBaseLike ? widgetTwelveLikeQrTopGrowPx : 0,
-        widgetIndex === 13 ? widgetFourteenQrWidthCompensationScale : 1,
-        widgetIndex === 13 ? widgetFourteenQrShellHeightDeltaPx : 0
+        isWidgetFourteenFamily ? widgetFourteenQrWidthCompensationScale : 1,
+        isWidgetFourteenFamily ? widgetFourteenQrShellHeightDeltaPx : 0
       );
 
       if (isWidgetTwelveLike) {
@@ -2203,25 +2226,36 @@ export default function ResourcesPage() {
         }
       }
 
-      if (isWidgetFourteen && widgetFourteenContentCanvas) {
-        const cropTopRatio = 0.15;
+      if (isWidgetFourteenFamily && widgetFourteenContentCanvas) {
+        const cropTopRatio = isWidgetSixteen ? 0.02 : 0.15;
         const innerWidthRatio = 0.82;
         const downShiftCm = 2;
         const pixelsPerCmAtBase = 26;
+        const headerExtendCm = isWidgetSixteen ? 1 : 0;
+        const sideExtendCmEach = isWidgetSixteen ? 0.25 : 0;
         const sourceWidth = widgetFourteenContentCanvas.width;
         const sourceHeight = widgetFourteenContentCanvas.height;
         const croppedTop = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * cropTopRatio)));
         const sourceDrawHeight = Math.max(1, sourceHeight - croppedTop);
-        const innerWidth = Math.max(1, Math.round(canvas.width * innerWidthRatio));
+        const headerExtendPx = Math.round(headerExtendCm * pixelsPerCmAtBase * outputScale);
+        const sideExtendPx = Math.round(sideExtendCmEach * pixelsPerCmAtBase * outputScale);
+        const contentAreaX = sideExtendPx;
+        const contentAreaY = headerExtendPx;
+        const contentAreaWidth = Math.max(1, canvas.width - sideExtendPx * 2);
+        const contentAreaHeight = Math.max(1, canvas.height - headerExtendPx);
+        const innerWidth = Math.max(1, Math.round(contentAreaWidth * innerWidthRatio));
         let innerHeight = Math.max(1, Math.round((sourceDrawHeight * innerWidth) / sourceWidth));
-        if (innerHeight > canvas.height) {
-          innerHeight = canvas.height;
+        if (innerHeight > contentAreaHeight) {
+          innerHeight = contentAreaHeight;
         }
-        const innerX = Math.floor((canvas.width - innerWidth) / 2);
+        const innerX = contentAreaX + Math.floor((contentAreaWidth - innerWidth) / 2);
         const rightWidth = Math.max(0, canvas.width - innerWidth - innerX);
         const downShiftPx = Math.round(downShiftCm * pixelsPerCmAtBase * outputScale);
-        const centeredY = Math.floor((canvas.height - innerHeight) / 2);
-        const innerY = Math.max(0, Math.min(canvas.height - innerHeight, centeredY + downShiftPx));
+        const centeredY = contentAreaY + Math.floor((contentAreaHeight - innerHeight) / 2);
+        const innerY = Math.max(
+          contentAreaY,
+          Math.min(contentAreaY + contentAreaHeight - innerHeight, centeredY + downShiftPx)
+        );
         const topHeight = Math.max(0, innerY);
         const bottomStartY = innerY + innerHeight;
         const bottomHeight = Math.max(0, canvas.height - bottomStartY);
@@ -2377,7 +2411,9 @@ export default function ResourcesPage() {
               const isWidgetTwelve = index === 11;
               const isWidgetFourteen = index === 13;
               const isWidgetFifteen = index === 14;
-              const isWidgetTwelveLike = isWidgetTwelve || isWidgetFourteen || isWidgetFifteen;
+              const isWidgetSixteen = index === 15;
+              const isWidgetTwelveLike =
+                isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isUploadLocked = isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
@@ -2454,6 +2490,8 @@ export default function ResourcesPage() {
                         ? "Widget 14 matches Widget 12 logic and output content, but exports in 50x100 ratio."
                         : isWidgetFifteen
                         ? "Widget 15 matches Widget 12 logic and output content, but exports with +10% width and same height."
+                        : isWidgetSixteen
+                        ? "Widget 16 matches Widget 14 output with an extended top header and side padding for price visibility, while preserving 2:1 ratio."
                         : isWidgetTwelve
                         ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
