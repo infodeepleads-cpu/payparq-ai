@@ -1249,7 +1249,14 @@ export default function MembersPage() {
                 <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                   Platform
                 </p>
-                <Link href="/locations" className="block hover:text-white transition-colors">
+                <Link
+                  href="/locations"
+                  className="block hover:text-white transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = "/locations";
+                  }}
+                >
                   Locations
                 </Link>
                 <Link href="/members" className="block hover:text-white transition-colors">

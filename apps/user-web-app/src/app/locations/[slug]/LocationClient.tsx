@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, PhoneCall } from "lucide-react";
+import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -19,6 +19,21 @@ type HubData = {
   verification_metadata?: Record<string, unknown>;
 };
 
+type SectionKey =
+  | "howItWorks"
+  | "map"
+  | "distance"
+  | "about"
+  | "faq"
+  | "access"
+  | "hours"
+  | "extras"
+  | "space"
+  | "reviews"
+  | "cancellation"
+  | "guarantee"
+  | "report";
+
 export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: { 
   hub: HubData; 
   priceLabel: string; 
@@ -31,6 +46,21 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [companyOpen, setCompanyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
+    howItWorks: true,
+    map: true,
+    distance: false,
+    about: false,
+    faq: false,
+    access: false,
+    hours: false,
+    extras: false,
+    space: false,
+    reviews: false,
+    cancellation: false,
+    guarantee: false,
+    report: false,
+  });
   const [isDesktop, setIsDesktop] = useState(false);
   
   const [checkIn, setCheckIn] = useState("");
@@ -211,6 +241,110 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       description:
         "Arrive, park, and go. Your license plate is your permit — monitored by AI.",
       icon: Camera,
+    },
+  ];
+
+  const serviceWidgets = [
+    {
+      id: "access" as SectionKey,
+      title: "Access",
+      value: "License plate entry",
+      description: "Automatic plate recognition at entry and exit.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+          <rect x="3" y="11" width="18" height="8" rx="2" />
+          <circle cx="8" cy="15" r="1" />
+          <path d="M11 15h6" />
+        </svg>
+      ),
+    },
+    {
+      id: "hours" as SectionKey,
+      title: "Hours available",
+      value: "24/7 operations",
+      description: "Open day and night including weekends.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v4l2.5 2.5" />
+        </svg>
+      ),
+    },
+    {
+      id: "extras" as SectionKey,
+      title: "Available extras",
+      value: "Uber + support",
+      description: "On-demand rides and direct city manager support.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3v18" />
+          <path d="M3 12h18" />
+          <path d="m6 6 12 12" />
+          <path d="m18 6-12 12" />
+        </svg>
+      ),
+    },
+    {
+      id: "space" as SectionKey,
+      title: "Space",
+      value: "Open-air & covered",
+      description: "Choose between open bays and covered parking.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="14" rx="2" />
+          <path d="M8 15V9h3a2 2 0 0 1 0 4H8" />
+        </svg>
+      ),
+    },
+    {
+      id: "reviews" as SectionKey,
+      title: "Reviews",
+      value: "4.8 average",
+      description: "Consistently high-rated by recent customers.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
+          <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+        </svg>
+      ),
+    },
+    {
+      id: "cancellation" as SectionKey,
+      title: "Cancellation policy",
+      value: "Free cancellation",
+      description: "Cancel within the policy window at no extra cost.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="4" y="5" width="16" height="16" rx="2" />
+          <path d="M8 3v4M16 3v4M4 10h16" />
+          <path d="m9 16 6-6" />
+        </svg>
+      ),
+    },
+    {
+      id: "guarantee" as SectionKey,
+      title: "Booking guarantee",
+      value: "Instant confirmation",
+      description: "Secure your spot immediately after checkout.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3 5 7v5c0 5 3.5 8 7 9 3.5-1 7-4 7-9V7l-7-4Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      id: "report" as SectionKey,
+      title: "Report a problem",
+      value: "Contact support",
+      description: "Reach the team quickly for urgent assistance.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H6l-3 3V12A8.5 8.5 0 0 1 11.5 3.5h1A8.5 8.5 0 0 1 21 12Z" />
+          <path d="M12 8v5" />
+          <circle cx="12" cy="16.5" r=".8" fill="currentColor" stroke="none" />
+        </svg>
+      ),
     },
   ];
 
@@ -740,139 +874,238 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 )}
               </div>
 
-              <div className="mt-4 grid grid-cols-4 gap-2 w-full">
-                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <Car className="w-3.5 h-3.5 flex-shrink-0 text-black" />
-                  <span className="truncate">Uber</span>
-                </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <PhoneCall className="w-3.5 h-3.5 flex-shrink-0 text-black" />
-                  <span className="truncate">Support 24/7</span>
-                </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <CreditCard className="w-3.5 h-3.5 flex-shrink-0 text-black" />
-                  <span className="truncate">Stripe</span>
-                </span>
-                <span className="flex items-center justify-center gap-1 rounded-full bg-white border border-black/10 py-1.5 text-[10px] sm:text-[11px] text-black whitespace-nowrap overflow-hidden">
-                  <Camera className="w-3.5 h-3.5 flex-shrink-0 text-black" />
-                  <span className="truncate">AI Vision</span>
-                </span>
-              </div>
-
-              
-
-              <section className="bg-[#05020A] text-white rounded-none overflow-hidden">
-                <div className="px-6 md:px-12 pt-16 md:pt-20 pb-8">
-                  <div className="space-y-12">
-                    <div className="space-y-2">
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">How it works</p>
-                      <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Your parking experience, simplified</h2>
-                    </div>
-                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-                      {howItWorks.map((step, idx) => (
-                        <div key={idx} className="space-y-2 rounded-2xl border border-black/10 bg-white p-4 text-black">
-                          <h3 className="text-sm font-semibold">{step.label}</h3>
-                          <p className="text-xs text-black/70">{step.description}</p>
+              <section className="mt-4 md:mt-6 bg-transparent rounded-none overflow-hidden w-full">
+                <div className="px-0 pt-0 pb-16 md:pb-20 space-y-4 w-full">
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.howItWorks}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, howItWorks: !prev.howItWorks }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <Car className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        <span className="text-sm md:text-base font-semibold">How it works</span>
+                      </span>
+                      {openSections.howItWorks ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.howItWorks ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                          {howItWorks.map((step, idx) => (
+                            <div key={idx} className="space-y-2 rounded-2xl border border-black/10 bg-white p-4 text-black">
+                              <h3 className="text-sm font-semibold">{step.label}</h3>
+                              <p className="text-xs text-black/70">{step.description}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </section>
-              <section className="-mt-8 bg-[#05020A] text-white rounded-none overflow-hidden">
-                <div className="px-6 md:px-12 pt-0 pb-16 md:pb-20 space-y-10">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">Map</p>
-                    <div className="relative w-full h-[260px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
-                      <iframe
-                        className="absolute inset-0 w-full h-full"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={
-                          hub.latitude && hub.longitude
-                            ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
-                            : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
-                        }
-                      />
-                    </div>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-3">Distance</p>
-                    <div className="rounded-3xl border border-black/10 bg-white text-black p-6 md:p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="px-4 py-4">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                        <p className="text-sm font-semibold">City Centre</p>
-                        <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
-                      </div>
-                      <div className="px-4 py-4">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                        <p className="text-sm font-semibold">Airport</p>
-                        <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
-                      </div>
-                      <div className="px-4 py-4">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                        <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
-                        <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
-                      </div>
-                    </div>
-                  </div>
-                  </div>
-                  <div className="space-y-4">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">About the location</p>
-                    <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">{locationName}</h2>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      {[
-                        { q: "City", a: cityName },
-                        { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
-                        { q: "Distance to Airport", a: typeof distAirport === "number" ? `${distAirport} km` : "N/A" },
-                        { q: "Distance to City Centre", a: typeof distCenter === "number" ? `${distCenter} km` : "N/A" },
-                        { q: `${cityConfig.beach.name} Distance`, a: typeof distBeach === "number" ? `${distBeach} km` : "N/A" },
-                        { q: "Typical transfer time", a: travelTime },
-                        { q: "Parking types", a: "Open‑air and covered bays" },
-                        { q: "Hours", a: "24/7 operations" },
-                        { q: "Payment", a: "Stripe secure checkout" },
-                        { q: "Security", a: "AI cameras and recorded entry/exit" },
-                        { q: "Access", a: "License plate recognition" },
-                        { q: "Support", a: "WhatsApp 24/7 City Manager" },
-                      ].map((item) => (
-                        <div key={item.q} className="px-4 py-3">
-                          <p className="text-xs font-semibold">{item.q}</p>
-                          <p className="text-xs text-white/70">{item.a}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-black/10 bg-white text-black p-6 md:p-8">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">FAQ</p>
-                    <div className="space-y-2">
-                      {finalFaq.map((i, idx) => {
-                        const open = openFaq.includes(idx);
-                        return (
-                          <div key={i.q}>
-                            <button
-                              type="button"
-                              className="w-full flex items-center justify-between py-3 text-sm font-semibold text-left"
-                              aria-expanded={open}
-                              onClick={() =>
-                                setOpenFaq((prev) =>
-                                  prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
-                                )
-                              }
-                            >
-                              <span className="text-left">{i.q}</span>
-                              {open ? (
-                                <Minus className="w-4 h-4 text-black/60" />
-                              ) : (
-                                <Plus className="w-4 h-4 text-black/60" />
-                              )}
-                            </button>
-                            {open ? <div className="pb-3 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: i.a }} /> : null}
+                  {serviceWidgets.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                        aria-expanded={openSections[item.id]}
+                        onClick={() => setOpenSections((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                      >
+                        <span className="inline-flex items-center gap-3">
+                          <span className="w-7 h-7 rounded-lg bg-[#5F3DFC]/10 flex items-center justify-center shrink-0">{item.icon}</span>
+                          <span className="text-sm md:text-base font-semibold">{item.title}</span>
+                        </span>
+                        {openSections[item.id] ? (
+                          <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        ) : (
+                          <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        )}
+                      </button>
+                      {openSections[item.id] ? (
+                        <div className="px-4 md:px-6 pb-4 md:pb-6">
+                          <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-5">
+                            <p className="text-sm font-semibold">{item.value}</p>
+                            <p className="text-xs text-black/70 mt-2">{item.description}</p>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ) : null}
                     </div>
+                  ))}
+
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.map}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, map: !prev.map }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <MapPin className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        <span className="text-sm md:text-base font-semibold">Map</span>
+                      </span>
+                      {openSections.map ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.map ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6">
+                        <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
+                          <iframe
+                            className="absolute inset-0 w-full h-full"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            src={
+                              hub.latitude && hub.longitude
+                                ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
+                                : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
+                            }
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.distance}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, distance: !prev.distance }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <Route className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        <span className="text-sm md:text-base font-semibold">Distance</span>
+                      </span>
+                      {openSections.distance ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.distance ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6">
+                        <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-6">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="px-2 py-2">
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                              <p className="text-sm font-semibold">City Centre</p>
+                              <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
+                            </div>
+                            <div className="px-2 py-2">
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                              <p className="text-sm font-semibold">Airport</p>
+                              <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
+                            </div>
+                            <div className="px-2 py-2">
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
+                              <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
+                              <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.about}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, about: !prev.about }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <Info className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        <span className="text-sm md:text-base font-semibold">About the location</span>
+                      </span>
+                      {openSections.about ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.about ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
+                        <h2 className="text-xl md:text-2xl font-semibold tracking-tight">{locationName}</h2>
+                        <div className="grid md:grid-cols-2 gap-3">
+                          {[
+                            { q: "City", a: cityName },
+                            { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
+                            { q: "Distance to Airport", a: typeof distAirport === "number" ? `${distAirport} km` : "N/A" },
+                            { q: "Distance to City Centre", a: typeof distCenter === "number" ? `${distCenter} km` : "N/A" },
+                            { q: `${cityConfig.beach.name} Distance`, a: typeof distBeach === "number" ? `${distBeach} km` : "N/A" },
+                            { q: "Typical transfer time", a: travelTime },
+                            { q: "Parking types", a: "Open‑air and covered bays" },
+                            { q: "Hours", a: "24/7 operations" },
+                            { q: "Payment", a: "Stripe secure checkout" },
+                            { q: "Security", a: "AI cameras and recorded entry/exit" },
+                            { q: "Access", a: "License plate recognition" },
+                            { q: "Support", a: "WhatsApp 24/7 City Manager" },
+                          ].map((item) => (
+                            <div key={item.q} className="px-2 py-2">
+                              <p className="text-xs font-semibold">{item.q}</p>
+                              <p className="text-xs text-black/70">{item.a}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.faq}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, faq: !prev.faq }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <MessageCircle className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        <span className="text-sm md:text-base font-semibold">FAQ</span>
+                      </span>
+                      {openSections.faq ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.faq ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6">
+                        <div className="space-y-2">
+                          {finalFaq.map((i, idx) => {
+                            const open = openFaq.includes(idx);
+                            return (
+                              <div key={i.q}>
+                                <button
+                                  type="button"
+                                  className="w-full flex items-start gap-3 py-3 text-sm font-semibold text-left"
+                                  aria-expanded={open}
+                                  onClick={() =>
+                                    setOpenFaq((prev) =>
+                                      prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+                                    )
+                                  }
+                                >
+                                  {open ? (
+                                    <Minus className="w-4 h-4 text-[#5F3DFC] mt-0.5 shrink-0" />
+                                  ) : (
+                                    <Plus className="w-4 h-4 text-[#5F3DFC] mt-0.5 shrink-0" />
+                                  )}
+                                  <span className="text-left">{i.q}</span>
+                                </button>
+                                {open ? <div className="pb-3 pl-7 text-sm text-black/75" dangerouslySetInnerHTML={{ __html: i.a }} /> : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </section>
@@ -1106,7 +1339,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                   Platform
                 </p>
-                <Link href="/locations" className="block hover:text-white transition-colors">
+                <Link
+                  href="/locations"
+                  className="block hover:text-white transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = "/locations";
+                  }}
+                >
                   Locations
                 </Link>
                 <Link href="/members" className="block hover:text-white transition-colors">
