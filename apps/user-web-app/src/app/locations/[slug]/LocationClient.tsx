@@ -125,6 +125,19 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const priceValue = parseFloat(priceLabel.replace(/[^0-9.]/g, '')) || 0;
   totalPrice = totalHours * priceValue;
   const totalPriceLabel = `€${totalPrice.toFixed(2)}`;
+  const formatEur = (value: number) => `€${value.toFixed(2)}`;
+  const hourlyPrice = priceValue > 0 ? priceValue : 2.5;
+  const dailyPrice = hourlyPrice * 24;
+  const oneWayRidePrice = Math.max(8, Math.round(hourlyPrice * 3));
+  const twoWayRidePrice = oneWayRidePrice * 2 - 2;
+  const competitorHourly = hourlyPrice + 0.9;
+  const competitorDaily = dailyPrice + 7;
+  const competitorOneWay = oneWayRidePrice + 3;
+  const competitorTwoWay = twoWayRidePrice + 6;
+  const monthlyPrice = dailyPrice * 30;
+  const uberBoltRidePrice = 5;
+  const parqRidePrice = 4.5;
+  const busCamperDailyPrice = 50;
 
   const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}`;
   
@@ -295,8 +308,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     },
     {
       id: "hours" as SectionKey,
-      title: "Hours available",
-      value: "24/7 operations",
+      title: "Radno Vrijeme",
+      value: "24/7 operacije",
       description: "Open day and night including weekends.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -322,8 +335,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "space" as SectionKey,
       title: "Space",
-      value: "Open-air & covered",
-      description: "Choose between open bays and covered parking.",
+      value: "Otvoreno",
+      description: "Otvoreni parking prostor.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="14" rx="2" />
@@ -345,8 +358,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "cancellation" as SectionKey,
       title: "Cancellation policy",
-      value: "Free cancellation",
-      description: "Cancel within the policy window at no extra cost.",
+      value: "Besplatno otkazivanje unutar 60 minuta",
+      description: "Otkazivanje je besplatno unutar 60 minuta prije dolaska.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="16" rx="2" />
@@ -370,8 +383,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "report" as SectionKey,
       title: "Report a problem",
-      value: "Contact support",
-      description: "Reach the team quickly for urgent assistance.",
+      value: "Contact support + payarq@outlook.com",
+      description: "Reach the team quickly for urgent assistance via email or support chat.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5H6l-3 3V12A8.5 8.5 0 0 1 11.5 3.5h1A8.5 8.5 0 0 1 21 12Z" />
@@ -829,6 +842,35 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
+                    <div className="mt-2 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja 1 Smjer</span><span className="font-semibold">{formatEur(oneWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja 2 Smjera</span><span className="font-semibold">{formatEur(twoWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Parq vožnja</span><span className="font-semibold">{formatEur(parqRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Autobusi i kamperi</span><span className="font-semibold">{formatEur(busCamperDailyPrice)}/dan</span></div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
+                    <div className="mt-2 space-y-1.5 text-xs text-black/80">
+                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
+                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja 1 Smjer</span><span className="font-semibold">{formatEur(competitorOneWay)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja 2 Smjera</span><span className="font-semibold">{formatEur(competitorTwoWay)}</span></div>
+                      <div className="flex items-center justify-between"><span>Uber/Bolt (cca)</span><span className="font-semibold">{formatEur(uberBoltRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Naš Parq</span><span className="font-semibold">{formatEur(parqRidePrice)}</span></div>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena o dostupnosti: cijene i raspoloživost mjesta ovise o terminu dolaska i trenutačnom kapacitetu.</p>
               </div>
               
               <div className="md:hidden bg-white rounded-3xl p-4 shadow-sm border border-gray-100 w-full -mt-2">
