@@ -61,6 +61,7 @@ export default function MembersPage() {
   const [actionLocation, setActionLocation] = useState("");
   const [actionProcessing, setActionProcessing] = useState<FlowType | null>(null);
   const [actionError, setActionError] = useState("");
+  const [activityFavorite, setActivityFavorite] = useState(false);
 
   const [devSignedIn, setDevSignedIn] = useState(false);
 
@@ -452,14 +453,58 @@ export default function MembersPage() {
     }
 
     if (activeItem === "activity") {
+      const selectedActivityLocation = actionLocation.trim() || "Parking Trogir";
       return (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight text-black">
             Activity
           </h2>
           <p className="text-sm text-black/70">
             A timeline of recent sessions, payments, and enforcement outcomes.
           </p>
+          <div className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-black leading-tight truncate">
+                {selectedActivityLocation}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActivityFavorite((value) => !value)}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 text-black hover:bg-black/5 transition-colors shrink-0"
+                aria-label={activityFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill={activityFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="m12 21-1.45-1.32C5.4 15.03 2 11.95 2 8.25 2 5.17 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A5.98 5.98 0 0 1 16.5 3C19.58 3 22 5.17 22 8.25c0 3.7-3.4 6.78-8.55 11.43z" />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] text-black/70">
+              <span className="inline-flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M4 18h4" />
+                  <path d="M16 18h4" />
+                  <path d="M7 18V9a3 3 0 1 1 6 0v9" />
+                  <path d="M17 18V9a3 3 0 1 0-6 0" />
+                </svg>
+                2 min walk
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
+                  <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                </svg>
+                4.8 reviews
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 3v18" />
+                  <path d="M3 12h18" />
+                  <path d="m5.6 5.6 12.8 12.8" />
+                  <path d="m18.4 5.6-12.8 12.8" />
+                </svg>
+                Extras available
+              </span>
+            </div>
+          </div>
         </div>
       );
     }

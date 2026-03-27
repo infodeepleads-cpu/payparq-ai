@@ -36,6 +36,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   
   // Set default check-in to now, check-out to 1 hour from now on mount
   useEffect(() => {
@@ -55,6 +56,27 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   
   const locationName = hub.name || "Split Airport car park";
   const locationId = hub.id || "parkng split airport";
+  const compactTravelTime = travelTime.replace("minutes", "min").replace("minute", "min");
+  const reviewsLabel = "4.8 reviews";
+  const extrasLabel = "Extras available";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("favorite-locations");
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+    setIsFavorite(parsed.includes(locationId));
+  }, [locationId]);
+
+  function toggleFavorite() {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("favorite-locations");
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+    const next = parsed.includes(locationId)
+      ? parsed.filter((id) => id !== locationId)
+      : [...parsed, locationId];
+    window.localStorage.setItem("favorite-locations", JSON.stringify(next));
+    setIsFavorite(next.includes(locationId));
+  }
   
   // Calculate total price and hours
   let totalHours = 1;
@@ -548,10 +570,48 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       
       <main className="flex-1 bg-white pt-16 md:pt-20">
         <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-5 md:pt-6 md:pb-5">
-          <div className="flex items-start gap-4 mb-6 md:mb-8 md:-ml-10">
-            <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-black">
-              {locationName} parking from {priceLabel} per hour - just {travelTime} away.
-            </h1>
+          <div className="flex items-start justify-between gap-2 mb-3 md:mb-8 md:-ml-10">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <h1 className="text-2xl md:text-4xl font-semibold tracking-tight leading-tight text-black">
+                  {locationName}
+                </h1>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2 w-full text-[11px] md:text-xs text-black/70">
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
+                    <circle cx="10.5" cy="4.8" r="1.8" />
+                    <path d="M9.5 7.2h2.3l1.4 3 2.4 1.2-.9 1.6-2.7-1.4-.8-1.6-.8 3 1.9 2 1.3 4.9h-2l-1.1-4.1-1.8-1.9-.7 3.3-2.2 2.3-1.2-1.1 1.8-2 1.5-6.9z" />
+                  </svg>
+                  {compactTravelTime}
+                </span>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
+                    <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                  {reviewsLabel}
+                </span>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M12 3v18" />
+                    <path d="M3 12h18" />
+                    <path d="m5.6 5.6 12.8 12.8" />
+                    <path d="m18.4 5.6-12.8 12.8" />
+                  </svg>
+                  {extrasLabel}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={toggleFavorite}
+              className="mt-0.5 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-black hover:bg-black/5 transition-colors shrink-0"
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="m12 21-1.45-1.32C5.4 15.03 2 11.95 2 8.25 2 5.17 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A5.98 5.98 0 0 1 16.5 3C19.58 3 22 5.17 22 8.25c0 3.7-3.4 6.78-8.55 11.43z" />
+              </svg>
+            </button>
           </div>
 
           <section className="grid gap-8 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1fr)] items-start">
