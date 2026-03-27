@@ -3,6 +3,7 @@ import { FooterBrand } from "@/components/FooterBrand";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabase } from "@/lib/supabase";
+import { formatEuroLabel, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 import LocationClient from "./LocationClient";
 
 const supabaseClient = supabase;
@@ -32,7 +33,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
   
   const { data: locationData, error } = await client
     .from("locations")
-    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier")
+    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling")
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
 
@@ -46,19 +47,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
 
-  // Calculate dynamic price
-  const basePrice = hub.base_price_hourly || 5;
-  let finalPrice = basePrice;
-
-  if (hub.dynamic_pricing_enabled && hub.dynamic_pricing_ratio) {
-    finalPrice *= hub.dynamic_pricing_ratio;
-  }
-  if (hub.surcharge_enabled && hub.surcharge_multiplier) {
-    finalPrice *= hub.surcharge_multiplier;
-  }
-
-  // Format price label
-  const priceLabel = `€${finalPrice.toFixed(2)}`;
+  const priceLabel = formatEuroLabel(resolveScannerTruthPriceEuro(hub, "hourly"));
 
   const hero = Array.isArray(hub.verification_photos) ? (hub.verification_photos[0] as string) : "";
   const faqItems: Array<{ q: string; a: string }> = [];

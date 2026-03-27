@@ -1,6 +1,47 @@
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+
+type PricingType = 'hourly' | 'daily' | 'monthly';
+
+function parseBooleanFlag(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
+  if (rawType === 'daily') return 'daily';
+  if (rawType === 'monthly') return 'monthly';
+  if (flowType === 'monthly') return 'monthly';
+  return 'hourly';
+}
+
+async function resolveUnitAmountCents(locationId: string, pricingType: PricingType): Promise<number> {
+  if (!supabase) {
+    throw { status: 500, message: 'supabase_not_configured' };
+  }
+  const { data, error } = await supabase
+    .from('locations')
+    .select(
+      'rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling'
+    )
+    .eq('id', locationId)
+    .maybeSingle();
+  if (error) {
+    throw { status: 500, message: error.message };
+  }
+  if (!data) {
+    throw { status: 404, message: 'location_not_found' };
+  }
+  const resolvedEuro = resolveScannerTruthPriceEuro(data, pricingType);
+  const resolvedCents = Math.round(resolvedEuro * 100);
+  if (!Number.isFinite(resolvedCents) || resolvedCents < 0) {
+    throw { status: 500, message: 'invalid_resolved_amount' };
+  }
+  return resolvedCents;
+}
 
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
@@ -12,11 +53,28 @@ export async function POST(req: NextRequest) {
   console.log('[Stripe Checkout] Request body:', body);
   const url = new URL(req.url);
   const location_id =
-    (typeof body.location_id === 'string' && body.location_id) || url.searchParams.get('loc') || '';
-  const display_id = (typeof body.display_id === 'string' && body.display_id) || '';
+    (typeof body.location_id === 'string' && body.location_id) ||
+    url.searchParams.get('loc') ||
+    url.searchParams.get('location_id') ||
+    '';
+  const display_id =
+    (typeof body.display_id === 'string' && body.display_id) || url.searchParams.get('display_id') || '';
   const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
+  const rawPricingType =
+    (typeof body.type === 'string' && body.type) || url.searchParams.get('type') || null;
+  const pricing_type = normalizePricingType(rawPricingType, flow_type);
+  const allowPromotionCodes =
+    (typeof body.allow_promotion_codes === 'boolean' && body.allow_promotion_codes) ||
+    parseBooleanFlag(url.searchParams.get('allow_promotion_codes'));
+  const hasTamperedAmountParams =
+    (typeof body === 'object' &&
+      body !== null &&
+      ('price' in body || 'amount' in body || 'amount_cents' in body)) ||
+    url.searchParams.has('price') ||
+    url.searchParams.has('amount') ||
+    url.searchParams.has('amount_cents');
   let customer_email: string | undefined = undefined;
   if (typeof body === 'object' && body && 'customer_email' in body) {
     const v = (body as { customer_email?: unknown }).customer_email;
@@ -44,6 +102,17 @@ export async function POST(req: NextRequest) {
       const message = e instanceof Error ? e.message : 'stripe_setup_failed';
       return NextResponse.json({ error: message }, { status: 400 });
     }
+  }
+
+  if (hasTamperedAmountParams) {
+    console.warn('[Stripe Checkout] Ignoring client-provided amount params', {
+      location_id,
+      pricing_type,
+    });
+  }
+
+  if (!location_id) {
+    return NextResponse.json({ error: 'missing_location_id' }, { status: 400 });
   }
 
   /* 
@@ -122,35 +191,14 @@ export async function POST(req: NextRequest) {
     reservationDescription += `\n(End time depends on selected hours)`;
   }
 
-  let unitAmount = 500;
-  if (location_id) {
-    if (!supabase) {
-      console.warn('Supabase client is not configured. Using default pricing.');
-    } else {
-      try {
-        const { data } = await supabase
-          .from('locations')
-          .select('base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier')
-          .eq('id', location_id)
-          .single();
-        
-        if (data) {
-          // base_price_hourly is in EUR, convert to cents
-          let price = (data.base_price_hourly || 5) * 100;
-          
-          if (data.dynamic_pricing_enabled && data.dynamic_pricing_ratio) {
-            price *= data.dynamic_pricing_ratio;
-          }
-          if (data.surcharge_enabled && data.surcharge_multiplier) {
-            price *= data.surcharge_multiplier;
-          }
-          
-          unitAmount = Math.round(price);
-        }
-      } catch (err) {
-        console.error('Failed to fetch pricing from Supabase:', err);
-      }
-    }
+  let unitAmount = 0;
+  try {
+    unitAmount = await resolveUnitAmountCents(location_id, pricing_type);
+  } catch (error) {
+    const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
+    const message =
+      typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
+    return NextResponse.json({ error: message }, { status });
   }
   try {
     // Attempt to create session with SEPA and Card
@@ -179,12 +227,22 @@ export async function POST(req: NextRequest) {
       success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${url.origin}/`,
       payment_method_types,
+      allow_promotion_codes: allowPromotionCodes,
       line_items: [
         {
           price_data: {
             currency: 'eur',
             product_data: { 
-              name: flow_type === 'park_now' ? 'Parking Session (Adjust Hours)' : (quantity > 1 ? `Parking Session (${quantity} Hours)` : 'Parking Session (1 Hour)'),
+              name:
+                pricing_type === 'daily'
+                  ? 'Parking Session (Daily)'
+                  : pricing_type === 'monthly'
+                    ? 'Parking Session (Monthly)'
+                    : flow_type === 'park_now'
+                      ? 'Parking Session (Adjust Hours)'
+                      : quantity > 1
+                        ? `Parking Session (${quantity} Hours)`
+                        : 'Parking Session (1 Hour)',
               description: reservationDescription || undefined,
             },
             unit_amount: unitAmount,
@@ -216,8 +274,10 @@ export async function POST(req: NextRequest) {
       payment_intent_data: {
         metadata: {
           location_id,
+          display_id,
           plate_number,
           flow_type,
+          pricing_type,
           check_in,
           check_out,
         },
@@ -233,11 +293,17 @@ export async function GET(req: NextRequest) {
   }
   const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const url = new URL(req.url);
-  const location_id = url.searchParams.get('loc') || '';
+  const location_id = url.searchParams.get('loc') || url.searchParams.get('location_id') || '';
+  const display_id = url.searchParams.get('display_id') || '';
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
-  const pricing_type = url.searchParams.get('type') === 'daily' ? 'daily' : 'hourly';
+  const pricing_type = normalizePricingType(url.searchParams.get('type'), flow_type);
+  const allowPromotionCodes = parseBooleanFlag(url.searchParams.get('allow_promotion_codes'));
   const customer_email = url.searchParams.get('email') || undefined;
+  const hasTamperedAmountParams =
+    url.searchParams.has('price') ||
+    url.searchParams.has('amount') ||
+    url.searchParams.has('amount_cents');
 
   if (flow_type === 'setup') {
     try {
@@ -262,43 +328,25 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  let unitAmount = 500;
-  if (location_id) {
-    if (!supabase) {
-      return NextResponse.json({ error: 'Supabase client is not configured.' }, { status: 500 });
-    }
-    const { data } = await supabase
-      .from('locations')
-      .select(
-        'rate_per_hour,base_price_hourly,base_price_daily,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling'
-      )
-      .eq('id', location_id)
-      .maybeSingle();
-    if (data) {
-      let resolvedPrice =
-        pricing_type === 'daily'
-          ? Number(data.base_price_daily ?? 0)
-          : Number(data.rate_per_hour ?? 0) > 0
-          ? Number(data.rate_per_hour ?? 0)
-          : Number(data.base_price_hourly ?? 0);
-      const floor =
-        pricing_type === 'daily'
-          ? Number(data.base_price_daily_floor ?? 0)
-          : Number(data.rate_per_hour_floor ?? 0);
-      const ceiling =
-        pricing_type === 'daily'
-          ? Number(data.base_price_daily_ceiling ?? 0)
-          : Number(data.rate_per_hour_ceiling ?? 0);
-      if (floor > 0 && resolvedPrice < floor) {
-        resolvedPrice = floor;
-      }
-      if (ceiling > 0 && resolvedPrice > ceiling) {
-        resolvedPrice = ceiling;
-      }
-      if (resolvedPrice > 0) {
-        unitAmount = Math.round(resolvedPrice * 100);
-      }
-    }
+  if (hasTamperedAmountParams) {
+    console.warn('[Stripe Checkout GET] Ignoring client-provided amount params', {
+      location_id,
+      pricing_type,
+    });
+  }
+
+  if (!location_id) {
+    return NextResponse.json({ error: 'missing_location_id' }, { status: 400 });
+  }
+
+  let unitAmount = 0;
+  try {
+    unitAmount = await resolveUnitAmountCents(location_id, pricing_type);
+  } catch (error) {
+    const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
+    const message =
+      typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
+    return NextResponse.json({ error: message }, { status });
   }
   try {
     const session = await stripe.checkout.sessions.create({
@@ -307,12 +355,18 @@ export async function GET(req: NextRequest) {
       success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${url.origin}/`,
       payment_method_types: ['card'],
+      allow_promotion_codes: allowPromotionCodes,
       line_items: [
         {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: pricing_type === 'daily' ? 'Parking Session (Daily)' : 'Parking Session (Hourly)',
+              name:
+                pricing_type === 'daily'
+                  ? 'Parking Session (Daily)'
+                  : pricing_type === 'monthly'
+                    ? 'Parking Session (Monthly)'
+                    : 'Parking Session (Hourly)',
             },
             unit_amount: unitAmount,
           },
@@ -322,6 +376,7 @@ export async function GET(req: NextRequest) {
       payment_intent_data: {
         metadata: {
           location_id,
+          display_id,
           plate_number,
           flow_type,
           pricing_type,

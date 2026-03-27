@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { resolvePricingModeFromSource, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 
 type LocationRow = {
   id: string;
@@ -385,92 +386,39 @@ function normalizeRole(value: string | null | undefined) {
   return "officer";
 }
 
-function toNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function resolvePricingMode(source: LocationRow) {
-  const metadata =
-    source.verification_metadata &&
-    typeof source.verification_metadata === "object"
-      ? source.verification_metadata
-      : null;
-
-  const modeRaw =
-    source.enforcement_pricing_mode ??
-    source.enforcmetn_pricing_mode ??
-    (metadata?.["enforcement_pricing_mode"] as string | undefined) ??
-    (metadata?.["enforcmetn_pricing_mode"] as string | undefined) ??
-    "hourly";
-
-  return modeRaw.toString().toLowerCase() === "daily" ? "daily" : "hourly";
+  const mode = resolvePricingModeFromSource(source);
+  return mode === "daily" ? "daily" : "hourly";
 }
 
 function resolveSignPrice(source: LocationRow, type: "hourly" | "daily") {
-  let price =
-    type === "daily"
-      ? toNumber(source.base_price_daily)
-      : toNumber(source.rate_per_hour ?? source.base_price_hourly);
-
-  const floor =
-    type === "daily"
-      ? toNumber(source.base_price_daily_floor)
-      : toNumber(source.rate_per_hour_floor);
-  const ceiling =
-    type === "daily"
-      ? toNumber(source.base_price_daily_ceiling)
-      : toNumber(source.rate_per_hour_ceiling);
-
-  if (floor > 0 && price < floor) {
-    price = floor;
-  }
-  if (ceiling > 0 && price > ceiling) {
-    price = ceiling;
-  }
-
-  if (!Number.isFinite(price) || price < 0) {
-    price = 0;
-  }
-
-  return price;
+  return resolveScannerTruthPriceEuro(source, type);
 }
 
 function buildCheckoutQrUrl(params: {
   locationId: string;
   displayId: string;
   type: "hourly" | "daily";
-  price: number | null;
   allowPromotionCodes?: boolean;
   promotionCodeLabel?: string;
 }) {
-  const functionsBase =
-    (process.env.NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL ?? "").trim().replace(/\/+$/, "") ||
-    `${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://iafjygownkhedereaoxw.supabase.co")
-      .trim()
-      .replace(/\/+$/, "")}/functions/v1`;
+  const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
+    .trim()
+    .replace(/\/+$/, "");
   const query = new URLSearchParams({
-    location_id: params.locationId,
+    loc: params.locationId,
     display_id: params.displayId,
+    flow: params.type === "daily" ? "reserve" : "park_now",
     type: params.type,
     t: Date.now().toString(),
   });
-  if (params.price !== null) {
-    const normalized = params.price < 0 ? 0 : params.price;
-    query.set("price", normalized.toFixed(2));
-    query.set("amount", normalized.toFixed(2));
-    query.set("amount_cents", Math.round(normalized * 100).toString());
-  }
   const allowPromotionCodes = params.allowPromotionCodes !== false;
   if (allowPromotionCodes) {
     query.set("allow_promotion_codes", "1");
     const trimmedLabel = (params.promotionCodeLabel ?? "").trim();
     query.set("promotion_code_label", trimmedLabel || "FREE100");
   }
-  return `${functionsBase}/create-checkout?${query.toString()}`;
+  return `${appBase}/api/stripe/checkout?${query.toString()}`;
 }
 
 function buildCasesQrUrl(displayId: string) {
@@ -694,7 +642,6 @@ export default function ResourcesPage() {
               locationId: row.id,
               displayId,
               type: pricingMode,
-              price: signPrice,
               allowPromotionCodes,
               promotionCodeLabel,
             }),
@@ -1175,70 +1122,6 @@ export default function ResourcesPage() {
         const qrDrawX = qrX + (qrBoxSize - qrSize) / 2;
         const qrDrawY = qrY + (qrBoxSize - qrSize) / 2;
 
-        const drawRoundedRect = (
-          x: number,
-          y: number,
-          size: number,
-          radius: number,
-          fillColor?: string,
-          strokeColor?: string,
-          strokeWidth = 0
-        ) => {
-          context.beginPath();
-          context.moveTo(x + radius, y);
-          context.lineTo(x + size - radius, y);
-          context.quadraticCurveTo(x + size, y, x + size, y + radius);
-          context.lineTo(x + size, y + size - radius);
-          context.quadraticCurveTo(x + size, y + size, x + size - radius, y + size);
-          context.lineTo(x + radius, y + size);
-          context.quadraticCurveTo(x, y + size, x, y + size - radius);
-          context.lineTo(x, y + radius);
-          context.quadraticCurveTo(x, y, x + radius, y);
-          context.closePath();
-          if (fillColor) {
-            context.fillStyle = fillColor;
-            context.fill();
-          }
-          if (strokeColor && strokeWidth > 0) {
-            context.lineWidth = strokeWidth;
-            context.strokeStyle = strokeColor;
-            context.stroke();
-          }
-        };
-
-        const drawRoundedRectBox = (
-          x: number,
-          y: number,
-          boxWidth: number,
-          boxHeight: number,
-          radius: number,
-          fillColor?: string,
-          strokeColor?: string,
-          strokeWidth = 0
-        ) => {
-          const safeRadius = Math.max(0, Math.min(radius, boxWidth / 2, boxHeight / 2));
-          context.beginPath();
-          context.moveTo(x + safeRadius, y);
-          context.lineTo(x + boxWidth - safeRadius, y);
-          context.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + safeRadius);
-          context.lineTo(x + boxWidth, y + boxHeight - safeRadius);
-          context.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - safeRadius, y + boxHeight);
-          context.lineTo(x + safeRadius, y + boxHeight);
-          context.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - safeRadius);
-          context.lineTo(x, y + safeRadius);
-          context.quadraticCurveTo(x, y, x + safeRadius, y);
-          context.closePath();
-          if (fillColor) {
-            context.fillStyle = fillColor;
-            context.fill();
-          }
-          if (strokeColor && strokeWidth > 0) {
-            context.lineWidth = strokeWidth;
-            context.strokeStyle = strokeColor;
-            context.stroke();
-          }
-        };
-
         if (exactQrMode) {
           const qrRenderWidth = Math.max(1, qrSize + exactQrWidthDeltaPx);
           const qrRenderHeight = Math.max(1, qrSize - exactQrTrimBottomPx);
@@ -1265,8 +1148,6 @@ export default function ResourcesPage() {
             qrRenderHeightWithTopGrow
           );
 
-          const moduleCount = moduleCountHint && moduleCountHint >= 21 ? moduleCountHint : 21;
-          
           if (hideCenterBadge) {
             context.restore();
             return;
@@ -1308,7 +1189,6 @@ export default function ResourcesPage() {
         const moduleCount = moduleCountHint && moduleCountHint >= 21 ? moduleCountHint : Math.min(33, Math.max(21, inferredModuleCount));
         const moduleDraw = qrSize / moduleCount;
         const qrMarkColor = "#000000";
-        const finderMarkColor = qrMarkColor;
         const dotDiameter = Math.max(1, moduleDraw * 0.8);
         const dotRadius = dotDiameter / 2;
         context.fillStyle = qrMarkColor;
@@ -1326,7 +1206,6 @@ export default function ResourcesPage() {
             context.fill();
           }
         }
-        const finderScale = 1;
         const logoBgSize = 31;
         context.fillStyle = "#ffffff";
         context.fillRect(
@@ -1900,6 +1779,56 @@ export default function ResourcesPage() {
         }
         context.drawImage(templateImage, offsetX, offsetY, drawWidth, drawHeight);
       }
+      const widgetSixteenPriceBottom = (widget.priceBottom ?? "").trim();
+      const widgetSixteenPriceTop = (widget.priceTop ?? "").trim();
+      const hasWidgetSixteenPriceRange =
+        isWidgetSixteen && widgetSixteenPriceBottom.length > 0 && widgetSixteenPriceTop.length > 0;
+      if (isWidgetSixteen) {
+        const widgetSixteenTopPriceOriginalText = "0.1€/h - 1.4€/h";
+        const widgetSixteenTopPriceText = "0.1€/h - 1€/h";
+        const widgetSixteenPixelsPerCm = 26;
+        const widgetSixteenTopPriceBaseFontSize = Math.max(18, Math.round(templateImage.height * 0.04));
+        const widgetSixteenTopPriceFontSize = Math.max(
+          9,
+          Math.round(widgetSixteenTopPriceBaseFontSize * 0.5)
+        );
+        const widgetSixteenTopPriceBaseY = Math.min(templateImage.height - 24, templateImage.height * 0.12 + 52);
+        const widgetSixteenTopPriceY = Math.max(
+          widgetSixteenTopPriceFontSize,
+          Math.round(widgetSixteenTopPriceBaseY - 5 * widgetSixteenPixelsPerCm)
+        );
+        context.save();
+        context.font = `900 ${widgetSixteenTopPriceFontSize}px Montserrat, Inter, Arial, sans-serif`;
+        const widgetSixteenTopPriceOriginalWidth = context.measureText(
+          widgetSixteenTopPriceOriginalText
+        ).width;
+        const widgetSixteenTopPriceTextWidth = context.measureText(widgetSixteenTopPriceText).width;
+        const widgetSixteenTopPriceBoxWidth = Math.max(
+          1,
+          Math.ceil((Math.max(widgetSixteenTopPriceOriginalWidth, widgetSixteenTopPriceTextWidth) + 12) * 1.2)
+        );
+        const widgetSixteenTopPriceBoxX = Math.round(width / 2 - widgetSixteenTopPriceBoxWidth / 2);
+        const widgetSixteenTopPriceBoxHeight = Math.max(
+          1,
+          Math.ceil(widgetSixteenTopPriceFontSize * 1.9 + 3 * widgetSixteenPixelsPerCm)
+        );
+        const widgetSixteenTopPriceBoxY = Math.max(
+          0,
+          Math.round(widgetSixteenTopPriceY - widgetSixteenTopPriceBoxHeight / 2)
+        );
+        context.fillStyle = "#ffffff";
+        context.fillRect(
+          widgetSixteenTopPriceBoxX,
+          widgetSixteenTopPriceBoxY,
+          widgetSixteenTopPriceBoxWidth,
+          Math.min(widgetSixteenTopPriceBoxHeight, height - widgetSixteenTopPriceBoxY)
+        );
+        context.fillStyle = "#111111";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(widgetSixteenTopPriceText, width / 2, widgetSixteenTopPriceY);
+        context.restore();
+      }
       if (!resourceForSign) {
         throw new Error("Select a location before downloading sign.");
       }
@@ -1907,7 +1836,6 @@ export default function ResourcesPage() {
         locationId: resourceForSign.id,
         displayId: resourceForSign.displayId,
         type: resourceForSign.pricingMode,
-        price: resourceForSign.signPrice,
         allowPromotionCodes: resourceForSign.allowPromotionCodes,
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
       });
@@ -2085,20 +2013,14 @@ export default function ResourcesPage() {
         context.font = "600 6.2px Inter, Arial, sans-serif";
         const footerLineHeight = 6.8;
         const footerStartY = 574;
-        const widgetSixteenPriceBottom = (widget.priceBottom ?? "").trim();
-        const widgetSixteenPriceTop = (widget.priceTop ?? "").trim();
-        const hasWidgetSixteenPriceRange =
-          widgetSixteenPriceBottom.length > 0 && widgetSixteenPriceTop.length > 0;
-        const widgetSixteenHrPriceSegment = hasWidgetSixteenPriceRange
-          ? ` Cijena od ${widgetSixteenPriceBottom}€ do ${widgetSixteenPriceTop}€/h,`
-          : "";
-        const widgetSixteenEngPriceSegment = hasWidgetSixteenPriceRange
-          ? ` Price from €${widgetSixteenPriceBottom} to €${widgetSixteenPriceTop}/h,`
-          : "";
         const footerLines = isWidgetSixteen
           ? [
-              `HR: Ulaskom pristajete na uvjete.${widgetSixteenHrPriceSegment} obvezna autorizacija. Operater: Indirektno, OIB: 83928715622, Podrška: payparq@outlook.com.`,
-              `ENG: By entering, you agree to the terms.${widgetSixteenEngPriceSegment} mandatory authorization. Operator: Indirektno,`,
+              hasWidgetSixteenPriceRange
+                ? `HR: Ulaskom pristajete na uvjete. Cijena od ${widgetSixteenPriceBottom}€ do ${widgetSixteenPriceTop}€/h, obvezna autorizacija. Operater: Indirektno,`
+                : "HR: Ulaskom pristajete na uvjete, obvezna autorizacija. Operater: Indirektno,",
+              hasWidgetSixteenPriceRange
+                ? `ENG: By entering, you agree to the terms. Price from €${widgetSixteenPriceBottom} to €${widgetSixteenPriceTop}/h, mandatory authorization. Operator: Indirektno,`
+                : "ENG: By entering, you agree to the terms. Mandatory authorization. Operator: Indirektno,",
               "OIB: 83928715622, Support: payparq@outlook.com.",
             ]
           : (() => {

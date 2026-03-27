@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
+import { formatEuroLabel, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ export async function GET() {
     }
     const { data: locations, error } = await client
       .from('locations')
-      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata,base_price_hourly,dynamic_pricing_enabled,dynamic_pricing_ratio,surcharge_enabled,surcharge_multiplier')
+      .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling')
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -41,11 +42,16 @@ export async function GET() {
       latitude?: number;
       longitude?: number;
       verification_metadata?: Record<string, unknown>;
+      rate_per_hour?: number;
       base_price_hourly?: number;
-      dynamic_pricing_enabled?: boolean;
-      dynamic_pricing_ratio?: number;
-      surcharge_enabled?: boolean;
-      surcharge_multiplier?: number;
+      base_price_daily?: number;
+      base_price_monthly?: number;
+      rate_per_hour_floor?: number;
+      rate_per_hour_ceiling?: number;
+      base_price_daily_floor?: number;
+      base_price_daily_ceiling?: number;
+      base_price_monthly_floor?: number;
+      base_price_monthly_ceiling?: number;
     };
 
     type Hub = {
@@ -68,18 +74,8 @@ export async function GET() {
         const lng = typeof loc.longitude === 'number' ? loc.longitude : 0;
         const displayId = String(loc.display_id || loc.id);
 
-        // Calculate dynamic price (same logic as [slug]/page.tsx and checkout/route.ts)
-        const basePrice = loc.base_price_hourly || 5;
-        let finalPrice = basePrice;
-
-        if (loc.dynamic_pricing_enabled && loc.dynamic_pricing_ratio) {
-          finalPrice *= loc.dynamic_pricing_ratio;
-        }
-        if (loc.surcharge_enabled && loc.surcharge_multiplier) {
-          finalPrice *= loc.surcharge_multiplier;
-        }
-
-        const priceLabel = `€${finalPrice.toFixed(2)}`;
+        const finalPrice = resolveScannerTruthPriceEuro(loc, 'hourly');
+        const priceLabel = formatEuroLabel(finalPrice);
 
         return { id: loc.id, displayId, name, label, href, lat, lng, priceLabel };
       })
