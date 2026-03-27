@@ -183,6 +183,40 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     photos = photos.slice(0, 4);
   }
   const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
+  const miniPhotos = Array.from({ length: 7 }, (_, idx) => photos[idx % photos.length]);
+  const streetViewHref =
+    typeof hub.latitude === "number" && typeof hub.longitude === "number"
+      ? `https://www.google.com/maps?q=&layer=c&cbll=${hub.latitude},${hub.longitude}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationName)}`;
+  const cityManagerName =
+    (typeof vm?.["city_manager_name"] === "string" && vm["city_manager_name"].trim().length > 0
+      ? vm["city_manager_name"]
+      : typeof vm?.["manager_name"] === "string" && vm["manager_name"].trim().length > 0
+      ? vm["manager_name"]
+      : "City Manager") as string;
+  const cityManagerPhoto =
+    (typeof vm?.["city_manager_photo"] === "string" && vm["city_manager_photo"].trim().length > 0
+      ? vm["city_manager_photo"]
+      : typeof vm?.["manager_photo"] === "string" && vm["manager_photo"].trim().length > 0
+      ? vm["manager_photo"]
+      : "") as string;
+  const cityManagerWhatsappRaw =
+    (typeof vm?.["city_manager_whatsapp"] === "string" && vm["city_manager_whatsapp"].trim().length > 0
+      ? vm["city_manager_whatsapp"]
+      : typeof vm?.["whatsapp"] === "string" && vm["whatsapp"].trim().length > 0
+      ? vm["whatsapp"]
+      : typeof vm?.["whatsapp_number"] === "string" && vm["whatsapp_number"].trim().length > 0
+      ? vm["whatsapp_number"]
+      : "") as string;
+  const cityManagerWhatsapp = cityManagerWhatsappRaw.replace(/[^\d]/g, "");
+  const cityManagerMessageHref = cityManagerWhatsapp
+    ? `https://wa.me/${cityManagerWhatsapp}?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}` 
+    : `https://wa.me/?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}`;
+  const reviewItems = [
+    { quote: "Čisto, brzo i bez čekanja. Ušli smo i izašli bez papira.", author: "Ana M.", rating: "5.0" },
+    { quote: "Podrška je odmah odgovorila i pomogla oko promjene termina.", author: "Marko R.", rating: "4.9" },
+    { quote: "Lokacija je jednostavna, cijena jasna i sve je prošlo bez stresa.", author: "Ivana K.", rating: "4.8" },
+  ];
 
   const handlePrevPhoto = () => {
     setCurrentPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
@@ -232,7 +266,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       label: "Arrange Your Ride & Protection",
       title: "3. Arrange Your Ride & Protection",
       description:
-        "Request Uber to the terminal in minutes. Flexible options, simple flow.",
+        "Zatražite Parq vožnju do odredišta u nekoliko minuta. Fleksibilne opcije, jednostavan proces.",
       icon: Car,
     },
     {
@@ -274,7 +308,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "extras" as SectionKey,
       title: "Available extras",
-      value: "Uber + support",
+      value: "Parq vožnja + support",
       description: "On-demand rides and direct city manager support.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -362,7 +396,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     url: `https://payparq.ai/locations/${hub.canonical_slug}`,
     slogan: "Effortless airport parking",
     amenityFeature: [
-      { "@type": "LocationFeatureSpecification", name: "On‑demand Uber", value: true },
+      { "@type": "LocationFeatureSpecification", name: "On‑demand Parq vožnja", value: true },
       { "@type": "LocationFeatureSpecification", name: "AI Camera Monitoring", value: true },
       { "@type": "LocationFeatureSpecification", name: "Stripe Secure Checkout", value: true },
     ],
@@ -393,11 +427,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const distAirport = distanceKm(hub.latitude, hub.longitude, cityConfig.airport.lat, cityConfig.airport.lng);
   const distBeach = distanceKm(hub.latitude, hub.longitude, cityConfig.beach.lat, cityConfig.beach.lng);
   const defaultFaq = [
-    { q: `How close is PayParq to ${cityName} Airport?`, a: `Typical transfer is 2–5 minutes by Uber depending on traffic. Our location is optimised for quick access to terminal routes.` },
+    { q: `How close is PayParq to ${cityName} Airport?`, a: `Typical transfer is 2–5 minutes by Parq vožnja depending on traffic. Our location is optimised for quick access to key destination routes.` },
     { q: `Is the car park secure?`, a: `Yes. We use AI‑powered cameras to monitor every entry and exit 24/7. The lot is remote but digitally supervised at all times.` },
     { q: `Do I need to display a ticket?`, a: `No. Your license plate is your digital permit. Our system recognises your car automatically.` },
     { q: `Can I cancel or change my booking?`, a: `Yes. You can cancel for a full refund up to 1 hour before your arrival time.` },
-    { q: `Do you offer on‑demand transfers?`, a: `Yes. Request Uber directly from the app for instant terminal drop‑off, typically arriving in minutes.` },
+    { q: `Do you offer on‑demand transfers?`, a: `Yes. Zatražite Parq vožnju direktno iz aplikacije za instant transfer do odredišta, obično u nekoliko minuta.` },
     { q: `Is the car park monitored?`, a: `AI camera monitoring, well‑lit bays, and activity logs provide a secure environment for short‑ and long‑stay parking.` },
     { q: `Do you support EVs?`, a: `Selected locations include EV charging. If not available at this site, nearby public chargers are suggested in the app.` },
     { q: `Are there height or size limits?`, a: `Most standard vehicles fit. Oversized vehicles should contact support for dedicated guidance before booking.` },
@@ -405,9 +439,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Is customer support available?`, a: `24/7 WhatsApp and in‑app support. Contact the City Manager directly from your confirmation.` },
     { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
-    { q: `What happens if my flight is delayed?`, a: `Adjust your end time in the app or contact support — we’ll help update your reservation.` },
+    { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we’ll help update your reservation.` },
     { q: `Is pricing transparent?`, a: `Yes. Clear hourly rates with no hidden fees. Total is shown before you confirm.` },
-    { q: `Can I order transport or buy insurance from your site?`, a: `Yes. After your booking is confirmed, you'll be redirected to a success page where you can arrange Uber transport, purchase insurance, and download your booking receipt. <a href="/success" class="underline text-blue-600" target="_blank">View Success Page Demo</a>` },
+    { q: `Can I order transport or buy insurance from your site?`, a: `Yes. After your booking is confirmed, you'll be redirected to a success page where you can arrange Parq vožnju, purchase insurance, and download your booking receipt. <a href="/success" class="underline text-blue-600" target="_blank">View Success Page Demo</a>` },
   ];
   const finalFaq = faqItems && faqItems.length > 0 ? faqItems : defaultFaq;
   const faqSchema = {
@@ -739,7 +773,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
             <button
               type="button"
               onClick={toggleFavorite}
-              className="mt-0.5 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-black hover:bg-black/5 transition-colors shrink-0"
+              className={`mt-0.5 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white transition-colors shrink-0 ${isFavorite ? "text-red-500 hover:bg-red-50" : "text-black hover:bg-black/5"}`}
               aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
             >
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -872,6 +906,50 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 text-[#5F3DFC]" aria-hidden="true">
+                    <path d="M12 2c3.9 0 7 3.1 7 7 0 5.2-7 13-7 13S5 14.2 5 9c0-3.9 3.1-7 7-7Z" fill="currentColor" />
+                    <circle cx="12" cy="9" r="2.8" fill="white" fillOpacity="0.95" />
+                    <path d="M11.1 4.8a4.2 4.2 0 0 1 5.1.6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                    <path d="M7.8 8.2a4.2 4.2 0 0 1 2.8-3.2" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-xs md:text-sm font-semibold text-black">Street View & Photos (8)</p>
+                </div>
+                <p className="mt-1 text-[11px] md:text-xs text-black/60">Provjerite ulaz i okolinu prije dolaska</p>
+                <div className="mt-3 grid grid-cols-4 md:grid-cols-8 gap-2">
+                  <a
+                    href={streetViewHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="aspect-square rounded-xl border border-black/10 bg-[#F7F7FB] flex flex-col items-center justify-center text-center px-1 hover:bg-[#F0EEFF] transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#5F3DFC]" aria-hidden="true">
+                      <path d="M12 2c3.9 0 7 3.1 7 7 0 5.2-7 13-7 13S5 14.2 5 9c0-3.9 3.1-7 7-7Z" fill="currentColor" />
+                      <circle cx="12" cy="9" r="2.8" fill="white" fillOpacity="0.95" />
+                      <path d="M11.1 4.8a4.2 4.2 0 0 1 5.1.6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                      <path d="M7.8 8.2a4.2 4.2 0 0 1 2.8-3.2" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-[9px] font-semibold text-[#5F3DFC] mt-1 leading-tight">Street View</span>
+                  </a>
+                  {miniPhotos.map((photo, idx) => {
+                    const photoIndex = idx % photos.length;
+                    const isActiveThumb = currentPhotoIndex === photoIndex;
+                    return (
+                      <button
+                        key={`${photo}-${idx}`}
+                        type="button"
+                        onClick={() => setCurrentPhotoIndex(photoIndex)}
+                        className={`relative aspect-square rounded-xl overflow-hidden border ${isActiveThumb ? "border-[#5F3DFC]" : "border-black/10"}`}
+                        aria-label={`Photo ${idx + 1}`}
+                      >
+                        <Image src={photo} alt={`${locationName} photo ${idx + 1}`} fill className="object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <section className="mt-4 md:mt-6 bg-transparent rounded-none overflow-hidden w-full">
@@ -1053,6 +1131,65 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                               <p className="text-xs text-black/70">{item.a}</p>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                      aria-expanded={openSections.reviews}
+                      onClick={() => setOpenSections((prev) => ({ ...prev, reviews: !prev.reviews }))}
+                    >
+                      <span className="inline-flex items-center gap-3">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#5F3DFC] shrink-0" fill="currentColor" aria-hidden="true">
+                          <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        </svg>
+                        <span className="text-sm md:text-base font-semibold">Recenzije i podrška</span>
+                      </span>
+                      {openSections.reviews ? (
+                        <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      ) : (
+                        <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                      )}
+                    </button>
+                    {openSections.reviews ? (
+                      <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {reviewItems.map((item) => (
+                            <div key={item.author} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
+                              <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
+                              <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
+                              <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {cityManagerPhoto ? (
+                              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-black/10 shrink-0">
+                                <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url("${cityManagerPhoto}")` }} aria-label={`${cityManagerName} profile`} />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-[#F0EEFF] text-[#5F3DFC] font-semibold text-sm inline-flex items-center justify-center shrink-0">
+                                {cityManagerName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-black truncate">{cityManagerName}</p>
+                              <p className="text-xs text-black/65">City Manager • Prosječni odgovor &lt; 5 min</p>
+                            </div>
+                          </div>
+                          <a
+                            href={cityManagerMessageHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center rounded-xl bg-[#5F3DFC] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4F33D4] transition-colors"
+                          >
+                            Pošalji poruku
+                          </a>
                         </div>
                       </div>
                     ) : null}
@@ -1339,16 +1476,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
                   Platform
                 </p>
-                <Link
-                  href="/locations"
-                  className="block hover:text-white transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.location.href = "/locations";
+                <button
+                  type="button"
+                  className="block hover:text-white transition-colors text-left"
+                  onClick={() => {
+                    window.location.assign("/locations");
                   }}
                 >
                   Locations
-                </Link>
+                </button>
                 <Link href="/members" className="block hover:text-white transition-colors">
                   Members
                 </Link>
