@@ -56,6 +56,35 @@ function canCreate(callerRole: string, targetRole: string): boolean {
   return false;
 }
 
+function roleFromMetadata(user: any): string {
+  return normalizeRole(
+    user?.user_metadata?.role ??
+      user?.app_metadata?.role ??
+      user?.user_metadata?.user_role ??
+      user?.app_metadata?.user_role,
+  );
+}
+
+async function ownsAllRequestedLocations(
+  callerUserId: string,
+  requestedLocationIds: string[],
+): Promise<boolean> {
+  if (requestedLocationIds.length === 0) return false;
+  const locRows = await Promise.all(requestedLocationIds.map(async (rawId) => {
+    const rowId = rawId.trim();
+    if (!rowId) return null;
+    const { data, error } = await admin
+      .from("locations")
+      .select("id,display_id,owner_id")
+      .or(`id.eq.${rowId},display_id.eq.${rowId}`)
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data;
+  }));
+  return locRows.every((row) => row && String(row.owner_id ?? "") === callerUserId);
+}
+
 async function hasPrivilegedProfile(): Promise<boolean> {
   const { count, error } = await admin
     .from("profiles")
@@ -180,7 +209,7 @@ serve(async (req) => {
       .eq("id", callerUserId)
       .maybeSingle();
     if (callerProfileError) return json({ error: callerProfileError.message }, 403);
-    const callerRole = normalizeRole(callerProfile?.role);
+    const callerRole = normalizeRole(callerProfile?.role ?? roleFromMetadata(callerUserData.user));
 
     if (action === "delete_staff" || action === "delete") {
       const targetUserId = String(body?.userId ?? body?.user_id ?? body?.id ?? "").trim();
@@ -246,9 +275,23 @@ serve(async (req) => {
     const locationId = locationIdRaw.length > 0
       ? locationIdRaw
       : (uniqueLocationIds.length > 0 ? uniqueLocationIds[0] : null);
+    const permissionLocationIds = locationId
+      ? [...new Set([locationId, ...uniqueLocationIds])]
+      : uniqueLocationIds;
 
     if (!isEmail(email)) return json({ error: "Invalid email" }, 400);
-    if (!canCreate(callerRole, targetRole)) {
+    let canCreateTargetRole = canCreate(callerRole, targetRole);
+    const canUseOwnerFallback =
+      !canCreateTargetRole &&
+      targetRole === "manager" &&
+      permissionLocationIds.length > 0;
+    if (canUseOwnerFallback) {
+      canCreateTargetRole = await ownsAllRequestedLocations(
+        callerUserId,
+        permissionLocationIds,
+      );
+    }
+    if (!canCreateTargetRole) {
       return json({ error: "No permission to create this role" }, 403);
     }
     if ((targetRole === "manager" || targetRole === "officer") && !locationId) {

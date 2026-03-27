@@ -294,7 +294,8 @@ void main() {
     );
   });
 
-  test('Error mapper normalizes quick-ticket duplicate postgres payload', () async {
+  test('Error mapper normalizes quick-ticket duplicate postgres payload',
+      () async {
     final file = File('lib/services/error_mapper.dart');
     final content = await file.readAsString();
 
@@ -302,7 +303,8 @@ void main() {
       content.contains('_isQuickTicketDuplicateError') &&
           content.contains('_isQuickTicketDuplicatePostgrest') &&
           content.contains('violations_quick_ticket_one_per_day_idx') &&
-          content.contains('Quick ticket already exists today for this plate at this location.'),
+          content.contains(
+              'Quick ticket already exists today for this plate at this location.'),
       isTrue,
       reason:
           'ErrorMapper must normalize 23505 quick-ticket duplicate errors globally so raw Postgres text never reaches the snackbar.',
@@ -377,6 +379,43 @@ void main() {
       isTrue,
       reason:
           'Officer role should see home data but should not have direct permits/pricing tab access.',
+    );
+  });
+
+  test('Create-officer allows lot-owner admin fallback for manager creation',
+      () async {
+    final file = File('supabase/functions/create-officer/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('function roleFromMetadata(') &&
+          content.contains('function ownsAllRequestedLocations(') &&
+          content.contains('targetRole === "manager"') &&
+          content.contains(
+              'canCreateTargetRole = await ownsAllRequestedLocations(') &&
+          content.contains(
+              'normalizeRole(callerProfile?.role ?? roleFromMetadata(callerUserData.user))'),
+      isTrue,
+      reason:
+          'Manager creation must work for admins with owned existing lots even when profile role is stale, while preserving backend permission checks.',
+    );
+  });
+
+  test('Stripe connect account creation enforces Croatia country default',
+      () async {
+    final file = File('supabase/functions/create-connect-account/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('const desiredCountry =') &&
+          content.contains('STRIPE_CONNECT_COUNTRY') &&
+          content.contains('"HR"') &&
+          content.contains('if (accountCountry !== targetCountry)') &&
+          content.contains(
+              'const replacement = await createExpressAccount(userId, targetCountry);'),
+      isTrue,
+      reason:
+          'Stripe Connect onboarding must default to Croatia and replace stale accounts created under another country.',
     );
   });
 }
