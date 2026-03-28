@@ -93,9 +93,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       data: (profile) {
         final locationId =
             ref.watch(selectedLocationIdProvider) ?? profile?['location_id'];
-        final role = profile?['role'];
-        final isSuperAdmin = role == 'super_admin';
-        final isAdmin = role == 'admin';
+        final roleRaw = (profile?['role'] ?? '').toString().toLowerCase();
+        final roleNorm = roleRaw.replaceAll('-', '_').replaceAll(' ', '_');
+        final isSuperAdmin =
+            roleNorm == 'super_admin' || roleNorm == 'superadmin';
+        final isAdmin = roleNorm == 'admin';
 
         return Scaffold(
           backgroundColor: AppTheme.background,
@@ -270,7 +272,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ConstrainedBox(
                                   constraints:
                                       const BoxConstraints(maxWidth: 160),
-                                  child: _buildVerificationBadge(loc, isAdmin),
+                                  child: _buildVerificationBadge(
+                                      loc, isAdmin, isSuperAdmin),
                                 ),
                                 const SizedBox(width: 12),
                                 ElevatedButton(
@@ -335,7 +338,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
-  Widget _buildVerificationBadge(Map<String, dynamic> loc, bool isAdmin) {
+  Widget _buildVerificationBadge(
+      Map<String, dynamic> loc, bool isAdmin, bool isSuperAdmin) {
     final isHr = ref.read(localeIsCroatianProvider);
     final rawStatus = loc['verification_status'] ?? 'unverified';
     final status =
@@ -345,6 +349,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     String label;
     bool showAction = false;
     IconData icon;
+
+    final canManageVerification = isAdmin || isSuperAdmin;
 
     switch (status) {
       case 'verified':
@@ -373,14 +379,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         badgeColor = const Color(0xFFFF3B30);
         label = Lang.sel(isHr, 'REJECTED', 'ODBIJENO');
         icon = Icons.error_outline;
-        showAction = isAdmin;
+        showAction = canManageVerification;
         break;
       case 'unverified':
       default:
         badgeColor = AppTheme.sidebarBackground;
         label = Lang.sel(isHr, 'SETUP REQUIRED', 'KONFIGURIRAJ');
         icon = Icons.info_outline;
-        showAction = isAdmin;
+        showAction = canManageVerification;
     }
 
     final bool fixedWidthRequired = status == 'contact_required' ||
@@ -692,6 +698,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final effectiveLoc = override != null ? {...loc, ...override} : loc;
         final nameCtrl = TextEditingController(
             text: (effectiveLoc['name'] ?? 'Unnamed Lot').toString());
+        final addressCtrl = TextEditingController(
+            text: (effectiveLoc['address'] ?? '').toString());
         final capacity = (effectiveLoc['capacity'] ?? 0) is int
             ? effectiveLoc['capacity'] as int
             : int.tryParse((effectiveLoc['capacity'] ?? '0').toString()) ?? 0;
@@ -709,7 +717,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         double pendingLongitude = (effectiveLoc['longitude'] is num)
             ? (effectiveLoc['longitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['longitude'] ?? 0.0}') ?? 0.0;
-        String currentAddress = (effectiveLoc['address'] ?? '').toString();
         final bool canEdit = isSuperAdmin || isAdmin;
 
         return AlertDialog(
@@ -726,6 +733,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 Future<void> saveChanges() async {
                   if (!canEdit) return;
                   final newName = nameCtrl.text.trim();
+                  final newAddress = addressCtrl.text.trim();
                   if (newName.isEmpty) {
                     messenger.showSnackBar(
                       SnackBar(
@@ -746,7 +754,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       this.setState(() {
                         _locOverrides[loc['id'].toString()] = {
                           'name': newName,
-                          'address': currentAddress,
+                          'address': newAddress,
                           'latitude': pendingLatitude,
                           'longitude': pendingLongitude,
                           'capacity': newCapacity,
@@ -759,7 +767,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         .updateLocationDetails(
                           id: loc['id'].toString(),
                           name: newName,
-                          address: currentAddress,
+                          address: newAddress,
                           latitude: pendingLatitude,
                           longitude: pendingLongitude,
                           capacity: newCapacity,
@@ -767,13 +775,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     setState(() {
                       currentName = newName;
                       loc['name'] = newName;
-                      loc['address'] = currentAddress;
+                      loc['address'] = newAddress;
                       loc['latitude'] = pendingLatitude;
                       loc['longitude'] = pendingLongitude;
                       currentCapacity = newCapacity;
                       loc['capacity'] = newCapacity;
                       loc['total_spots'] = newCapacity;
                       nameCtrl.text = newName;
+                      addressCtrl.text = newAddress;
                       capacityCtrl.text = '$newCapacity';
                     });
                     if (dialogContext.mounted) {
@@ -873,6 +882,32 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                         ref.watch(localeIsCroatianProvider),
                                         'e.g. Parking Trogir',
                                         'npr. Parking Trogir'),
+                                    filled: true,
+                                    fillColor: AppTheme.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider),
+                                      'Address', 'Adresa'),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: addressCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: Lang.sel(
+                                        ref.watch(localeIsCroatianProvider),
+                                        'e.g. City center',
+                                        'npr. Centar grada'),
                                     filled: true,
                                     fillColor: AppTheme.surface,
                                     border: OutlineInputBorder(
@@ -1027,7 +1062,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                             pendingLatitude = latLng.latitude;
                                             pendingLongitude = latLng.longitude;
                                             if (address.trim().isNotEmpty) {
-                                              currentAddress = address.trim();
+                                              addressCtrl.text = address.trim();
                                             }
                                           });
                                         },
