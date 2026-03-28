@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 type PricingType = 'hourly' | 'daily' | 'monthly';
+const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
+const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
 
 function parseBooleanFlag(value: string | null | undefined): boolean {
   if (!value) return false;
@@ -16,6 +18,72 @@ function normalizePricingType(rawType: string | null | undefined, flowType: stri
   if (rawType === 'monthly') return 'monthly';
   if (flowType === 'monthly') return 'monthly';
   return 'hourly';
+}
+
+function buildSwitchCheckoutUrl(params: {
+  baseUrl: string;
+  locationId: string;
+  displayId: string;
+  flowType: string;
+  targetType: PricingType;
+  customerEmail?: string;
+  allowPromotionCodes: boolean;
+}) {
+  const { baseUrl, locationId, displayId, flowType, targetType, customerEmail, allowPromotionCodes } = params;
+  const switchUrl = new URL('/api/stripe/checkout', baseUrl);
+  switchUrl.searchParams.set('location_id', locationId);
+  if (displayId) {
+    switchUrl.searchParams.set('display_id', displayId);
+  }
+  if (flowType) {
+    switchUrl.searchParams.set('flow', flowType);
+  }
+  switchUrl.searchParams.set('type', targetType);
+  if (customerEmail) {
+    switchUrl.searchParams.set('email', customerEmail);
+  }
+  if (allowPromotionCodes) {
+    switchUrl.searchParams.set('allow_promotion_codes', '1');
+  }
+  return switchUrl.toString();
+}
+
+function buildSubmitMessage(params: {
+  pricingType: PricingType;
+  baseUrl: string;
+  locationId: string;
+  displayId: string;
+  flowType: string;
+  customerEmail?: string;
+  allowPromotionCodes: boolean;
+}) {
+  const termsLine =
+    'By paying, you agree to our [Terms of Service](https://www.payparq.com/terms) and [Privacy Policy](https://www.payparq.com/privacy).';
+  if (params.pricingType === 'daily') {
+    const hourlyUrl = buildSwitchCheckoutUrl({
+      baseUrl: params.baseUrl,
+      locationId: params.locationId,
+      displayId: params.displayId,
+      flowType: params.flowType,
+      targetType: 'hourly',
+      customerEmail: params.customerEmail,
+      allowPromotionCodes: params.allowPromotionCodes,
+    });
+    return `Need hourly for this location? [Open hourly checkout](${hourlyUrl})\n${termsLine}`;
+  }
+  if (params.pricingType === 'hourly') {
+    const dailyUrl = buildSwitchCheckoutUrl({
+      baseUrl: params.baseUrl,
+      locationId: params.locationId,
+      displayId: params.displayId,
+      flowType: params.flowType,
+      targetType: 'daily',
+      customerEmail: params.customerEmail,
+      allowPromotionCodes: params.allowPromotionCodes,
+    });
+    return `Need daily for this location? [Open daily checkout](${dailyUrl})\n${termsLine}`;
+  }
+  return termsLine;
 }
 
 async function resolveUnitAmountCents(locationId: string, pricingType: PricingType): Promise<number> {
@@ -80,13 +148,22 @@ export async function POST(req: NextRequest) {
     const v = (body as { customer_email?: unknown }).customer_email;
     if (typeof v === 'string') customer_email = v;
   }
+  const submitMessage = buildSubmitMessage({
+    pricingType: pricing_type,
+    baseUrl: url.origin,
+    locationId: location_id,
+    displayId: display_id,
+    flowType: flow_type,
+    customerEmail: customer_email,
+    allowPromotionCodes,
+  });
 
   if (flow_type === 'setup') {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${url.origin}/`,
+        success_url: unifiedStripeSuccessUrl,
+        cancel_url: unifiedStripeCancelUrl,
         customer_email,
         payment_method_types: ['card'],
         setup_intent_data: {
@@ -224,8 +301,8 @@ export async function POST(req: NextRequest) {
     return await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${url.origin}/`,
+      success_url: unifiedStripeSuccessUrl,
+      cancel_url: unifiedStripeCancelUrl,
       payment_method_types,
       allow_promotion_codes: allowPromotionCodes,
       line_items: [
@@ -259,7 +336,7 @@ export async function POST(req: NextRequest) {
       ],
       custom_text: {
         submit: {
-          message: 'By paying, you agree to our [Terms of Service](https://www.payparq.com/terms) and [Privacy Policy](https://www.payparq.com/privacy).',
+          message: submitMessage,
         },
       },
       custom_fields: [
@@ -300,6 +377,15 @@ export async function GET(req: NextRequest) {
   const pricing_type = normalizePricingType(url.searchParams.get('type'), flow_type);
   const allowPromotionCodes = parseBooleanFlag(url.searchParams.get('allow_promotion_codes'));
   const customer_email = url.searchParams.get('email') || undefined;
+  const submitMessage = buildSubmitMessage({
+    pricingType: pricing_type,
+    baseUrl: url.origin,
+    locationId: location_id,
+    displayId: display_id,
+    flowType: flow_type,
+    customerEmail: customer_email,
+    allowPromotionCodes,
+  });
   const hasTamperedAmountParams =
     url.searchParams.has('price') ||
     url.searchParams.has('amount') ||
@@ -309,8 +395,8 @@ export async function GET(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
-        success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${url.origin}/`,
+        success_url: unifiedStripeSuccessUrl,
+        cancel_url: unifiedStripeCancelUrl,
         customer_email,
         payment_method_types: ['card'],
         setup_intent_data: {
@@ -352,8 +438,8 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: `${url.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${url.origin}/`,
+      success_url: unifiedStripeSuccessUrl,
+      cancel_url: unifiedStripeCancelUrl,
       payment_method_types: ['card'],
       allow_promotion_codes: allowPromotionCodes,
       line_items: [
@@ -373,6 +459,11 @@ export async function GET(req: NextRequest) {
           quantity: 1,
         },
       ],
+      custom_text: {
+        submit: {
+          message: submitMessage,
+        },
+      },
       payment_intent_data: {
         metadata: {
           location_id,

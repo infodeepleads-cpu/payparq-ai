@@ -1,16 +1,31 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Car, Shield, Download, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 
+type SessionSummary = {
+  session_id: string;
+  ref_id: string;
+  email: string | null;
+  amount_total: number;
+  currency: string;
+  flow_type: string | null;
+  location_id: string | null;
+  membership_exists: boolean;
+  email_verified: boolean;
+};
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const refId = sessionId ? sessionId.slice(-8) : null;
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [lookupError, setLookupError] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const refId = summary?.ref_id ?? (sessionId ? sessionId.slice(-8) : null);
   const mailSubject = `Insurance Application${refId ? ` – Booking ${refId}` : ''}`;
   const mailBody =
     `Hello Payparq,\n\n` +
@@ -26,6 +41,61 @@ function SuccessContent() {
   const handleDownloadReceipt = () => {
     window.print();
   };
+
+  useEffect(() => {
+    let active = true;
+    if (!sessionId) {
+      return;
+    }
+    const run = async () => {
+      setLookupLoading(true);
+      setLookupError('');
+      try {
+        const response = await fetch(`/api/stripe/session?session_id=${encodeURIComponent(sessionId)}`);
+        const payload = (await response.json().catch(() => null)) as SessionSummary | { error?: string } | null;
+        if (!active) return;
+        if (!response.ok) {
+          setSummary(null);
+          setLookupError(
+            payload && 'error' in payload && payload.error
+              ? payload.error
+              : 'Unable to load payment details.'
+          );
+          return;
+        }
+        setSummary(payload as SessionSummary);
+      } catch {
+        if (!active) return;
+        setSummary(null);
+        setLookupError('Unable to load payment details.');
+      } finally {
+        if (!active) return;
+        setLookupLoading(false);
+      }
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
+
+  const membersHref = useMemo(() => {
+    if (!summary?.email) return '/members';
+    return `/members?email=${encodeURIComponent(summary.email)}&tab=activity`;
+  }, [summary?.email]);
+  const extendHourlyHref = useMemo(() => {
+    if (!summary?.location_id) return '';
+    const params = new URLSearchParams({
+      location_id: summary.location_id,
+      flow: 'park_now',
+      type: 'hourly',
+      allow_promotion_codes: '1',
+    });
+    if (summary.email) {
+      params.set('email', summary.email);
+    }
+    return `/api/stripe/checkout?${params.toString()}`;
+  }, [summary?.location_id, summary?.email]);
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -45,6 +115,16 @@ function SuccessContent() {
                   Your parking session has been successfully booked. 
                   {sessionId && <span className="block mt-1 text-xs text-black/40 font-mono">Ref: {sessionId.slice(-8)}</span>}
                 </p>
+                {summary?.email && (
+                  <p className="text-xs text-black/50 mt-2">
+                    Membership is ready for {summary.email}. Verify email to unlock promotions.
+                  </p>
+                )}
+                {!summary?.email_verified && summary?.email && (
+                  <p className="text-[11px] text-black/50 mt-1">
+                    Check Inbox and Junk/Spam after tapping verify.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -92,6 +172,59 @@ function SuccessContent() {
                   </a>
                 </div>
               </div>
+            </div>
+
+            <div className="h-px bg-black/5" />
+
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-sm text-black/70">
+                  Open Members to track this live session and account activity.
+                </p>
+                {(lookupLoading || lookupError) && (
+                  <p className="text-[11px] text-black/50 mt-1">
+                    {lookupLoading ? 'Loading payment details...' : lookupError}
+                  </p>
+                )}
+              </div>
+              <Link
+                href={membersHref}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-black text-white text-[13px] font-semibold shadow-sm hover:bg-gray-900 transition-colors w-full md:w-auto"
+              >
+                Open Members
+              </Link>
+            </div>
+
+            <div className="h-px bg-black/5" />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-black">Extend Your Stay</p>
+                {summary?.location_id && (
+                  <p className="text-[11px] text-black/50">Location: {summary.location_id}</p>
+                )}
+              </div>
+              <p className="text-xs text-black/60">
+                Fastest conversion path: one tap to extend now, no form re-entry.
+              </p>
+              <div className="grid md:grid-cols-2 gap-3">
+                <a
+                  href={extendHourlyHref || '#'}
+                  aria-disabled={!extendHourlyHref}
+                  className={`inline-flex items-center justify-center px-4 py-3 rounded-full text-xs font-semibold transition-colors ${
+                    extendHourlyHref
+                      ? 'bg-black text-white hover:bg-gray-900'
+                      : 'bg-black/10 text-black/40 pointer-events-none'
+                  }`}
+                >
+                  Extend hourly
+                </a>
+              </div>
+              {!summary?.location_id && (
+                <p className="text-[11px] text-black/50">
+                  Extension links appear as soon as payment location details are loaded.
+                </p>
+              )}
             </div>
 
             <div className="h-px bg-black/5" />
