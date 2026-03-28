@@ -7,10 +7,46 @@ type PricingType = 'hourly' | 'daily' | 'monthly';
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
 const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
 
-function parseBooleanFlag(value: string | null | undefined): boolean {
-  if (!value) return false;
+function parseOptionalBooleanValue(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (typeof value !== 'string') return undefined;
   const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+  if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') return true;
+  if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') return false;
+  return undefined;
+}
+
+function resolveAllowPromotionCodesDefaultOn(bodyValue: unknown, queryValue: string | null | undefined): boolean {
+  const bodyResolved = parseOptionalBooleanValue(bodyValue);
+  if (bodyResolved !== undefined) return bodyResolved;
+  const queryResolved = parseOptionalBooleanValue(queryValue);
+  if (queryResolved !== undefined) return queryResolved;
+  return true;
+}
+
+function formatBerlinDateTime(value: Date): string {
+  try {
+    const dateParts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(value);
+    const tzFormatted = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      timeZoneName: 'short',
+    }).format(value);
+    const tzMatch = tzFormatted.match(/\b(CET|CEST)\b/i);
+    const tz = (tzMatch?.[1] ?? 'CET').toUpperCase();
+    const get = (type: string) => dateParts.find((p) => p.type === type)?.value ?? '';
+    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} ${tz}`;
+  } catch {
+    return `${value.toISOString().replace('T', ' ').split('.')[0]} CET`;
+  }
 }
 
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
@@ -42,9 +78,7 @@ function buildSwitchCheckoutUrl(params: {
   if (customerEmail) {
     switchUrl.searchParams.set('email', customerEmail);
   }
-  if (allowPromotionCodes) {
-    switchUrl.searchParams.set('allow_promotion_codes', '1');
-  }
+  switchUrl.searchParams.set('allow_promotion_codes', allowPromotionCodes ? '1' : '0');
   return switchUrl.toString();
 }
 
@@ -133,9 +167,10 @@ export async function POST(req: NextRequest) {
   const rawPricingType =
     (typeof body.type === 'string' && body.type) || url.searchParams.get('type') || null;
   const pricing_type = normalizePricingType(rawPricingType, flow_type);
-  const allowPromotionCodes =
-    (typeof body.allow_promotion_codes === 'boolean' && body.allow_promotion_codes) ||
-    parseBooleanFlag(url.searchParams.get('allow_promotion_codes'));
+  const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
+    (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
+    url.searchParams.get('allow_promotion_codes')
+  );
   const hasTamperedAmountParams =
     (typeof body === 'object' &&
       body !== null &&
@@ -226,10 +261,11 @@ export async function POST(req: NextRequest) {
     const formatIso = (iso: string) => {
       if (!iso) return '';
       try {
-        const [datePart, timePart] = iso.split('T');
-        const [y, m, d] = datePart.split('-');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${d} ${months[parseInt(m) - 1]} ${y}, ${timePart}`;
+        const parsed = new Date(iso);
+        if (!Number.isNaN(parsed.getTime())) {
+          return formatBerlinDateTime(parsed);
+        }
+        return iso;
       } catch {
         return iso;
       }
@@ -244,27 +280,12 @@ export async function POST(req: NextRequest) {
       quantity = Math.ceil(diff / (1000 * 60 * 60));
     }
   } else if (flow_type === 'park_now') {
-    // For Park Now, we default to 1 hour but allow user to adjust
     quantity = 1;
-    // We don't set reservationDescription with dates here because user selects quantity in Stripe
-    // But we still want to show Location ID if available
-    // Also show "Start Time" which is effectively "Now"
-    
-    // Helper to format Date
-    const formatNow = (d: Date) => {
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const timePart = d.toTimeString().slice(0, 5); // HH:MM
-      return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${timePart}`;
-    };
-    
-    const nowFormatted = formatNow(new Date());
+    const nowFormatted = formatBerlinDateTime(new Date());
     reservationDescription = `Start Time: ${nowFormatted}`;
-    
     if (display_id) {
       reservationDescription += `\nLocation ID: ${display_id}`;
     }
-    
-    // We add a note about end time being dependent on quantity
     reservationDescription += `\n(End time depends on selected hours)`;
   }
 
@@ -375,7 +396,10 @@ export async function GET(req: NextRequest) {
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
   const pricing_type = normalizePricingType(url.searchParams.get('type'), flow_type);
-  const allowPromotionCodes = parseBooleanFlag(url.searchParams.get('allow_promotion_codes'));
+  const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
+    undefined,
+    url.searchParams.get('allow_promotion_codes')
+  );
   const customer_email = url.searchParams.get('email') || undefined;
   const submitMessage = buildSubmitMessage({
     pricingType: pricing_type,
