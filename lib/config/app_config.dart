@@ -19,9 +19,8 @@ class AppConfig {
       String.fromEnvironment('PROD_GUARD', defaultValue: '0');
   static const _rawRedirectUrl =
       String.fromEnvironment('SUPABASE_REDIRECT_URL', defaultValue: '');
-  static const _webSignOutStartupFlag = String.fromEnvironment(
-      'FORCE_WEB_SIGNOUT_ON_STARTUP',
-      defaultValue: '0');
+  static const _webSignOutStartupFlag =
+      String.fromEnvironment('FORCE_WEB_SIGNOUT_ON_STARTUP', defaultValue: '0');
   static const _rawApkDownloadUrl = String.fromEnvironment('APK_DOWNLOAD_URL',
       defaultValue:
           'https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/app-release.apk');
@@ -111,7 +110,7 @@ class AppConfig {
     required String type,
     String? timestamp,
     double? price,
-    bool allowPromotionCodes = false,
+    bool allowPromotionCodes = true,
     String? promotionCodeLabel,
     String? hourlySwitchUrl,
     String? dailySwitchUrl,
@@ -140,9 +139,7 @@ class AppConfig {
       queryParams['amount'] = normalized.toStringAsFixed(2);
       queryParams['amount_cents'] = (normalized * 100).round().toString();
     }
-    if (allowPromotionCodes) {
-      queryParams['allow_promotion_codes'] = '1';
-    }
+    queryParams['allow_promotion_codes'] = allowPromotionCodes ? '1' : '0';
     final trimmedLabel = promotionCodeLabel?.trim() ?? '';
     if (trimmedLabel.isNotEmpty) {
       queryParams['promotion_code_label'] = trimmedLabel;

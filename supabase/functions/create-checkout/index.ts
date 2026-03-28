@@ -263,6 +263,23 @@ function parseEuroToCents(v: unknown): number | null {
   return Math.round(n * 100);
 }
 
+function parseOptionalBooleanValue(v: unknown): boolean | undefined {
+  if (typeof v === "boolean") return v;
+  if (typeof v !== "string") return undefined;
+  const normalized = v.trim().toLowerCase();
+  if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
+  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") return false;
+  return undefined;
+}
+
+function resolveAllowPromotionCodesDefaultOn(bodyValue: unknown, queryValue: string | null): boolean {
+  const bodyResolved = parseOptionalBooleanValue(bodyValue);
+  if (bodyResolved !== undefined) return bodyResolved;
+  const queryResolved = parseOptionalBooleanValue(queryValue);
+  if (queryResolved !== undefined) return queryResolved;
+  return true;
+}
+
 async function resolveLocation(input: string): Promise<{ id: string; display_id?: string } | null> {
   const candidate = String(input ?? "").trim();
   if (!candidate) return null;
@@ -811,10 +828,9 @@ serve(async (req: Request) => {
       parseEuroToCents(url.searchParams.get("price"));
 
     // V6: Dynamic promotion code support and mobile phone field
-    const allowPromotionCodes = (
-      body["allow_promotion_codes"] === "1" ||
-      body["allow_promotion_codes"] === true ||
-      url.searchParams.get("allow_promotion_codes") === "1"
+    const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
+      body["allow_promotion_codes"],
+      url.searchParams.get("allow_promotion_codes"),
     );
 
     const promotionCodeLabel = String(
@@ -875,10 +891,16 @@ serve(async (req: Request) => {
           second: "2-digit",
           hour12: false,
         }).formatToParts(value);
+        const tzFormatted = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Berlin",
+          timeZoneName: "short",
+        }).format(value);
+        const tzMatch = tzFormatted.match(/\b(CET|CEST)\b/i);
+        const tz = (tzMatch?.[1] ?? "CET").toUpperCase();
         const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")}`;
+        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${tz}`;
       } catch {
-        return value.toISOString().replace("T", " ").split(".")[0];
+        return `${value.toISOString().replace("T", " ").split(".")[0]} CET`;
       }
     };
     const purchaseTimeDisplay = formatBerlinDateTime(now);
@@ -906,13 +928,11 @@ serve(async (req: Request) => {
 
     const formatIso = (iso: string): string => {
       if (!iso) return "";
-      const trimmed = iso.trim();
-      const withSpace = trimmed.replace("T", " ");
-      const withoutMilliseconds = withSpace.replace(
-        /(\.\d+)(?=\s*(Z|[+-]\d{2}:?\d{2})?$)/,
-        "",
-      );
-      return withoutMilliseconds.replace(/Z$/, "");
+      const parsed = new Date(iso);
+      if (!Number.isNaN(parsed.getTime())) {
+        return formatBerlinDateTime(parsed);
+      }
+      return iso.trim();
     };
 
     let reservationDescription = "";
