@@ -116,9 +116,9 @@ const checkoutTextByLocale: Record<string, {
     termsSuffix: ".",
   },
   hr: {
-    reservationAdjustDays: "Parking sesija (Odaberi broj dana)",
-    reservationAdjustMonths: "Parking sesija (Odaberi broj mjeseci)",
-    reservationAdjustHours: "Parking sesija (Odaberi broj sati)",
+    reservationAdjustDays: "Parking sesija (Prilagodite broj dana)",
+    reservationAdjustMonths: "Parking sesija (Prilagodite broj mjeseci)",
+    reservationAdjustHours: "Parking sesija (Prilagodite broj sati)",
     parkingAccessAtId: "Pristup parkingu na ID",
     from: "Od",
     to: "Do",
@@ -891,27 +891,61 @@ serve(async (req: Request) => {
           second: "2-digit",
           hour12: false,
         }).formatToParts(value);
-        const tzFormatted = new Intl.DateTimeFormat("en-GB", {
-          timeZone: "Europe/Berlin",
-          timeZoneName: "short",
-        }).format(value);
-        const tzMatch = tzFormatted.match(/\b(CET|CEST)\b/i);
-        const tz = (tzMatch?.[1] ?? "CET").toUpperCase();
         const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${tz}`;
+        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} CET`;
       } catch {
         return `${value.toISOString().replace("T", " ").split(".")[0]} CET`;
       }
+    };
+    const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
+    const parseDateInput = (rawValue: string): { epochMs: number | null; display: string } => {
+      const raw = rawValue.trim();
+      if (!raw) {
+        return { epochMs: null, display: "" };
+      }
+      const hasExplicitTimezone = /(?:[zZ]|[+-]\d{2}:\d{2})$/.test(raw);
+      if (hasExplicitTimezone) {
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) {
+          return { epochMs: parsed.getTime(), display: formatBerlinDateTime(parsed) };
+        }
+        return { epochMs: null, display: raw };
+      }
+      const naiveMatch = raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/,
+      );
+      if (naiveMatch) {
+        const year = Number(naiveMatch[1]);
+        const month = Number(naiveMatch[2]);
+        const day = Number(naiveMatch[3]);
+        const hour = Number(naiveMatch[4]);
+        const minute = Number(naiveMatch[5]);
+        const second = Number(naiveMatch[6] ?? "00");
+        const millisecond = Number((naiveMatch[7] ?? "0").padEnd(3, "0"));
+        const utcLike = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+        if (Number.isFinite(utcLike)) {
+          const tz = resolveBerlinTzAbbreviation(new Date(utcLike));
+          const formatted = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")} ${tz}`;
+          return { epochMs: utcLike, display: formatted };
+        }
+      }
+      const parsed = new Date(raw);
+      if (!Number.isNaN(parsed.getTime())) {
+        return { epochMs: parsed.getTime(), display: formatBerlinDateTime(parsed) };
+      }
+      return { epochMs: null, display: raw };
     };
     const purchaseTimeDisplay = formatBerlinDateTime(now);
 
     let quantity = 1;
     const hasReservationWindow = checkIn.length > 0 && checkOut.length > 0;
     const isReservationFlow = flow === "reserve" || hasReservationWindow;
+    const parsedCheckIn = parseDateInput(checkIn);
+    const parsedCheckOut = parseDateInput(checkOut);
     if (hasReservationWindow) {
-      const start = new Date(checkIn);
-      const end = new Date(checkOut);
-      const diff = end.getTime() - start.getTime();
+      const startMs = parsedCheckIn.epochMs;
+      const endMs = parsedCheckOut.epochMs;
+      const diff = startMs != null && endMs != null ? endMs - startMs : Number.NaN;
       if (Number.isFinite(diff) && diff > 0) {
         if (type === "daily") {
           quantity = Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -928,11 +962,7 @@ serve(async (req: Request) => {
 
     const formatIso = (iso: string): string => {
       if (!iso) return "";
-      const parsed = new Date(iso);
-      if (!Number.isNaN(parsed.getTime())) {
-        return formatBerlinDateTime(parsed);
-      }
-      return iso.trim();
+      return parseDateInput(iso).display;
     };
 
     let reservationDescription = "";
