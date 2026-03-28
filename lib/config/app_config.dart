@@ -120,9 +120,21 @@ class AppConfig {
     String? flow,
   }) {
     final t = timestamp ?? DateTime.now().millisecondsSinceEpoch.toString();
-    final base = supabaseFunctionsBaseUrl.isNotEmpty
-        ? supabaseFunctionsBaseUrl
-        : '$supabaseUrl/functions/v1';
+    final defaultBase = '$supabaseUrl/functions/v1';
+    final configuredBase = supabaseFunctionsBaseUrl.trim();
+    final configuredUri =
+        configuredBase.isNotEmpty ? Uri.tryParse(configuredBase) : null;
+    final supabaseUri = Uri.tryParse(supabaseUrl);
+    final configuredHost = configuredUri?.host.toLowerCase() ?? '';
+    final supabaseHost = supabaseUri?.host.toLowerCase() ?? '';
+    final configuredIsLocal =
+        configuredHost == 'localhost' || configuredHost == '127.0.0.1';
+    final sameHost = configuredHost.isNotEmpty &&
+        supabaseHost.isNotEmpty &&
+        configuredHost == supabaseHost;
+    final base = configuredBase.isNotEmpty && (configuredIsLocal || sameHost)
+        ? configuredBase
+        : defaultBase;
     final queryParams = <String, String>{
       'location_id': locationId,
       if (displayId != null && displayId.isNotEmpty) 'display_id': displayId,
