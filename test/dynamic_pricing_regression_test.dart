@@ -118,7 +118,7 @@ void main() {
     );
   });
 
-  test('Daily checkout keeps hourly CTA only in submit text as hyperlink',
+  test('Checkout keeps reciprocal daily/hourly CTA in submit text as hyperlink',
       () async {
     final file = File('supabase/functions/create-checkout/index.ts');
     final content = await file.readAsString();
@@ -128,19 +128,27 @@ void main() {
           content.contains('hourlySwitchUrlParam') &&
           content.contains('resolvedHourlySwitchUrl') &&
           content.contains('new URL(hourlySwitchUrlParam)') &&
+          content
+              .contains('dailySwitchUrl.searchParams.set("type", "daily");') &&
+          content.contains('dailySwitchUrlParam') &&
+          content.contains('resolvedDailySwitchUrl') &&
+          content.contains('new URL(dailySwitchUrlParam)') &&
           content.contains(
               'new URL("/functions/v1/create-checkout", requestUrl.origin);') &&
           content.contains('checkoutText.needHourly') &&
           content.contains('checkoutText.openHourlyCheckout') &&
+          content.contains('checkoutText.needDaily') &&
+          content.contains('checkoutText.openDailyCheckout') &&
           content.contains('(\${resolvedHourlySwitchUrl})') &&
+          content.contains('(\${resolvedDailySwitchUrl})') &&
           content.contains(
               'const nonReservationDescription = nonReservationDescriptionBase;') &&
           content.contains('submit: {') &&
-          content.contains('message: dailyHourlyCtaMessage') &&
-          content.contains('type === "daily"'),
+          content.contains('hourlyDailyCtaMessage') &&
+          content.contains('type === "daily" || type === "hourly"'),
       isTrue,
       reason:
-          'Daily flow must keep hourly CTA only above submit as hyperlink-style text, not in item description.',
+          'Daily and hourly flows must keep reciprocal CTA links in submit text (not item description), including both daily_switch_url and hourly_switch_url paths.',
     );
   });
 

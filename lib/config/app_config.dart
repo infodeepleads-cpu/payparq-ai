@@ -114,6 +114,7 @@ class AppConfig {
     bool allowPromotionCodes = false,
     String? promotionCodeLabel,
     String? hourlySwitchUrl,
+    String? dailySwitchUrl,
     String? permitId,
     String? checkIn,
     String? checkOut,
@@ -149,6 +150,10 @@ class AppConfig {
     final trimmedHourlySwitchUrl = hourlySwitchUrl?.trim() ?? '';
     if (trimmedHourlySwitchUrl.isNotEmpty) {
       queryParams['hourly_switch_url'] = trimmedHourlySwitchUrl;
+    }
+    final trimmedDailySwitchUrl = dailySwitchUrl?.trim() ?? '';
+    if (trimmedDailySwitchUrl.isNotEmpty) {
+      queryParams['daily_switch_url'] = trimmedDailySwitchUrl;
     }
     return Uri.parse('$base/create-checkout')
         .replace(queryParameters: queryParams)

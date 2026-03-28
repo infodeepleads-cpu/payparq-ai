@@ -7,10 +7,8 @@ const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   Deno.env.get("SERVICE_ROLE_KEY") ?? "";
-const successUrl = Deno.env.get("STRIPE_SUCCESS_URL") ??
-  "https://mobile-scanner-flax-static.vercel.app/#/dashboard";
-const cancelUrl = Deno.env.get("STRIPE_CANCEL_URL") ??
-  "https://mobile-scanner-flax-static.vercel.app/#/dashboard";
+const successUrl = "https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}";
+const cancelUrl = "https://www.payparq.com/success";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,18 +73,19 @@ const checkoutTextByLocale: Record<string, {
   reservationAdjustDays: string;
   reservationAdjustMonths: string;
   reservationAdjustHours: string;
-  unitDays: string;
-  unitMonths: string;
-  unitHours: string;
   parkingAccessAtId: string;
   from: string;
   to: string;
   total: string;
   locationId: string;
   startTime: string;
-  endTimeDependsOnSelected: string;
+  endTimeDependsOnSelectedDays: string;
+  endTimeDependsOnSelectedMonths: string;
+  endTimeDependsOnSelectedHours: string;
   needHourly: string;
   openHourlyCheckout: string;
+  needDaily: string;
+  openDailyCheckout: string;
   termsPrefix: string;
   termsLabel: string;
   andWord: string;
@@ -97,18 +96,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Parking Session (Adjust Days)",
     reservationAdjustMonths: "Parking Session (Adjust Months)",
     reservationAdjustHours: "Parking Session (Adjust Hours)",
-    unitDays: "days",
-    unitMonths: "months",
-    unitHours: "hours",
     parkingAccessAtId: "Parking access at ID",
     from: "From",
     to: "To",
     total: "Total",
     locationId: "Location ID",
     startTime: "Start Time",
-    endTimeDependsOnSelected: "End time depends on selected",
+    endTimeDependsOnSelectedDays: "End time depends on selected days",
+    endTimeDependsOnSelectedMonths: "End time depends on selected months",
+    endTimeDependsOnSelectedHours: "End time depends on selected hours",
     needHourly: "Need hourly for this location?",
     openHourlyCheckout: "Open hourly checkout",
+    needDaily: "Need daily for this location?",
+    openDailyCheckout: "Open daily checkout",
     termsPrefix: "By paying, you agree to our",
     termsLabel: "Terms of Service",
     andWord: "and",
@@ -119,18 +119,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Parking sesija (Prilagodi dane)",
     reservationAdjustMonths: "Parking sesija (Prilagodi mjesece)",
     reservationAdjustHours: "Parking sesija (Prilagodi sate)",
-    unitDays: "dane",
-    unitMonths: "mjesece",
-    unitHours: "sate",
     parkingAccessAtId: "Pristup parkingu na ID",
     from: "Od",
     to: "Do",
     total: "Ukupno",
     locationId: "ID lokacije",
     startTime: "Vrijeme početka",
-    endTimeDependsOnSelected: "Vrijeme završetka ovisi o odabranim",
+    endTimeDependsOnSelectedDays: "Vrijeme završetka ovisi o odabranim danima",
+    endTimeDependsOnSelectedMonths: "Vrijeme završetka ovisi o odabranim mjesecima",
+    endTimeDependsOnSelectedHours: "Vrijeme završetka ovisi o odabranim satima",
     needHourly: "Trebate satni parking za ovu lokaciju?",
     openHourlyCheckout: "Otvori satni checkout",
+    needDaily: "Trebate dnevni parking za ovu lokaciju?",
+    openDailyCheckout: "Otvori dnevni checkout",
     termsPrefix: "Plaćanjem prihvaćate naše",
     termsLabel: "Uvjeti korištenja",
     andWord: "i",
@@ -141,18 +142,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Parkvorgang (Tage anpassen)",
     reservationAdjustMonths: "Parkvorgang (Monate anpassen)",
     reservationAdjustHours: "Parkvorgang (Stunden anpassen)",
-    unitDays: "Tage",
-    unitMonths: "Monate",
-    unitHours: "Stunden",
     parkingAccessAtId: "Parkzugang bei ID",
     from: "Von",
     to: "Bis",
     total: "Gesamt",
     locationId: "Standort-ID",
     startTime: "Startzeit",
-    endTimeDependsOnSelected: "Endzeit hängt von den ausgewählten",
+    endTimeDependsOnSelectedDays: "Endzeit hängt von den ausgewählten Tagen ab",
+    endTimeDependsOnSelectedMonths: "Endzeit hängt von den ausgewählten Monaten ab",
+    endTimeDependsOnSelectedHours: "Endzeit hängt von den ausgewählten Stunden ab",
     needHourly: "Brauchen Sie stündlich für diesen Standort?",
     openHourlyCheckout: "Stündlichen Checkout öffnen",
+    needDaily: "Brauchen Sie täglich für diesen Standort?",
+    openDailyCheckout: "Täglichen Checkout öffnen",
     termsPrefix: "Mit der Zahlung stimmen Sie unseren",
     termsLabel: "Nutzungsbedingungen",
     andWord: "und",
@@ -163,18 +165,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Парковка (Изменить дни)",
     reservationAdjustMonths: "Парковка (Изменить месяцы)",
     reservationAdjustHours: "Парковка (Изменить часы)",
-    unitDays: "дней",
-    unitMonths: "месяцев",
-    unitHours: "часов",
     parkingAccessAtId: "Доступ к парковке на ID",
     from: "С",
     to: "По",
     total: "Итого",
     locationId: "ID локации",
     startTime: "Время начала",
-    endTimeDependsOnSelected: "Время окончания зависит от выбранных",
+    endTimeDependsOnSelectedDays: "Время окончания зависит от выбранных дней",
+    endTimeDependsOnSelectedMonths: "Время окончания зависит от выбранных месяцев",
+    endTimeDependsOnSelectedHours: "Время окончания зависит от выбранных часов",
     needHourly: "Нужна почасовая оплата для этой локации?",
     openHourlyCheckout: "Открыть почасовой checkout",
+    needDaily: "Нужна дневная оплата для этой локации?",
+    openDailyCheckout: "Открыть дневной checkout",
     termsPrefix: "Оплачивая, вы соглашаетесь с нашими",
     termsLabel: "Условиями использования",
     andWord: "и",
@@ -185,18 +188,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Sesja parkingowa (Dostosuj dni)",
     reservationAdjustMonths: "Sesja parkingowa (Dostosuj miesiące)",
     reservationAdjustHours: "Sesja parkingowa (Dostosuj godziny)",
-    unitDays: "dni",
-    unitMonths: "miesięcy",
-    unitHours: "godzin",
     parkingAccessAtId: "Dostęp do parkingu przy ID",
     from: "Od",
     to: "Do",
     total: "Suma",
     locationId: "ID lokalizacji",
     startTime: "Czas rozpoczęcia",
-    endTimeDependsOnSelected: "Czas zakończenia zależy od wybranych",
+    endTimeDependsOnSelectedDays: "Czas zakończenia zależy od wybranych dni",
+    endTimeDependsOnSelectedMonths: "Czas zakończenia zależy od wybranych miesięcy",
+    endTimeDependsOnSelectedHours: "Czas zakończenia zależy od wybranych godzin",
     needHourly: "Potrzebujesz opłaty godzinowej dla tej lokalizacji?",
     openHourlyCheckout: "Otwórz checkout godzinowy",
+    needDaily: "Potrzebujesz opłaty dziennej dla tej lokalizacji?",
+    openDailyCheckout: "Otwórz checkout dzienny",
     termsPrefix: "Płacąc, akceptujesz nasze",
     termsLabel: "Warunki korzystania",
     andWord: "oraz",
@@ -207,18 +211,19 @@ const checkoutTextByLocale: Record<string, {
     reservationAdjustDays: "Sesión de estacionamiento (Ajustar días)",
     reservationAdjustMonths: "Sesión de estacionamiento (Ajustar meses)",
     reservationAdjustHours: "Sesión de estacionamiento (Ajustar horas)",
-    unitDays: "días",
-    unitMonths: "meses",
-    unitHours: "horas",
     parkingAccessAtId: "Acceso de estacionamiento en ID",
     from: "Desde",
     to: "Hasta",
     total: "Total",
     locationId: "ID de ubicación",
     startTime: "Hora de inicio",
-    endTimeDependsOnSelected: "La hora de finalización depende de los",
+    endTimeDependsOnSelectedDays: "La hora de finalización depende de los días seleccionados",
+    endTimeDependsOnSelectedMonths: "La hora de finalización depende de los meses seleccionados",
+    endTimeDependsOnSelectedHours: "La hora de finalización depende de las horas seleccionadas",
     needHourly: "¿Necesitas tarifa por hora para esta ubicación?",
     openHourlyCheckout: "Abrir checkout por hora",
+    needDaily: "¿Necesitas tarifa diaria para esta ubicación?",
+    openDailyCheckout: "Abrir checkout diario",
     termsPrefix: "Al pagar, aceptas nuestros",
     termsLabel: "Términos del servicio",
     andWord: "y la",
@@ -843,6 +848,9 @@ serve(async (req: Request) => {
     const hourlySwitchUrlParam = String(
       body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ?? "",
     ).trim();
+    const dailySwitchUrlParam = String(
+      body["daily_switch_url"] ?? url.searchParams.get("daily_switch_url") ?? "",
+    ).trim();
     const localeParam = String(
       body["locale"] ?? url.searchParams.get("locale") ?? "",
     ).trim();
@@ -938,11 +946,11 @@ serve(async (req: Request) => {
       : type === "monthly"
       ? checkoutText.reservationAdjustMonths
       : checkoutText.reservationAdjustHours;
-    const nonReservationUnit = type === "daily"
-      ? checkoutText.unitDays
+    const endTimeDependsOnSelected = type === "daily"
+      ? checkoutText.endTimeDependsOnSelectedDays
       : type === "monthly"
-      ? checkoutText.unitMonths
-      : checkoutText.unitHours;
+      ? checkoutText.endTimeDependsOnSelectedMonths
+      : checkoutText.endTimeDependsOnSelectedHours;
     const nonReservationStartTime = hasReservationWindow
       ? formatIso(checkIn)
       : purchaseTimeDisplay;
@@ -962,9 +970,25 @@ serve(async (req: Request) => {
         }
       } catch (_) {}
     }
+    const dailySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
+    dailySwitchUrl.searchParams.set("location_id", locationUuid || locationId);
+    if (displayId) {
+      dailySwitchUrl.searchParams.set("display_id", displayId);
+    }
+    dailySwitchUrl.searchParams.set("type", "daily");
+    let resolvedDailySwitchUrl = dailySwitchUrl.toString();
+    if (dailySwitchUrlParam) {
+      try {
+        const parsedDailySwitchUrl = new URL(dailySwitchUrlParam);
+        if (parsedDailySwitchUrl.protocol === "https:" || parsedDailySwitchUrl.protocol === "http:") {
+          resolvedDailySwitchUrl = parsedDailySwitchUrl.toString();
+        }
+      } catch (_) {}
+    }
     const dailyHourlyCtaMessage = `${checkoutText.needHourly} [${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
+    const hourlyDailyCtaMessage = `${checkoutText.needDaily} [${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
     const nonReservationDescriptionBase =
-      `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}\n(${checkoutText.endTimeDependsOnSelected} ${nonReservationUnit})`;
+      `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}\n(${endTimeDependsOnSelected})`;
     const nonReservationDescription = nonReservationDescriptionBase;
     const lineItem: any = {
       quantity: checkoutQuantity,
@@ -1010,10 +1034,10 @@ serve(async (req: Request) => {
         terms_of_service_acceptance: {
           message: `${checkoutText.termsPrefix} [${checkoutText.termsLabel}](https://payparq.ai/terms) ${checkoutText.andWord} [${checkoutText.privacyLabel}](https://payparq.ai/privacy)${checkoutText.termsSuffix}`,
         },
-        ...(type === "daily"
+        ...((type === "daily" || type === "hourly")
           ? {
             submit: {
-              message: dailyHourlyCtaMessage,
+              message: type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage,
             },
           }
           : {}),

@@ -644,6 +644,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             promotionCodeLabel: promotionCodeLabel,
           )
         : null;
+    final dailySwitchUrl = mode == 'hourly'
+        ? AppConfig.createCheckoutUrl(
+            locationId: locationId,
+            displayId: displayId,
+            type: 'daily',
+            timestamp: timestamp,
+            price: _priceForType('daily'),
+            allowPromotionCodes: allowPromotionCodes,
+            promotionCodeLabel: promotionCodeLabel,
+          )
+        : null;
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
@@ -653,6 +664,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       allowPromotionCodes: allowPromotionCodes,
       promotionCodeLabel: promotionCodeLabel,
       hourlySwitchUrl: hourlySwitchUrl,
+      dailySwitchUrl: dailySwitchUrl,
       checkIn: _reserveCheckIn!.toIso8601String(),
       checkOut: _reserveCheckOut!.toIso8601String(),
       flow: 'reserve',
@@ -694,6 +706,17 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             promotionCodeLabel: promotionCodeLabel,
           )
         : null;
+    final dailySwitchUrl = type == 'hourly'
+        ? AppConfig.createCheckoutUrl(
+            locationId: locationId,
+            displayId: displayId,
+            type: 'daily',
+            timestamp: timestamp,
+            price: _priceForType('daily'),
+            allowPromotionCodes: allowPromotionCodes,
+            promotionCodeLabel: promotionCodeLabel,
+          )
+        : null;
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
@@ -703,6 +726,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       allowPromotionCodes: allowPromotionCodes,
       promotionCodeLabel: promotionCodeLabel,
       hourlySwitchUrl: hourlySwitchUrl,
+      dailySwitchUrl: dailySwitchUrl,
     );
 
     // LOGGING TO VERIFY URL PARAMETERS
