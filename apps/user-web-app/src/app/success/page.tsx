@@ -15,6 +15,10 @@ type SessionSummary = {
   currency: string;
   flow_type: string | null;
   location_id: string | null;
+  location_name?: string | null;
+  location_display_id?: string | null;
+  check_in: string | null;
+  check_out: string | null;
   membership_exists: boolean;
   email_verified: boolean;
 };
@@ -25,7 +29,32 @@ function SuccessContent() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+  const fallbackLocationId =
+    searchParams.get('display_id') || searchParams.get('location_id') || null;
+  const fallbackCheckIn = searchParams.get('check_in') || null;
+  const fallbackCheckOut = searchParams.get('check_out') || null;
   const refId = summary?.ref_id ?? (sessionId ? sessionId.slice(-8) : null);
+  const formatDateTime = (value: string | null | undefined) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleString('hr-HR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Zagreb',
+    });
+  };
+  const checkoutLocation = summary?.location_id ?? fallbackLocationId;
+  const checkoutLocationName = summary?.location_name ?? null;
+  const checkoutLocationDisplayId = summary?.location_display_id ?? null;
+  const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
+  const checkoutStart = summary?.check_in ?? fallbackCheckIn;
+  const checkoutEnd = summary?.check_out ?? fallbackCheckOut;
   const mailSubject = `Insurance Application${refId ? ` – Booking ${refId}` : ''}`;
   const mailBody =
     `Hello Payparq,\n\n` +
@@ -84,18 +113,18 @@ function SuccessContent() {
     return `/members?email=${encodeURIComponent(summary.email)}&tab=activity`;
   }, [summary?.email]);
   const extendHourlyHref = useMemo(() => {
-    if (!summary?.location_id) return '';
+    if (!checkoutLocation) return '';
     const params = new URLSearchParams({
-      location_id: summary.location_id,
+      location_id: checkoutLocation,
       flow: 'park_now',
       type: 'hourly',
       allow_promotion_codes: '1',
     });
-    if (summary.email) {
+    if (summary?.email) {
       params.set('email', summary.email);
     }
     return `/api/stripe/checkout?${params.toString()}`;
-  }, [summary?.location_id, summary?.email]);
+  }, [checkoutLocation, summary?.email]);
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -109,12 +138,28 @@ function SuccessContent() {
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="space-y-2">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">
-                  Booking Confirmed
+                  Rezervacija potvrđena
                 </h1>
                 <p className="text-sm md:text-base text-black/70 max-w-lg">
-                  Your parking session has been successfully booked. 
+                  Vaša sesija parkiranja je uspješno rezervirana.
                   {sessionId && <span className="block mt-1 text-xs text-black/40 font-mono">Ref: {sessionId.slice(-8)}</span>}
                 </p>
+                <div className="mt-3 rounded-xl border border-black/10 bg-white p-3 text-xs text-black/70 space-y-1">
+                  <p>
+                    <span className="font-semibold text-black">Lokacija:</span>{' '}
+                    {checkoutLocationName || checkoutLocationIdLabel || '—'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-black">ID lokacije:</span>{' '}
+                    {checkoutLocationIdLabel || '—'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-black">Vrijedi od:</span> {formatDateTime(checkoutStart)}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-black">Vrijedi do:</span> {formatDateTime(checkoutEnd)}
+                  </p>
+                </div>
                 {summary?.email && (
                   <p className="text-xs text-black/50 mt-2">
                     Membership is ready for {summary.email}. Verify email to unlock promotions.
@@ -200,8 +245,8 @@ function SuccessContent() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-black">Extend Your Stay</p>
-                {summary?.location_id && (
-                  <p className="text-[11px] text-black/50">Location: {summary.location_id}</p>
+                {checkoutLocation && (
+                  <p className="text-[11px] text-black/50">Location: {checkoutLocation}</p>
                 )}
               </div>
               <p className="text-xs text-black/60">
@@ -220,7 +265,7 @@ function SuccessContent() {
                   Extend hourly
                 </a>
               </div>
-              {!summary?.location_id && (
+              {!checkoutLocation && (
                 <p className="text-[11px] text-black/50">
                   Extension links appear as soon as payment location details are loaded.
                 </p>

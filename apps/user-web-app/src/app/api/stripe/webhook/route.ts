@@ -4,6 +4,70 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
 
+function parseIso(value: string | null | undefined) {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+}
+
+function resolveExitTimeFromQuantity(params: {
+  entryIso: string;
+  quantity: number;
+  pricingType: string;
+}) {
+  const entry = new Date(params.entryIso);
+  if (Number.isNaN(entry.getTime())) return null;
+  const quantity = Number.isFinite(params.quantity) && params.quantity > 0 ? params.quantity : 1;
+  const pricingType = params.pricingType.trim().toLowerCase();
+  const exit = new Date(entry.getTime());
+  if (pricingType === 'daily') {
+    exit.setUTCDate(exit.getUTCDate() + quantity);
+  } else if (pricingType === 'monthly') {
+    exit.setUTCDate(exit.getUTCDate() + quantity * 30);
+  } else {
+    exit.setUTCHours(exit.getUTCHours() + quantity);
+  }
+  return exit.toISOString();
+}
+
+async function ensureMemberAccountByEmail(rawEmail: string | null | undefined) {
+  const email = (rawEmail ?? '').trim().toLowerCase();
+  if (!email || !supabaseAdmin) {
+    return { ok: false, created: false };
+  }
+  const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (listError) {
+    console.error('❌ Failed to list auth users:', listError.message);
+    return { ok: false, created: false };
+  }
+  const existing = listData.users.find(
+    (item) => (item.email ?? '').trim().toLowerCase() === email
+  );
+  if (existing) {
+    return { ok: true, created: false };
+  }
+  const generatedPassword = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+  const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: generatedPassword,
+    email_confirm: false,
+    user_metadata: {
+      role: 'member',
+      membership_source: 'stripe_checkout',
+    },
+  });
+  if (createError) {
+    console.error('❌ Failed to create member auth user:', createError.message);
+    return { ok: false, created: false };
+  }
+  return { ok: true, created: true };
+}
+
 export async function POST(req: Request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
   const buf = Buffer.from(await req.arrayBuffer());
@@ -25,9 +89,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true });
     }
 
+    const sessionMetadata = session.metadata ?? {};
+
     // 1. EXTRACT DATA
-    let location_id = session.metadata?.location_id || '';
-    let plate_number = session.metadata?.plate_number || '';
+    let location_id = sessionMetadata.location_id || '';
+    let plate_number = sessionMetadata.plate_number || '';
 
     // If metadata is empty, check custom fields (Payment Links)
     if ((!location_id || !plate_number) && session.custom_fields) {
@@ -69,6 +135,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true });
     }
 
+    let lineItemQuantity = 1;
+    try {
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+      const quantityFromStripe = Number(lineItems.data?.[0]?.quantity ?? 1);
+      if (Number.isFinite(quantityFromStripe) && quantityFromStripe > 0) {
+        lineItemQuantity = quantityFromStripe;
+      }
+    } catch {
+      lineItemQuantity = 1;
+    }
+
+    const pricingType = (sessionMetadata.pricing_type ?? 'hourly').toString();
+    const checkInFromMetadata = parseIso(sessionMetadata.check_in);
+    const checkOutFromMetadata = parseIso(sessionMetadata.check_out);
+    const createdAtIso = new Date(session.created * 1000).toISOString();
+    const entryTime = checkInFromMetadata ?? createdAtIso;
+    const exitTime =
+      checkOutFromMetadata ??
+      resolveExitTimeFromQuantity({
+        entryIso: entryTime,
+        quantity: lineItemQuantity,
+        pricingType,
+      });
+    const durationMinutes =
+      exitTime != null
+        ? Math.max(1, Math.round((new Date(exitTime).getTime() - new Date(entryTime).getTime()) / 60000))
+        : null;
+
     // 3. INSERT INTO SUPABASE
     const insertData = {
       location_id,
@@ -79,9 +173,17 @@ export async function POST(req: Request) {
       currency: session.currency || 'usd',
       stripe_session_id: session.id,
       payment_status: 'paid',
+      status: 'active',
+      entry_time: entryTime,
+      exit_time: exitTime,
+      quantity: lineItemQuantity,
+      duration_minutes: durationMinutes,
+      stripe_metadata: sessionMetadata,
     };
 
     console.log('🚀 Inserting into Supabase:', insertData);
+
+    await ensureMemberAccountByEmail(session.customer_details?.email || null);
 
     const { error: insertError } = await client
       .from('parking_sessions')

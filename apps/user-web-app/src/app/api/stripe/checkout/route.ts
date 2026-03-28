@@ -7,6 +7,72 @@ type PricingType = 'hourly' | 'daily' | 'monthly';
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
 const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
 
+function buildSuccessUrl(params: {
+  locationId?: string;
+  displayId?: string;
+  checkIn?: string;
+  checkOut?: string;
+}) {
+  const url = new URL('https://www.payparq.com/success');
+  url.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
+  if (params.locationId) {
+    url.searchParams.set('location_id', params.locationId);
+  }
+  if (params.displayId) {
+    url.searchParams.set('display_id', params.displayId);
+  }
+  if (params.checkIn) {
+    url.searchParams.set('check_in', params.checkIn);
+  }
+  if (params.checkOut) {
+    url.searchParams.set('check_out', params.checkOut);
+  }
+  return url.toString();
+}
+
+function normalizeEmailValue(value: string | null | undefined): string | null {
+  const normalized = (value ?? '').trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+async function resolveStripeCustomerIdByEmail(
+  stripe: Stripe,
+  email: string | null
+): Promise<string | null> {
+  if (!email) return null;
+  try {
+    const list = await stripe.customers.list({
+      email,
+      limit: 10,
+    });
+    const exact = list.data.find(
+      (customer) => (customer.email ?? '').trim().toLowerCase() === email
+    );
+    return exact?.id ?? list.data[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildCheckoutCustomerParams(params: {
+  customerId: string | null;
+  customerEmail: string | null;
+}): Pick<
+  Stripe.Checkout.SessionCreateParams,
+  'customer' | 'customer_email' | 'customer_creation'
+> {
+  if (params.customerId) {
+    return { customer: params.customerId };
+  }
+  if (params.customerEmail) {
+    return {
+      customer_email: params.customerEmail,
+      customer_creation: 'always',
+    };
+  }
+  return {};
+}
+
 function parseOptionalBooleanValue(value: unknown): boolean | undefined {
   if (typeof value === 'boolean') return value;
   if (typeof value !== 'string') return undefined;
@@ -120,29 +186,64 @@ function buildSubmitMessage(params: {
   return termsLine;
 }
 
-async function resolveUnitAmountCents(locationId: string, pricingType: PricingType): Promise<number> {
+type LocationPricingResolution = {
+  unitAmountCents: number;
+  resolvedLocationId: string;
+  resolvedDisplayId: string;
+};
+
+async function resolveLocationPricing(
+  locationId: string,
+  displayId: string,
+  pricingType: PricingType
+): Promise<LocationPricingResolution> {
   if (!supabase) {
     throw { status: 500, message: 'supabase_not_configured' };
   }
-  const { data, error } = await supabase
-    .from('locations')
-    .select(
-      'rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling'
-    )
-    .eq('id', locationId)
-    .maybeSingle();
-  if (error) {
-    throw { status: 500, message: error.message };
+
+  const selectedColumns =
+    'id,display_id,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling';
+
+  const fallbackDisplayId = displayId || locationId;
+  let data: Record<string, unknown> | null = null;
+  if (fallbackDisplayId) {
+    const byDisplayId = await supabase
+      .from('locations')
+      .select(selectedColumns)
+      .eq('display_id', fallbackDisplayId)
+      .maybeSingle();
+    if (byDisplayId.error) {
+      throw { status: 500, message: byDisplayId.error.message };
+    }
+    data = byDisplayId.data;
   }
+
+  if (!data && locationId) {
+    const byId = await supabase
+      .from('locations')
+      .select(selectedColumns)
+      .eq('id', locationId)
+      .maybeSingle();
+    if (byId.error) {
+      throw { status: 500, message: byId.error.message };
+    }
+    data = byId.data;
+  }
+
   if (!data) {
     throw { status: 404, message: 'location_not_found' };
   }
+
   const resolvedEuro = resolveScannerTruthPriceEuro(data, pricingType);
   const resolvedCents = Math.round(resolvedEuro * 100);
   if (!Number.isFinite(resolvedCents) || resolvedCents < 0) {
     throw { status: 500, message: 'invalid_resolved_amount' };
   }
-  return resolvedCents;
+  return {
+    unitAmountCents: resolvedCents,
+    resolvedLocationId: String(data.id ?? locationId),
+    resolvedDisplayId: String(data.display_id ?? displayId ?? ''),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -183,23 +284,19 @@ export async function POST(req: NextRequest) {
     const v = (body as { customer_email?: unknown }).customer_email;
     if (typeof v === 'string') customer_email = v;
   }
-  const submitMessage = buildSubmitMessage({
-    pricingType: pricing_type,
-    baseUrl: url.origin,
-    locationId: location_id,
-    displayId: display_id,
-    flowType: flow_type,
-    customerEmail: customer_email,
-    allowPromotionCodes,
+  const normalizedCustomerEmail = normalizeEmailValue(customer_email ?? url.searchParams.get('email'));
+  const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
+  const checkoutCustomerParams = buildCheckoutCustomerParams({
+    customerId: existingCustomerId,
+    customerEmail: normalizedCustomerEmail,
   });
-
   if (flow_type === 'setup') {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'setup',
         success_url: unifiedStripeSuccessUrl,
         cancel_url: unifiedStripeCancelUrl,
-        customer_email,
+        ...checkoutCustomerParams,
         payment_method_types: ['card'],
         setup_intent_data: {
           metadata: {
@@ -290,14 +387,34 @@ export async function POST(req: NextRequest) {
   }
 
   let unitAmount = 0;
+  let resolvedLocationId = location_id;
+  let resolvedDisplayId = display_id;
   try {
-    unitAmount = await resolveUnitAmountCents(location_id, pricing_type);
+    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type);
+    unitAmount = pricingResolution.unitAmountCents;
+    resolvedLocationId = pricingResolution.resolvedLocationId;
+    resolvedDisplayId = pricingResolution.resolvedDisplayId;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
+  const submitMessage = buildSubmitMessage({
+    pricingType: pricing_type,
+    baseUrl: url.origin,
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    flowType: flow_type,
+    customerEmail: customer_email,
+    allowPromotionCodes,
+  });
+  const checkoutSuccessUrl = buildSuccessUrl({
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    checkIn: check_in || undefined,
+    checkOut: check_out || undefined,
+  });
   try {
     // Attempt to create session with SEPA and Card
     const session = await createSession(['card', 'sepa_debit']);
@@ -322,7 +439,7 @@ export async function POST(req: NextRequest) {
     return await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: unifiedStripeSuccessUrl,
+      success_url: checkoutSuccessUrl,
       cancel_url: unifiedStripeCancelUrl,
       payment_method_types,
       allow_promotion_codes: allowPromotionCodes,
@@ -368,11 +485,21 @@ export async function POST(req: NextRequest) {
           optional: false,
         },
       ],
-      customer_email,
+      ...checkoutCustomerParams,
+      metadata: {
+        location_id: resolvedLocationId,
+        display_id: resolvedDisplayId,
+        plate_number,
+        flow_type,
+        pricing_type,
+        check_in,
+        check_out,
+      },
       payment_intent_data: {
+        setup_future_usage: 'off_session',
         metadata: {
-          location_id,
-          display_id,
+          location_id: resolvedLocationId,
+          display_id: resolvedDisplayId,
           plate_number,
           flow_type,
           pricing_type,
@@ -396,19 +523,18 @@ export async function GET(req: NextRequest) {
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
   const pricing_type = normalizePricingType(url.searchParams.get('type'), flow_type);
+  const check_in = url.searchParams.get('in') || '';
+  const check_out = url.searchParams.get('out') || '';
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     undefined,
     url.searchParams.get('allow_promotion_codes')
   );
   const customer_email = url.searchParams.get('email') || undefined;
-  const submitMessage = buildSubmitMessage({
-    pricingType: pricing_type,
-    baseUrl: url.origin,
-    locationId: location_id,
-    displayId: display_id,
-    flowType: flow_type,
-    customerEmail: customer_email,
-    allowPromotionCodes,
+  const normalizedCustomerEmail = normalizeEmailValue(customer_email);
+  const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
+  const checkoutCustomerParams = buildCheckoutCustomerParams({
+    customerId: existingCustomerId,
+    customerEmail: normalizedCustomerEmail,
   });
   const hasTamperedAmountParams =
     url.searchParams.has('price') ||
@@ -421,7 +547,7 @@ export async function GET(req: NextRequest) {
         mode: 'setup',
         success_url: unifiedStripeSuccessUrl,
         cancel_url: unifiedStripeCancelUrl,
-        customer_email,
+        ...checkoutCustomerParams,
         payment_method_types: ['card'],
         setup_intent_data: {
           metadata: {
@@ -450,19 +576,39 @@ export async function GET(req: NextRequest) {
   }
 
   let unitAmount = 0;
+  let resolvedLocationId = location_id;
+  let resolvedDisplayId = display_id;
   try {
-    unitAmount = await resolveUnitAmountCents(location_id, pricing_type);
+    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type);
+    unitAmount = pricingResolution.unitAmountCents;
+    resolvedLocationId = pricingResolution.resolvedLocationId;
+    resolvedDisplayId = pricingResolution.resolvedDisplayId;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
+  const submitMessage = buildSubmitMessage({
+    pricingType: pricing_type,
+    baseUrl: url.origin,
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    flowType: flow_type,
+    customerEmail: customer_email,
+    allowPromotionCodes,
+  });
+  const checkoutSuccessUrl = buildSuccessUrl({
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    checkIn: check_in || undefined,
+    checkOut: check_out || undefined,
+  });
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       phone_number_collection: { enabled: true },
-      success_url: unifiedStripeSuccessUrl,
+      success_url: checkoutSuccessUrl,
       cancel_url: unifiedStripeCancelUrl,
       payment_method_types: ['card'],
       allow_promotion_codes: allowPromotionCodes,
@@ -488,13 +634,26 @@ export async function GET(req: NextRequest) {
           message: submitMessage,
         },
       },
+      ...checkoutCustomerParams,
+      metadata: {
+        location_id: resolvedLocationId,
+        display_id: resolvedDisplayId,
+        plate_number,
+        flow_type,
+        pricing_type,
+        check_in,
+        check_out,
+      },
       payment_intent_data: {
+        setup_future_usage: 'off_session',
         metadata: {
-          location_id,
-          display_id,
+          location_id: resolvedLocationId,
+          display_id: resolvedDisplayId,
           plate_number,
           flow_type,
           pricing_type,
+          check_in,
+          check_out,
         },
       },
     });

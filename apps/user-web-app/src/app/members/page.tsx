@@ -21,6 +21,18 @@ type NavItemId =
 
 type AuthMode = "sign_in" | "sign_up";
 type FlowType = "park_now" | "monthly" | "reserve";
+type ActivityRow = {
+  id: string;
+  created_at?: string | null;
+  location_id?: string | null;
+  plate?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  payment_status?: string | null;
+  status?: string | null;
+  entry_time?: string | null;
+  exit_time?: string | null;
+};
 
 function normalizeRole(value: unknown) {
   const normalized = (value ?? "")
@@ -53,6 +65,8 @@ export default function MembersPage() {
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [verificationNotice, setVerificationNotice] = useState("");
 
   const [activeItem, setActiveItem] = useState<NavItemId>("home");
   const [plates, setPlates] = useState<string[]>([]);
@@ -62,6 +76,8 @@ export default function MembersPage() {
   const [actionProcessing, setActionProcessing] = useState<FlowType | null>(null);
   const [actionError, setActionError] = useState("");
   const [activityFavorite, setActivityFavorite] = useState(false);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
 
   const [devSignedIn, setDevSignedIn] = useState(false);
 
@@ -75,6 +91,34 @@ export default function MembersPage() {
   const [homeOpen, setHomeOpen] = useState(true);
 
   const isSignedIn = !!user || devSignedIn;
+  const isEmailVerified = devSignedIn || Boolean((user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at);
+
+  function parseCurrency(value: string | null | undefined) {
+    const normalized = (value ?? "eur").toString().toUpperCase();
+    return normalized;
+  }
+
+  function formatActivityDate(value: string | null | undefined) {
+    if (!value) return "Unknown time";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString();
+  }
+  function formatCroatianDateTime(value: string | null | undefined) {
+    if (!value) return "Nije dostupno";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("hr-HR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+      timeZone: "Europe/Zagreb",
+    });
+  }
 
   async function resolveIsAdmin(currentUser: User | null) {
     if (!currentUser || !supabase) {
@@ -146,6 +190,105 @@ export default function MembersPage() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const prefillEmail = (params.get("email") ?? "").trim().toLowerCase();
+    const tab = (params.get("tab") ?? "").trim().toLowerCase();
+    if (prefillEmail) {
+      setEmail(prefillEmail);
+    }
+    if (
+      tab === "home" ||
+      tab === "monthly" ||
+      tab === "activity" ||
+      tab === "company" ||
+      tab === "payment" ||
+      tab === "vehicles" ||
+      tab === "promotions" ||
+      tab === "rewards" ||
+      tab === "help" ||
+      tab === "account"
+    ) {
+      setActiveItem(tab as NavItemId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !user?.email || !supabase || !isSupabaseConfigured) {
+      setActivityRows([]);
+      return;
+    }
+    const client = supabase;
+    let active = true;
+    const run = async () => {
+      setActivityLoading(true);
+      try {
+        const { data, error } = await client
+          .from("parking_sessions")
+          .select("id,created_at,location_id,plate,price,currency,payment_status,status,entry_time,exit_time")
+          .eq("email", user.email)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        if (!active) return;
+        if (error) {
+          setActivityRows([]);
+          return;
+        }
+        setActivityRows((data ?? []) as ActivityRow[]);
+      } catch {
+        if (!active) return;
+        setActivityRows([]);
+      } finally {
+        if (!active) return;
+        setActivityLoading(false);
+      }
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn, user?.email]);
+
+  useEffect(() => {
+    if (!isSignedIn || typeof window === "undefined" || activityRows.length === 0) {
+      return;
+    }
+    if (!("Notification" in window)) {
+      return;
+    }
+    if (Notification.permission === "default") {
+      void Notification.requestPermission();
+    }
+    const timers: number[] = [];
+    const now = Date.now();
+    for (const row of activityRows) {
+      if (!row.exit_time) continue;
+      const exitDate = new Date(row.exit_time);
+      if (Number.isNaN(exitDate.getTime())) continue;
+      const notifyAt = exitDate.getTime() - 10 * 60 * 1000;
+      const message = `Sesija za lokaciju ${row.location_id || "Nepoznata lokacija"} istječe za 10 minuta. Otvorite Members za produljenje.`;
+      if (notifyAt <= now) {
+        if (exitDate.getTime() > now && Notification.permission === "granted") {
+          new Notification("Payparq podsjetnik", { body: message });
+        }
+        continue;
+      }
+      const delay = notifyAt - now;
+      const timerId = window.setTimeout(() => {
+        if (Notification.permission === "granted") {
+          new Notification("Payparq podsjetnik", { body: message });
+        }
+      }, delay);
+      timers.push(timerId);
+    }
+    return () => {
+      for (const timerId of timers) {
+        window.clearTimeout(timerId);
+      }
+    };
+  }, [activityRows, isSignedIn]);
 
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
@@ -280,6 +423,39 @@ export default function MembersPage() {
     }
   }
 
+  async function handleSendVerificationEmail() {
+    const targetEmail = user?.email || email.trim().toLowerCase();
+    if (!targetEmail) {
+      setVerificationNotice("No email available for verification.");
+      return;
+    }
+    if (!supabase || !isSupabaseConfigured) {
+      setVerificationNotice("Verification is not configured for this environment.");
+      return;
+    }
+    setVerificationLoading(true);
+    setVerificationNotice("");
+    try {
+      const redirectTo =
+        typeof window !== "undefined" ? `${window.location.origin}/members?tab=promotions` : undefined;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: targetEmail,
+        options: {
+          emailRedirectTo: redirectTo,
+        },
+      });
+      if (error) {
+        setVerificationNotice(error.message);
+      } else {
+        setVerificationNotice("Verification email sent. Check Inbox and Junk/Spam.");
+      }
+    } catch {
+      setVerificationNotice("Unable to send verification email right now.");
+    } finally {
+      setVerificationLoading(false);
+    }
+  }
+
   function renderActiveContent() {
     if (activeItem === "account") {
       return (
@@ -301,6 +477,16 @@ export default function MembersPage() {
                 Signed in as <span className="font-semibold">{displayEmail}</span>
               </p>
               <div className="flex flex-wrap gap-2 pt-2">
+                {!isEmailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendVerificationEmail}
+                    disabled={verificationLoading}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-60"
+                  >
+                    {verificationLoading ? "Sending..." : "Verify email"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleResetPassword}
@@ -322,7 +508,29 @@ export default function MembersPage() {
                 >
                   Log out
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setVerificationNotice("You have opted out of promotions.")}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
+                >
+                  Opt out
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVerificationNotice("Delete account request received. Support will finalize deletion.")}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-red-200 text-red-700 text-[11px] font-semibold hover:bg-red-50 transition-colors"
+                >
+                  Delete account
+                </button>
               </div>
+              {!isEmailVerified && (
+                <p className="text-[11px] text-black/60">
+                  Verify your email to unlock Promotions access. Check Inbox and Junk/Spam.
+                </p>
+              )}
+              {verificationNotice && (
+                <p className="text-[11px] text-black/70">{verificationNotice}</p>
+              )}
             </div>
             <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
@@ -462,6 +670,39 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             A timeline of recent sessions, payments, and enforcement outcomes.
           </p>
+          {activityLoading && (
+            <p className="text-xs text-black/60">Loading live activity...</p>
+          )}
+          {!activityLoading && activityRows.length === 0 && (
+            <p className="text-xs text-black/60">
+              No sessions yet. Complete a checkout and this feed updates automatically.
+            </p>
+          )}
+          {!activityLoading && activityRows.length > 0 && (
+            <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
+              {activityRows.map((row) => (
+                <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-black">
+                      {row.plate || "Unknown plate"} · {row.location_id || "Unknown location"}
+                    </p>
+                    <p className="text-[11px] text-black/60">
+                      {formatActivityDate(row.created_at)}
+                    </p>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                    <span>
+                      {Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}
+                    </span>
+                    <span>{(row.payment_status || row.status || "pending").toUpperCase()}</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-black/70">
+                    Vrijedi: {formatCroatianDateTime(row.entry_time || row.created_at)} — {formatCroatianDateTime(row.exit_time)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold text-black leading-tight truncate">
@@ -683,6 +924,44 @@ export default function MembersPage() {
     }
 
     if (activeItem === "promotions") {
+      if (!isEmailVerified) {
+        return (
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Promotions
+            </h2>
+            <p className="text-sm text-black/70">
+              Promotions are locked until your email is verified.
+            </p>
+            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-3">
+              <p className="text-xs text-black/70">
+                Before verifying, check Inbox and Junk/Spam folders.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  disabled={verificationLoading}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors disabled:opacity-60"
+                >
+                  {verificationLoading ? "Sending..." : "Verify email"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendVerificationEmail}
+                  disabled={verificationLoading}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/10 text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
+                >
+                  Resend email
+                </button>
+              </div>
+              {verificationNotice && (
+                <p className="text-[11px] text-black/70">{verificationNotice}</p>
+              )}
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="space-y-2">
           <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -691,6 +970,11 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             Redeem and manage promotional codes connected to your profile.
           </p>
+          <div className="rounded-xl border border-black/10 bg-white p-4">
+            <p className="text-sm text-black/80">
+              Promotions unlocked. Your account is verified.
+            </p>
+          </div>
         </div>
       );
     }
@@ -754,8 +1038,8 @@ export default function MembersPage() {
                   Sign in to your Payparq account
                 </h1>
                 <p className="text-sm text-black/70 mb-6">
-                  Use the same email and password as Mobile Scanner to access
-                  member tools, subscriptions, and activity.
+                  Access member tools, subscriptions, and activity. You can sign
+                  in with password or verify by email link.
                 </p>
                 {!isSupabaseConfigured && (
                   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">
@@ -800,6 +1084,32 @@ export default function MembersPage() {
                     {authMode === "sign_in" ? "Sign in" : "Create account"}
                   </button>
                 </form>
+                <div className="mt-3 rounded-xl border border-black/10 bg-black/[0.02] p-3 space-y-2">
+                  <p className="text-[11px] text-black/70">
+                    No password? Verify by email. Check Inbox and Junk/Spam.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSendVerificationEmail}
+                      disabled={verificationLoading || !email.trim()}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-60"
+                    >
+                      {verificationLoading ? "Sending..." : "Verify email"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendVerificationEmail}
+                      disabled={verificationLoading || !email.trim()}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
+                    >
+                      Resend email
+                    </button>
+                  </div>
+                  {verificationNotice && (
+                    <p className="text-[11px] text-black/70">{verificationNotice}</p>
+                  )}
+                </div>
                 <div className="mt-4 flex items-center justify-between text-[11px] text-black/70">
                   <button
                     type="button"
