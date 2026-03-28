@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
-import { formatEuroLabel, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import { formatEuroLabel, normalizeLocationName, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +67,7 @@ export async function GET() {
 
     const hubs: Hub[] = await Promise.all(
       (locations || []).map(async (loc: DbLocation) => {
-        const name = String(loc.name || '');
+        const name = normalizeLocationName(loc.name);
         const label = 'PayParq hub';
         const href = `/locations/${String(loc.canonical_slug ?? '').trim()}`;
         const lat = typeof loc.latitude === 'number' ? loc.latitude : 0;

@@ -29,10 +29,30 @@ function SuccessContent() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+  const fallbackDisplayId =
+    searchParams.get('display_id') ||
+    searchParams.get('displayId') ||
+    searchParams.get('id') ||
+    null;
   const fallbackLocationId =
-    searchParams.get('display_id') || searchParams.get('location_id') || null;
-  const fallbackCheckIn = searchParams.get('check_in') || null;
-  const fallbackCheckOut = searchParams.get('check_out') || null;
+    fallbackDisplayId ||
+    searchParams.get('location_id') ||
+    searchParams.get('locationId') ||
+    searchParams.get('loc') ||
+    searchParams.get('location') ||
+    null;
+  const fallbackCheckIn =
+    searchParams.get('check_in') ||
+    searchParams.get('checkIn') ||
+    searchParams.get('in') ||
+    searchParams.get('start') ||
+    null;
+  const fallbackCheckOut =
+    searchParams.get('check_out') ||
+    searchParams.get('checkOut') ||
+    searchParams.get('out') ||
+    searchParams.get('end') ||
+    null;
   const refId = summary?.ref_id ?? (sessionId ? sessionId.slice(-8) : null);
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
@@ -80,7 +100,21 @@ function SuccessContent() {
       setLookupLoading(true);
       setLookupError('');
       try {
-        const response = await fetch(`/api/stripe/session?session_id=${encodeURIComponent(sessionId)}`);
+        const lookupParams = new URLSearchParams();
+        lookupParams.set('session_id', sessionId);
+        if (fallbackDisplayId) {
+          lookupParams.set('display_id', fallbackDisplayId);
+        }
+        if (fallbackLocationId) {
+          lookupParams.set('location_id', fallbackLocationId);
+        }
+        if (fallbackCheckIn) {
+          lookupParams.set('check_in', fallbackCheckIn);
+        }
+        if (fallbackCheckOut) {
+          lookupParams.set('check_out', fallbackCheckOut);
+        }
+        const response = await fetch(`/api/stripe/session?${lookupParams.toString()}`);
         const payload = (await response.json().catch(() => null)) as SessionSummary | { error?: string } | null;
         if (!active) return;
         if (!response.ok) {
@@ -106,7 +140,7 @@ function SuccessContent() {
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [sessionId, fallbackDisplayId, fallbackLocationId, fallbackCheckIn, fallbackCheckOut]);
 
   const membersHref = useMemo(() => {
     if (!summary?.email) return '/members';

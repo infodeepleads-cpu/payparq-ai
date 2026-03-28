@@ -3,7 +3,7 @@ import { FooterBrand } from "@/components/FooterBrand";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabase } from "@/lib/supabase";
-import { formatEuroLabel, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
+import { formatEuroLabel, normalizeLocationName, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 import LocationClient from "./LocationClient";
 
 const supabaseClient = supabase;
@@ -46,6 +46,8 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
   if (!hub) {
     return null;
   }
+
+  hub.name = normalizeLocationName(hub.name);
 
   const priceLabel = formatEuroLabel(resolveScannerTruthPriceEuro(hub, "hourly"));
 

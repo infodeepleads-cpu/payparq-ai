@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
+import { normalizeLocationName, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 
 type HubData = {
   id: string;
@@ -17,6 +18,16 @@ type HubData = {
   longitude?: number;
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
+  rate_per_hour?: number;
+  base_price_hourly?: number;
+  base_price_daily?: number;
+  base_price_monthly?: number;
+  rate_per_hour_floor?: number;
+  rate_per_hour_ceiling?: number;
+  base_price_daily_floor?: number;
+  base_price_daily_ceiling?: number;
+  base_price_monthly_floor?: number;
+  base_price_monthly_ceiling?: number;
 };
 
 type SectionKey =
@@ -84,7 +95,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     if (!checkOut) setCheckOut(outStr);
   }, [checkIn, checkOut]);
   
-  const locationName = hub.name || "Split Airport car park";
+  const locationName = normalizeLocationName(hub.name) || "Parking Trogir";
   const locationId = hub.id || "parkng split airport";
   const compactTravelTime = travelTime.replace("minutes", "min").replace("minute", "min");
   const reviewsLabel = "4.8 reviews";
@@ -126,18 +137,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   totalPrice = totalHours * priceValue;
   const totalPriceLabel = `€${totalPrice.toFixed(2)}`;
   const formatEur = (value: number) => `€${value.toFixed(2)}`;
-  const hourlyPrice = priceValue > 0 ? priceValue : 2.5;
-  const dailyPrice = hourlyPrice * 24;
-  const oneWayRidePrice = Math.max(8, Math.round(hourlyPrice * 3));
-  const twoWayRidePrice = oneWayRidePrice * 2 - 2;
-  const competitorHourly = hourlyPrice + 0.9;
+  const hourlyPrice = resolveScannerTruthPriceEuro(hub, "hourly") || (priceValue > 0 ? priceValue : 2.5);
+  const dailyPrice = resolveScannerTruthPriceEuro(hub, "daily");
+  const monthlyPrice = resolveScannerTruthPriceEuro(hub, "monthly");
+  const parqOneWayRidePrice = 4.5;
+  const parqTwoWayRidePrice = 9;
+  const uberOneWayRidePrice = 5;
+  const uberTwoWayRidePrice = 10;
+  const competitorHourly = 1.5;
   const competitorDaily = dailyPrice + 7;
-  const competitorOneWay = oneWayRidePrice + 3;
-  const competitorTwoWay = twoWayRidePrice + 6;
-  const monthlyPrice = dailyPrice * 30;
-  const uberBoltRidePrice = 5;
-  const parqRidePrice = 4.5;
-  const busCamperDailyPrice = 50;
+  const camperDailyPrice = 20;
+  const busDailyPrice = 50;
 
   const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}`;
   
@@ -184,6 +194,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const hideAnnouncementBar = true; // Always hide announcement bar for location pages
   
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const isSupabaseStorageUrl = (url: string) =>
+    /^https?:\/\/[^/]+\/storage\/v1\/object\/public\//.test(url);
   const photoList = Array.isArray(hub.verification_photos) ? hub.verification_photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [];
   const candidateHero = typeof _hero === "string" && _hero.trim().length > 0 ? _hero : undefined;
   let photos = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
@@ -196,6 +208,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     photos = photos.slice(0, 4);
   }
   const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
+  const currentPhotoIsSupabase = isSupabaseStorageUrl(currentPhoto);
   const miniPhotos = Array.from({ length: 7 }, (_, idx) => photos[idx % photos.length]);
   const streetViewHref =
     typeof hub.latitude === "number" && typeof hub.longitude === "number"
@@ -804,6 +817,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     alt={`${locationName} parking`}
                     fill
                     priority
+                    quality={100}
+                    unoptimized={currentPhotoIsSupabase}
                     className="object-cover"
                   />
                   {/* Photo Navigation */}
@@ -848,14 +863,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
-                    <div className="mt-2 space-y-1.5 text-xs">
+                    <div className="mt-2 space-y-1.5 text-xs text-black/85">
                       <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja 1 Smjer</span><span className="font-semibold">{formatEur(oneWayRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja 2 Smjera</span><span className="font-semibold">{formatEur(twoWayRidePrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Parq vožnja</span><span className="font-semibold">{formatEur(parqRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Autobusi i kamperi</span><span className="font-semibold">{formatEur(busCamperDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(parqOneWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(parqTwoWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Kamperi</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Autobusi</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
@@ -863,14 +878,12 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
                       <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja 1 Smjer</span><span className="font-semibold">{formatEur(competitorOneWay)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja 2 Smjera</span><span className="font-semibold">{formatEur(competitorTwoWay)}</span></div>
-                      <div className="flex items-center justify-between"><span>Uber/Bolt (cca)</span><span className="font-semibold">{formatEur(uberBoltRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Naš Parq</span><span className="font-semibold">{formatEur(parqRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(uberOneWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(uberTwoWayRidePrice)}</span></div>
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena o dostupnosti: cijene i raspoloživost mjesta ovise o terminu dolaska i trenutačnom kapacitetu.</p>
+                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: PayParq koristi dinamičke cijene; preporučujemo rezervaciju, za vožnje barem 60 min prije dolaska. Cijene vožnje mogu varirati i prihvaćanje nije garantirano.</p>
               </div>
               
               <div className="md:hidden bg-white rounded-3xl p-4 shadow-sm border border-gray-100 w-full -mt-2">
@@ -987,7 +1000,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         className={`relative aspect-square rounded-xl overflow-hidden border ${isActiveThumb ? "border-[#5F3DFC]" : "border-black/10"}`}
                         aria-label={`Photo ${idx + 1}`}
                       >
-                        <Image src={photo} alt={`${locationName} photo ${idx + 1}`} fill className="object-cover" />
+                        <Image
+                          src={photo}
+                          alt={`${locationName} photo ${idx + 1}`}
+                          fill
+                          quality={100}
+                          unoptimized={isSupabaseStorageUrl(photo)}
+                          className="object-cover"
+                        />
                       </button>
                     );
                   })}

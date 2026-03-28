@@ -5,7 +5,7 @@ import NextImage from "next/image";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { resolvePricingModeFromSource, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
+import { normalizeLocationName, resolvePricingModeFromSource, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 
 type LocationRow = {
   id: string;
@@ -623,7 +623,7 @@ export default function ResourcesPage() {
             ]) || "FREE100";
           return {
             id: row.id,
-            name: row.name || `Lot ${displayId}`,
+            name: normalizeLocationName(row.name) || `Lot ${displayId}`,
             displayId,
             pricingMode,
             signPrice,

@@ -7,6 +7,49 @@ type PricingType = 'hourly' | 'daily' | 'monthly';
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
 const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
 
+function resolveStripeSecretKey(): string | null {
+  const secret = (process.env.STRIPE_SECRET_KEY ?? '').trim();
+  if (!secret) return null;
+  if (!/^sk_(test|live)_/i.test(secret)) return null;
+  if (/your_stripe|replace_me|changeme|example/i.test(secret)) return null;
+  return secret;
+}
+
+function buildSupabaseFunctionCheckoutUrl(params: {
+  locationId: string;
+  displayId?: string;
+  flowType: string;
+  pricingType: PricingType;
+  checkIn?: string;
+  checkOut?: string;
+  allowPromotionCodes: boolean;
+  customerEmail?: string;
+}): string | null {
+  const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '').trim();
+  if (!supabaseBase) return null;
+  const url = new URL('/functions/v1/create-checkout', supabaseBase.replace(/\/+$/, ''));
+  url.searchParams.set('location_id', params.locationId);
+  if (params.displayId) {
+    url.searchParams.set('display_id', params.displayId);
+  }
+  if (params.flowType) {
+    url.searchParams.set('flow', params.flowType);
+  }
+  url.searchParams.set('type', params.pricingType);
+  if (params.checkIn) {
+    url.searchParams.set('check_in', params.checkIn);
+  }
+  if (params.checkOut) {
+    url.searchParams.set('check_out', params.checkOut);
+  }
+  if (params.customerEmail) {
+    url.searchParams.set('email', params.customerEmail);
+  }
+  url.searchParams.set('allow_promotion_codes', params.allowPromotionCodes ? '1' : '0');
+  url.searchParams.set('t', Date.now().toString());
+  return url.toString();
+}
+
 function buildSuccessUrl(params: {
   locationId?: string;
   displayId?: string;
@@ -247,11 +290,6 @@ async function resolveLocationPricing(
 }
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    return NextResponse.json({ error: 'missing_stripe_secret' }, { status: 500 });
-  }
-  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   console.log('[Stripe Checkout] Request body:', body);
   const url = new URL(req.url);
@@ -284,6 +322,26 @@ export async function POST(req: NextRequest) {
     const v = (body as { customer_email?: unknown }).customer_email;
     if (typeof v === 'string') customer_email = v;
   }
+  const secret = resolveStripeSecretKey();
+  if (!secret) {
+    const fallbackUrl = location_id
+      ? buildSupabaseFunctionCheckoutUrl({
+          locationId: location_id,
+          displayId: display_id || undefined,
+          flowType: flow_type,
+          pricingType: pricing_type,
+          checkIn: (body.check_in as string) || url.searchParams.get('in') || undefined,
+          checkOut: (body.check_out as string) || url.searchParams.get('out') || undefined,
+          allowPromotionCodes,
+          customerEmail: customer_email,
+        })
+      : null;
+    if (fallbackUrl) {
+      return NextResponse.json({ url: fallbackUrl });
+    }
+    return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
+  }
+  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const normalizedCustomerEmail = normalizeEmailValue(customer_email ?? url.searchParams.get('email'));
   const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
   const checkoutCustomerParams = buildCheckoutCustomerParams({
@@ -512,11 +570,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    return NextResponse.json({ error: 'missing_stripe_secret' }, { status: 500 });
-  }
-  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const url = new URL(req.url);
   const location_id = url.searchParams.get('loc') || url.searchParams.get('location_id') || '';
   const display_id = url.searchParams.get('display_id') || '';
@@ -530,6 +583,26 @@ export async function GET(req: NextRequest) {
     url.searchParams.get('allow_promotion_codes')
   );
   const customer_email = url.searchParams.get('email') || undefined;
+  const secret = resolveStripeSecretKey();
+  if (!secret) {
+    const fallbackUrl = location_id
+      ? buildSupabaseFunctionCheckoutUrl({
+          locationId: location_id,
+          displayId: display_id || undefined,
+          flowType: flow_type,
+          pricingType: pricing_type,
+          checkIn: check_in || undefined,
+          checkOut: check_out || undefined,
+          allowPromotionCodes,
+          customerEmail: customer_email,
+        })
+      : null;
+    if (fallbackUrl) {
+      return NextResponse.redirect(fallbackUrl, { status: 303 });
+    }
+    return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
+  }
+  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
   const normalizedCustomerEmail = normalizeEmailValue(customer_email);
   const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
   const checkoutCustomerParams = buildCheckoutCustomerParams({

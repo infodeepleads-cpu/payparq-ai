@@ -69,3 +69,9 @@ export function resolveScannerTruthPriceEuro(
 export function formatEuroLabel(amountEuro: number): string {
   return `€${amountEuro.toFixed(2)}`;
 }
+
+export function normalizeLocationName(name: string | null | undefined): string {
+  const raw = String(name ?? "").trim();
+  if (!raw) return "";
+  return raw;
+}
