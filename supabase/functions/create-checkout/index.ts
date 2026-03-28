@@ -7,7 +7,6 @@ const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   Deno.env.get("SERVICE_ROLE_KEY") ?? "";
-const successUrl = "https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}";
 const cancelUrl = "https://www.payparq.com/success";
 
 const corsHeaders = {
@@ -726,16 +725,16 @@ serve(async (req: Request) => {
     // V10: Super robust location resolution
     let locData = null;
     
-    // 1. Try UUID
-    if (isUuid(locationId)) {
+    // 1. Try Display ID from explicit parameter first
+    if (/^\d{5}$/.test(urlDisplayId)) {
       const { data } = await admin
         .from("locations")
         .select("id, display_id, name")
-        .eq("id", locationId)
+        .eq("display_id", urlDisplayId)
         .maybeSingle();
       locData = data;
     }
-    
+
     // 2. Try Display ID (5 digits) from locationId parameter
     if (!locData && /^\d{5}$/.test(locationId)) {
       const { data } = await admin
@@ -746,17 +745,17 @@ serve(async (req: Request) => {
       locData = data;
     }
 
-    // 2.5 Try Display ID from explicit parameter
-    if (!locData && /^\d{5}$/.test(urlDisplayId)) {
+    // 3. Try UUID
+    if (!locData && isUuid(locationId)) {
       const { data } = await admin
         .from("locations")
         .select("id, display_id, name")
-        .eq("display_id", urlDisplayId)
+        .eq("id", locationId)
         .maybeSingle();
       locData = data;
     }
     
-    // 3. Try Canonical Slug
+    // 4. Try Canonical Slug
     if (!locData) {
       const { data } = await admin
         .from("locations")
@@ -766,7 +765,7 @@ serve(async (req: Request) => {
       locData = data;
     }
     
-    // 4. Try exact Name
+    // 5. Try exact Name
     if (!locData) {
       const { data } = await admin
         .from("locations")
@@ -776,7 +775,7 @@ serve(async (req: Request) => {
       locData = data;
     }
     
-    // 5. Try case-insensitive Name
+    // 6. Try case-insensitive Name
     if (!locData) {
       const { data } = await admin
         .from("locations")
@@ -786,7 +785,7 @@ serve(async (req: Request) => {
       locData = data;
     }
     
-    // 6. Try partial Name match
+    // 7. Try partial Name match
     if (!locData) {
       const { data } = await admin
         .from("locations")
@@ -987,6 +986,33 @@ serve(async (req: Request) => {
       reservationDescription = `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${(unitAmountCents / 100).toFixed(2)}`;
     }
     const checkoutQuantity = isReservationFlow ? 1 : quantity;
+    const derivedCheckInIso = checkIn || now.toISOString();
+    let derivedCheckOutIso = checkOut;
+    if (!derivedCheckOutIso) {
+      const baseStart = new Date(derivedCheckInIso);
+      if (!Number.isNaN(baseStart.getTime())) {
+        const durationMinutes = type === "monthly"
+          ? checkoutQuantity * 30 * 24 * 60
+          : type === "daily"
+          ? checkoutQuantity * 24 * 60
+          : checkoutQuantity * 60;
+        derivedCheckOutIso = new Date(baseStart.getTime() + durationMinutes * 60 * 1000).toISOString();
+      }
+    }
+    const resolvedSuccessUrl = new URL("https://www.payparq.com/success");
+    resolvedSuccessUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+    if (locationUuid) {
+      resolvedSuccessUrl.searchParams.set("location_id", locationUuid);
+    }
+    if (displayId) {
+      resolvedSuccessUrl.searchParams.set("display_id", displayId);
+    }
+    if (derivedCheckInIso) {
+      resolvedSuccessUrl.searchParams.set("check_in", derivedCheckInIso);
+    }
+    if (derivedCheckOutIso) {
+      resolvedSuccessUrl.searchParams.set("check_out", derivedCheckOutIso);
+    }
     const reservationName = (locData?.name ?? "").toString().trim();
     const reservationTitle = reservationName.length > 0
       ? reservationName
@@ -1070,7 +1096,7 @@ serve(async (req: Request) => {
     const sessionOptions: any = {
       mode: "payment",
       payment_method_types: ["card"],
-      success_url: successUrl,
+      success_url: resolvedSuccessUrl.toString(),
       cancel_url: cancelUrl,
       client_reference_id: locationUuid, // Use UUID if possible
       customer_email: email || undefined,
@@ -1107,8 +1133,8 @@ serve(async (req: Request) => {
         mobile: mobile,
         email: email,
         permit_id: permitId || undefined,
-        check_in: checkIn || undefined,
-        check_out: checkOut || undefined,
+        check_in: derivedCheckInIso || undefined,
+        check_out: derivedCheckOutIso || undefined,
         activation_at: activationAt || undefined,
       },
     };

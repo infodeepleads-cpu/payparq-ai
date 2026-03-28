@@ -11,6 +11,7 @@ const desiredCountry = (Deno.env.get("STRIPE_CONNECT_COUNTRY") ?? "HR").trim().t
 const refreshPath = (Deno.env.get("STRIPE_CONNECT_REFRESH_PATH") ?? "/#/finance").trim();
 const returnPath = (Deno.env.get("STRIPE_CONNECT_RETURN_PATH") ?? "/#/finance").trim();
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
+type StripeAccount = Awaited<ReturnType<typeof stripe.accounts.create>>;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,7 +83,7 @@ async function persistStripeAccount(userId: string, accountId: string): Promise<
   if (error) throw new Error(error.message);
 }
 
-async function createExpressAccount(userId: string, country: string): Promise<Stripe.Account> {
+async function createExpressAccount(userId: string, country: string): Promise<StripeAccount> {
   return await stripe.accounts.create({
     type: "express",
     country,
@@ -124,9 +125,10 @@ serve(async (req) => {
         accountCountry = String(existing.country ?? "").toUpperCase();
         if (accountCountry !== targetCountry) {
           const replacement = await createExpressAccount(userId, targetCountry);
-          stripeAccountId = replacement.id;
+          const replacementId = replacement.id;
+          stripeAccountId = replacementId;
           accountCountry = String(replacement.country ?? "").toUpperCase();
-          await persistStripeAccount(userId, stripeAccountId);
+          await persistStripeAccount(userId, replacementId);
         }
       } catch {
         stripeAccountId = null;
@@ -135,13 +137,20 @@ serve(async (req) => {
 
     if (!stripeAccountId) {
       const created = await createExpressAccount(userId, targetCountry);
-      stripeAccountId = created.id;
+      const createdId = created.id;
+      stripeAccountId = createdId;
       accountCountry = String(created.country ?? "").toUpperCase();
-      await persistStripeAccount(userId, stripeAccountId);
+      await persistStripeAccount(userId, createdId);
     }
 
+    if (!stripeAccountId) {
+      return json({ error: "Failed to create Stripe account" }, 500);
+    }
+
+    const activeStripeAccountId = stripeAccountId;
+
     const accountLink = await stripe.accountLinks.create({
-      account: stripeAccountId,
+      account: activeStripeAccountId,
       type: "account_onboarding",
       refresh_url: buildAbsoluteUrl(refreshPath),
       return_url: buildAbsoluteUrl(returnPath),
@@ -150,7 +159,7 @@ serve(async (req) => {
     return json({
       ok: true,
       url: accountLink.url,
-      stripe_account_id: stripeAccountId,
+      stripe_account_id: activeStripeAccountId,
       country: accountCountry || targetCountry,
     });
   } catch (error) {

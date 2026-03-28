@@ -265,11 +265,10 @@ serve(async (req) => {
     const name = String(body?.name ?? "").trim();
     const targetRole = normalizeRole(body?.role);
     const locationIdRaw = String(body?.location_id ?? "").trim();
-    const requestedLocationIds = Array.isArray(body?.location_ids)
-      ? body.location_ids
+    const requestedLocationIds: string[] = Array.isArray(body?.location_ids)
+      ? body.location_ids.map((id: unknown) => String(id ?? "").trim())
       : [];
     const locationIds = requestedLocationIds
-      .map((id: unknown) => String(id ?? "").trim())
       .filter((id: string) => id.length > 0);
     const uniqueLocationIds = [...new Set(locationIds)];
     const locationId = locationIdRaw.length > 0

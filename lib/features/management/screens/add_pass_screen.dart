@@ -398,7 +398,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
                                             child: Text(Lang.sel(
                                                 isCroatian,
                                                 '$m Month${m > 1 ? 's' : ''}',
-                                                '$m mjesec${m > 1 ? 'a' : ''}'))))
+                                                '$m Mjesec${m > 1 ? 'a' : ''}'))))
                                         .toList(),
                                     onChanged: (v) {
                                       setState(() {
@@ -716,7 +716,7 @@ class _AddPassScreenState extends ConsumerState<AddPassScreen> {
       case DateTime.friday:
         return Lang.sel(isCroatian, 'Fri', 'Pet');
       case DateTime.saturday:
-        return Lang.sel(isCroatian, 'Sat', 'Sub');
+        return Lang.sel(isCroatian, 'Sat', 'Sat');
       case DateTime.sunday:
         return Lang.sel(isCroatian, 'Sun', 'Ned');
       default:

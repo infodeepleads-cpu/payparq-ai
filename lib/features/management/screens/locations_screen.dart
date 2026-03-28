@@ -523,6 +523,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
+  String _buildHubLocationUrl(Map<String, dynamic> loc) {
+    final String displayId = (loc['display_id'] ?? '').toString();
+    final String name = (loc['name'] ?? '')
+        .toString()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\\s-]'), '')
+        .replaceAll(RegExp(r'\\s+'), '-');
+    final String slug = name.isNotEmpty ? name : displayId.toLowerCase();
+    return 'https://payparq.com/locations/$slug';
+  }
+
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
     final messenger = ScaffoldMessenger.of(context);
     final Map<String, dynamic> meta =
@@ -533,7 +544,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           .read(locationsControllerProvider)
           .updateHubDesignation(loc, enabled);
       if (enabled) {
-        final url = 'https://payparqai.vercel.app/locations/$slug';
+        final url = 'https://payparq.com/locations/$slug';
         try {
           await launchUrl(Uri.parse(url));
         } catch (_) {}
@@ -816,410 +827,401 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   }
                 }
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$currentName • $displayId',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(dialogContext).size.height * 0.78,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.border),
                           ),
-                          const SizedBox(height: 12),
-                          if (!canEdit)
-                            Row(
-                              children: [
-                                Icon(Icons.edit_location_alt_outlined,
-                                    size: 18, color: Colors.grey[600]),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    Lang.sel(
-                                        ref.watch(localeIsCroatianProvider),
-                                        'Location Name: $currentName',
-                                        'Naziv lokacije: $currentName'),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  Lang.sel(ref.watch(localeIsCroatianProvider),
-                                      'Location Name', 'Naziv lokacije'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: nameCtrl,
-                                  decoration: InputDecoration(
-                                    hintText: Lang.sel(
-                                        ref.watch(localeIsCroatianProvider),
-                                        'e.g. Parking Trogir',
-                                        'npr. Parking Trogir'),
-                                    filled: true,
-                                    fillColor: AppTheme.surface,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  Lang.sel(ref.watch(localeIsCroatianProvider),
-                                      'Address', 'Adresa'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: addressCtrl,
-                                  decoration: InputDecoration(
-                                    hintText: Lang.sel(
-                                        ref.watch(localeIsCroatianProvider),
-                                        'e.g. City center',
-                                        'npr. Centar grada'),
-                                    filled: true,
-                                    fillColor: AppTheme.surface,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 12),
-                          Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.local_parking,
-                                  size: 18, color: Colors.grey[600]),
-                              const SizedBox(width: 8),
-                              if (!canEdit)
-                                Text(
-                                  Lang.sel(
-                                      ref.watch(localeIsCroatianProvider),
-                                      'Capacity: $currentCapacity',
-                                      'Kapacitet: $currentCapacity'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                )
-                              else ...[
-                                Text(
-                                  Lang.sel(ref.watch(localeIsCroatianProvider),
-                                      'Capacity', 'Kapacitet'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 120,
-                                  child: TextField(
-                                    controller: capacityCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      hintText: 'e.g. 150',
-                                      filled: true,
-                                      fillColor: AppTheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on_outlined,
-                                  size: 18, color: Colors.grey[600]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  Lang.sel(
-                                      ref.watch(localeIsCroatianProvider),
-                                      'Coordinates: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
-                                      'Koordinate: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}'),
-                                  maxLines: 1,
-                                  softWrap: false,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (canEdit) ...[
-                            const SizedBox(height: 12),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    showLocationPicker = !showLocationPicker;
-                                  });
-                                },
-                                icon: Icon(
-                                  showLocationPicker
-                                      ? Icons.expand_less
-                                      : Icons.map_outlined,
+                              Text(
+                                '$currentName • $displayId',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.black,
                                 ),
-                                label: Text(
-                                  showLocationPicker
-                                      ? Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Hide map',
-                                          'Sakrij mapu')
-                                      : Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Change location',
-                                          'Promijeni lokaciju'),
-                                  style: GoogleFonts.inter(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: AppTheme.border),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 10),
-                                ),
                               ),
-                            ),
-                            if (showLocationPicker) ...[
                               const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.border),
-                                ),
-                                child: Column(
+                              if (!canEdit)
+                                Row(
+                                  children: [
+                                    Icon(Icons.edit_location_alt_outlined,
+                                        size: 18, color: Colors.grey[600]),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'Location Name: $currentName',
+                                            'Naziv lokacije: $currentName'),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       Lang.sel(
                                           ref.watch(localeIsCroatianProvider),
-                                          'Map image: tap to move pin and save',
-                                          'Slika mape: klikni za promjenu pina i spremi'),
+                                          'Location Name',
+                                          'Naziv lokacije'),
                                       style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        color: Colors.black87,
+                                        fontSize: 14,
+                                        color: Colors.black,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    SizedBox(
-                                      height: 320,
-                                      child: LotLocationPicker(
-                                        initialLocation: LatLng(
-                                            pendingLatitude, pendingLongitude),
-                                        onLocationSelected: (latLng, address) {
-                                          setState(() {
-                                            pendingLatitude = latLng.latitude;
-                                            pendingLongitude = latLng.longitude;
-                                            if (address.trim().isNotEmpty) {
-                                              addressCtrl.text = address.trim();
-                                            }
-                                          });
-                                        },
+                                    TextField(
+                                      controller: nameCtrl,
+                                      decoration: InputDecoration(
+                                        hintText: Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'e.g. Parking Trogir',
+                                            'npr. Parking Trogir'),
+                                        filled: true,
+                                        fillColor: AppTheme.surface,
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Address',
+                                          'Adresa'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: addressCtrl,
+                                      decoration: InputDecoration(
+                                        hintText: Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'e.g. City center',
+                                            'npr. Centar grada'),
+                                        filled: true,
+                                        fillColor: AppTheme.surface,
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide.none,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Icon(Icons.local_parking,
+                                      size: 18, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  if (!canEdit)
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Capacity: $currentCapacity',
+                                          'Kapacitet: $currentCapacity'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    )
+                                  else ...[
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Capacity',
+                                          'Kapacitet'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 120,
+                                      child: TextField(
+                                        controller: capacityCtrl,
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g. 150',
+                                          filled: true,
+                                          fillColor: AppTheme.surface,
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            ],
-                          ],
-                          const SizedBox(height: 12),
-                          if (isSuperAdmin)
-                            Row(
-                              children: [
-                                Text(
-                                  Lang.sel(ref.watch(localeIsCroatianProvider),
-                                      'Hub Enabled', 'Hub omogućen'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_outlined,
+                                      size: 18, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Coordinates: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
+                                          'Koordinate: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}'),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Switch(
-                                  value: isHub,
-                                  activeThumbColor: Colors.black,
-                                  onChanged: (v) async {
-                                    setState(() {
-                                      final Map<String, dynamic> meta =
-                                          (loc['verification_metadata'] ?? {})
-                                              as Map<String, dynamic>;
-                                      meta['hub_enabled'] = v;
-                                    });
-                                    await _toggleHub(loc, v);
-                                    if (v == true) {
-                                      final String displayId =
-                                          (loc['display_id'] ?? '').toString();
-                                      final String name = (loc['name'] ?? '')
-                                          .toString()
-                                          .toLowerCase()
-                                          .replaceAll(
-                                              RegExp(r'[^a-z0-9\\s-]'), '')
-                                          .replaceAll(RegExp(r'\\s+'), '-');
-                                      final String slug = name.isNotEmpty
-                                          ? name
-                                          : displayId.toLowerCase();
-                                      final String url =
-                                          'https://payparqai.vercel.app/locations/$slug';
-                                      try {
-                                        await launchUrl(Uri.parse(url));
-                                      } catch (_) {}
-                                    }
-                                    if (!dialogContext.mounted) return;
-                                    Navigator.pop(dialogContext);
-                                    _showLocationDetail(
-                                        loc, isSuperAdmin, isAdmin);
-                                  },
-                                ),
-                              ],
-                            ),
-                          if (isSuperAdmin && isHub) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.link,
-                                    size: 18, color: Colors.black),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: SelectableText(
-                                    () {
-                                      final String displayId =
-                                          (loc['display_id'] ?? '').toString();
-                                      final String name = (loc['name'] ?? '')
-                                          .toString()
-                                          .toLowerCase()
-                                          .replaceAll(
-                                              RegExp(r'[^a-z0-9\\s-]'), '')
-                                          .replaceAll(RegExp(r'\\s+'), '-');
-                                      final String slug = name.isNotEmpty
-                                          ? name
-                                          : displayId.toLowerCase();
-                                      return 'https://payparqai.vercel.app/locations/$slug';
-                                    }(),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: Colors.blue[800],
-                                      decoration: TextDecoration.underline,
+                                ],
+                              ),
+                              if (canEdit) ...[
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        showLocationPicker =
+                                            !showLocationPicker;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      showLocationPicker
+                                          ? Icons.expand_less
+                                          : Icons.map_outlined,
+                                      color: Colors.black,
+                                    ),
+                                    label: Text(
+                                      showLocationPicker
+                                          ? Lang.sel(
+                                              ref.watch(
+                                                  localeIsCroatianProvider),
+                                              'Hide map',
+                                              'Sakrij mapu')
+                                          : Lang.sel(
+                                              ref.watch(
+                                                  localeIsCroatianProvider),
+                                              'Change location',
+                                              'Promijeni lokaciju'),
+                                      style: GoogleFonts.inter(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: AppTheme.border),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    final String displayId =
-                                        (loc['display_id'] ?? '').toString();
-                                    final String name = (loc['name'] ?? '')
-                                        .toString()
-                                        .toLowerCase()
-                                        .replaceAll(
-                                            RegExp(r'[^a-z0-9\\s-]'), '')
-                                        .replaceAll(RegExp(r'\\s+'), '-');
-                                    final String slug = name.isNotEmpty
-                                        ? name
-                                        : displayId.toLowerCase();
-                                    final String url =
-                                        'https://payparqai.vercel.app/locations/$slug';
-                                    await launchUrl(Uri.parse(url));
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 10),
+                                if (showLocationPicker) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border:
+                                          Border.all(color: AppTheme.border),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          Lang.sel(
+                                              ref.watch(
+                                                  localeIsCroatianProvider),
+                                              'Map image: tap to move pin and save',
+                                              'Slika mape: klikni za promjenu pina i spremi'),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13,
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        LotLocationPicker(
+                                          initialLocation: LatLng(
+                                              pendingLatitude,
+                                              pendingLongitude),
+                                          onLocationSelected:
+                                              (latLng, address) {
+                                            setState(() {
+                                              pendingLatitude = latLng.latitude;
+                                              pendingLongitude =
+                                                  latLng.longitude;
+                                              if (address.trim().isNotEmpty) {
+                                                addressCtrl.text =
+                                                    address.trim();
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Text(Lang.sel(
-                                      ref.watch(localeIsCroatianProvider),
-                                      'Open Hub Page',
-                                      'Otvori Hub stranicu')),
-                                )
+                                ],
                               ],
-                            ),
-                          ],
-                          if (canEdit) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: saving ? null : saveChanges,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
+                              const SizedBox(height: 12),
+                              if (isSuperAdmin)
+                                Row(
+                                  children: [
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Hub Enabled',
+                                          'Hub omogućen'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Switch(
+                                      value: isHub,
+                                      activeThumbColor: Colors.black,
+                                      onChanged: (v) async {
+                                        setState(() {
+                                          final Map<String, dynamic> meta =
+                                              (loc['verification_metadata'] ??
+                                                  {}) as Map<String, dynamic>;
+                                          meta['hub_enabled'] = v;
+                                        });
+                                        await _toggleHub(loc, v);
+                                        if (v == true) {
+                                          final String url =
+                                              _buildHubLocationUrl(loc);
+                                          try {
+                                            await launchUrl(Uri.parse(url));
+                                          } catch (_) {}
+                                        }
+                                        if (!dialogContext.mounted) return;
+                                        Navigator.pop(dialogContext);
+                                        _showLocationDetail(
+                                            loc, isSuperAdmin, isAdmin);
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                child: saving
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2),
-                                      )
-                                    : Text(Lang.sel(
-                                        ref.watch(localeIsCroatianProvider),
-                                        'Save Changes',
-                                        'Spremi promjene')),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                              if (isSuperAdmin && isHub) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.link,
+                                        size: 18, color: Colors.black),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: SelectableText(
+                                        _buildHubLocationUrl(loc),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          color: Colors.blue[800],
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        final String url =
+                                            _buildHubLocationUrl(loc);
+                                        await launchUrl(Uri.parse(url));
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                      ),
+                                      child: Text(Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Open Hub Page',
+                                          'Otvori Hub stranicu')),
+                                    )
+                                  ],
+                                ),
+                              ],
+                              if (canEdit) ...[
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: saving ? null : saveChanges,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.black,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                    ),
+                                    child: saving
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2),
+                                          )
+                                        : Text(Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'Save Changes',
+                                            'Spremi promjene')),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 );
               },
             ),

@@ -55,12 +55,8 @@ class _VerificationUploadScreenState
       return;
     }
 
-    const bool isWeb = kIsWeb;
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
-      imageQuality: isWeb ? 15 : 25,
-      maxWidth: isWeb ? 800 : 1024,
-      maxHeight: isWeb ? 800 : 1024,
     );
 
     if (image != null) {
@@ -78,12 +74,7 @@ class _VerificationUploadScreenState
       return;
     }
 
-    const bool isWeb = kIsWeb;
-    final List<XFile> images = await _picker.pickMultiImage(
-      imageQuality: isWeb ? 15 : 25,
-      maxWidth: isWeb ? 800 : 1024,
-      maxHeight: isWeb ? 800 : 1024,
-    );
+    final List<XFile> images = await _picker.pickMultiImage();
 
     if (images.isNotEmpty) {
       setState(() {
@@ -126,10 +117,8 @@ class _VerificationUploadScreenState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(Lang.sel(
-                    ref.read(localeIsCroatianProvider),
-                    'Sign downloaded',
-                    'Znak je preuzet'))),
+                content: Text(Lang.sel(ref.read(localeIsCroatianProvider),
+                    'Sign downloaded', 'Znak je preuzet'))),
           );
         }
       } else {
@@ -202,9 +191,9 @@ class _VerificationUploadScreenState
         widget.location['verification_status'] ?? 'unverified';
 
     // Calculate hourly price with floor/ceiling
-    double price = double.tryParse(
-            (widget.location['rate_per_hour'] ?? 0.0).toString()) ??
-        0.0;
+    double price =
+        double.tryParse((widget.location['rate_per_hour'] ?? 0.0).toString()) ??
+            0.0;
     final floor = double.tryParse(
             (widget.location['rate_per_hour_floor'] ?? 0.0).toString()) ??
         0.0;
