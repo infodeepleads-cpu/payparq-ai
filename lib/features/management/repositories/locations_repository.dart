@@ -20,6 +20,24 @@ class LocationsRepository {
     }).eq('id', id);
   }
 
+  Future<void> updateLocationDetails({
+    required String id,
+    required String name,
+    required String? address,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+  }) async {
+    await _client.from('locations').update({
+      'name': name.trim(),
+      'address': (address ?? '').trim(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'capacity': capacity,
+      'total_spots': capacity,
+    }).eq('id', id);
+  }
+
   Future<Map<String, dynamic>> createLocation({
     required String name,
     required String address,

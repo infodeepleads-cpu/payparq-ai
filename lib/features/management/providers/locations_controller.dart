@@ -61,6 +61,29 @@ class LocationsController {
     }
   }
 
+  Future<void> updateLocationDetails({
+    required String id,
+    required String name,
+    required String? address,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+  }) async {
+    try {
+      await _repo.updateLocationDetails(
+        id: id,
+        name: name,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        capacity: capacity,
+      );
+      _ref.invalidate(locationsStreamProvider);
+    } catch (e) {
+      throw AppError('Update failed: $e', cause: e);
+    }
+  }
+
   Future<String> createLocation({
     required String name,
     required String address,

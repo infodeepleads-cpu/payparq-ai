@@ -422,9 +422,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   status == 'pending' ||
                   status == 'rejected')
               ? 0
-              : (fixedWidthRequired
-                  ? (isSetupRequired ? 148 : 160)
-                  : 140),
+              : (fixedWidthRequired ? (isSetupRequired ? 148 : 160) : 140),
           maxWidth: isSetupRequired ? 148 : 160,
         ),
         padding: EdgeInsets.symmetric(
@@ -688,26 +686,30 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) {
-        final name = (loc['name'] ?? 'Unnamed Lot').toString();
         final displayId = (loc['display_id'] ?? 'N/A').toString();
         final String idStr = loc['id'].toString();
         final Map<String, dynamic>? override = _locOverrides[idStr];
         final effectiveLoc = override != null ? {...loc, ...override} : loc;
+        final nameCtrl = TextEditingController(
+            text: (effectiveLoc['name'] ?? 'Unnamed Lot').toString());
         final capacity = (effectiveLoc['capacity'] ?? 0) is int
             ? effectiveLoc['capacity'] as int
             : int.tryParse((effectiveLoc['capacity'] ?? '0').toString()) ?? 0;
         final capacityCtrl = TextEditingController(text: '$capacity');
         int currentCapacity = capacity;
+        String currentName = (effectiveLoc['name'] ?? 'Unnamed Lot').toString();
         bool saving = false;
+        bool showLocationPicker = false;
         final Map<String, dynamic> meta =
             (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
         final bool isHub = meta['hub_enabled'] == true;
-        final double latitude = (loc['latitude'] is num)
-            ? (loc['latitude'] as num).toDouble()
-            : double.tryParse('${loc['latitude'] ?? 0.0}') ?? 0.0;
-        final double longitude = (loc['longitude'] is num)
-            ? (loc['longitude'] as num).toDouble()
-            : double.tryParse('${loc['longitude'] ?? 0.0}') ?? 0.0;
+        double pendingLatitude = (effectiveLoc['latitude'] is num)
+            ? (effectiveLoc['latitude'] as num).toDouble()
+            : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
+        double pendingLongitude = (effectiveLoc['longitude'] is num)
+            ? (effectiveLoc['longitude'] as num).toDouble()
+            : double.tryParse('${effectiveLoc['longitude'] ?? 0.0}') ?? 0.0;
+        String currentAddress = (effectiveLoc['address'] ?? '').toString();
         final bool canEdit = isSuperAdmin || isAdmin;
 
         return AlertDialog(
@@ -723,6 +725,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 final navigator = Navigator.of(dialogContext);
                 Future<void> saveChanges() async {
                   if (!canEdit) return;
+                  final newName = nameCtrl.text.trim();
+                  if (newName.isEmpty) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                          content: Text(Lang.sel(
+                              ref.watch(localeIsCroatianProvider),
+                              'Location name is required',
+                              'Naziv lokacije je obavezan'))),
+                    );
+                    return;
+                  }
                   setState(() => saving = true);
                   try {
                     final newCapacity =
@@ -732,6 +745,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     if (mounted) {
                       this.setState(() {
                         _locOverrides[loc['id'].toString()] = {
+                          'name': newName,
+                          'address': currentAddress,
+                          'latitude': pendingLatitude,
+                          'longitude': pendingLongitude,
                           'capacity': newCapacity,
                           'total_spots': newCapacity,
                         };
@@ -739,11 +756,24 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     }
                     await ref
                         .read(locationsControllerProvider)
-                        .updateCapacity(loc['id'].toString(), newCapacity);
+                        .updateLocationDetails(
+                          id: loc['id'].toString(),
+                          name: newName,
+                          address: currentAddress,
+                          latitude: pendingLatitude,
+                          longitude: pendingLongitude,
+                          capacity: newCapacity,
+                        );
                     setState(() {
+                      currentName = newName;
+                      loc['name'] = newName;
+                      loc['address'] = currentAddress;
+                      loc['latitude'] = pendingLatitude;
+                      loc['longitude'] = pendingLongitude;
                       currentCapacity = newCapacity;
                       loc['capacity'] = newCapacity;
                       loc['total_spots'] = newCapacity;
+                      nameCtrl.text = newName;
                       capacityCtrl.text = '$newCapacity';
                     });
                     if (dialogContext.mounted) {
@@ -793,13 +823,66 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '$name • $displayId',
+                            '$currentName • $displayId',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
                           ),
+                          const SizedBox(height: 12),
+                          if (!canEdit)
+                            Row(
+                              children: [
+                                Icon(Icons.edit_location_alt_outlined,
+                                    size: 18, color: Colors.grey[600]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    Lang.sel(
+                                        ref.watch(localeIsCroatianProvider),
+                                        'Location Name: $currentName',
+                                        'Naziv lokacije: $currentName'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider),
+                                      'Location Name', 'Naziv lokacije'),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: nameCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: Lang.sel(
+                                        ref.watch(localeIsCroatianProvider),
+                                        'e.g. Parking Trogir',
+                                        'npr. Parking Trogir'),
+                                    filled: true,
+                                    fillColor: AppTheme.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
@@ -858,8 +941,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 child: Text(
                                   Lang.sel(
                                       ref.watch(localeIsCroatianProvider),
-                                      'Coordinates: $latitude, $longitude',
-                                      'Koordinate: $latitude, $longitude'),
+                                      'Coordinates: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
+                                      'Koordinate: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}'),
                                   maxLines: 1,
                                   softWrap: false,
                                   overflow: TextOverflow.ellipsis,
@@ -872,6 +955,89 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               ),
                             ],
                           ),
+                          if (canEdit) ...[
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    showLocationPicker = !showLocationPicker;
+                                  });
+                                },
+                                icon: Icon(
+                                  showLocationPicker
+                                      ? Icons.expand_less
+                                      : Icons.map_outlined,
+                                  color: Colors.black,
+                                ),
+                                label: Text(
+                                  showLocationPicker
+                                      ? Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Hide map',
+                                          'Sakrij mapu')
+                                      : Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Change location',
+                                          'Promijeni lokaciju'),
+                                  style: GoogleFonts.inter(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: AppTheme.border),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                            ),
+                            if (showLocationPicker) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Map image: tap to move pin and save',
+                                          'Slika mape: klikni za promjenu pina i spremi'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      height: 320,
+                                      child: LotLocationPicker(
+                                        initialLocation: LatLng(
+                                            pendingLatitude, pendingLongitude),
+                                        onLocationSelected: (latLng, address) {
+                                          setState(() {
+                                            pendingLatitude = latLng.latitude;
+                                            pendingLongitude = latLng.longitude;
+                                            if (address.trim().isNotEmpty) {
+                                              currentAddress = address.trim();
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                           const SizedBox(height: 12),
                           if (isSuperAdmin)
                             Row(
