@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
@@ -719,6 +721,16 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         String currentName = (effectiveLoc['name'] ?? 'Unnamed Lot').toString();
         bool saving = false;
         bool showLocationPicker = false;
+        final ImagePicker picker = ImagePicker();
+        final Map<String, Uint8List> localPhotoPreviewBytes = {};
+        final List<String> originalPhotoUrls =
+            ((effectiveLoc['verification_photos'] as List?) ?? const [])
+                .map((e) => e.toString())
+                .where((e) => e.trim().isNotEmpty)
+                .toList();
+        final List<String> editablePhotoUrls =
+            List<String>.from(originalPhotoUrls);
+        final List<XFile> newlySelectedPhotos = [];
         final Map<String, dynamic> meta =
             (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
         final bool isHub = meta['hub_enabled'] == true;
@@ -741,6 +753,48 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               builder: (context, setState) {
                 final messenger = ScaffoldMessenger.of(dialogContext);
                 final navigator = Navigator.of(dialogContext);
+                Future<void> pickLocationPhotos(ImageSource source) async {
+                  if (!canEdit) return;
+                  final currentTotal =
+                      editablePhotoUrls.length + newlySelectedPhotos.length;
+                  if (currentTotal >= 12) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(Lang.sel(
+                            ref.watch(localeIsCroatianProvider),
+                            'Maximum 12 location photos allowed.',
+                            'Maksimalno 12 fotografija lokacije.')),
+                      ),
+                    );
+                    return;
+                  }
+                  if (source == ImageSource.gallery) {
+                    final picked = await picker.pickMultiImage();
+                    if (picked.isEmpty) return;
+                    final availableSlots = 12 - currentTotal;
+                    setState(() {
+                      newlySelectedPhotos
+                          .addAll(picked.take(availableSlots).toList());
+                    });
+                    return;
+                  }
+                  final picked = await picker.pickImage(source: source);
+                  if (picked == null) return;
+                  setState(() {
+                    newlySelectedPhotos.add(picked);
+                  });
+                }
+
+                Future<ImageProvider> previewProvider(XFile file) async {
+                  final cached = localPhotoPreviewBytes[file.path];
+                  if (cached != null) {
+                    return MemoryImage(cached);
+                  }
+                  final bytes = await file.readAsBytes();
+                  localPhotoPreviewBytes[file.path] = bytes;
+                  return MemoryImage(bytes);
+                }
+
                 Future<void> saveChanges() async {
                   if (!canEdit) return;
                   final newName = nameCtrl.text.trim();
@@ -760,6 +814,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     final newCapacity =
                         int.tryParse(capacityCtrl.text.trim()) ??
                             currentCapacity;
+                    final bool photosChanged = newlySelectedPhotos.isNotEmpty ||
+                        editablePhotoUrls.length != originalPhotoUrls.length ||
+                        editablePhotoUrls
+                            .any((url) => !originalPhotoUrls.contains(url));
                     // Optimistically update override to prevent old value flicker
                     if (mounted) {
                       this.setState(() {
@@ -770,6 +828,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           'longitude': pendingLongitude,
                           'capacity': newCapacity,
                           'total_spots': newCapacity,
+                          'verification_photos': List<String>.from(
+                            editablePhotoUrls,
+                          ),
                         };
                       });
                     }
@@ -783,6 +844,30 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           longitude: pendingLongitude,
                           capacity: newCapacity,
                         );
+                    if (photosChanged) {
+                      final uploadedUrls = newlySelectedPhotos.isNotEmpty
+                          ? await ref
+                              .read(locationsControllerProvider)
+                              .uploadVerificationPhotos(
+                                locationId: loc['id'].toString(),
+                                images: List<XFile>.from(newlySelectedPhotos),
+                              )
+                          : <String>[];
+                      final nextPhotoUrls = [
+                        ...editablePhotoUrls,
+                        ...uploadedUrls,
+                      ];
+                      await ref
+                          .read(locationsControllerProvider)
+                          .updateVerificationPhotos(
+                            id: loc['id'].toString(),
+                            photoUrls: nextPhotoUrls,
+                          );
+                      editablePhotoUrls
+                        ..clear()
+                        ..addAll(nextPhotoUrls);
+                      newlySelectedPhotos.clear();
+                    }
                     setState(() {
                       currentName = newName;
                       loc['name'] = newName;
@@ -792,6 +877,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       currentCapacity = newCapacity;
                       loc['capacity'] = newCapacity;
                       loc['total_spots'] = newCapacity;
+                      loc['verification_photos'] = List<String>.from(
+                        editablePhotoUrls,
+                      );
                       nameCtrl.text = newName;
                       addressCtrl.text = newAddress;
                       capacityCtrl.text = '$newCapacity';
@@ -1015,6 +1103,237 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 16),
+                              Text(
+                                Lang.sel(
+                                    ref.watch(localeIsCroatianProvider),
+                                    'Location Photos (${editablePhotoUrls.length + newlySelectedPhotos.length})',
+                                    'Fotografije lokacije (${editablePhotoUrls.length + newlySelectedPhotos.length})'),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              if (editablePhotoUrls.isNotEmpty)
+                                GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                                  itemCount: editablePhotoUrls.length,
+                                  itemBuilder: (context, index) {
+                                    final photoUrl = editablePhotoUrls[index];
+                                    return InkWell(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => Dialog.fullscreen(
+                                            backgroundColor: Colors.black,
+                                            child: Stack(
+                                              children: [
+                                                Center(
+                                                  child:
+                                                      Image.network(photoUrl),
+                                                ),
+                                                Positioned(
+                                                  top: 40,
+                                                  right: 20,
+                                                  child: IconButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(context),
+                                                    icon: const Icon(
+                                                      Icons.close,
+                                                      color: Colors.white,
+                                                      size: 30,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            child: Image.network(
+                                              photoUrl,
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return Container(
+                                                  color: AppTheme.surface,
+                                                  child: const Icon(
+                                                      Icons.broken_image),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          if (canEdit)
+                                            Positioned(
+                                              top: 4,
+                                              right: 4,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  setState(() {
+                                                    editablePhotoUrls
+                                                        .removeAt(index);
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: Colors.black54,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.close,
+                                                    size: 14,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              if (newlySelectedPhotos.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                                  itemCount: newlySelectedPhotos.length,
+                                  itemBuilder: (context, index) {
+                                    final localFile =
+                                        newlySelectedPhotos[index];
+                                    return FutureBuilder<ImageProvider>(
+                                      future: previewProvider(localFile),
+                                      builder: (context, snapshot) {
+                                        if (!snapshot.hasData) {
+                                          return Container(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              color: AppTheme.surface,
+                                            ),
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2),
+                                            ),
+                                          );
+                                        }
+                                        return Stack(
+                                          children: [
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                image: DecorationImage(
+                                                  image: snapshot.data!,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              top: 4,
+                                              right: 4,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  setState(() {
+                                                    localPhotoPreviewBytes
+                                                        .remove(localFile.path);
+                                                    newlySelectedPhotos
+                                                        .removeAt(index);
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                    color: Colors.black54,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.close,
+                                                    size: 14,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
+                              if (canEdit) ...[
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () => pickLocationPhotos(
+                                          ImageSource.camera),
+                                      icon: const Icon(Icons.camera_alt,
+                                          color: Colors.black, size: 18),
+                                      label: Text(
+                                        Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'Take photo',
+                                            'Snimi fotografiju'),
+                                        style: GoogleFonts.inter(
+                                            color: Colors.black),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side:
+                                            BorderSide(color: AppTheme.border),
+                                      ),
+                                    ),
+                                    OutlinedButton.icon(
+                                      onPressed: () => pickLocationPhotos(
+                                          ImageSource.gallery),
+                                      icon: const Icon(Icons.photo_library,
+                                          color: Colors.black, size: 18),
+                                      label: Text(
+                                        Lang.sel(
+                                            ref.watch(localeIsCroatianProvider),
+                                            'Choose gallery',
+                                            'Odaberi iz galerije'),
+                                        style: GoogleFonts.inter(
+                                            color: Colors.black),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side:
+                                            BorderSide(color: AppTheme.border),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               if (canEdit) ...[
                                 const SizedBox(height: 12),
                                 Align(

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:typed_data';
 
 class LocationsRepository {
   final SupabaseClient _client;
@@ -9,8 +10,7 @@ class LocationsRepository {
       String id, Map<String, dynamic> metadata) async {
     await _client
         .from('locations')
-        .update({'verification_metadata': metadata})
-        .eq('id', id);
+        .update({'verification_metadata': metadata}).eq('id', id);
   }
 
   Future<void> updateCapacity(String id, int capacity) async {
@@ -36,6 +36,29 @@ class LocationsRepository {
       'capacity': capacity,
       'total_spots': capacity,
     }).eq('id', id);
+  }
+
+  Future<void> updateVerificationPhotos(
+      String id, List<String> photoUrls) async {
+    await _client
+        .from('locations')
+        .update({'verification_photos': photoUrls}).eq('id', id);
+  }
+
+  Future<void> uploadVerificationFile({
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+  }) async {
+    await _client.storage.from('location-verification').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: FileOptions(contentType: mimeType, upsert: true),
+        );
+  }
+
+  String getVerificationPublicUrl(String fileName) {
+    return _client.storage.from('location-verification').getPublicUrl(fileName);
   }
 
   Future<Map<String, dynamic>> createLocation({
