@@ -198,6 +198,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     /^https?:\/\/[^/]+\/storage\/v1\/object\/public\//.test(url);
   const photoList = Array.isArray(hub.verification_photos) ? hub.verification_photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [];
   const candidateHero = typeof _hero === "string" && _hero.trim().length > 0 ? _hero : undefined;
+  const effectivePhotoCount = photoList.length > 0 ? photoList.length : 1;
+  const streetAndPhotoCount = 1 + photoList.length;
   let photos = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
   // Ensure at least 4 photos for slider
   if (photos.length < 4) {
@@ -209,7 +211,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   }
   const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
   const currentPhotoIsSupabase = isSupabaseStorageUrl(currentPhoto);
-  const miniPhotos = Array.from({ length: 7 }, (_, idx) => photos[idx % photos.length]);
+  const miniPhotosSource = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
+  const miniPhotos = miniPhotosSource.slice(0, 7);
   const streetViewHref =
     typeof hub.latitude === "number" && typeof hub.longitude === "number"
       ? `https://www.google.com/maps?q=&layer=c&cbll=${hub.latitude},${hub.longitude}`
@@ -839,7 +842,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <ChevronRight className="w-6 h-6" />
                       </button>
                       <div className="absolute top-4 right-6 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
-                        {currentPhotoIndex + 1} / {photos.length}
+                        {Math.min(currentPhotoIndex + 1, effectivePhotoCount)} / {effectivePhotoCount}
                       </div>
                     </>
                   )}
@@ -971,7 +974,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <path d="M11.1 4.8a4.2 4.2 0 0 1 5.1.6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
                     <path d="M7.8 8.2a4.2 4.2 0 0 1 2.8-3.2" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
                   </svg>
-                  <p className="text-xs md:text-sm font-semibold text-black">Street View & Photos (8)</p>
+                  <p className="text-xs md:text-sm font-semibold text-black">Street View & Photos ({streetAndPhotoCount})</p>
                 </div>
                 <p className="mt-1 text-[11px] md:text-xs text-black/60">Provjerite ulaz i okolinu prije dolaska</p>
                 <div className="mt-3 grid grid-cols-4 md:grid-cols-8 gap-2">
@@ -990,7 +993,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <span className="text-[9px] font-semibold text-[#5F3DFC] mt-1 leading-tight">Street View</span>
                   </a>
                   {miniPhotos.map((photo, idx) => {
-                    const photoIndex = idx % photos.length;
+                    const photoIndex = idx;
                     const isActiveThumb = currentPhotoIndex === photoIndex;
                     return (
                       <button
