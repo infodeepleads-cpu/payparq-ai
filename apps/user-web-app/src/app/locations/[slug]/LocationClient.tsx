@@ -6,7 +6,7 @@ import Image from "next/image";
 import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
-import { normalizeLocationName, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
+import { normalizeLocationName, resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 
 type HubData = {
   id: string;
@@ -77,12 +77,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
+  const parkTaxiLeadMinutes = 60;
+  const parkTaxiDefaultOffsetMinutes = 65;
+  const parkTaxiDefaultDurationHours = 1;
   
   // Set default check-in to now, check-out to 1 hour from now on mount
   useEffect(() => {
     const now = new Date();
-    // Adjust to local timezone for datetime-local input
     const offset = now.getTimezoneOffset() * 60000;
     const localNow = new Date(now.getTime() - offset);
     const inStr = localNow.toISOString().slice(0, 16);
@@ -94,6 +97,62 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     if (!checkIn) setCheckIn(inStr);
     if (!checkOut) setCheckOut(outStr);
   }, [checkIn, checkOut]);
+  
+  useEffect(() => {
+    if (activeTab !== 'park_now') return;
+    const minDate = new Date(Date.now() + parkTaxiLeadMinutes * 60 * 1000);
+    const defaultCheckInDate = new Date(Date.now() + parkTaxiDefaultOffsetMinutes * 60 * 1000);
+    const defaultOutDate = new Date(defaultCheckInDate.getTime() + parkTaxiDefaultDurationHours * 60 * 60 * 1000);
+    const toLocalDatetimeInput = (value: Date) => {
+      const offset = value.getTimezoneOffset() * 60000;
+      return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+    };
+    const minCheckIn = toLocalDatetimeInput(defaultCheckInDate);
+    const minCheckOut = toLocalDatetimeInput(defaultOutDate);
+    setCheckIn((prev) => {
+      if (!prev) return minCheckIn;
+      const prevDate = new Date(prev);
+      if (Number.isNaN(prevDate.getTime()) || prevDate.getTime() < minDate.getTime()) return minCheckIn;
+      return prev;
+    });
+    setCheckOut((prev) => {
+      if (!prev) return minCheckOut;
+      const prevDate = new Date(prev);
+      if (Number.isNaN(prevDate.getTime()) || prevDate.getTime() <= minDate.getTime()) return minCheckOut;
+      return prev;
+    });
+  }, [activeTab, parkTaxiDefaultDurationHours, parkTaxiDefaultOffsetMinutes, parkTaxiLeadMinutes]);
+
+  useEffect(() => {
+    if (activeTab !== 'reserve') return;
+    const now = new Date();
+    const reserveOutDate = new Date(now.getTime() + 60 * 60 * 1000);
+    const parkTaxiAutoCheckIn = new Date(now.getTime() + parkTaxiDefaultOffsetMinutes * 60 * 1000);
+    const parkTaxiAutoCheckOut = new Date(now.getTime() + (parkTaxiDefaultOffsetMinutes * 60 * 1000) + (parkTaxiDefaultDurationHours * 60 * 60 * 1000));
+    const twoMinutesMs = 2 * 60 * 1000;
+    const toLocalDatetimeInput = (value: Date) => {
+      const offset = value.getTimezoneOffset() * 60000;
+      return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+    };
+    const reserveNowStr = toLocalDatetimeInput(now);
+    const reserveOutStr = toLocalDatetimeInput(reserveOutDate);
+    setCheckIn((prev) => {
+      if (!prev) return reserveNowStr;
+      const prevDate = new Date(prev);
+      if (Number.isNaN(prevDate.getTime())) return reserveNowStr;
+      const isParkTaxiAutoTime =
+        Math.abs(prevDate.getTime() - parkTaxiAutoCheckIn.getTime()) <= twoMinutesMs;
+      return isParkTaxiAutoTime ? reserveNowStr : prev;
+    });
+    setCheckOut((prev) => {
+      if (!prev) return reserveOutStr;
+      const prevDate = new Date(prev);
+      if (Number.isNaN(prevDate.getTime())) return reserveOutStr;
+      const isParkTaxiAutoTime =
+        Math.abs(prevDate.getTime() - parkTaxiAutoCheckOut.getTime()) <= twoMinutesMs;
+      return isParkTaxiAutoTime ? reserveOutStr : prev;
+    });
+  }, [activeTab, parkTaxiDefaultDurationHours, parkTaxiDefaultOffsetMinutes]);
   
   const locationName = normalizeLocationName(hub.name) || "Parking Trogir";
   const locationId = hub.id || "parkng split airport";
@@ -121,7 +180,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   
   // Calculate total price and hours
   let totalHours = 1;
-  let totalPrice = 0;
+  let totalDays = 1;
   
   if (checkIn && checkOut) {
     const start = new Date(checkIn);
@@ -129,16 +188,23 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     const diff = end.getTime() - start.getTime();
     if (diff > 0) {
       totalHours = Math.ceil(diff / (1000 * 60 * 60));
+      totalDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
     }
   }
 
   // Parse price from label (e.g. "€2.50/hr" -> 2.50)
   const priceValue = parseFloat(priceLabel.replace(/[^0-9.]/g, '')) || 0;
-  totalPrice = totalHours * priceValue;
-  const totalPriceLabel = `€${totalPrice.toFixed(2)}`;
   const formatEur = (value: number) => `€${value.toFixed(2)}`;
   const hourlyPrice = resolveScannerTruthPriceEuro(hub, "hourly") || (priceValue > 0 ? priceValue : 2.5);
   const dailyPrice = resolveScannerTruthPriceEuro(hub, "daily");
+  const parkTaxiUnitPrice = resolveParkTaxiPriceEuro(hub) || dailyPrice;
+  const reserveUsesDailyPricing = totalHours > 24;
+  const reserveTotalAmount = reserveUsesDailyPricing ? totalDays * dailyPrice : totalHours * hourlyPrice;
+  const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
+  const reserveDurationLabel = reserveUsesDailyPricing
+    ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
+    : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
+  const parkTaxiTotalPriceLabel = `€${(totalDays * parkTaxiUnitPrice).toFixed(2)}`;
   const monthlyPrice = resolveScannerTruthPriceEuro(hub, "monthly");
   const parqOneWayRidePrice = 4.5;
   const parqTwoWayRidePrice = 9;
@@ -148,13 +214,49 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const competitorDaily = dailyPrice + 7;
   const camperDailyPrice = 20;
   const busDailyPrice = 50;
+  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}&flow=${encodeURIComponent(activeTab)}`;
 
-  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}`;
+  const parkTaxiMinCheckIn = (() => {
+    const minDate = new Date(Date.now() + parkTaxiDefaultOffsetMinutes * 60 * 1000);
+    const offset = minDate.getTimezoneOffset() * 60000;
+    return new Date(minDate.getTime() - offset).toISOString().slice(0, 16);
+  })();
+  const validateParkTaxiLeadTime = () => {
+    if (activeTab !== 'park_now') return "";
+    if (!checkIn || !checkOut) return "Odaberite vrijeme dolaska i odlaska.";
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return "Vrijeme dolaska i odlaska nije ispravno.";
+    }
+    if (end.getTime() <= start.getTime()) {
+      return "Vrijeme odlaska mora biti nakon vremena dolaska.";
+    }
+    const minStart = Date.now() + parkTaxiLeadMinutes * 60 * 1000;
+    if (start.getTime() < minStart) {
+      return "Početna vožnja mora biti rezervirana najmanje 60 minuta ranije.";
+    }
+    return "";
+  };
+  const mapCheckoutErrorMessage = (errorValue: string) => {
+    if (errorValue === "park_taxi_requires_check_in_and_check_out") return "Za Park & Taxi morate odabrati dolazak i odlazak.";
+    if (errorValue === "invalid_check_in_or_check_out") return "Vrijeme dolaska i odlaska nije ispravno.";
+    if (errorValue === "check_out_must_be_after_check_in") return "Vrijeme odlaska mora biti nakon vremena dolaska.";
+    if (errorValue === "park_taxi_requires_60_min_advance") return "Početna vožnja mora biti rezervirana najmanje 60 minuta ranije.";
+    return errorValue;
+  };
+  const canSubmitCheckout = Boolean(checkIn && checkOut);
   
-  async function handleBook(e: React.MouseEvent) {
-    if (activeTab === 'reserve' && (!checkIn || !checkOut)) return;
+  async function handleBook(e: React.MouseEvent<HTMLElement>) {
+    if (!canSubmitCheckout) return;
+    const parkTaxiError = validateParkTaxiLeadTime();
+    if (parkTaxiError) {
+      setCheckoutError(parkTaxiError);
+      return;
+    }
     
     e.preventDefault();
+    setCheckoutError("");
     setLoading(true);
     
     try {
@@ -166,15 +268,20 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         body: JSON.stringify({
           location_id: locationId,
           display_id: hub.display_id,
-          check_in: activeTab === 'reserve' ? checkIn : undefined,
-          check_out: activeTab === 'reserve' ? checkOut : undefined,
+          check_in: checkIn || undefined,
+          check_out: checkOut || undefined,
           flow_type: activeTab,
+          type: activeTab === 'park_now' || (activeTab === 'reserve' && reserveUsesDailyPricing) ? 'daily' : undefined,
+          park_taxi: activeTab === 'park_now' ? 1 : undefined,
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         console.error("Checkout error response:", errData);
+        if (typeof errData?.error === "string" && errData.error.trim()) {
+          setCheckoutError(mapCheckoutErrorMessage(errData.error));
+        }
         throw new Error(errData.error || "Checkout failed");
       }
 
@@ -184,9 +291,16 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       }
     } catch (err) {
       console.error(err);
+      if (!checkoutError) {
+        setCheckoutError("Checkout nije uspio. Pokušajte ponovno.");
+      }
       setLoading(false);
     }
   }
+  
+  useEffect(() => {
+    setCheckoutError((prev) => (prev ? "" : prev));
+  }, [activeTab, checkIn, checkOut]);
 
   const vm = hub.verification_metadata as Record<string, unknown> | undefined;
   const hideHeaderMeta = typeof vm?.["hide_header"] === "boolean" ? (vm?.["hide_header"] as boolean) : false;
@@ -617,7 +731,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   onClick={checkIn && checkOut ? handleBook : undefined}
                   className={`px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  {loading ? "Processing..." : (checkIn && checkOut ? `Book (${totalPriceLabel})` : `Book (${priceLabel}/hr)`)}
+                  {loading ? "Processing..." : (checkIn && checkOut ? `Lock in Price (${reserveTotalPriceLabel})` : `Lock in Price (${priceLabel}/hr)`)}
                 </Link>
               </div>
             </div>
@@ -862,13 +976,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 </div>
               </div>
 
-              <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+              <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/85">
                       <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Dnevni parking i 2 vožnje do 5km) Trogir/Airport</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(parqOneWayRidePrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(parqTwoWayRidePrice)}</span></div>
@@ -886,18 +1001,19 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: PayParq koristi dinamičke cijene; preporučujemo rezervaciju, za vožnje barem 60 min prije dolaska. Cijene vožnje mogu varirati i prihvaćanje nije garantirano.</p>
+                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 min prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
               </div>
               
               <div className="md:hidden bg-white rounded-3xl p-4 shadow-sm border border-gray-100 w-full -mt-2">
                 <h2 className="text-base font-bold mb-3">Check price & availability</h2>
-                <Link
-                  href={checkoutHref}
-                  onClick={activeTab === 'reserve' ? (checkIn && checkOut ? handleBook : undefined) : handleBook}
+                <button
+                  type="button"
+                  onClick={handleBook}
+                  disabled={loading || !canSubmitCheckout}
                   className={`w-full inline-flex justify-center items-center px-4 py-2 rounded-xl bg-[#5F3DFC] text-white text-sm font-semibold shadow-sm hover:bg-[#4330c4] transition-colors mb-3 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  {loading ? "Processing..." : `Book (${priceLabel})`}
-                </Link>
+                  {loading ? "Processing..." : (activeTab === 'reserve' ? `Lock in Price (${priceLabel})` : "Zaključaj cijenu")}
+                </button>
                 {activeTab === 'reserve' ? (
                   <>
                     <div className="space-y-3 mb-3">
@@ -907,6 +1023,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           type="datetime-local"
                           value={checkIn}
                           onChange={(e) => setCheckIn(e.target.value)}
+                          min={undefined}
                           className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                         />
                       </div>
@@ -916,6 +1033,58 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           type="datetime-local"
                           value={checkOut}
                           onChange={(e) => setCheckOut(e.target.value)}
+                          min={checkIn || undefined}
+                          className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                        />
+                      </div>
+                    </div>
+                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju polaska. Parq vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
+                    <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
+                      <button
+                        onClick={() => setActiveTab('reserve')}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
+                      >
+                        Parking
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('park_now')}
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
+                      >
+                        <span className="notranslate" translate="no">Park & Taxi</span>
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                      <span className="text-gray-500 font-medium text-xs">Total</span>
+                      <div className="text-right">
+                        <div className="text-lg font-bold">{reserveTotalPriceLabel}</div>
+                        <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
+                      <strong className="notranslate" translate="no">Park & Taxi</strong>
+                      <p className="mt-1 opacity-90">Dnevna karta + 2 vožnje su uključene. Početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 minuta prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
+                    </div>
+                    <div className="space-y-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">From</label>
+                        <input
+                          type="datetime-local"
+                          value={checkIn}
+                          onChange={(e) => setCheckIn(e.target.value)}
+                          min={parkTaxiMinCheckIn}
+                          className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">To</label>
+                        <input
+                          type="datetime-local"
+                          value={checkOut}
+                          onChange={(e) => setCheckOut(e.target.value)}
+                          min={checkIn || parkTaxiMinCheckIn}
                           className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-xs font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                         />
                       </div>
@@ -923,47 +1092,27 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
-                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
                       >
-                        Reserve
+                        Parking
                       </button>
                       <button
                         onClick={() => setActiveTab('park_now')}
-                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
+                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
                       >
-                        Park Now
+                        <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
                     </div>
                     <div className="flex items-center justify-between py-2 border-t border-gray-100">
                       <span className="text-gray-500 font-medium text-xs">Total</span>
                       <div className="text-right">
-                        <div className="text-lg font-bold">{totalPriceLabel}</div>
-                        <div className="text-[10px] text-gray-400 font-medium">{totalHours} hours ({priceLabel}/hr)</div>
+                        <div className="text-lg font-bold">{parkTaxiTotalPriceLabel}</div>
+                        <div className="text-[10px] text-gray-400 font-medium">{totalDays} days ({formatEur(parkTaxiUnitPrice)}/day)</div>
                       </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="mb-3">
-                    <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
-                      <strong>Park Immediately</strong>
-                      <p className="mt-1 opacity-90">Start your session now. Adjust duration in checkout.</p>
-                    </div>
-                    <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
-                      <button
-                        onClick={() => setActiveTab('reserve')}
-                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all text-gray-500 hover:text-black"
-                      >
-                        Reserve
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('park_now')}
-                        className="flex-1 py-1 text-xs font-medium rounded-lg transition-all bg-white shadow-sm text-black"
-                      >
-                        Park Now
-                      </button>
                     </div>
                   </div>
                 )}
+                {checkoutError ? <p className="mt-2 text-[11px] text-red-600">{checkoutError}</p> : null}
               </div>
 
               <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
@@ -1326,7 +1475,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     activeTab === 'reserve' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  Reserve
+                  Parking
                 </button>
                 <button
                   onClick={() => setActiveTab('park_now')}
@@ -1334,7 +1483,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     activeTab === 'park_now' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
                   }`}
                 >
-                  Park Now
+                  <span className="notranslate" translate="no">Park & Taxi</span>
                 </button>
               </div>
 
@@ -1349,6 +1498,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         type="datetime-local"
                         value={checkIn}
                         onChange={(e) => setCheckIn(e.target.value)}
+                        min={undefined}
                         className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                       />
                     </div>
@@ -1360,46 +1510,76 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         type="datetime-local"
                         value={checkOut}
                         onChange={(e) => setCheckOut(e.target.value)}
+                        min={checkIn || undefined}
                         className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
                       />
                     </div>
                   </div>
+                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju polaska. Parq vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
                   
                   <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
                     <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-xl font-bold">{totalPriceLabel}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">{totalHours} hours ({priceLabel}/hr)</div>
+                      <div className="text-xl font-bold">{reserveTotalPriceLabel}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="mb-4">
                   <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
-                    <strong>Park Immediately</strong>
+                    <strong className="notranslate" translate="no">Park & Taxi</strong>
                     <p className="mt-1 opacity-90">
-                      Start your session now. Adjust duration in checkout.
+                      Dnevna karta + 2 vožnje su uključene. Početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 minuta prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.
                     </p>
+                  </div>
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        From
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={checkIn}
+                        onChange={(e) => setCheckIn(e.target.value)}
+                        min={parkTaxiMinCheckIn}
+                        className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                        To
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={checkOut}
+                        onChange={(e) => setCheckOut(e.target.value)}
+                        min={checkIn || parkTaxiMinCheckIn}
+                        className="w-full bg-gray-50 border-0 rounded-xl px-3 py-2 text-sm font-medium text-black focus:ring-2 focus:ring-[#5F3DFC]"
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
                     <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-xl font-bold">€{priceValue.toFixed(2)}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">1 hour ({priceLabel}/hr)</div>
+                      <div className="text-xl font-bold">{parkTaxiTotalPriceLabel}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">{totalDays} days ({formatEur(parkTaxiUnitPrice)}/day)</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              <Link
-                href={checkoutHref}
-                onClick={(activeTab === 'reserve' && checkIn && checkOut) || activeTab === 'park_now' ? handleBook : undefined}
+              <button
+                type="button"
+                onClick={handleBook}
+                disabled={loading || !canSubmitCheckout}
                 className={`w-full block text-center font-bold py-3 rounded-xl hover:opacity-90 transition-colors shadow-lg bg-[#5F3DFC] text-white shadow-indigo-200 ${
-                  loading || (activeTab === 'reserve' && (!checkIn || !checkOut)) ? 'opacity-75 cursor-not-allowed' : ''
+                  loading || !canSubmitCheckout ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
-                {loading ? "Processing..." : (activeTab === 'reserve' ? "Book Now" : "Park Now")}
-              </Link>
+                {loading ? "Processing..." : (activeTab === 'reserve' ? "Lock in Price" : "Zaključaj cijenu")}
+              </button>
+              {checkoutError ? <p className="mt-2 text-xs text-red-600 text-center">{checkoutError}</p> : null}
               
               <p className="mt-3 text-[10px] text-center text-gray-400">
                 Secure payment via Stripe • Free cancellation

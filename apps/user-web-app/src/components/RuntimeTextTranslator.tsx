@@ -85,6 +85,12 @@ const localHrOverrides = new Map<string, string>([
 function shouldTranslateText(text: string) {
   const value = text.trim();
   if (!value) return false;
+  if (
+    /\bsafe\s+parking\s+by\s+payparq\b/i.test(value) ||
+    /\bsigurno\s+parkiranje(?:\s+(?:uz|by|s))?\s+payparq\b/i.test(value)
+  ) {
+    return false;
+  }
   if (/^(https?:\/\/|www\.)/i.test(value)) return false;
   if (/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(value)) return false;
   if (!/[A-Za-z]/.test(value)) return false;

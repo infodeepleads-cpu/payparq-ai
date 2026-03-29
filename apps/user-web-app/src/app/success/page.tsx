@@ -75,6 +75,42 @@ function SuccessContent() {
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
   const checkoutStart = summary?.check_in ?? fallbackCheckIn;
   const checkoutEnd = summary?.check_out ?? fallbackCheckOut;
+  const checkoutFlowType = summary?.flow_type ?? searchParams.get('flow');
+  const isParkTaxiFlow = checkoutFlowType === 'park_now';
+  const parkTaxiDays = useMemo(() => {
+    if (!checkoutStart || !checkoutEnd) return 1;
+    const start = new Date(checkoutStart);
+    const end = new Date(checkoutEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+    const diff = end.getTime() - start.getTime();
+    if (diff <= 0) return 1;
+    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [checkoutEnd, checkoutStart]);
+  const formatStartTimeShort = (value: string | null | undefined) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return parsed.toLocaleTimeString('hr-HR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Europe/Zagreb',
+    });
+  };
+  const formatAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
+    const normalized = Number(amount ?? 0);
+    const value = Number.isFinite(normalized) ? normalized / 100 : 0;
+    const resolvedCurrency = (currency || 'EUR').toUpperCase();
+    return new Intl.NumberFormat('hr-HR', {
+      style: 'currency',
+      currency: resolvedCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+  const parkTaxiUltrabrief = isParkTaxiFlow
+    ? `${checkoutLocationName || 'Safe Parking by PayParq Split Airport/Trogir'} • ID ${checkoutLocationIdLabel || '—'} • Od ${formatDateTime(checkoutStart)} • Do ${formatDateTime(checkoutEnd)} • Ukupno ${formatAmount(summary?.amount_total, summary?.currency)} • Prva vožnja ${formatStartTimeShort(checkoutStart)} • Uključeno ${parkTaxiDays} ${parkTaxiDays === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`
+    : '';
   const mailSubject = `Insurance Application${refId ? ` – Booking ${refId}` : ''}`;
   const mailBody =
     `Hello Payparq,\n\n` +
@@ -194,6 +230,11 @@ function SuccessContent() {
                     <span className="font-semibold text-black">Vrijedi do:</span> {formatDateTime(checkoutEnd)}
                   </p>
                 </div>
+                {parkTaxiUltrabrief && (
+                  <p className="mt-2 text-[11px] text-black/70">
+                    {parkTaxiUltrabrief}
+                  </p>
+                )}
                 {summary?.email && (
                   <p className="text-xs text-black/50 mt-2">
                     Membership is ready for {summary.email}. Verify email to unlock promotions.

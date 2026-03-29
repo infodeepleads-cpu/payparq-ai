@@ -27,6 +27,11 @@ export default function PayPage() {
     const loc = params.get("loc") || "";
     const inVal = params.get("in") || "";
     const outVal = params.get("out") || "";
+    const flowParam = params.get("flow");
+    const flowFromParams: FlowType | null =
+      flowParam === "park_now" || flowParam === "monthly" || flowParam === "reserve"
+        ? flowParam
+        : null;
     
     if (loc) {
       Promise.resolve().then(() => {
@@ -35,9 +40,17 @@ export default function PayPage() {
         setReserveLocation(loc);
         setCheckIn(inVal);
         setCheckOut(outVal);
-        if (inVal && outVal) {
-          setActiveTab("reserve");
+        if (flowFromParams) {
+          setActiveTab(flowFromParams);
+          return;
         }
+        if (inVal && outVal) setActiveTab("reserve");
+      });
+      return;
+    }
+    if (flowFromParams) {
+      Promise.resolve().then(() => {
+        setActiveTab(flowFromParams);
       });
     }
   }, []);

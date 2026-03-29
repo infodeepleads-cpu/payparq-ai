@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import { resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 type PricingType = 'hourly' | 'daily' | 'monthly';
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
@@ -34,6 +34,9 @@ function buildSupabaseFunctionCheckoutUrl(params: {
   }
   if (params.flowType) {
     url.searchParams.set('flow', params.flowType);
+  }
+  if (params.flowType === 'park_now') {
+    url.searchParams.set('park_taxi', '1');
   }
   url.searchParams.set('type', params.pricingType);
   if (params.checkIn) {
@@ -161,8 +164,36 @@ function formatBerlinDateTime(value: Date): string {
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
   if (rawType === 'daily') return 'daily';
   if (rawType === 'monthly') return 'monthly';
+  if (flowType === 'park_now') return 'daily';
   if (flowType === 'monthly') return 'monthly';
   return 'hourly';
+}
+
+function validateParkTaxiReservationWindow(flowType: string, checkIn: string, checkOut: string): string | null {
+  if (flowType !== 'park_now') return null;
+  if (!checkIn || !checkOut) {
+    return 'park_taxi_requires_check_in_and_check_out';
+  }
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 'invalid_check_in_or_check_out';
+  }
+  if (end.getTime() <= start.getTime()) {
+    return 'check_out_must_be_after_check_in';
+  }
+  if (start.getTime() < Date.now() + 60 * 60 * 1000) {
+    return 'park_taxi_requires_60_min_advance';
+  }
+  return null;
+}
+
+function exceedsOneDayDuration(checkIn: string, checkOut: string): boolean {
+  if (!checkIn || !checkOut) return false;
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+  return end.getTime() - start.getTime() > 24 * 60 * 60 * 1000;
 }
 
 function buildSwitchCheckoutUrl(params: {
@@ -233,19 +264,21 @@ type LocationPricingResolution = {
   unitAmountCents: number;
   resolvedLocationId: string;
   resolvedDisplayId: string;
+  resolvedLocationName: string;
 };
 
 async function resolveLocationPricing(
   locationId: string,
   displayId: string,
-  pricingType: PricingType
+  pricingType: PricingType,
+  flowType: string
 ): Promise<LocationPricingResolution> {
   if (!supabase) {
     throw { status: 500, message: 'supabase_not_configured' };
   }
 
   const selectedColumns =
-    'id,display_id,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling';
+    'id,display_id,name,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling';
 
   const fallbackDisplayId = displayId || locationId;
   let data: Record<string, unknown> | null = null;
@@ -277,7 +310,9 @@ async function resolveLocationPricing(
     throw { status: 404, message: 'location_not_found' };
   }
 
-  const resolvedEuro = resolveScannerTruthPriceEuro(data, pricingType);
+  const isParkTaxiFlow = flowType === 'park_now';
+  const parkTaxiEuro = isParkTaxiFlow ? resolveParkTaxiPriceEuro(data) : 0;
+  const resolvedEuro = parkTaxiEuro > 0 ? parkTaxiEuro : resolveScannerTruthPriceEuro(data, pricingType);
   const resolvedCents = Math.round(resolvedEuro * 100);
   if (!Number.isFinite(resolvedCents) || resolvedCents < 0) {
     throw { status: 500, message: 'invalid_resolved_amount' };
@@ -286,6 +321,7 @@ async function resolveLocationPricing(
     unitAmountCents: resolvedCents,
     resolvedLocationId: String(data.id ?? locationId),
     resolvedDisplayId: String(data.display_id ?? displayId ?? ''),
+    resolvedLocationName: String(data.name ?? '').trim(),
   };
 }
 
@@ -303,9 +339,13 @@ export async function POST(req: NextRequest) {
   const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
+  const check_in = (body.check_in as string) || url.searchParams.get('in') || '';
+  const check_out = (body.check_out as string) || url.searchParams.get('out') || '';
   const rawPricingType =
     (typeof body.type === 'string' && body.type) || url.searchParams.get('type') || null;
-  const pricing_type = normalizePricingType(rawPricingType, flow_type);
+  const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
+  const pricing_type: PricingType =
+    flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
     url.searchParams.get('allow_promotion_codes')
@@ -399,64 +439,82 @@ export async function POST(req: NextRequest) {
   //   return NextResponse.json({ url: redirectUrl });
   // }
 
-  // Parse check-in/out
-  const check_in = (body.check_in as string) || url.searchParams.get('in') || '';
-  const check_out = (body.check_out as string) || url.searchParams.get('out') || '';
+  const parkTaxiWindowError = validateParkTaxiReservationWindow(flow_type, check_in, check_out);
+  if (parkTaxiWindowError) {
+    return NextResponse.json({ error: parkTaxiWindowError }, { status: 400 });
+  }
 
-  // Calculate quantity (hours)
+  const isParkTaxiFlow = flow_type === 'park_now';
+  const isReserveDailyFlow = flow_type === 'reserve' && pricing_type === 'daily';
   let quantity = 1;
   let reservationDescription = '';
+  const formatIso = (iso: string) => {
+    if (!iso) return '';
+    try {
+      const parsed = new Date(iso);
+      if (!Number.isNaN(parsed.getTime())) {
+        return formatBerlinDateTime(parsed);
+      }
+      return iso;
+    } catch {
+      return iso;
+    }
+  };
+  const formatIsoNoSeconds = (iso: string) => formatIso(iso).replace(/:(\d{2}) CET$/, ' CET');
+  const formatTimeShort = (iso: string) => {
+    const formatted = formatIso(iso);
+    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\sCET$/);
+    if (match) return `${match[1]}:${match[2]}`;
+    return '';
+  };
   if (check_in && check_out) {
     const start = new Date(check_in);
     const end = new Date(check_out);
     const diff = end.getTime() - start.getTime();
-    
-    // Always format the description if dates are provided
-    // Format helper that ignores timezone shifts by parsing the ISO string directly
-    const formatIso = (iso: string) => {
-      if (!iso) return '';
-      try {
-        const parsed = new Date(iso);
-        if (!Number.isNaN(parsed.getTime())) {
-          return formatBerlinDateTime(parsed);
-        }
-        return iso;
-      } catch {
-        return iso;
-      }
-    };
-
-    reservationDescription = `From: ${formatIso(check_in)} To: ${formatIso(check_out)}`;
-    if (display_id) {
-      reservationDescription += `\nLocation ID: ${display_id}`;
-    }
-
     if (diff > 0) {
-      quantity = Math.ceil(diff / (1000 * 60 * 60));
+      quantity = isParkTaxiFlow || isReserveDailyFlow
+        ? Math.ceil(diff / (1000 * 60 * 60 * 24))
+        : Math.ceil(diff / (1000 * 60 * 60));
     }
-  } else if (flow_type === 'park_now') {
+  } else if (isParkTaxiFlow) {
     quantity = 1;
     const nowFormatted = formatBerlinDateTime(new Date());
     reservationDescription = `Start Time: ${nowFormatted}`;
     if (display_id) {
       reservationDescription += `\nLocation ID: ${display_id}`;
     }
-    reservationDescription += `\n(End time depends on selected hours)`;
+    reservationDescription += `\n(End time depends on selected days)`;
   }
 
   let unitAmount = 0;
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
+  let resolvedLocationName = '';
   try {
-    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type);
+    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
+    resolvedLocationName = pricingResolution.resolvedLocationName;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
+  }
+  if (check_in && check_out) {
+    if (isParkTaxiFlow) {
+      const locationTitle = resolvedLocationName || 'Safe Parking by PayParq Split Airport/Trogir';
+      const locationIdLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id || '—';
+      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const firstRideTime = formatTimeShort(check_in) || '--:--';
+      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(check_in)} • Do ${formatIsoNoSeconds(check_out)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+    } else {
+      reservationDescription = `From: ${formatIso(check_in)} To: ${formatIso(check_out)}`;
+      if (resolvedDisplayId || display_id) {
+        reservationDescription += `\nLocation ID: ${resolvedDisplayId || display_id}`;
+      }
+    }
   }
   const submitMessage = buildSubmitMessage({
     pricingType: pricing_type,
@@ -507,13 +565,17 @@ export async function POST(req: NextRequest) {
             currency: 'eur',
             product_data: { 
               name:
-                pricing_type === 'daily'
-                  ? 'Parking Session (Daily)'
+                isParkTaxiFlow
+                  ? quantity > 1
+                    ? `Park & Taxi Package (${quantity} Days)`
+                    : 'Park & Taxi Package (1 Day)'
+                  : pricing_type === 'daily'
+                  ? quantity > 1
+                    ? `Parking Session (${quantity} Days)`
+                    : 'Parking Session (1 Day)'
                   : pricing_type === 'monthly'
                     ? 'Parking Session (Monthly)'
-                    : flow_type === 'park_now'
-                      ? 'Parking Session (Adjust Hours)'
-                      : quantity > 1
+                    : quantity > 1
                         ? `Parking Session (${quantity} Hours)`
                         : 'Parking Session (1 Hour)',
               description: reservationDescription || undefined,
@@ -521,11 +583,7 @@ export async function POST(req: NextRequest) {
             unit_amount: unitAmount,
           },
           quantity: quantity,
-          adjustable_quantity: flow_type === 'park_now' ? { 
-            enabled: true,
-            minimum: 1,
-            maximum: 24,
-          } : {
+          adjustable_quantity: {
             enabled: false,
           },
         },
@@ -575,9 +633,15 @@ export async function GET(req: NextRequest) {
   const display_id = url.searchParams.get('display_id') || '';
   const plate_number = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
-  const pricing_type = normalizePricingType(url.searchParams.get('type'), flow_type);
   const check_in = url.searchParams.get('in') || '';
   const check_out = url.searchParams.get('out') || '';
+  const normalizedPricingType = normalizePricingType(url.searchParams.get('type'), flow_type);
+  const pricing_type: PricingType =
+    flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
+  const parkTaxiWindowError = validateParkTaxiReservationWindow(flow_type, check_in, check_out);
+  if (parkTaxiWindowError) {
+    return NextResponse.json({ error: parkTaxiWindowError }, { status: 400 });
+  }
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     undefined,
     url.searchParams.get('allow_promotion_codes')
@@ -652,7 +716,7 @@ export async function GET(req: NextRequest) {
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
   try {
-    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type);
+    const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;

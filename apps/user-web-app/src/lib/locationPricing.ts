@@ -16,6 +16,13 @@ type PricingSource = {
   verification_metadata?: Record<string, unknown> | null;
 };
 
+function toFiniteMetadataNumber(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  if (parsed > 9999) return 9999;
+  return parsed;
+}
+
 function toPositiveNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return fallback;
@@ -66,6 +73,16 @@ export function resolveScannerTruthPriceEuro(
   return euro;
 }
 
+export function resolveParkTaxiPriceEuro(source: PricingSource): number {
+  const metadata =
+    source.verification_metadata &&
+    typeof source.verification_metadata === "object"
+      ? source.verification_metadata
+      : null;
+  const raw = metadata?.["park_taxi_price"];
+  return toFiniteMetadataNumber(raw);
+}
+
 export function formatEuroLabel(amountEuro: number): string {
   return `€${amountEuro.toFixed(2)}`;
 }
@@ -73,5 +90,14 @@ export function formatEuroLabel(amountEuro: number): string {
 export function normalizeLocationName(name: string | null | undefined): string {
   const raw = String(name ?? "").trim();
   if (!raw) return "";
-  return raw;
+  const normalized = raw.replace(/\s+/g, " ");
+  const brandPrefixRegex =
+    /^(?:safe\s+parking\s+by\s+payparq|sigurno\s+parkiranje(?:\s+(?:uz|by|s))?\s+payparq)\b/i;
+  if (brandPrefixRegex.test(normalized)) {
+    const remainder = normalized.replace(brandPrefixRegex, "").trim();
+    return remainder
+      ? `Safe Parking by PayParq ${remainder}`
+      : "Safe Parking by PayParq";
+  }
+  return normalized;
 }
