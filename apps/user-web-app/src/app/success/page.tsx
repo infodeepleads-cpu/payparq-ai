@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Car, Shield, Download, ExternalLink } from 'lucide-react';
+import { Car } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
@@ -53,7 +53,6 @@ function SuccessContent() {
     searchParams.get('out') ||
     searchParams.get('end') ||
     null;
-  const refId = summary?.ref_id ?? (sessionId ? sessionId.slice(-8) : null);
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
     const parsed = new Date(value);
@@ -111,22 +110,6 @@ function SuccessContent() {
   const parkTaxiUltrabrief = isParkTaxiFlow
     ? `${checkoutLocationName || 'Safe Parking by PayParq Split Airport/Trogir'} • ID ${checkoutLocationIdLabel || '—'} • Od ${formatDateTime(checkoutStart)} • Do ${formatDateTime(checkoutEnd)} • Ukupno ${formatAmount(summary?.amount_total, summary?.currency)} • Prva vožnja ${formatStartTimeShort(checkoutStart)} • Uključeno ${parkTaxiDays} ${parkTaxiDays === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`
     : '';
-  const mailSubject = `Insurance Application${refId ? ` – Booking ${refId}` : ''}`;
-  const mailBody =
-    `Hello Payparq,\n\n` +
-    `I’d like to apply for parking insurance.\n\n` +
-    `Vehicle details:\n` +
-    `- Make/Model:\n` +
-    `- License plate:\n` +
-    `- Year:\n\n` +
-    `Please confirm price. I will attach a photo of my vehicle.\n\n` +
-    `Thank you,\n`;
-  const mailtoHref = `mailto:payparq@outlook.com?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
-
-  const handleDownloadReceipt = () => {
-    window.print();
-  };
-
   useEffect(() => {
     let active = true;
     if (!sessionId) {
@@ -180,21 +163,26 @@ function SuccessContent() {
 
   const membersHref = useMemo(() => {
     if (!summary?.email) return '/members';
-    return `/members?email=${encodeURIComponent(summary.email)}&tab=activity`;
+    return `/members?email=${encodeURIComponent(summary.email)}`;
   }, [summary?.email]);
-  const extendHourlyHref = useMemo(() => {
-    if (!checkoutLocation) return '';
+  const trackDriverHref = useMemo(() => {
     const params = new URLSearchParams({
-      location_id: checkoutLocation,
-      flow: 'park_now',
-      type: 'hourly',
-      allow_promotion_codes: '1',
+      tab: 'activity',
     });
     if (summary?.email) {
       params.set('email', summary.email);
     }
-    return `/api/stripe/checkout?${params.toString()}`;
-  }, [checkoutLocation, summary?.email]);
+    return `/members?${params.toString()}`;
+  }, [summary?.email]);
+  const orderParqRideHref = useMemo(() => {
+    const params = new URLSearchParams({
+      tab: 'home',
+    });
+    if (summary?.email) {
+      params.set('email', summary.email);
+    }
+    return `/members?${params.toString()}`;
+  }, [summary?.email]);
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -249,118 +237,38 @@ function SuccessContent() {
             </div>
           </div>
 
-          {/* Main Actions Card */}
-          <div className="bg-gray-50 border border-black/5 rounded-3xl p-6 md:p-8 space-y-8 no-print shadow-sm">
-            
-            {/* Upsell: Uber */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-black">Next Steps</h3>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <a 
-                  href="https://m.uber.com/ul" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white border border-black/5 hover:border-black/10 hover:shadow-md transition-all"
-                >
-                  <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center shrink-0">
-                    <Car size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-black">Order Uber</h3>
-                    <p className="text-xs text-black/50 truncate">Get a ride</p>
-                  </div>
-                  <ExternalLink size={16} className="text-black/30 group-hover:text-black transition-colors" />
-                </a>
-
-                {/* Upsell: Insurance */}
-                <div className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white border border-[#5F3DFC]/10 hover:border-[#5F3DFC]/30 hover:shadow-md transition-all text-left">
-                  <div className="w-12 h-12 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center shadow-lg shadow-[#5F3DFC]/20 shrink-0">
-                    <Shield size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-black">Add Insurance</h3>
-                    <p className="text-xs text-black/50 truncate">Protect your trip</p>
-                  </div>
-                  <a
-                    href={mailtoHref}
-                    className="px-4 py-1.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
-                  >
-                    Apply
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-px bg-black/5" />
-
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="text-center md:text-left">
-                <p className="text-sm text-black/70">
-                  Open Members to track this live session and account activity.
-                </p>
-                {(lookupLoading || lookupError) && (
-                  <p className="text-[11px] text-black/50 mt-1">
-                    {lookupLoading ? 'Loading payment details...' : lookupError}
-                  </p>
-                )}
-              </div>
-              <Link
-                href={membersHref}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-black text-white text-[13px] font-semibold shadow-sm hover:bg-gray-900 transition-colors w-full md:w-auto"
-              >
-                Open Members
-              </Link>
-            </div>
-
-            <div className="h-px bg-black/5" />
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-black">Extend Your Stay</p>
-                {checkoutLocation && (
-                  <p className="text-[11px] text-black/50">Location: {checkoutLocation}</p>
-                )}
-              </div>
-              <p className="text-xs text-black/60">
-                Fastest conversion path: one tap to extend now, no form re-entry.
+          <div className="bg-gray-50 border border-black/5 rounded-3xl p-6 md:p-8 space-y-5 no-print shadow-sm">
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-semibold text-black">Nastavite u Members zoni</h3>
+              <p className="text-sm text-black/70">
+                Osiguranje, Uber, produženje boravka i preuzimanje potvrde računa dostupni su unutar Members zone.
               </p>
-              <div className="grid md:grid-cols-2 gap-3">
-                <a
-                  href={extendHourlyHref || '#'}
-                  aria-disabled={!extendHourlyHref}
-                  className={`inline-flex items-center justify-center px-4 py-3 rounded-full text-xs font-semibold transition-colors ${
-                    extendHourlyHref
-                      ? 'bg-black text-white hover:bg-gray-900'
-                      : 'bg-black/10 text-black/40 pointer-events-none'
-                  }`}
-                >
-                  Extend hourly
-                </a>
-              </div>
-              {!checkoutLocation && (
+              {(lookupLoading || lookupError) && (
                 <p className="text-[11px] text-black/50">
-                  Extension links appear as soon as payment location details are loaded.
+                  {lookupLoading ? 'Loading payment details...' : lookupError}
                 </p>
               )}
             </div>
-
-            <div className="h-px bg-black/5" />
-
-            {/* Receipt Download */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-              <p className="text-sm text-black/60 text-center md:text-left">
-                Need a copy for your records?
-              </p>
-              <button 
-                onClick={handleDownloadReceipt}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-[13px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors w-full md:w-auto"
+            <div className="grid md:grid-cols-3 gap-3">
+              <Link
+                href={membersHref}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
               >
-                <Download size={16} />
-                Download Receipt
-              </button>
+                Otvori Members page
+              </Link>
+              <Link
+                href={trackDriverHref}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
+              >
+                24/7 tracking Parq vozača
+              </Link>
+              <Link
+                href={orderParqRideHref}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
+              >
+                <Car size={14} />
+                Naruči Parq vožnju
+              </Link>
             </div>
           </div>
 

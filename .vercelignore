@@ -9,8 +9,6 @@ build
 coverage
 node_modules
 CANONICAL_BACKUP_20260130
-apps
-apps 2
 linux/flutter/ephemeral
 macos/Flutter/ephemeral
 windows/flutter/ephemeral

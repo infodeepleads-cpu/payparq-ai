@@ -42,7 +42,6 @@ type SectionKey =
   | "space"
   | "reviews"
   | "cancellation"
-  | "guarantee"
   | "report";
 
 export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: { 
@@ -57,6 +56,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [companyOpen, setCompanyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
+  const [openAllReviews, setOpenAllReviews] = useState(false);
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     howItWorks: true,
     map: true,
@@ -69,7 +69,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     space: false,
     reviews: false,
     cancellation: false,
-    guarantee: false,
     report: false,
   });
   const [isDesktop, setIsDesktop] = useState(false);
@@ -157,7 +156,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const locationName = normalizeLocationName(hub.name) || "Parking Trogir";
   const locationId = hub.id || "parkng split airport";
   const compactTravelTime = travelTime.replace("minutes", "min").replace("minute", "min");
-  const reviewsLabel = "4.8 reviews";
+  const totalReviews = 27;
+  const averageRating = "4.9";
+  const reviewsLabel = `${averageRating} (${totalReviews}) reviews`;
   const extrasLabel = "Extras available";
 
   useEffect(() => {
@@ -350,16 +351,42 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       ? vm["whatsapp"]
       : typeof vm?.["whatsapp_number"] === "string" && vm["whatsapp_number"].trim().length > 0
       ? vm["whatsapp_number"]
-      : "") as string;
+      : "+385 992166037") as string;
   const cityManagerWhatsapp = cityManagerWhatsappRaw.replace(/[^\d]/g, "");
+  const cityManagerWhatsappDisplay = cityManagerWhatsapp ? `+${cityManagerWhatsapp}` : cityManagerWhatsappRaw;
   const cityManagerMessageHref = cityManagerWhatsapp
     ? `https://wa.me/${cityManagerWhatsapp}?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}` 
     : `https://wa.me/?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}`;
-  const reviewItems = [
+  const allReviewItems = [
     { quote: "Čisto, brzo i bez čekanja. Ušli smo i izašli bez papira.", author: "Ana M.", rating: "5.0" },
     { quote: "Podrška je odmah odgovorila i pomogla oko promjene termina.", author: "Marko R.", rating: "4.9" },
     { quote: "Lokacija je jednostavna, cijena jasna i sve je prošlo bez stresa.", author: "Ivana K.", rating: "4.8" },
+    { quote: "Prijava je bila jednostavna, sve jasno u aplikaciji.", author: "Petra L.", rating: "4.9" },
+    { quote: "Odlična lokacija i brz transfer.", author: "Nikola B.", rating: "4.8" },
+    { quote: "Preporučujem za putovanja, bez stresa.", author: "Maja T.", rating: "4.9" },
+    { quote: "Sve je prošlo točno kako je napisano.", author: "Luka S.", rating: "5.0" },
+    { quote: "Podrška na WhatsAppu je stvarno brza.", author: "Karlo D.", rating: "4.8" },
+    { quote: "Parking čist i pregledan, lako za pronaći.", author: "Nina P.", rating: "4.9" },
+    { quote: "Vrlo korektna cijena i usluga.", author: "Iva K.", rating: "4.8" },
+    { quote: "Bez čekanja i komplikacija kod ulaza.", author: "Dario V.", rating: "4.9" },
+    { quote: "Idealno za aerodrom, sve radi kako treba.", author: "Sara J.", rating: "5.0" },
+    { quote: "Produženje parkinga u aplikaciji radi odlično.", author: "Tomislav N.", rating: "4.8" },
+    { quote: "Jasne upute i odlična komunikacija.", author: "Marina C.", rating: "4.9" },
+    { quote: "Brza potvrda i uredno iskustvo.", author: "Ivan G.", rating: "4.8" },
+    { quote: "Vožnja je stigla odmah nakon poziva.", author: "Antonela Z.", rating: "4.9" },
+    { quote: "Najjednostavniji parking koji sam koristio.", author: "Filip H.", rating: "5.0" },
+    { quote: "Sve preporuke za ovu lokaciju.", author: "Jelena R.", rating: "4.8" },
+    { quote: "Sigurno, osvijetljeno i praktično.", author: "Bruno E.", rating: "4.9" },
+    { quote: "Točno vrijeme i odlična organizacija.", author: "Lea M.", rating: "4.8" },
+    { quote: "Aplikacija i plaćanje prošli bez problema.", author: "Matej U.", rating: "4.9" },
+    { quote: "Jako ljubazna korisnička podrška.", author: "Katarina O.", rating: "4.8" },
+    { quote: "Lokacija blizu svega bitnog.", author: "Stipe A.", rating: "4.9" },
+    { quote: "Povratak po auto također bez čekanja.", author: "Ena F.", rating: "4.8" },
+    { quote: "Jednostavno i pouzdano od početka do kraja.", author: "Dominik I.", rating: "4.9" },
+    { quote: "Sve preporuke, opet koristim.", author: "Marta Š.", rating: "5.0" },
+    { quote: "Transparentno i profesionalno.", author: "Roko P.", rating: "4.8" },
   ];
+  const reviewItems = allReviewItems.slice(0, 3);
 
   const handlePrevPhoto = () => {
     setCurrentPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
@@ -392,47 +419,33 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
  
   const howItWorks = [
     {
-      label: "Dovezi se i skeniraj",
-      title: "1. Dovezi se i skeniraj",
+      label: "Skeniraj QR kod",
+      title: "1. Skeniraj QR kod",
       description:
         "Dovezi se na lokaciju i skeniraj QR kod.",
       icon: CreditCard,
     },
     {
-      label: "Skeniraj i plati",
-      title: "2. Skeniraj i plati",
+      label: "Unesi podatke i plati",
+      title: "2. Unesi podatke i plati",
       description:
-        "Odaberi količinu, unesi podatke i plati putem Stripea.",
+        "Odaberi količinu (broj sati), unesi email, broj mobitela i plati.",
       icon: Car,
     },
     {
-      label: "Odaberi prijevoz (Opcionalno)",
-      title: "3. Odaberi prijevoz (Opcionalno)",
+      label: "Dodaj vožnju ili produži parking",
+      title: "3. Dodaj vožnju ili produži parking",
       description:
-        "Odaberi prijevoz ili rezerviraj 60 minuta unaprijed za garanciju polaska.",
+        "Možeš dodati Vožnju ili produžiti parking putem aplikacije. Za najbolje iskustvo vožnje rezerviraj 60 min unaprijed.",
       icon: Camera,
     },
   ];
 
   const serviceWidgets = [
     {
-      id: "access" as SectionKey,
-      title: "Access",
-      value: "License plate entry",
-      description: "Automatic plate recognition at entry and exit.",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M4 11V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
-          <rect x="3" y="11" width="18" height="8" rx="2" />
-          <circle cx="8" cy="15" r="1" />
-          <path d="M11 15h6" />
-        </svg>
-      ),
-    },
-    {
       id: "hours" as SectionKey,
       title: "Radno Vrijeme",
-      value: "24/7 operacije",
+      value: "24/7 Operacije",
       description: "Open day and night including weekends.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -444,8 +457,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "extras" as SectionKey,
       title: "Available extras",
-      value: "Parq vožnja + support",
-      description: "On-demand rides and direct city manager support.",
+      value: "Parq vožnja",
+      description: "On-demand rides available from the app.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 3v18" />
@@ -458,8 +471,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     {
       id: "space" as SectionKey,
       title: "Space",
-      value: "Otvoreno",
-      description: "Otvoreni parking prostor.",
+      value: "Otvoreno, zid uz cestu, rasvjeta",
+      description: "Otvoreni parking prostor sa zidom uz cestu i rasvjetom.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="14" rx="2" />
@@ -468,21 +481,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       ),
     },
     {
-      id: "reviews" as SectionKey,
-      title: "Reviews",
-      value: "4.8 average",
-      description: "Consistently high-rated by recent customers.",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
-          <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-        </svg>
-      ),
-    },
-    {
       id: "cancellation" as SectionKey,
       title: "Cancellation policy",
-      value: "Besplatno otkazivanje unutar 60 minuta",
-      description: "Otkazivanje je besplatno unutar 60 minuta prije dolaska.",
+      value: "Besplatno otkazivanje + garancija rezervacije",
+      description: "Otkazivanje je besplatno unutar 60 minuta prije dolaska, a rezervacija je garantirana nakon potvrde.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="5" width="16" height="16" rx="2" />
@@ -492,21 +494,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       ),
     },
     {
-      id: "guarantee" as SectionKey,
-      title: "Booking guarantee",
-      value: "Instant confirmation",
-      description: "Secure your spot immediately after checkout.",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 3 5 7v5c0 5 3.5 8 7 9 3.5-1 7-4 7-9V7l-7-4Z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      ),
-    },
-    {
       id: "report" as SectionKey,
       title: "Report a problem",
-      value: "Contact support + payarq@outlook.com",
+      value: "Contact support + payparq@outlook.com",
       description: "Reach the team quickly for urgent assistance via email or support chat.",
       icon: (
         <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -547,23 +537,16 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     }
     return "Your City";
   })();
-  const cityConfig = cityName === "Split"
-    ? { center: { lat: 43.5081, lng: 16.4402 }, airport: { lat: 43.5380, lng: 16.2980 }, beach: { lat: 43.5149, lng: 16.4436, name: "Bačvice Beach" } }
-    : { center: { lat: 45.8150, lng: 15.9819 }, airport: { lat: 45.7380, lng: 16.0610 }, beach: { lat: 45.7804, lng: 15.9420, name: "Jarun Lake" } };
-  const distanceKm = (lat1?: number, lon1?: number, lat2?: number, lon2?: number) => {
-    if (typeof lat1 !== "number" || typeof lon1 !== "number" || typeof lat2 !== "number" || typeof lon2 !== "number") return null;
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round((R * c) * 10) / 10;
+  const referencePoints = {
+    airport: { lat: 43.5389, lng: 16.2976, name: "Aerodrom Kaštela" },
+    trogir: { lat: 43.5157, lng: 16.2502, name: "Trogir centar" },
+    marina: { lat: 43.5126, lng: 16.1112, name: "Closest Beach" },
   };
-  const distCenter = distanceKm(hub.latitude, hub.longitude, cityConfig.center.lat, cityConfig.center.lng);
-  const distAirport = distanceKm(hub.latitude, hub.longitude, cityConfig.airport.lat, cityConfig.airport.lng);
-  const distBeach = distanceKm(hub.latitude, hub.longitude, cityConfig.beach.lat, cityConfig.beach.lng);
+  const distAirportDisplay = "700 m";
+  const distTrogirDisplay = "4.9 km";
+  const distMarinaDisplay = "200m";
   const defaultFaq = [
-    { q: `How close is PayParq to ${cityName} Airport?`, a: `Typical transfer is 2–5 minutes by Parq vožnja depending on traffic. Our location is optimised for quick access to key destination routes.` },
+    { q: `Koliko je PayParq blizu zračne luke Split?`, a: `Udaljenost pješice je oko 5 minuta, a moguć je i transfer koji traje manje od minute.` },
     { q: `Is the car park secure?`, a: `Yes. We use AI‑powered cameras to monitor every entry and exit 24/7. The lot is remote but digitally supervised at all times.` },
     { q: `Do I need to display a ticket?`, a: `No. Your license plate is your digital permit. Our system recognises your car automatically.` },
     { q: `Can I cancel or change my booking?`, a: `Yes. You can cancel for a full refund up to 1 hour before your arrival time.` },
@@ -576,8 +559,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
     { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we’ll help update your reservation.` },
-    { q: `Is pricing transparent?`, a: `Yes. Clear hourly rates with no hidden fees. Total is shown before you confirm.` },
-    { q: `Can I order transport or buy insurance from your site?`, a: `Yes. After your booking is confirmed, you'll be redirected to a success page where you can arrange Parq vožnju, purchase insurance, and download your booking receipt. <a href="/success" class="underline text-blue-600" target="_blank">View Success Page Demo</a>` },
+    { q: `Je li cijena transparentna?`, a: `Da. Jasne satnice bez skrivenih naknada. Ukupno se prikazuje prije nego što potvrdite, uz dodani Stripeov trošak obrade transakcije.` },
+    { q: `Mogu li naručiti prijevoz ili kupiti osiguranje s vaše stranice?`, a: `Da. Nakon što je vaša rezervacija potvrđena, bit ćete preusmjereni na uspješnu stranicu na kojoj možete dogovoriti Parq vožnju, kupiti osiguranje i preuzeti potvrdu o rezervaciji. Osiguranje je moguće aplicirati samo za verificirane korisnike, ovisno o lokaciji. <a href="/success" class="underline text-blue-600" target="_blank">Pogledajte demonstraciju stranice uspjeha</a>` },
   ];
   const finalFaq = faqItems && faqItems.length > 0 ? faqItems : defaultFaq;
   const faqSchema = {
@@ -1180,11 +1163,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.howItWorks ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid gap-4 md:grid-cols-3 max-w-6xl mx-auto">
                           {howItWorks.map((step, idx) => (
-                            <div key={idx} className="space-y-2 rounded-2xl border border-black/10 bg-white p-4 text-black">
+                            <div key={idx} className="rounded-2xl border border-black/10 bg-white p-5 md:p-6 text-black text-center flex h-full flex-col items-center justify-center">
                               <h3 className="text-sm font-semibold">{step.label}</h3>
-                              <p className="text-xs text-black/70">{step.description}</p>
+                              <p className="mt-2 text-xs text-black/70">{step.description}</p>
                             </div>
                           ))}
                         </div>
@@ -1279,18 +1262,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="px-2 py-2">
                               <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">City Centre</p>
-                              <p className="text-xs text-black/70">{typeof distCenter === "number" ? `${distCenter} km` : "N/A"}</p>
+                              <p className="text-sm font-semibold">{referencePoints.airport.name}</p>
+                              <p className="text-xs text-black/70">{distAirportDisplay}</p>
                             </div>
                             <div className="px-2 py-2">
                               <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">Airport</p>
-                              <p className="text-xs text-black/70">{typeof distAirport === "number" ? `${distAirport} km` : "N/A"}</p>
+                              <p className="text-sm font-semibold">{referencePoints.trogir.name}</p>
+                              <p className="text-xs text-black/70">{distTrogirDisplay}</p>
                             </div>
                             <div className="px-2 py-2">
                               <p className="text-[10px] uppercase tracking-[0.18em] text-black/60">Distance</p>
-                              <p className="text-sm font-semibold">{cityConfig.beach.name}</p>
-                              <p className="text-xs text-black/70">{typeof distBeach === "number" ? `${distBeach} km` : "N/A"}</p>
+                              <p className="text-sm font-semibold">{referencePoints.marina.name}</p>
+                              <p className="text-xs text-black/70">{distMarinaDisplay}</p>
                             </div>
                           </div>
                         </div>
@@ -1322,12 +1305,12 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           {[
                             { q: "City", a: cityName },
                             { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
-                            { q: "Distance to Airport", a: typeof distAirport === "number" ? `${distAirport} km` : "N/A" },
-                            { q: "Distance to City Centre", a: typeof distCenter === "number" ? `${distCenter} km` : "N/A" },
-                            { q: `${cityConfig.beach.name} Distance`, a: typeof distBeach === "number" ? `${distBeach} km` : "N/A" },
+                            { q: `Udaljenost do ${referencePoints.airport.name}`, a: distAirportDisplay },
+                            { q: `Udaljenost do ${referencePoints.trogir.name}`, a: distTrogirDisplay },
+                            { q: "Closest Beach", a: distMarinaDisplay },
                             { q: "Typical transfer time", a: travelTime },
                             { q: "Parking types", a: "Open‑air and covered bays" },
-                            { q: "Hours", a: "24/7 operations" },
+                            { q: "sati", a: "24/7 operacije" },
                             { q: "Payment", a: "Stripe secure checkout" },
                             { q: "Security", a: "AI cameras and recorded entry/exit" },
                             { q: "Access", a: "License plate recognition" },
@@ -1364,6 +1347,26 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.reviews ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
+                        <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                          <div className="flex items-center gap-6">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
+                              <p className="text-lg font-semibold text-black">{averageRating} / 5</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
+                              <p className="text-lg font-semibold text-black">{totalReviews}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setOpenAllReviews((prev) => !prev)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#5F3DFC]/25 px-4 py-2 text-sm font-semibold text-[#5F3DFC] hover:bg-[#F5F2FF] transition-colors"
+                          >
+                            {openAllReviews ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            <span>{openAllReviews ? "Sakrij sve recenzije" : "Pregledaj sve recenzije"}</span>
+                          </button>
+                        </div>
                         <div className="grid gap-3 md:grid-cols-3">
                           {reviewItems.map((item) => (
                             <div key={item.author} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
@@ -1373,6 +1376,20 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             </div>
                           ))}
                         </div>
+                        {openAllReviews ? (
+                          <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+                            <p className="text-sm font-semibold text-black">Sve recenzije za ovu lokaciju</p>
+                            <div className="mt-3 grid gap-3 md:grid-cols-2">
+                              {allReviewItems.map((item, idx) => (
+                                <div key={`${item.author}-${idx}`} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
+                                  <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
+                                  <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
+                                  <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                         <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             {cityManagerPhoto ? (
@@ -1387,6 +1404,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-black truncate">{cityManagerName}</p>
                               <p className="text-xs text-black/65">City Manager • Prosječni odgovor &lt; 5 min</p>
+                              <p className="text-xs text-black/65">WhatsApp Business kontakt City Managera: {cityManagerWhatsappDisplay}</p>
                             </div>
                           </div>
                           <a
