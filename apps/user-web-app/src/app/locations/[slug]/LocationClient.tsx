@@ -392,31 +392,24 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
  
   const howItWorks = [
     {
-      label: "Book & Pay Instantly",
-      title: "1. Book & Pay Instantly",
+      label: "Dovezi se i skeniraj",
+      title: "1. Dovezi se i skeniraj",
       description:
-        "Choose your parking time and pay securely via Stripe — digital, fast, no paper.",
+        "Dovezi se na lokaciju i skeniraj QR kod.",
       icon: CreditCard,
     },
     {
-      label: "Connect with Your City Manager",
-      title: "2. Connect with Your City Manager",
+      label: "Skeniraj i plati",
+      title: "2. Skeniraj i plati",
       description:
-        "Message the City Manager via WhatsApp for 24/7 support, questions, or changes.",
-      icon: MessageCircle,
-    },
-    {
-      label: "Arrange Your Ride & Protection",
-      title: "3. Arrange Your Ride & Protection",
-      description:
-        "Zatražite Parq vožnju do odredišta u nekoliko minuta. Fleksibilne opcije, jednostavan proces.",
+        "Odaberi količinu, unesi podatke i plati putem Stripea.",
       icon: Car,
     },
     {
-      label: "Park & Go",
-      title: "4. Park & Go",
+      label: "Odaberi prijevoz (Opcionalno)",
+      title: "3. Odaberi prijevoz (Opcionalno)",
       description:
-        "Arrive, park, and go. Your license plate is your permit — monitored by AI.",
+        "Odaberi prijevoz ili rezerviraj 60 minuta unaprijed za garanciju polaska.",
       icon: Camera,
     },
   ];
