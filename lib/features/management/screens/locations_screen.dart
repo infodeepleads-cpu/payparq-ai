@@ -720,6 +720,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         int currentCapacity = capacity;
         String currentName = (effectiveLoc['name'] ?? 'Unnamed Lot').toString();
         bool saving = false;
+        String? uploadStatusText;
         bool showLocationPicker = false;
         final ImagePicker picker = ImagePicker();
         final Map<String, Uint8List> localPhotoPreviewBytes = {};
@@ -845,12 +846,29 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           capacity: newCapacity,
                         );
                     if (photosChanged) {
+                      setState(() {
+                        uploadStatusText = Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          'Preparing upload...',
+                          'Priprema uploada...',
+                        );
+                      });
                       final uploadedUrls = newlySelectedPhotos.isNotEmpty
                           ? await ref
                               .read(locationsControllerProvider)
                               .uploadVerificationPhotos(
                                 locationId: loc['id'].toString(),
                                 images: List<XFile>.from(newlySelectedPhotos),
+                                onProgress: (current, total) {
+                                  if (!dialogContext.mounted) return;
+                                  setState(() {
+                                    uploadStatusText = Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Uploading photo $current/$total...',
+                                      'Upload fotografije $current/$total...',
+                                    );
+                                  });
+                                },
                               )
                           : <String>[];
                       final nextPhotoUrls = [
@@ -883,7 +901,13 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       nameCtrl.text = newName;
                       addressCtrl.text = newAddress;
                       capacityCtrl.text = '$newCapacity';
+                      uploadStatusText = null;
                     });
+                    if (mounted) {
+                      this.setState(() {
+                        _locOverrides.remove(loc['id'].toString());
+                      });
+                    }
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
                         SnackBar(
@@ -902,6 +926,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       });
                     }
                     if (dialogContext.mounted) {
+                      setState(() {
+                        uploadStatusText = null;
+                      });
                       messenger.showSnackBar(
                         SnackBar(
                             content: Text(Lang.sel(
@@ -911,7 +938,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                       );
                     }
                   } finally {
-                    if (dialogContext.mounted) setState(() => saving = false);
+                    if (dialogContext.mounted) {
+                      setState(() {
+                        saving = false;
+                        uploadStatusText = null;
+                      });
+                    }
                   }
                 }
 
@@ -1507,6 +1539,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               ],
                               if (canEdit) ...[
                                 const SizedBox(height: 16),
+                                if (saving && uploadStatusText != null) ...[
+                                  Text(
+                                    uploadStatusText!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(

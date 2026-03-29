@@ -20,6 +20,7 @@ final locationsControllerProvider = Provider<LocationsController>((ref) {
 class LocationsController {
   final Ref _ref;
   final LocationsRepository _repo;
+  static const int _maxLocationPhotoBytes = 8 * 1024 * 1024;
 
   LocationsController(this._ref, this._repo);
 
@@ -193,28 +194,36 @@ class LocationsController {
   Future<List<String>> uploadVerificationPhotos({
     required String locationId,
     required List<XFile> images,
+    void Function(int current, int total)? onProgress,
   }) async {
     try {
-      final List<Future<String>> uploadFutures = [];
+      final uploadedUrls = <String>[];
+      final total = images.length;
       for (var i = 0; i < images.length; i++) {
         final image = images[i];
-        uploadFutures.add(() async {
-          final bytes = await image.readAsBytes();
-          final format = _resolveImageFormat(image, bytes);
-          final fileExt = format.ext;
-          final mimeType = format.mimeType;
-          final fileName =
-              '${locationId}_${DateTime.now().millisecondsSinceEpoch}_${i}_edit.$fileExt';
-          await _repo.uploadVerificationFile(
-            fileName: fileName,
-            bytes: bytes,
-            mimeType: mimeType,
+        onProgress?.call(i + 1, total);
+        final bytes = await image.readAsBytes();
+        if (bytes.lengthInBytes > _maxLocationPhotoBytes) {
+          final maxMb =
+              (_maxLocationPhotoBytes / (1024 * 1024)).toStringAsFixed(0);
+          throw AppError(
+            'Photo ${i + 1} is too large (${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)}MB). Max allowed is ${maxMb}MB.',
           );
-          return _repo.getVerificationPublicUrl(fileName);
-        }());
+        }
+        final format = _resolveImageFormat(image, bytes);
+        final fileExt = format.ext;
+        final mimeType = format.mimeType;
+        final fileName =
+            '${locationId}_${DateTime.now().millisecondsSinceEpoch}_${i}_edit.$fileExt';
+        await _repo.uploadVerificationFile(
+          fileName: fileName,
+          bytes: bytes,
+          mimeType: mimeType,
+        );
+        uploadedUrls.add(_repo.getVerificationPublicUrl(fileName));
       }
-      return await Future.wait(uploadFutures)
-          .timeout(const Duration(seconds: 40));
+      onProgress?.call(total, total);
+      return Future.value(uploadedUrls).timeout(const Duration(seconds: 90));
     } catch (e) {
       throw AppError('Upload photos failed: $e', cause: e);
     }
