@@ -57,6 +57,28 @@ void main() {
     );
   });
 
+  test('Park&Taxi checkout uses daily type path and dedicated query flag',
+      () async {
+    final appConfigFile = File('lib/config/app_config.dart');
+    final appConfigContent = await appConfigFile.readAsString();
+    final pricingScreenFile = File(
+      'lib/features/intelligence/screens/dynamic_pricing_screen.dart',
+    );
+    final pricingScreenContent = await pricingScreenFile.readAsString();
+
+    expect(
+      appConfigContent.contains("if (parkTaxiMode) 'park_taxi': '1'") &&
+          pricingScreenContent
+              .contains("final bool isParkTaxi = type == 'park_taxi';") &&
+          pricingScreenContent
+              .contains("final checkoutType = isParkTaxi ? 'daily' : type;") &&
+          pricingScreenContent.contains("parkTaxiMode: isParkTaxi,"),
+      isTrue,
+      reason:
+          'Park&Taxi links must keep daily checkout semantics while carrying a dedicated park_taxi flag.',
+    );
+  });
+
   test('Dynamic pricing update avoids singular coercion on update response',
       () async {
     final file = File(
@@ -142,7 +164,7 @@ void main() {
           content.contains('(\${resolvedHourlySwitchUrl})') &&
           content.contains('(\${resolvedDailySwitchUrl})') &&
           content.contains(
-              'const nonReservationDescription = nonReservationDescriptionBase;') &&
+              'const nonReservationDescription = parkTaxiRequested') &&
           content.contains('submit: {') &&
           content.contains('hourlyDailyCtaMessage') &&
           content.contains('type === "daily" || type === "hourly"'),

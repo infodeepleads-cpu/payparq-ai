@@ -30,6 +30,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
   final TextEditingController _hourlyController = TextEditingController();
   final TextEditingController _dailyController = TextEditingController();
   final TextEditingController _monthlyController = TextEditingController();
+  final TextEditingController _parkTaxiController = TextEditingController();
 
   // Ceiling Controllers
   final TextEditingController _hourlyCeilingController =
@@ -134,6 +135,36 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     return true;
   }
 
+  bool _isHubLocation(Map<String, dynamic>? source) {
+    if (source == null) return false;
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    return metadata?['hub_enabled'] == true;
+  }
+
+  bool _isSelectedHub() => _isHubLocation(_selectedLocation);
+
+  double _parsePositiveEuro(String input, {double fallback = 0.0}) {
+    final normalized = input.replaceAll(RegExp(r'[^\d.]'), '');
+    final parsed = double.tryParse(normalized);
+    if (parsed == null || !parsed.isFinite || parsed < 0) return fallback;
+    if (parsed > 9999) return 9999;
+    return parsed;
+  }
+
+  double _parkTaxiPriceFromLocation(Map<String, dynamic>? source) {
+    if (source == null) return 0.0;
+    final metadataRaw = source['verification_metadata'];
+    final metadata =
+        metadataRaw is Map ? Map<String, dynamic>.from(metadataRaw) : null;
+    final raw = metadata?['park_taxi_price'];
+    final value = double.tryParse('${raw ?? ''}') ?? 0.0;
+    if (!value.isFinite || value <= 0) return 0.0;
+    if (value > 9999) return 9999;
+    return value;
+  }
+
   String _resolvePromotionCodeLabel(Map<String, dynamic> source) {
     final metadataRaw = source['verification_metadata'];
     final metadata =
@@ -197,6 +228,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             _hourlyController.clear();
             _dailyController.clear();
             _monthlyController.clear();
+            _parkTaxiController.clear();
           }
           _isLoading = false;
         });
@@ -266,6 +298,8 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       _hourlyController.text = hourly;
       _dailyController.text = daily;
       _monthlyController.text = monthly;
+      final parkTaxi = _parkTaxiPriceFromLocation(loc);
+      _parkTaxiController.text = parkTaxi > 0 ? parkTaxi.toString() : '';
 
       _hourlyCeilingController.text = hourlyCeiling;
       _dailyCeilingController.text = dailyCeiling;
@@ -318,57 +352,21 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     }
 
     // Capture user input before starting the save
-    final String rawHourly = _hourlyController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newHourly = double.tryParse(rawHourly) ?? 0.0;
-
-    final String rawDaily = _dailyController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newDaily = double.tryParse(rawDaily) ?? 0.0;
-
-    final String rawMonthly = _monthlyController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newMonthly = double.tryParse(rawMonthly) ?? 0.0;
-
-    final String rawHourlyCeiling = _hourlyCeilingController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newHourlyCeiling = double.tryParse(rawHourlyCeiling) ?? 0.0;
-
-    final String rawDailyCeiling = _dailyCeilingController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newDailyCeiling = double.tryParse(rawDailyCeiling) ?? 0.0;
-
-    final String rawMonthlyCeiling = _monthlyCeilingController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newMonthlyCeiling = double.tryParse(rawMonthlyCeiling) ?? 0.0;
-
-    final String rawHourlyFloor = _hourlyFloorController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newHourlyFloor = double.tryParse(rawHourlyFloor) ?? 0.0;
-    final String rawDailyFloor = _dailyFloorController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newDailyFloor = double.tryParse(rawDailyFloor) ?? 0.0;
-    final String rawMonthlyFloor = _monthlyFloorController.text.replaceAll(
-      RegExp(r'[^\d.]'),
-      '',
-    );
-    final double newMonthlyFloor = double.tryParse(rawMonthlyFloor) ?? 0.0;
+    final double newHourly = _parsePositiveEuro(_hourlyController.text);
+    final double newDaily = _parsePositiveEuro(_dailyController.text);
+    final double newMonthly = _parsePositiveEuro(_monthlyController.text);
+    final double newParkTaxi = _parsePositiveEuro(_parkTaxiController.text);
+    final double newHourlyCeiling =
+        _parsePositiveEuro(_hourlyCeilingController.text);
+    final double newDailyCeiling =
+        _parsePositiveEuro(_dailyCeilingController.text);
+    final double newMonthlyCeiling =
+        _parsePositiveEuro(_monthlyCeilingController.text);
+    final double newHourlyFloor =
+        _parsePositiveEuro(_hourlyFloorController.text);
+    final double newDailyFloor = _parsePositiveEuro(_dailyFloorController.text);
+    final double newMonthlyFloor =
+        _parsePositiveEuro(_monthlyFloorController.text);
 
     setState(() => _isLoading = true);
 
@@ -402,6 +400,11 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         flagsPayload['enforcmetn_pricing_mode'] = _enforcementPricingMode;
         metadata['enforcement_pricing_mode'] = _enforcementPricingMode;
         metadata['enforcmetn_pricing_mode'] = _enforcementPricingMode;
+      }
+      if (_isHubLocation(_selectedLocation)) {
+        metadata['park_taxi_price'] = newParkTaxi;
+      } else {
+        metadata.remove('park_taxi_price');
       }
       metadata['allow_promotion_codes'] = _hourlyCouponFieldEnabled;
       metadata['allowPromotionCodes'] = _hourlyCouponFieldEnabled;
@@ -449,6 +452,9 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             (data['base_price_daily_floor'] ?? 0.0).toString();
         _monthlyFloorController.text =
             (data['base_price_monthly_floor'] ?? 0.0).toString();
+        final nextParkTaxi = _parkTaxiPriceFromLocation(data);
+        _parkTaxiController.text =
+            nextParkTaxi > 0 ? nextParkTaxi.toString() : '';
         _enforcementPricingMode = _resolveEnforcementPricingMode(data);
       });
       ref.invalidate(selectedDownloadLocationProvider);
@@ -689,13 +695,15 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     if (_selectedLocation == null) return;
     final locationId = (_selectedLocation!['id']).toString();
     final displayId = (_selectedLocation!['display_id'] ?? '').toString();
+    final bool isParkTaxi = type == 'park_taxi';
+    final checkoutType = isParkTaxi ? 'daily' : type;
     final price = _priceForType(type);
     final allowPromotionCodes = _hourlyCouponFieldEnabled;
     final promotionCodeLabel =
         allowPromotionCodes ? _couponNameController.text.trim() : null;
 
     final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-    final hourlySwitchUrl = type == 'daily'
+    final hourlySwitchUrl = type == 'daily' || type == 'park_taxi'
         ? AppConfig.createCheckoutUrl(
             locationId: locationId,
             displayId: displayId,
@@ -720,13 +728,14 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
     final checkoutUrl = AppConfig.createCheckoutUrl(
       locationId: locationId,
       displayId: displayId,
-      type: type,
+      type: checkoutType,
       timestamp: timestamp,
       price: price,
       allowPromotionCodes: allowPromotionCodes,
       promotionCodeLabel: promotionCodeLabel,
       hourlySwitchUrl: hourlySwitchUrl,
       dailySwitchUrl: dailySwitchUrl,
+      parkTaxiMode: isParkTaxi,
     );
 
     // LOGGING TO VERIFY URL PARAMETERS
@@ -1432,6 +1441,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
       'hourly' => double.tryParse(_hourlyController.text) ?? 0.0,
       'daily' => double.tryParse(_dailyController.text) ?? 0.0,
       'monthly' => double.tryParse(_monthlyController.text) ?? 0.0,
+      'park_taxi' => _parsePositiveEuro(_parkTaxiController.text),
       _ => 0.0,
     };
 
@@ -1441,6 +1451,7 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
         'hourly' => 'rate_per_hour',
         'daily' => 'base_price_daily',
         'monthly' => 'base_price_monthly',
+        'park_taxi' => 'base_price_daily',
         _ => 'rate_per_hour',
       };
       price = double.tryParse((selected[key] ?? 0).toString()) ?? 0.0;
@@ -1551,6 +1562,18 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       'monthly',
                       Colors.black,
                     ),
+                    if (_isSelectedHub()) ...[
+                      const SizedBox(height: 12),
+                      _buildStripeButton(
+                        Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          'Generate Park&Taxi Link',
+                          'Generiraj Park&Taxi link',
+                        ),
+                        'park_taxi',
+                        Colors.black,
+                      ),
+                    ],
                   ],
                 );
               }
@@ -1591,6 +1614,20 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                       Colors.black,
                     ),
                   ),
+                  if (_isSelectedHub()) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStripeButton(
+                        Lang.sel(
+                          ref.watch(localeIsCroatianProvider),
+                          'Generate Park&Taxi Link',
+                          'Generiraj Park&Taxi link',
+                        ),
+                        'park_taxi',
+                        Colors.black,
+                      ),
+                    ),
+                  ],
                 ],
               );
             },
@@ -1718,6 +1755,20 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
                     Icons.calendar_month_outlined,
                   ),
                 ),
+                if (_isSelectedHub()) ...[
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: _buildPriceInput(
+                      Lang.sel(
+                        isCroatian,
+                        'Park & Taxi Rate',
+                        'Park & Taxi cijena',
+                      ),
+                      _parkTaxiController,
+                      Icons.local_taxi_outlined,
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 32),

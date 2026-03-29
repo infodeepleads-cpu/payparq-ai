@@ -81,6 +81,8 @@ const checkoutTextByLocale: Record<string, {
   endTimeDependsOnSelectedDays: string;
   endTimeDependsOnSelectedMonths: string;
   endTimeDependsOnSelectedHours: string;
+  parkTaxiPackageLine: string;
+  parkTaxiQuantityHint: string;
   needHourly: string;
   openHourlyCheckout: string;
   needDaily: string;
@@ -104,6 +106,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "End time depends on selected days",
     endTimeDependsOnSelectedMonths: "End time depends on selected months",
     endTimeDependsOnSelectedHours: "End time depends on selected hours",
+    parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
+    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Need hourly for this location?",
     openHourlyCheckout: "Open hourly checkout",
     needDaily: "Need daily for this location?",
@@ -127,6 +131,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "Vrijeme završetka ovisi o odabranom broju dana",
     endTimeDependsOnSelectedMonths: "Vrijeme završetka ovisi o odabranom broju mjeseci",
     endTimeDependsOnSelectedHours: "Vrijeme završetka ovisi o odabranom broju sati",
+    parkTaxiPackageLine: "Dnevna Parking Karta + 2 Vožnje do 5km uključene",
+    parkTaxiQuantityHint: "Količina = broj dana. Svaki odabrani dan uključuje 1 dnevnu kartu + 2 vožnje do 5km.",
     needHourly: "Trebate satni parking za ovu lokaciju?",
     openHourlyCheckout: "Otvori satni checkout",
     needDaily: "Trebate dnevni parking za ovu lokaciju?",
@@ -150,6 +156,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "Endzeit hängt von den ausgewählten Tagen ab",
     endTimeDependsOnSelectedMonths: "Endzeit hängt von den ausgewählten Monaten ab",
     endTimeDependsOnSelectedHours: "Endzeit hängt von den ausgewählten Stunden ab",
+    parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
+    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Brauchen Sie stündlich für diesen Standort?",
     openHourlyCheckout: "Stündlichen Checkout öffnen",
     needDaily: "Brauchen Sie täglich für diesen Standort?",
@@ -173,6 +181,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "Время окончания зависит от выбранных дней",
     endTimeDependsOnSelectedMonths: "Время окончания зависит от выбранных месяцев",
     endTimeDependsOnSelectedHours: "Время окончания зависит от выбранных часов",
+    parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
+    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Нужна почасовая оплата для этой локации?",
     openHourlyCheckout: "Открыть почасовой checkout",
     needDaily: "Нужна дневная оплата для этой локации?",
@@ -196,6 +206,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "Czas zakończenia zależy od wybranych dni",
     endTimeDependsOnSelectedMonths: "Czas zakończenia zależy od wybranych miesięcy",
     endTimeDependsOnSelectedHours: "Czas zakończenia zależy od wybranych godzin",
+    parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
+    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Potrzebujesz opłaty godzinowej dla tej lokalizacji?",
     openHourlyCheckout: "Otwórz checkout godzinowy",
     needDaily: "Potrzebujesz opłaty dziennej dla tej lokalizacji?",
@@ -219,6 +231,8 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedDays: "La hora de finalización depende de los días seleccionados",
     endTimeDependsOnSelectedMonths: "La hora de finalización depende de los meses seleccionados",
     endTimeDependsOnSelectedHours: "La hora de finalización depende de las horas seleccionadas",
+    parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
+    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "¿Necesitas tarifa por hora para esta ubicación?",
     openHourlyCheckout: "Abrir checkout por hora",
     needDaily: "¿Necesitas tarifa diaria para esta ubicación?",
@@ -622,6 +636,39 @@ async function locationPriceCents(
   return Math.round(euro * 100);
 }
 
+async function hubParkTaxiPriceCents(
+  locationId: string,
+): Promise<{ isHub: boolean; cents: number }> {
+  const idColumn = isUuid(locationId) ? "id" : "display_id";
+  const { data, error } = await admin
+    .from("locations")
+    .select("verification_metadata,base_price_daily,base_price_daily_floor,base_price_daily_ceiling")
+    .eq(idColumn, locationId)
+    .maybeSingle();
+  if (error || !data) {
+    return { isHub: false, cents: 0 };
+  }
+  const toPositiveNumber = (value: unknown, fallback = 0): number => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+    return parsed;
+  };
+  const metadataRaw = data["verification_metadata"];
+  const metadata = metadataRaw && typeof metadataRaw === "object"
+    ? metadataRaw as Record<string, unknown>
+    : {};
+  const isHub = metadata["hub_enabled"] === true;
+  const parkTaxiRaw = toPositiveNumber(metadata["park_taxi_price"]);
+  const daily = toPositiveNumber(data["base_price_daily"], 20);
+  const floor = toPositiveNumber(data["base_price_daily_floor"]);
+  const ceiling = toPositiveNumber(data["base_price_daily_ceiling"]);
+  let euro = parkTaxiRaw > 0 ? parkTaxiRaw : daily;
+  if (floor > 0 && euro < floor) euro = floor;
+  if (ceiling > 0 && euro > ceiling) euro = ceiling;
+  if (!Number.isFinite(euro) || euro < 0) euro = 0;
+  return { isHub, cents: Math.round(euro * 100) };
+}
+
 async function cleanupExpiredCheckoutSession(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
@@ -812,9 +859,15 @@ serve(async (req: Request) => {
       // We'll proceed with the Stripe checkout but skip the seeding.
     }
 
-    const type = normalizeType(
+    const parkTaxiRequested =
+      parseOptionalBooleanValue(body["park_taxi"]) ??
+      parseOptionalBooleanValue(url.searchParams.get("park_taxi")) ??
+      false;
+    const requestedType = normalizeType(
       String(body["type"] ?? url.searchParams.get("type") ?? "hourly"),
     );
+    const type: "hourly" | "daily" | "monthly" =
+      parkTaxiRequested ? "daily" : requestedType;
     const email = String(
       body["email"] ?? url.searchParams.get("email") ?? "",
     ).trim();
@@ -875,7 +928,7 @@ serve(async (req: Request) => {
     );
     const checkoutText = checkoutTextByLocale[checkoutLocale] ?? checkoutTextByLocale.en;
 
-    console.log(`[V17] Params: locationId=${locationId}, type=${type}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
+    console.log(`[V17] Params: locationId=${locationId}, type=${type}, parkTaxi=${parkTaxiRequested}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
     const now = new Date();
     const formatBerlinDateTime = (value: Date): string => {
@@ -966,9 +1019,16 @@ serve(async (req: Request) => {
 
     let reservationDescription = "";
 
+    if (parkTaxiRequested && !locationUuid) {
+      return json({ error: "location_id must resolve for park_taxi" }, 400);
+    }
     let amountCents = explicitCents;
-    if (amountCents == null) {
-      // Use the fetched locData for price if available
+    if (parkTaxiRequested && locationUuid) {
+      const parkTaxi = await hubParkTaxiPriceCents(locationUuid);
+      amountCents = parkTaxi.isHub
+        ? parkTaxi.cents
+        : await locationPriceCents(locationUuid, "daily");
+    } else if (amountCents == null) {
       amountCents = await locationPriceCents(locationUuid, type);
     }
     if (isReservationFlow && explicitCents == null && quantity > 1) {
@@ -1064,8 +1124,10 @@ serve(async (req: Request) => {
     const dailyHourlyCtaMessage = `${checkoutText.needHourly} [${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
     const hourlyDailyCtaMessage = `${checkoutText.needDaily} [${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
     const nonReservationDescriptionBase =
-      `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}\n(${endTimeDependsOnSelected})`;
-    const nonReservationDescription = nonReservationDescriptionBase;
+      `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}`;
+    const nonReservationDescription = parkTaxiRequested
+      ? `${nonReservationDescriptionBase}\n(${checkoutText.parkTaxiPackageLine})\n${checkoutText.parkTaxiQuantityHint}`
+      : `${nonReservationDescriptionBase}\n(${endTimeDependsOnSelected})`;
     const lineItem: any = {
       quantity: checkoutQuantity,
       price_data: {

@@ -118,6 +118,7 @@ class AppConfig {
     String? checkIn,
     String? checkOut,
     String? flow,
+    bool parkTaxiMode = false,
   }) {
     final t = timestamp ?? DateTime.now().millisecondsSinceEpoch.toString();
     final defaultBase = '$supabaseUrl/functions/v1';
@@ -144,6 +145,7 @@ class AppConfig {
       if (checkIn != null && checkIn.isNotEmpty) 'check_in': checkIn,
       if (checkOut != null && checkOut.isNotEmpty) 'check_out': checkOut,
       if (flow != null && flow.isNotEmpty) 'flow': flow,
+      if (parkTaxiMode) 'park_taxi': '1',
     };
     if (price != null) {
       final normalized = price < 0 ? 0.0 : price;
