@@ -244,7 +244,7 @@ export default function MembersPage() {
 
     const run = async () => {
       try {
-        const { error } = await client.auth.verifyOtp({
+        const { data, error } = await client.auth.verifyOtp({
           type: otpType === "recovery" ? "recovery" : "magiclink",
           token_hash: tokenHash,
         } as {
@@ -257,12 +257,12 @@ export default function MembersPage() {
           setLoginNotice("");
           return;
         }
-        const cleaned = new URL(window.location.href);
-        cleaned.searchParams.delete("token_hash");
-        cleaned.searchParams.delete("type");
-        cleaned.searchParams.delete("next");
-        window.history.replaceState({}, "", `${cleaned.pathname}${cleaned.search}${cleaned.hash}`);
-        window.location.replace(safeNextPath);
+        if (data?.user) {
+          setUser(data.user);
+          void resolveIsAdmin(data.user);
+        }
+        window.history.replaceState({}, "", safeNextPath);
+        setLoginNotice("");
       } finally {
         if (!cancelled) {
           setAuthLoading(false);
