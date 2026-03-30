@@ -404,9 +404,9 @@ export default function MembersPage() {
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; email?: string }
+        | { ok?: boolean; id?: string; error?: string; email?: string }
         | null;
-      if (!response.ok) {
+      if (!response.ok || !payload?.ok || !payload?.id) {
         setAuthError(formatOtpError(payload?.error || "Unable to send sign-in email."));
       } else {
         setLoginNotice(`Sign-in email sent to ${payload?.email || normalizedEmail}. Check Inbox and Junk/Spam.`);
@@ -534,9 +534,9 @@ export default function MembersPage() {
         }),
       });
       const payload = (await response.json().catch(() => null)) as
-        | { error?: string; email?: string }
+        | { ok?: boolean; id?: string; error?: string; email?: string }
         | null;
-      if (!response.ok) {
+      if (!response.ok || !payload?.ok || !payload?.id) {
         setVerificationNotice(formatOtpError(payload?.error || "Unable to send verification email right now."));
       } else {
         setVerificationNotice(
