@@ -403,11 +403,13 @@ export default function MembersPage() {
           source: "members_login",
         }),
       });
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; email?: string }
+        | null;
       if (!response.ok) {
         setAuthError(formatOtpError(payload?.error || "Unable to send sign-in email."));
       } else {
-        setLoginNotice("Sign-in email sent. Check Inbox and Junk/Spam.");
+        setLoginNotice(`Sign-in email sent to ${payload?.email || normalizedEmail}. Check Inbox and Junk/Spam.`);
       }
     } finally {
       setAuthLoading(false);
@@ -531,11 +533,15 @@ export default function MembersPage() {
           source: "members_verification",
         }),
       });
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; email?: string }
+        | null;
       if (!response.ok) {
         setVerificationNotice(formatOtpError(payload?.error || "Unable to send verification email right now."));
       } else {
-        setVerificationNotice("Verification email sent. Check Inbox and Junk/Spam.");
+        setVerificationNotice(
+          `Verification email sent to ${payload?.email || targetEmail}. Check Inbox and Junk/Spam.`
+        );
       }
     } catch {
       setVerificationNotice("Unable to send verification email right now.");
