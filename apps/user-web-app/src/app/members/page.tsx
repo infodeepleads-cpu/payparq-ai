@@ -18,8 +18,6 @@ type NavItemId =
   | "promotions"
   | "rewards"
   | "help";
-
-type AuthMode = "sign_in" | "sign_up";
 type FlowType = "park_now" | "monthly" | "reserve";
 type ActivityRow = {
   id: string;
@@ -60,11 +58,10 @@ export default function MembersPage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>("sign_in");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [loginNotice, setLoginNotice] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationNotice, setVerificationNotice] = useState("");
 
@@ -118,6 +115,41 @@ export default function MembersPage() {
       hour12: false,
       timeZone: "Europe/Zagreb",
     });
+  }
+
+  function resolveSafeNextPath(value: string | null | undefined) {
+    const fallback = "/members";
+    const trimmed = (value ?? "").trim();
+    if (!trimmed) return fallback;
+    if (trimmed.startsWith("/")) return trimmed;
+    try {
+      if (typeof window === "undefined") return fallback;
+      const parsed = new URL(trimmed);
+      if (parsed.origin !== window.location.origin) return fallback;
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function formatOtpError(message: string) {
+    const normalized = message.toLowerCase();
+    if (normalized.includes("redirect") && normalized.includes("allow")) {
+      return "Redirect URL nije dopušten u Supabase postavkama. Dodajte Members URL u Auth URL Configuration.";
+    }
+    if (normalized.includes("error sending magic link email")) {
+      return "Pogreška pri slanju e-pošte s čarobnom vezom. U Supabase Auth provjerite Email provider, SMTP postavke i Redirect URL.";
+    }
+    if (normalized.includes("email address not authorized")) {
+      return "Adresa e-pošte nije odobrena za slanje. Potvrdite sender domenu i mailbox u SMTP servisu.";
+    }
+    if (normalized.includes("signups not allowed")) {
+      return "Registracije su isključene u Supabase projektu. Uključite Email sign-in i dopustite kreiranje korisnika.";
+    }
+    if (normalized.includes("invalid login credentials")) {
+      return "Prijava nije uspjela. Pokušajte ponovno kroz link iz e-pošte.";
+    }
+    return message;
   }
 
   async function resolveIsAdmin(currentUser: User | null) {
@@ -188,6 +220,59 @@ export default function MembersPage() {
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = (params.get("token_hash") ?? "").trim();
+    if (!tokenHash) return;
+    if (!supabase || !isSupabaseConfigured) {
+      setAuthError("Members sign-in is not configured for this environment.");
+      return;
+    }
+    const client = supabase;
+
+    const otpType = (params.get("type") ?? "magiclink").trim().toLowerCase();
+    const safeNextPath = resolveSafeNextPath(params.get("next"));
+    let cancelled = false;
+
+    setAuthLoading(true);
+    setAuthError("");
+    setLoginNotice("Potvrđujemo prijavu...");
+
+    const run = async () => {
+      try {
+        const { error } = await client.auth.verifyOtp({
+          type: otpType === "recovery" ? "recovery" : "magiclink",
+          token_hash: tokenHash,
+        } as {
+          type: "magiclink" | "recovery";
+          token_hash: string;
+        });
+        if (cancelled) return;
+        if (error) {
+          setAuthError(formatOtpError(error.message));
+          setLoginNotice("");
+          return;
+        }
+        const cleaned = new URL(window.location.href);
+        cleaned.searchParams.delete("token_hash");
+        cleaned.searchParams.delete("type");
+        cleaned.searchParams.delete("next");
+        window.history.replaceState({}, "", `${cleaned.pathname}${cleaned.search}${cleaned.hash}`);
+        window.location.replace(safeNextPath);
+      } finally {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -293,8 +378,8 @@ export default function MembersPage() {
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      setAuthError("Enter your email and password.");
+    if (!normalizedEmail) {
+      setAuthError("Enter your email.");
       return;
     }
 
@@ -305,24 +390,24 @@ export default function MembersPage() {
 
     setAuthLoading(true);
     setAuthError("");
+    setLoginNotice("");
 
     try {
-      if (authMode === "sign_in") {
-        const { error } = await supabase.auth.signInWithPassword({
+      const redirectTo = "/members";
+      const response = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           email: normalizedEmail,
-          password,
-        });
-        if (error) {
-          setAuthError(error.message);
-        }
+          redirectTo,
+          source: "members_login",
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setAuthError(formatOtpError(payload?.error || "Unable to send sign-in email."));
       } else {
-        const { error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-        });
-        if (error) {
-          setAuthError(error.message);
-        }
+        setLoginNotice("Sign-in email sent. Check Inbox and Junk/Spam.");
       }
     } finally {
       setAuthLoading(false);
@@ -436,16 +521,19 @@ export default function MembersPage() {
     setVerificationLoading(true);
     setVerificationNotice("");
     try {
-      const redirectTo =
-        typeof window !== "undefined" ? `${window.location.origin}/members?tab=promotions` : undefined;
-      const { error } = await supabase.auth.signInWithOtp({
-        email: targetEmail,
-        options: {
-          emailRedirectTo: redirectTo,
-        },
+      const redirectTo = "/members?tab=promotions";
+      const response = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: targetEmail,
+          redirectTo,
+          source: "members_verification",
+        }),
       });
-      if (error) {
-        setVerificationNotice(error.message);
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setVerificationNotice(formatOtpError(payload?.error || "Unable to send verification email right now."));
       } else {
         setVerificationNotice("Verification email sent. Check Inbox and Junk/Spam.");
       }
@@ -1038,8 +1126,7 @@ export default function MembersPage() {
                   Sign in to your Payparq account
                 </h1>
                 <p className="text-sm text-black/70 mb-6">
-                  Access member tools, subscriptions, and activity. You can sign
-                  in with password or verify by email link.
+                  Access member tools, subscriptions, and activity with secure email sign-in.
                 </p>
                 {!isSupabaseConfigured && (
                   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">
@@ -1060,70 +1147,21 @@ export default function MembersPage() {
                       placeholder="you@company.com"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-black/70">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                      placeholder="Create a strong password"
-                    />
-                  </div>
                   {authError && (
                     <p className="text-[11px] text-red-600">{authError}</p>
+                  )}
+                  {loginNotice && (
+                    <p className="text-[11px] text-black/70">{loginNotice}</p>
                   )}
                   <button
                     type="submit"
                     disabled={authLoading}
                     className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {authMode === "sign_in" ? "Sign in" : "Create account"}
+                    {authLoading ? "Sending..." : "Send sign-in email"}
                   </button>
                 </form>
-                <div className="mt-3 rounded-xl border border-black/10 bg-black/[0.02] p-3 space-y-2">
-                  <p className="text-[11px] text-black/70">
-                    No password? Verify by email. Check Inbox and Junk/Spam.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSendVerificationEmail}
-                      disabled={verificationLoading || !email.trim()}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-60"
-                    >
-                      {verificationLoading ? "Sending..." : "Verify email"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSendVerificationEmail}
-                      disabled={verificationLoading || !email.trim()}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors disabled:opacity-60"
-                    >
-                      Resend email
-                    </button>
-                  </div>
-                  {verificationNotice && (
-                    <p className="text-[11px] text-black/70">{verificationNotice}</p>
-                  )}
-                </div>
-                <div className="mt-4 flex items-center justify-between text-[11px] text-black/70">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAuthMode((mode) =>
-                        mode === "sign_in" ? "sign_up" : "sign_in"
-                      )
-                    }
-                    className="underline underline-offset-2"
-                  >
-                    {authMode === "sign_in"
-                      ? "New to Payparq? Create an account"
-                      : "Already a member? Sign in"}
-                  </button>
+                <div className="mt-4 flex items-center justify-end text-[11px] text-black/70">
                   <Link href="/support" className="hover:text-black">
                     Need help?
                   </Link>
