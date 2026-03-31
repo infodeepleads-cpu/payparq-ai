@@ -73,6 +73,7 @@ type SignWidget = {
 const SIGN_WIDGETS_STORAGE_KEY = "resources-sign-widgets-v1";
 const RESOURCES_WIDGET_STATE_BUCKET = "location-verification";
 const RESOURCES_WIDGET_STATE_PATH_PREFIX = "resources/widget-state";
+const RESOURCES_WIDGET_STATE_SHARED_PATH = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/shared.json`;
 type PersistedSignWidget = Pick<
   SignWidget,
   | "id"
@@ -535,12 +536,26 @@ export default function ResourcesPage() {
           return;
         }
 
-        const widgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${currentUser.id}.json`;
+        const widgetStatePath = RESOURCES_WIDGET_STATE_SHARED_PATH;
+        const legacyWidgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${currentUser.id}.json`;
         try {
-          const { data: remoteWidgetFile, error: remoteWidgetError } = await client.storage
+          let remoteWidgetFile: Blob | null = null;
+          let loadedFromLegacyPath = false;
+          const { data: sharedWidgetFile, error: sharedWidgetError } = await client.storage
             .from(RESOURCES_WIDGET_STATE_BUCKET)
             .download(widgetStatePath);
-          if (!cancelled && !remoteWidgetError && remoteWidgetFile) {
+          if (!sharedWidgetError && sharedWidgetFile) {
+            remoteWidgetFile = sharedWidgetFile;
+          } else {
+            const { data: legacyWidgetFile, error: legacyWidgetError } = await client.storage
+              .from(RESOURCES_WIDGET_STATE_BUCKET)
+              .download(legacyWidgetStatePath);
+            if (!legacyWidgetError && legacyWidgetFile) {
+              remoteWidgetFile = legacyWidgetFile;
+              loadedFromLegacyPath = true;
+            }
+          }
+          if (!cancelled && remoteWidgetFile) {
             const rawRemoteWidgets = await remoteWidgetFile.text();
             const parsedRemoteWidgets = parsePersistedWidgets(rawRemoteWidgets);
             if (parsedRemoteWidgets && parsedRemoteWidgets.length > 0) {
@@ -552,6 +567,18 @@ export default function ResourcesPage() {
               setWidgets(mergedWidgets);
               if (typeof window !== "undefined") {
                 window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, serializedWidgets);
+              }
+              if (loadedFromLegacyPath) {
+                void client.storage
+                  .from(RESOURCES_WIDGET_STATE_BUCKET)
+                  .upload(
+                    widgetStatePath,
+                    new Blob([serializedWidgets], { type: "application/json" }),
+                    {
+                      upsert: true,
+                      contentType: "application/json",
+                    }
+                  );
               }
             }
           }
@@ -797,7 +824,7 @@ export default function ResourcesPage() {
       clearTimeout(remoteSyncTimeoutRef.current);
     }
     const supabaseClient = supabase;
-    const widgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${user.id}.json`;
+    const widgetStatePath = RESOURCES_WIDGET_STATE_SHARED_PATH;
     remoteSyncTimeoutRef.current = setTimeout(() => {
       void supabaseClient.storage
         .from(RESOURCES_WIDGET_STATE_BUCKET)
