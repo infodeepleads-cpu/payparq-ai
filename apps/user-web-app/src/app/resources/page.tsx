@@ -74,6 +74,25 @@ const SIGN_WIDGETS_STORAGE_KEY = "resources-sign-widgets-v1";
 const RESOURCES_WIDGET_STATE_BUCKET = "location-verification";
 const RESOURCES_WIDGET_STATE_PATH_PREFIX = "resources/widget-state";
 const RESOURCES_WIDGET_STATE_SHARED_PATH = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/shared.json`;
+const WIDGET_TEMPLATES_LOCKED = true;
+const HARD_LOCKED_TEMPLATE_URLS = [
+  "/resources/templates/widget-01.png",
+  "/resources/templates/widget-01.png",
+  "/resources/templates/widget-03.jpg",
+  "/resources/templates/widget-04.jpg",
+  "/resources/templates/widget-01.png",
+  "/resources/templates/widget-01.png",
+  "/resources/templates/widget-01.png",
+  "/resources/templates/widget-08.png",
+  "/resources/templates/widget-08.png",
+  "/resources/templates/widget-10.png",
+  "/resources/templates/widget-08.png",
+  "/resources/templates/widget-12.png",
+  "/resources/templates/widget-12.png",
+  "/resources/templates/widget-14.png",
+  "/resources/templates/widget-15.png",
+  "/resources/templates/widget-16.png",
+] as const;
 type PersistedSignWidget = Pick<
   SignWidget,
   | "id"
@@ -178,7 +197,7 @@ function mergeWidgetSources(primary: SignWidget[] | null, fallback: SignWidget[]
 
 function createDefaultWidgets() {
   const now = Date.now();
-  return [
+  const defaults = [
     {
       id: `widget-${now}`,
       templateUrl: "",
@@ -345,6 +364,10 @@ function createDefaultWidgets() {
       downloading: false,
     },
   ] satisfies SignWidget[];
+  return defaults.map((widget, index) => ({
+    ...widget,
+    templateUrl: HARD_LOCKED_TEMPLATE_URLS[index] ?? "",
+  }));
 }
 
 function parsePersistedWidgets(raw: string) {
@@ -387,6 +410,7 @@ function mergeWithDefaultWidgets(parsedWidgets: SignWidget[]) {
     return {
       ...defaultWidget,
       ...storedWidget,
+      templateUrl: defaultWidget.templateUrl,
       guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
       priceBottom: storedWidget.priceBottom ?? defaultWidget.priceBottom,
       priceTop: storedWidget.priceTop ?? defaultWidget.priceTop,
@@ -433,23 +457,7 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
 }
 
 function createInitialWidgets() {
-  const defaults = createDefaultWidgets();
-  if (typeof window === "undefined") {
-    return defaults;
-  }
-  try {
-    const raw = window.localStorage.getItem(SIGN_WIDGETS_STORAGE_KEY);
-    if (!raw) {
-      return defaults;
-    }
-    const parsedWidgets = parsePersistedWidgets(raw);
-    if (!parsedWidgets || parsedWidgets.length === 0) {
-      return defaults;
-    }
-    return mergeWithDefaultWidgets(parsedWidgets);
-  } catch {
-    return defaults;
-  }
+  return createDefaultWidgets();
 }
 
 function normalizeRole(value: string | null | undefined) {
@@ -880,6 +888,9 @@ export default function ResourcesPage() {
     );
   }, [defaultTemplateUrl]);
   useEffect(() => {
+    if (WIDGET_TEMPLATES_LOCKED) {
+      return;
+    }
     setWidgets((current) => {
       if (current.length < 2) {
         return current;
@@ -948,6 +959,10 @@ export default function ResourcesPage() {
   }, [widgets, user?.id, canAccess, hasLoadedRemoteWidgets]);
 
   function createWidget() {
+    if (WIDGET_TEMPLATES_LOCKED) {
+      setError("Templates are locked and cannot be added, changed, or deleted.");
+      return;
+    }
     setWidgets((current) => [
       ...current,
       {
@@ -1028,6 +1043,10 @@ export default function ResourcesPage() {
   async function handleWidgetTemplateUpload(widgetId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
+    if (WIDGET_TEMPLATES_LOCKED) {
+      setError("Templates are locked and cannot be added, changed, or deleted.");
+      return;
+    }
     if (!file || !supabase) {
       return;
     }
@@ -1091,6 +1110,10 @@ export default function ResourcesPage() {
     }
   }
   function handleRemoveWidgetTemplate(widgetId: string) {
+    if (WIDGET_TEMPLATES_LOCKED) {
+      setError("Templates are locked and cannot be added, changed, or deleted.");
+      return;
+    }
     setWidgets((current) =>
       current.map((widget) =>
         widget.id === widgetId ? { ...widget, templateUrl: "" } : widget
@@ -1920,52 +1943,6 @@ export default function ResourcesPage() {
       const widgetSixteenPriceTop = (widget.priceTop ?? "").trim();
       const hasWidgetSixteenPriceRange =
         isWidgetSixteen && widgetSixteenPriceBottom.length > 0 && widgetSixteenPriceTop.length > 0;
-      if (isWidgetSixteen) {
-        const widgetSixteenTopPriceOriginalText = "0.1€/h - 1.4€/h";
-        const widgetSixteenTopPriceText = "0.1€/h - 1€/h";
-        const widgetSixteenPixelsPerCm = 26;
-        const widgetSixteenTopPriceBaseFontSize = Math.max(18, Math.round(templateImage.height * 0.04));
-        const widgetSixteenTopPriceFontSize = Math.max(
-          9,
-          Math.round(widgetSixteenTopPriceBaseFontSize * 0.5)
-        );
-        const widgetSixteenTopPriceBaseY = Math.min(templateImage.height - 24, templateImage.height * 0.12 + 52);
-        const widgetSixteenTopPriceY = Math.max(
-          widgetSixteenTopPriceFontSize,
-          Math.round(widgetSixteenTopPriceBaseY - 5 * widgetSixteenPixelsPerCm)
-        );
-        context.save();
-        context.font = `900 ${widgetSixteenTopPriceFontSize}px Montserrat, Inter, Arial, sans-serif`;
-        const widgetSixteenTopPriceOriginalWidth = context.measureText(
-          widgetSixteenTopPriceOriginalText
-        ).width;
-        const widgetSixteenTopPriceTextWidth = context.measureText(widgetSixteenTopPriceText).width;
-        const widgetSixteenTopPriceBoxWidth = Math.max(
-          1,
-          Math.ceil((Math.max(widgetSixteenTopPriceOriginalWidth, widgetSixteenTopPriceTextWidth) + 12) * 1.2)
-        );
-        const widgetSixteenTopPriceBoxX = Math.round(width / 2 - widgetSixteenTopPriceBoxWidth / 2);
-        const widgetSixteenTopPriceBoxHeight = Math.max(
-          1,
-          Math.ceil(widgetSixteenTopPriceFontSize * 1.9 + 3 * widgetSixteenPixelsPerCm)
-        );
-        const widgetSixteenTopPriceBoxY = Math.max(
-          0,
-          Math.round(widgetSixteenTopPriceY - widgetSixteenTopPriceBoxHeight / 2)
-        );
-        context.fillStyle = "#ffffff";
-        context.fillRect(
-          widgetSixteenTopPriceBoxX,
-          widgetSixteenTopPriceBoxY,
-          widgetSixteenTopPriceBoxWidth,
-          Math.min(widgetSixteenTopPriceBoxHeight, height - widgetSixteenTopPriceBoxY)
-        );
-        context.fillStyle = "#111111";
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.fillText(widgetSixteenTopPriceText, width / 2, widgetSixteenTopPriceY);
-        context.restore();
-      }
       if (!resourceForSign) {
         throw new Error("Select a location before downloading sign.");
       }
@@ -2490,13 +2467,16 @@ export default function ResourcesPage() {
         {!loading && canAccess && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-white/75">Create as many sign widgets as you need.</p>
+              <p className="text-sm text-white/75">
+                Templates are now hardcoded and locked for all accounts.
+              </p>
               <button
                 type="button"
                 onClick={createWidget}
-                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-white/90 transition-colors"
+                disabled={WIDGET_TEMPLATES_LOCKED}
+                className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-white/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               >
-                + Upload New Photo
+                + Add Widget
               </button>
             </div>
             {widgets.map((widget, index) => {
@@ -2513,7 +2493,8 @@ export default function ResourcesPage() {
               const isWidgetTwelveLike =
                 isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
-              const isUploadLocked = isGuestParkingWidget || isWidgetNine || isWidgetEleven;
+              const isUploadLocked =
+                WIDGET_TEMPLATES_LOCKED || isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
@@ -2558,7 +2539,7 @@ export default function ResourcesPage() {
                             : "cursor-pointer bg-white text-black hover:bg-white/90"
                         }`}
                       >
-                        {widget.uploading ? "Uploading..." : "Upload Photo"}
+                        {isUploadLocked ? "Template Locked" : widget.uploading ? "Uploading..." : "Upload Photo"}
                         <input
                           type="file"
                           accept="image/*"

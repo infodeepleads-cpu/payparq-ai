@@ -227,7 +227,8 @@ export default function MembersPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const tokenHash = (params.get("token_hash") ?? "").trim();
-    if (!tokenHash) return;
+    const code = (params.get("code") ?? "").trim();
+    if (!tokenHash && !code) return;
     if (!supabase || !isSupabaseConfigured) {
       setAuthError("Members sign-in is not configured for this environment.");
       return;
@@ -244,13 +245,23 @@ export default function MembersPage() {
 
     const run = async () => {
       try {
-        const { data, error } = await client.auth.verifyOtp({
-          type: otpType === "recovery" ? "recovery" : "magiclink",
-          token_hash: tokenHash,
-        } as {
-          type: "magiclink" | "recovery";
-          token_hash: string;
-        });
+        let data: { user: User | null } | null = null;
+        let error: { message: string } | null = null;
+        if (tokenHash) {
+          const verifyResult = await client.auth.verifyOtp({
+            type: otpType === "recovery" ? "recovery" : "magiclink",
+            token_hash: tokenHash,
+          } as {
+            type: "magiclink" | "recovery";
+            token_hash: string;
+          });
+          data = verifyResult.data as { user: User | null } | null;
+          error = verifyResult.error ? { message: verifyResult.error.message } : null;
+        } else if (code) {
+          const exchangeResult = await client.auth.exchangeCodeForSession(code);
+          data = exchangeResult.data as { user: User | null } | null;
+          error = exchangeResult.error ? { message: exchangeResult.error.message } : null;
+        }
         if (cancelled) return;
         if (error) {
           setAuthError(formatOtpError(error.message));
@@ -261,7 +272,13 @@ export default function MembersPage() {
           setUser(data.user);
           void resolveIsAdmin(data.user);
         }
-        window.history.replaceState({}, "", safeNextPath);
+        const cleaned = new URL(window.location.href);
+        cleaned.searchParams.delete("token_hash");
+        cleaned.searchParams.delete("type");
+        cleaned.searchParams.delete("next");
+        cleaned.searchParams.delete("code");
+        const nextPath = safeNextPath || cleaned.pathname;
+        window.history.replaceState({}, "", `${nextPath}${cleaned.search}${cleaned.hash}`);
         setLoginNotice("");
       } finally {
         if (!cancelled) {
