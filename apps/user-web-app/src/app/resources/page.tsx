@@ -75,6 +75,7 @@ const RESOURCES_WIDGET_STATE_BUCKET = "location-verification";
 const RESOURCES_WIDGET_STATE_PATH_PREFIX = "resources/widget-state";
 const RESOURCES_WIDGET_STATE_SHARED_PATH = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/shared.json`;
 const WIDGET_TEMPLATES_LOCKED = true;
+const UNLOCKED_WIDGET_INDICES = [16, 17] as const;
 const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-01.png",
   "/resources/templates/widget-01.png",
@@ -92,6 +93,8 @@ const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-14.png",
   "/resources/templates/widget-15.png",
   "/resources/templates/widget-16.png",
+  "",
+  "",
 ] as const;
 type PersistedSignWidget = Pick<
   SignWidget,
@@ -363,6 +366,26 @@ function createDefaultWidgets() {
       uploading: false,
       downloading: false,
     },
+    {
+      id: `widget-${now}-17`,
+      templateUrl: "",
+      fileName: "Safe Parking 17",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
+    {
+      id: `widget-${now}-18`,
+      templateUrl: "",
+      fileName: "Safe Parking 18",
+      extraText: "",
+      guestParkingMinutes: "90",
+      selectedLocationId: "",
+      uploading: false,
+      downloading: false,
+    },
   ] satisfies SignWidget[];
   return defaults.map((widget, index) => ({
     ...widget,
@@ -458,6 +481,13 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
 
 function createInitialWidgets() {
   return createDefaultWidgets();
+}
+
+function isTemplateLockedForIndex(widgetIndex: number) {
+  if (!WIDGET_TEMPLATES_LOCKED) {
+    return false;
+  }
+  return !UNLOCKED_WIDGET_INDICES.includes(widgetIndex as (typeof UNLOCKED_WIDGET_INDICES)[number]);
 }
 
 function normalizeRole(value: string | null | undefined) {
@@ -1043,7 +1073,8 @@ export default function ResourcesPage() {
   async function handleWidgetTemplateUpload(widgetId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (WIDGET_TEMPLATES_LOCKED) {
+    const widgetIndex = widgets.findIndex((item) => item.id === widgetId);
+    if (widgetIndex < 0 || isTemplateLockedForIndex(widgetIndex)) {
       setError("Templates are locked and cannot be added, changed, or deleted.");
       return;
     }
@@ -1062,7 +1093,10 @@ export default function ResourcesPage() {
       // If file is very large or it's Widget 10, try to compress it to fit
       // Widget 12 and 14 stay at original dimensions for exact-size downloads
       const shouldCompressLargeFile =
-        file.size > 2 * 1024 * 1024 && !widgetId.endsWith("-12") && !widgetId.endsWith("-14");
+        file.size > 2 * 1024 * 1024 &&
+        !widgetId.endsWith("-12") &&
+        !widgetId.endsWith("-14") &&
+        !widgetId.endsWith("-17");
       if (shouldCompressLargeFile || widgetId.includes("-10")) {
         try {
           fileToUpload = await compressImage(file);
@@ -1110,7 +1144,8 @@ export default function ResourcesPage() {
     }
   }
   function handleRemoveWidgetTemplate(widgetId: string) {
-    if (WIDGET_TEMPLATES_LOCKED) {
+    const widgetIndex = widgets.findIndex((item) => item.id === widgetId);
+    if (widgetIndex < 0 || isTemplateLockedForIndex(widgetIndex)) {
       setError("Templates are locked and cannot be added, changed, or deleted.");
       return;
     }
@@ -1388,7 +1423,7 @@ export default function ResourcesPage() {
       };
       const width = 400;
       const height = 600;
-      const outputScale = 2;
+      const outputScale = widgetIndex === 16 ? 4 : 2;
       const buildQrDataUrl = async (value: string, width: number) => {
         const QRCodeModule = await import("qrcode");
         const qrModel = QRCodeModule.create(value, {
@@ -1462,6 +1497,10 @@ export default function ResourcesPage() {
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
         context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
+        if (widgetIndex === 16) {
+          await downloadCanvas(canvas);
+          return;
+        }
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
         const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
@@ -2494,7 +2533,7 @@ export default function ResourcesPage() {
                 isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
               const isUploadLocked =
-                WIDGET_TEMPLATES_LOCKED || isGuestParkingWidget || isWidgetNine || isWidgetEleven;
+                isTemplateLockedForIndex(index) || isGuestParkingWidget || isWidgetNine || isWidgetEleven;
               const isWidgetThreeOrFour = index === 2 || index === 3;
               const normalizedGuestParkingMinutes =
                 widget.guestParkingMinutes.replace(/\D+/g, "").replace(/^0+/, "") || "90";
