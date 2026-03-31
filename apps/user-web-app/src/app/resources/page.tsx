@@ -89,6 +89,93 @@ type PersistedSignWidget = Pick<
   | "userRole"
 >;
 
+function normalizeTemplateUrl(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) {
+    return "";
+  }
+  try {
+    const parsed = new URL(trimmed);
+    const pathname = parsed.pathname;
+    const bucket = RESOURCES_WIDGET_STATE_BUCKET;
+    const publicMarker = `/storage/v1/object/public/${bucket}/`;
+    if (pathname.includes(publicMarker)) {
+      return trimmed;
+    }
+    const markers = [
+      `/storage/v1/object/sign/${bucket}/`,
+      `/storage/v1/object/authenticated/${bucket}/`,
+      `/storage/v1/object/${bucket}/`,
+      `/storage/v1/render/image/sign/${bucket}/`,
+      `/storage/v1/render/image/public/${bucket}/`,
+    ];
+    for (const marker of markers) {
+      const markerIndex = pathname.indexOf(marker);
+      if (markerIndex === -1) {
+        continue;
+      }
+      const pathPart = pathname.slice(markerIndex + marker.length);
+      if (!pathPart) {
+        return trimmed;
+      }
+      return `${parsed.origin}${publicMarker}${decodeURIComponent(pathPart)}`;
+    }
+    return trimmed;
+  } catch {
+    if (trimmed.startsWith("resources/")) {
+      return supabase?.storage
+        .from(RESOURCES_WIDGET_STATE_BUCKET)
+        .getPublicUrl(trimmed).data.publicUrl || trimmed;
+    }
+    return trimmed;
+  }
+}
+
+function mergeWidgetSources(primary: SignWidget[] | null, fallback: SignWidget[] | null) {
+  if (!primary && !fallback) {
+    return { widgets: null, usedFallbackData: false };
+  }
+  if (!primary && fallback) {
+    return { widgets: fallback, usedFallbackData: true };
+  }
+  if (!primary) {
+    return { widgets: null, usedFallbackData: false };
+  }
+  if (!fallback) {
+    return { widgets: primary, usedFallbackData: false };
+  }
+  const maxLength = Math.max(primary.length, fallback.length);
+  let usedFallbackData = false;
+  const merged = Array.from({ length: maxLength }, (_, index) => {
+    const primaryWidget = primary[index];
+    const fallbackWidget = fallback[index];
+    if (!primaryWidget && fallbackWidget) {
+      usedFallbackData = true;
+      return fallbackWidget;
+    }
+    if (!primaryWidget) {
+      return fallbackWidget as SignWidget;
+    }
+    if (!fallbackWidget) {
+      return primaryWidget;
+    }
+    const primaryTemplateUrl = normalizeTemplateUrl(primaryWidget.templateUrl);
+    const fallbackTemplateUrl = normalizeTemplateUrl(fallbackWidget.templateUrl);
+    if (!primaryTemplateUrl && fallbackTemplateUrl) {
+      usedFallbackData = true;
+      return {
+        ...primaryWidget,
+        templateUrl: fallbackTemplateUrl,
+      };
+    }
+    return {
+      ...primaryWidget,
+      templateUrl: primaryTemplateUrl,
+    };
+  });
+  return { widgets: merged, usedFallbackData };
+}
+
 function createDefaultWidgets() {
   const now = Date.now();
   return [
@@ -272,7 +359,8 @@ function parsePersistedWidgets(raw: string) {
         : `widget-${Date.now()}-${index + 1}`;
     return {
       id,
-      templateUrl: typeof item?.templateUrl === "string" ? item.templateUrl : "",
+      templateUrl:
+        typeof item?.templateUrl === "string" ? normalizeTemplateUrl(item.templateUrl) : "",
       fileName: typeof item?.fileName === "string" ? item.fileName : `Safe Parking ${index + 1}`,
       extraText: typeof item?.extraText === "string" ? item.extraText : "",
       guestParkingMinutes:
@@ -539,27 +627,40 @@ export default function ResourcesPage() {
         const widgetStatePath = RESOURCES_WIDGET_STATE_SHARED_PATH;
         const legacyWidgetStatePath = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/${currentUser.id}.json`;
         try {
-          let remoteWidgetFile: Blob | null = null;
-          let loadedFromLegacyPath = false;
+          let sharedRemoteWidgetFile: Blob | null = null;
+          let legacyRemoteWidgetFile: Blob | null = null;
           const { data: sharedWidgetFile, error: sharedWidgetError } = await client.storage
             .from(RESOURCES_WIDGET_STATE_BUCKET)
             .download(widgetStatePath);
           if (!sharedWidgetError && sharedWidgetFile) {
-            remoteWidgetFile = sharedWidgetFile;
-          } else {
-            const { data: legacyWidgetFile, error: legacyWidgetError } = await client.storage
-              .from(RESOURCES_WIDGET_STATE_BUCKET)
-              .download(legacyWidgetStatePath);
-            if (!legacyWidgetError && legacyWidgetFile) {
-              remoteWidgetFile = legacyWidgetFile;
-              loadedFromLegacyPath = true;
-            }
+            sharedRemoteWidgetFile = sharedWidgetFile;
           }
-          if (!cancelled && remoteWidgetFile) {
-            const rawRemoteWidgets = await remoteWidgetFile.text();
-            const parsedRemoteWidgets = parsePersistedWidgets(rawRemoteWidgets);
-            if (parsedRemoteWidgets && parsedRemoteWidgets.length > 0) {
-              const mergedWidgets = mergeWithDefaultWidgets(parsedRemoteWidgets);
+          const { data: legacyWidgetFile, error: legacyWidgetError } = await client.storage
+            .from(RESOURCES_WIDGET_STATE_BUCKET)
+            .download(legacyWidgetStatePath);
+          if (!legacyWidgetError && legacyWidgetFile) {
+            legacyRemoteWidgetFile = legacyWidgetFile;
+          }
+          const sharedParsedWidgets = sharedRemoteWidgetFile
+            ? parsePersistedWidgets(await sharedRemoteWidgetFile.text())
+            : null;
+          const legacyParsedWidgets = legacyRemoteWidgetFile
+            ? parsePersistedWidgets(await legacyRemoteWidgetFile.text())
+            : null;
+          const sharedMergedWidgets =
+            sharedParsedWidgets && sharedParsedWidgets.length > 0
+              ? mergeWithDefaultWidgets(sharedParsedWidgets)
+              : null;
+          const legacyMergedWidgets =
+            legacyParsedWidgets && legacyParsedWidgets.length > 0
+              ? mergeWithDefaultWidgets(legacyParsedWidgets)
+              : null;
+          const { widgets: hydratedWidgets, usedFallbackData } = mergeWidgetSources(
+            sharedMergedWidgets,
+            legacyMergedWidgets
+          );
+          if (!cancelled && hydratedWidgets && hydratedWidgets.length > 0) {
+              const mergedWidgets = mergeWithDefaultWidgets(hydratedWidgets);
               const serializedWidgets = JSON.stringify(
                 serializeWidgetsForPersistence(mergedWidgets)
               );
@@ -568,7 +669,7 @@ export default function ResourcesPage() {
               if (typeof window !== "undefined") {
                 window.localStorage.setItem(SIGN_WIDGETS_STORAGE_KEY, serializedWidgets);
               }
-              if (loadedFromLegacyPath) {
+              if (!sharedRemoteWidgetFile || usedFallbackData) {
                 void client.storage
                   .from(RESOURCES_WIDGET_STATE_BUCKET)
                   .upload(
@@ -580,7 +681,6 @@ export default function ResourcesPage() {
                     }
                   );
               }
-            }
           }
         } finally {
           if (!cancelled) {
@@ -657,14 +757,14 @@ export default function ResourcesPage() {
             allowPromotionCodes,
             promotionCodeLabel,
             latestFineAmount: latestFineByLocation.get(row.id) ?? null,
-            locationTemplateUrl: resolveMetadataString(metadata, [
+            locationTemplateUrl: normalizeTemplateUrl(resolveMetadataString(metadata, [
               "location_template_url",
               "resource_template_url",
-            ]),
-            payableSignTemplateUrl: resolveMetadataString(metadata, [
+            ])),
+            payableSignTemplateUrl: normalizeTemplateUrl(resolveMetadataString(metadata, [
               "payable_sign_template_url",
               "private_notice_template_url",
-            ]),
+            ])),
             checkoutQrUrl: buildCheckoutQrUrl({
               locationId: row.id,
               displayId,
@@ -931,6 +1031,7 @@ export default function ResourcesPage() {
     if (!file || !supabase) {
       return;
     }
+    const previousTemplateUrl = widgets.find((item) => item.id === widgetId)?.templateUrl ?? "";
     setWidgets((current) =>
       current.map((widget) => (widget.id === widgetId ? { ...widget, uploading: true } : widget))
     );
@@ -955,6 +1056,15 @@ export default function ResourcesPage() {
         fileToUpload,
         `resources/payable-sign/${widgetId}-${Date.now()}-${safeName}`
       );
+      try {
+        await loadImage(uploadedUrl);
+      } catch {
+        if (previousTemplateUrl) {
+          setError("Uploaded file is not publicly readable. Keeping the previously working photo.");
+          return;
+        }
+        throw new Error("Uploaded file is not publicly readable. Check Supabase Storage bucket access.");
+      }
       setWidgets((current) => {
         const firstWidgetId = current[0]?.id ?? "";
         const secondWidgetId = current[1]?.id ?? "";
