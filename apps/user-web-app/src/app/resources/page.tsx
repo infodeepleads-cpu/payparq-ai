@@ -62,6 +62,7 @@ type SignWidget = {
   extraText: string;
   guestParkingMinutes: string;
   selectedLocationId: string;
+  fixedQrLocationId?: string;
   priceBottom?: string;
   priceTop?: string;
   uploading: boolean;
@@ -104,6 +105,7 @@ type PersistedSignWidget = Pick<
   | "extraText"
   | "guestParkingMinutes"
   | "selectedLocationId"
+  | "fixedQrLocationId"
   | "priceBottom"
   | "priceTop"
   | "userName"
@@ -412,6 +414,7 @@ function parsePersistedWidgets(raw: string) {
       guestParkingMinutes:
         typeof item?.guestParkingMinutes === "string" ? item.guestParkingMinutes : "90",
       selectedLocationId: typeof item?.selectedLocationId === "string" ? item.selectedLocationId : "",
+      fixedQrLocationId: typeof item?.fixedQrLocationId === "string" ? item.fixedQrLocationId : "",
       priceBottom: typeof item?.priceBottom === "string" ? item.priceBottom : "",
       priceTop: typeof item?.priceTop === "string" ? item.priceTop : "",
       userName: typeof item?.userName === "string" ? item.userName : undefined,
@@ -430,10 +433,14 @@ function mergeWithDefaultWidgets(parsedWidgets: SignWidget[]) {
     if (!storedWidget) {
       return defaultWidget;
     }
+    const resolvedTemplateUrl = isTemplateLockedForIndex(index)
+      ? defaultWidget.templateUrl
+      : storedWidget.templateUrl || defaultWidget.templateUrl;
     return {
       ...defaultWidget,
       ...storedWidget,
-      templateUrl: defaultWidget.templateUrl,
+      templateUrl: resolvedTemplateUrl,
+      fixedQrLocationId: storedWidget.fixedQrLocationId ?? "",
       guestParkingMinutes: storedWidget.guestParkingMinutes || defaultWidget.guestParkingMinutes,
       priceBottom: storedWidget.priceBottom ?? defaultWidget.priceBottom,
       priceTop: storedWidget.priceTop ?? defaultWidget.priceTop,
@@ -457,6 +464,7 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
       extraText,
       guestParkingMinutes,
       selectedLocationId,
+      fixedQrLocationId,
       priceBottom,
       priceTop,
       userName,
@@ -470,6 +478,7 @@ function serializeWidgetsForPersistence(widgets: SignWidget[]) {
         extraText,
         guestParkingMinutes,
         selectedLocationId,
+        fixedQrLocationId,
         priceBottom,
         priceTop,
         userName,
@@ -1213,12 +1222,14 @@ export default function ResourcesPage() {
     const isWidgetFourteen = widgetIndex === 13;
     const isWidgetFifteen = widgetIndex === 14;
     const isWidgetSixteen = widgetIndex === 15;
+    const isWidgetSeventeen = widgetIndex === 16;
     const isWidgetFourteenFamily = isWidgetFourteen || isWidgetSixteen;
     const isWidgetTwelveLike =
       isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
     const isWidgetTwelveBaseLike = isWidgetTwelve || isWidgetFifteen;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
-    const requiresLocationData = widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike;
+    const requiresLocationData =
+      widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike || isWidgetSeventeen;
     if (requiresLocationData && !resource) {
       setError("Select a location before downloading sign.");
       return;
@@ -1497,7 +1508,7 @@ export default function ResourcesPage() {
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
         context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
-        if (widgetIndex === 16) {
+        if (widgetIndex === 17) {
           await downloadCanvas(canvas);
           return;
         }
@@ -1585,7 +1596,13 @@ export default function ResourcesPage() {
         const clampedHeight = Math.max(1, Math.min(adjustedHeight, templateImage.height));
         const clampedX = Math.max(0, Math.min(adjustedX, templateImage.width - clampedWidth));
         const clampedY = Math.max(0, Math.min(adjustedY, templateImage.height - clampedHeight));
-        if (widgetIndex !== 7 && widgetIndex !== 8 && widgetIndex !== 9 && widgetIndex !== 10) {
+        if (
+          widgetIndex !== 7 &&
+          widgetIndex !== 8 &&
+          widgetIndex !== 9 &&
+          widgetIndex !== 10 &&
+          !isWidgetSeventeen
+        ) {
           context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         } else if (widgetIndex === 9) {
           // For Widget 10, place the QR code 1.4cm down and 2.7cm to the right from original spot
@@ -1598,6 +1615,81 @@ export default function ResourcesPage() {
           const qrWidth = qrTargetWidth * 0.9;
           const qrHeight = qrTargetHeight * 0.9;
           context.drawImage(qrImage, qrX, qrY, qrWidth, qrHeight);
+        }
+        if (isWidgetSeventeen) {
+          const fixedQrLocationId = (widget.fixedQrLocationId ?? "").trim() || resourceForSign?.id || "";
+          const fixedQrLocation =
+            sortedLocations.find((item) => item.id === fixedQrLocationId) ?? resourceForSign;
+          if (!fixedQrLocation) {
+            throw new Error("Select a location before downloading sign.");
+          }
+          const fixedCheckoutUrl = buildCheckoutQrUrl({
+            locationId: fixedQrLocation.id,
+            displayId: fixedQrLocation.displayId,
+            type: fixedQrLocation.pricingMode,
+            allowPromotionCodes: fixedQrLocation.allowPromotionCodes,
+            promotionCodeLabel: fixedQrLocation.promotionCodeLabel,
+          });
+          const { default: QRCodeStyling } = await import("qr-code-styling");
+          const topQrStyling = new QRCodeStyling({
+            width: 900,
+            height: 900,
+            type: "canvas",
+            data: fixedCheckoutUrl,
+            margin: 0,
+            dotsOptions: {
+              type: "dots",
+              color: "#000000",
+            },
+            cornersSquareOptions: {
+              type: "extra-rounded",
+              color: "#000000",
+            },
+            cornersDotOptions: {
+              type: "dot",
+              color: "#000000",
+            },
+            backgroundOptions: {
+              color: "#ffffff",
+            },
+            qrOptions: {
+              errorCorrectionLevel: "H",
+            },
+          });
+          const topQrRawData = await topQrStyling.getRawData("png");
+          if (!(topQrRawData instanceof Blob)) {
+            throw new Error("Unable to generate widget 17 top QR.");
+          }
+          const topQrObjectUrl = URL.createObjectURL(topQrRawData);
+          try {
+            const topQrImage = await loadImage(topQrObjectUrl);
+            const baseTopQrSize = Math.max(74, Math.round(clampedWidth * 0.92));
+            const topQrSize = Math.max(52, Math.round(baseTopQrSize * 0.77));
+            const topQrRightShiftPx = pxPerCm * 4.8;
+            const topQrX = Math.max(
+              0,
+              Math.min(
+                clampedX + (clampedWidth - topQrSize) / 2 + topQrRightShiftPx,
+                templateImage.width - topQrSize
+              )
+            );
+            const topQrDownShiftPx = pxPerCm * 4.8;
+            const topQrY = Math.max(
+              0,
+              Math.min(clampedY - topQrSize + topQrDownShiftPx, templateImage.height - topQrSize)
+            );
+            const idLabel = `ID ${fixedQrLocation.displayId}`;
+            context.fillStyle = "#ffffff";
+            context.fillRect(topQrX - 3, topQrY - 3, topQrSize + 6, topQrSize + 6);
+            context.drawImage(topQrImage, topQrX, topQrY, topQrSize, topQrSize);
+            context.fillStyle = "#111111";
+            context.textAlign = "center";
+            context.textBaseline = "alphabetic";
+            context.font = `700 ${Math.max(12, Math.round(templateImage.height * 0.026))}px Inter, Arial, sans-serif`;
+            context.fillText(idLabel, topQrX + topQrSize / 2, Math.max(16, topQrY - Math.round(pxPerCm * 0.38)));
+          } finally {
+            URL.revokeObjectURL(topQrObjectUrl);
+          }
         }
         if (shouldMatchWidget3Styling) {
           const stickerDiameter = pxPerCm * 1.52145;
@@ -2529,6 +2621,7 @@ export default function ResourcesPage() {
               const isWidgetFourteen = index === 13;
               const isWidgetFifteen = index === 14;
               const isWidgetSixteen = index === 15;
+              const isWidgetSeventeen = index === 16;
               const isWidgetTwelveLike =
                 isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
@@ -2610,6 +2703,8 @@ export default function ResourcesPage() {
                         ? "Widget 15 matches Widget 12 logic and output content, but exports with +10% width and same height."
                         : isWidgetSixteen
                         ? "Widget 16 matches Widget 14 output with an extended top header and side padding for price visibility, while preserving 2:1 ratio."
+                        : isWidgetSeventeen
+                        ? "Widget 17 adds a fixed-location top QR + location ID label above the existing QR and uses price range fields like Widget 16."
                         : isWidgetTwelve
                         ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
@@ -2650,7 +2745,14 @@ export default function ResourcesPage() {
                             setWidgets((current) =>
                               current.map((item) =>
                                 item.id === widget.id
-                                  ? { ...item, selectedLocationId: event.target.value }
+                                  ? {
+                                      ...item,
+                                      selectedLocationId: event.target.value,
+                                      fixedQrLocationId:
+                                        isWidgetSeventeen && !(item.fixedQrLocationId ?? "").trim()
+                                          ? event.target.value
+                                          : item.fixedQrLocationId,
+                                    }
                                   : item
                               )
                             )
@@ -2664,6 +2766,32 @@ export default function ResourcesPage() {
                           ))}
                         </select>
                       </label>
+                      {isWidgetSeventeen && (
+                        <label className="space-y-1 block">
+                          <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+                            Fixed QR location
+                          </span>
+                          <select
+                            value={widget.fixedQrLocationId || widget.selectedLocationId}
+                            onChange={(event) =>
+                              setWidgets((current) =>
+                                current.map((item) =>
+                                  item.id === widget.id
+                                    ? { ...item, fixedQrLocationId: event.target.value }
+                                    : item
+                                )
+                              )
+                            }
+                            className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+                          >
+                            {sortedLocations.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name} • {item.displayId}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       {selectedLocation && (
                         <div className="space-y-1 text-[11px] text-white/75">
                           <p>
@@ -2803,7 +2931,7 @@ export default function ResourcesPage() {
                           />
                         </label>
                       )}
-                      {isWidgetSixteen && (
+                      {(isWidgetSixteen || isWidgetSeventeen) && (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <label className="space-y-1 block">
                             <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
