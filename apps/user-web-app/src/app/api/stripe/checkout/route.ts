@@ -8,11 +8,27 @@ const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHE
 const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
 
 function resolveStripeSecretKey(): string | null {
-  const secret = (process.env.STRIPE_SECRET_KEY ?? '').trim();
-  if (!secret) return null;
-  if (!/^sk_(test|live)_/i.test(secret)) return null;
-  if (/your_stripe|replace_me|changeme|example/i.test(secret)) return null;
-  return secret;
+  const candidates = [
+    process.env.STRIPE_SECRET_KEY,
+    process.env.STRIPE_SECRET,
+    process.env.STRIPE_KEY,
+    process.env.STRIPE_API_SECRET,
+    process.env.STRIPE_PRIVATE_KEY,
+    process.env.STRIPE_LIVE_SECRET_KEY,
+    process.env.STRIPE_TEST_SECRET_KEY,
+    process.env.NEXT_PRIVATE_STRIPE_SECRET_KEY,
+    process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY,
+  ];
+  for (const rawValue of candidates) {
+    const secret = (rawValue ?? '')
+      .trim()
+      .replace(/^['"]+|['"]+$/g, '');
+    if (!secret) continue;
+    if (!/^sk_(test|live)_/i.test(secret)) continue;
+    if (/your_stripe|replace_me|changeme|example/i.test(secret)) continue;
+    return secret;
+  }
+  return null;
 }
 
 function buildSupabaseFunctionCheckoutUrl(params: {
@@ -22,6 +38,8 @@ function buildSupabaseFunctionCheckoutUrl(params: {
   pricingType: PricingType;
   checkIn?: string;
   checkOut?: string;
+  quantity?: number;
+  reservationDescription?: string;
   allowPromotionCodes: boolean;
   customerEmail?: string;
 }): string | null {
@@ -44,6 +62,14 @@ function buildSupabaseFunctionCheckoutUrl(params: {
   }
   if (params.checkOut) {
     url.searchParams.set('check_out', params.checkOut);
+  }
+  if (typeof params.quantity === 'number' && Number.isFinite(params.quantity) && params.quantity > 0) {
+    url.searchParams.set('quantity', String(Math.max(1, Math.ceil(params.quantity))));
+  }
+  const trimmedDescription = (params.reservationDescription ?? '').trim();
+  if (trimmedDescription) {
+    url.searchParams.set('description', trimmedDescription);
+    url.searchParams.set('reservation_description', trimmedDescription);
   }
   if (params.customerEmail) {
     url.searchParams.set('email', params.customerEmail);
@@ -196,6 +222,52 @@ function exceedsOneDayDuration(checkIn: string, checkOut: string): boolean {
   return end.getTime() - start.getTime() > 24 * 60 * 60 * 1000;
 }
 
+function formatCheckoutIso(iso: string): string {
+  if (!iso) return '';
+  try {
+    const parsed = new Date(iso);
+    if (!Number.isNaN(parsed.getTime())) {
+      return formatBerlinDateTime(parsed);
+    }
+    return iso;
+  } catch {
+    return iso;
+  }
+}
+
+function buildFallbackCheckoutDetails(params: {
+  flowType: string;
+  pricingType: PricingType;
+  checkIn: string;
+  checkOut: string;
+  displayId: string;
+}) {
+  const isParkTaxiFlow = params.flowType === 'park_now';
+  const isReserveDailyFlow = params.flowType === 'reserve' && params.pricingType === 'daily';
+  let quantity = 1;
+  let reservationDescription = '';
+  if (params.checkIn && params.checkOut) {
+    const start = new Date(params.checkIn);
+    const end = new Date(params.checkOut);
+    const diff = end.getTime() - start.getTime();
+    if (diff > 0) {
+      quantity = isParkTaxiFlow || isReserveDailyFlow
+        ? Math.ceil(diff / (1000 * 60 * 60 * 24))
+        : Math.ceil(diff / (1000 * 60 * 60));
+    }
+    reservationDescription = `From: ${formatCheckoutIso(params.checkIn)} To: ${formatCheckoutIso(params.checkOut)}`;
+    if (params.displayId) {
+      reservationDescription += `\nLocation ID: ${params.displayId}`;
+    }
+  } else if (isParkTaxiFlow) {
+    reservationDescription = `Start Time: ${formatBerlinDateTime(new Date())}`;
+    if (params.displayId) {
+      reservationDescription += `\nLocation ID: ${params.displayId}`;
+    }
+  }
+  return { quantity: Math.max(1, quantity), reservationDescription };
+}
+
 function buildSwitchCheckoutUrl(params: {
   baseUrl: string;
   locationId: string;
@@ -346,6 +418,12 @@ export async function POST(req: NextRequest) {
   const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
+  const shouldAutoFillHourlyWindow =
+    pricing_type === 'hourly' && flow_type === 'reserve' && !check_in && !check_out;
+  const effectiveCheckIn = shouldAutoFillHourlyWindow ? new Date().toISOString() : check_in;
+  const effectiveCheckOut = shouldAutoFillHourlyWindow
+    ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    : check_out;
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
     url.searchParams.get('allow_promotion_codes')
@@ -364,14 +442,23 @@ export async function POST(req: NextRequest) {
   }
   const secret = resolveStripeSecretKey();
   if (!secret) {
+    const fallbackCheckoutDetails = buildFallbackCheckoutDetails({
+      flowType: flow_type,
+      pricingType: pricing_type,
+      checkIn: effectiveCheckIn,
+      checkOut: effectiveCheckOut,
+      displayId: display_id,
+    });
     const fallbackUrl = location_id
       ? buildSupabaseFunctionCheckoutUrl({
           locationId: location_id,
           displayId: display_id || undefined,
           flowType: flow_type,
           pricingType: pricing_type,
-          checkIn: (body.check_in as string) || url.searchParams.get('in') || undefined,
-          checkOut: (body.check_out as string) || url.searchParams.get('out') || undefined,
+          checkIn: effectiveCheckIn || undefined,
+          checkOut: effectiveCheckOut || undefined,
+          quantity: fallbackCheckoutDetails.quantity,
+          reservationDescription: fallbackCheckoutDetails.reservationDescription,
           allowPromotionCodes,
           customerEmail: customer_email,
         })
@@ -439,7 +526,11 @@ export async function POST(req: NextRequest) {
   //   return NextResponse.json({ url: redirectUrl });
   // }
 
-  const parkTaxiWindowError = validateParkTaxiReservationWindow(flow_type, check_in, check_out);
+  const parkTaxiWindowError = validateParkTaxiReservationWindow(
+    flow_type,
+    effectiveCheckIn,
+    effectiveCheckOut
+  );
   if (parkTaxiWindowError) {
     return NextResponse.json({ error: parkTaxiWindowError }, { status: 400 });
   }
@@ -502,21 +593,21 @@ export async function POST(req: NextRequest) {
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
-  if (check_in && check_out) {
+  if (effectiveCheckIn && effectiveCheckOut) {
     if (isParkTaxiFlow) {
       const locationTitle = resolvedLocationName || 'Safe Parking by PayParq Split Airport/Trogir';
       const locationIdLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id || '—';
       const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
-      const firstRideTime = formatTimeShort(check_in) || '--:--';
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(check_in)} • Do ${formatIsoNoSeconds(check_out)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      const firstRideTime = formatTimeShort(effectiveCheckIn) || '--:--';
+      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(effectiveCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
     } else {
-      reservationDescription = `From: ${formatIso(check_in)} To: ${formatIso(check_out)}`;
+      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(effectiveCheckOut)}`;
       if (resolvedDisplayId || display_id) {
         reservationDescription += `\nLocation ID: ${resolvedDisplayId || display_id}`;
       }
     }
   }
-  const submitMessage = buildSubmitMessage({
+  const submitMessageBase = buildSubmitMessage({
     pricingType: pricing_type,
     baseUrl: url.origin,
     locationId: resolvedLocationId,
@@ -525,11 +616,14 @@ export async function POST(req: NextRequest) {
     customerEmail: customer_email,
     allowPromotionCodes,
   });
+  const submitMessage = reservationDescription
+    ? `${reservationDescription}\n${submitMessageBase}`
+    : submitMessageBase;
   const checkoutSuccessUrl = buildSuccessUrl({
     locationId: resolvedLocationId,
     displayId: resolvedDisplayId,
-    checkIn: check_in || undefined,
-    checkOut: check_out || undefined,
+    checkIn: effectiveCheckIn || undefined,
+    checkOut: effectiveCheckOut || undefined,
   });
   try {
     // Attempt to create session with SEPA and Card
@@ -608,8 +702,8 @@ export async function POST(req: NextRequest) {
         plate_number,
         flow_type,
         pricing_type,
-        check_in,
-        check_out,
+        check_in: effectiveCheckIn,
+        check_out: effectiveCheckOut,
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -619,8 +713,8 @@ export async function POST(req: NextRequest) {
           plate_number,
           flow_type,
           pricing_type,
-          check_in,
-          check_out,
+          check_in: effectiveCheckIn,
+          check_out: effectiveCheckOut,
         },
       },
     });
@@ -638,7 +732,17 @@ export async function GET(req: NextRequest) {
   const normalizedPricingType = normalizePricingType(url.searchParams.get('type'), flow_type);
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
-  const parkTaxiWindowError = validateParkTaxiReservationWindow(flow_type, check_in, check_out);
+  const shouldAutoFillHourlyWindow =
+    pricing_type === 'hourly' && flow_type === 'reserve' && !check_in && !check_out;
+  const effectiveCheckIn = shouldAutoFillHourlyWindow ? new Date().toISOString() : check_in;
+  const effectiveCheckOut = shouldAutoFillHourlyWindow
+    ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    : check_out;
+  const parkTaxiWindowError = validateParkTaxiReservationWindow(
+    flow_type,
+    effectiveCheckIn,
+    effectiveCheckOut
+  );
   if (parkTaxiWindowError) {
     return NextResponse.json({ error: parkTaxiWindowError }, { status: 400 });
   }
@@ -649,14 +753,23 @@ export async function GET(req: NextRequest) {
   const customer_email = url.searchParams.get('email') || undefined;
   const secret = resolveStripeSecretKey();
   if (!secret) {
+    const fallbackCheckoutDetails = buildFallbackCheckoutDetails({
+      flowType: flow_type,
+      pricingType: pricing_type,
+      checkIn: effectiveCheckIn,
+      checkOut: effectiveCheckOut,
+      displayId: display_id,
+    });
     const fallbackUrl = location_id
       ? buildSupabaseFunctionCheckoutUrl({
           locationId: location_id,
           displayId: display_id || undefined,
           flowType: flow_type,
           pricingType: pricing_type,
-          checkIn: check_in || undefined,
-          checkOut: check_out || undefined,
+          checkIn: effectiveCheckIn || undefined,
+          checkOut: effectiveCheckOut || undefined,
+          quantity: fallbackCheckoutDetails.quantity,
+          reservationDescription: fallbackCheckoutDetails.reservationDescription,
           allowPromotionCodes,
           customerEmail: customer_email,
         })
@@ -712,21 +825,84 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'missing_location_id' }, { status: 400 });
   }
 
+  const isParkTaxiFlow = flow_type === 'park_now';
+  const isReserveDailyFlow = flow_type === 'reserve' && pricing_type === 'daily';
+  let quantity = 1;
+  let reservationDescription = '';
+  const formatIso = (iso: string) => {
+    if (!iso) return '';
+    try {
+      const parsed = new Date(iso);
+      if (!Number.isNaN(parsed.getTime())) {
+        return formatBerlinDateTime(parsed);
+      }
+      return iso;
+    } catch {
+      return iso;
+    }
+  };
+  const formatIsoNoSeconds = (iso: string) => formatIso(iso).replace(/:(\d{2}) CET$/, ' CET');
+  const formatTimeShort = (iso: string) => {
+    const formatted = formatIso(iso);
+    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\sCET$/);
+    if (match) return `${match[1]}:${match[2]}`;
+    return '';
+  };
+  if (effectiveCheckIn && effectiveCheckOut) {
+    const start = new Date(effectiveCheckIn);
+    const end = new Date(effectiveCheckOut);
+    const diff = end.getTime() - start.getTime();
+    if (diff > 0) {
+      quantity = isParkTaxiFlow || isReserveDailyFlow
+        ? Math.ceil(diff / (1000 * 60 * 60 * 24))
+        : Math.ceil(diff / (1000 * 60 * 60));
+    }
+  } else if (isParkTaxiFlow) {
+    quantity = 1;
+    const nowFormatted = formatBerlinDateTime(new Date());
+    reservationDescription = `Start Time: ${nowFormatted}`;
+    if (display_id) {
+      reservationDescription += `\nLocation ID: ${display_id}`;
+    }
+    reservationDescription += `\n(End time depends on selected days)`;
+  }
   let unitAmount = 0;
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
+  let resolvedLocationName = '';
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
+    resolvedLocationName = pricingResolution.resolvedLocationName;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
-  const submitMessage = buildSubmitMessage({
+  const checkoutSuccessUrl = buildSuccessUrl({
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    checkIn: effectiveCheckIn || undefined,
+    checkOut: effectiveCheckOut || undefined,
+  });
+  if (effectiveCheckIn && effectiveCheckOut) {
+    if (isParkTaxiFlow) {
+      const locationTitle = resolvedLocationName || 'Safe Parking by PayParq Split Airport/Trogir';
+      const locationIdLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id || '—';
+      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const firstRideTime = formatTimeShort(effectiveCheckIn) || '--:--';
+      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(effectiveCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+    } else {
+      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(effectiveCheckOut)}`;
+      if (resolvedDisplayId || display_id) {
+        reservationDescription += `\nLocation ID: ${resolvedDisplayId || display_id}`;
+      }
+    }
+  }
+  const submitMessageBase = buildSubmitMessage({
     pricingType: pricing_type,
     baseUrl: url.origin,
     locationId: resolvedLocationId,
@@ -735,12 +911,9 @@ export async function GET(req: NextRequest) {
     customerEmail: customer_email,
     allowPromotionCodes,
   });
-  const checkoutSuccessUrl = buildSuccessUrl({
-    locationId: resolvedLocationId,
-    displayId: resolvedDisplayId,
-    checkIn: check_in || undefined,
-    checkOut: check_out || undefined,
-  });
+  const submitMessage = reservationDescription
+    ? `${reservationDescription}\n${submitMessageBase}`
+    : submitMessageBase;
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -755,15 +928,27 @@ export async function GET(req: NextRequest) {
             currency: 'eur',
             product_data: {
               name:
-                pricing_type === 'daily'
-                  ? 'Parking Session (Daily)'
+                isParkTaxiFlow
+                  ? quantity > 1
+                    ? `Park & Taxi Package (${quantity} Days)`
+                    : 'Park & Taxi Package (1 Day)'
+                  : pricing_type === 'daily'
+                  ? quantity > 1
+                    ? `Parking Session (${quantity} Days)`
+                    : 'Parking Session (1 Day)'
                   : pricing_type === 'monthly'
                     ? 'Parking Session (Monthly)'
-                    : 'Parking Session (Hourly)',
+                    : quantity > 1
+                        ? `Parking Session (${quantity} Hours)`
+                        : 'Parking Session (1 Hour)',
+              description: reservationDescription || undefined,
             },
             unit_amount: unitAmount,
           },
-          quantity: 1,
+          quantity,
+          adjustable_quantity: {
+            enabled: false,
+          },
         },
       ],
       custom_text: {
@@ -771,6 +956,14 @@ export async function GET(req: NextRequest) {
           message: submitMessage,
         },
       },
+      custom_fields: [
+        {
+          key: 'plate_number',
+          label: { type: 'custom', custom: 'License Plate Number (e.g. MA679XX)' },
+          type: 'text',
+          optional: false,
+        },
+      ],
       ...checkoutCustomerParams,
       metadata: {
         location_id: resolvedLocationId,
@@ -778,8 +971,8 @@ export async function GET(req: NextRequest) {
         plate_number,
         flow_type,
         pricing_type,
-        check_in,
-        check_out,
+        check_in: effectiveCheckIn,
+        check_out: effectiveCheckOut,
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -789,8 +982,8 @@ export async function GET(req: NextRequest) {
           plate_number,
           flow_type,
           pricing_type,
-          check_in,
-          check_out,
+          check_in: effectiveCheckIn,
+          check_out: effectiveCheckOut,
         },
       },
     });

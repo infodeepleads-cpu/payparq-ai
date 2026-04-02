@@ -76,7 +76,7 @@ const RESOURCES_WIDGET_STATE_BUCKET = "location-verification";
 const RESOURCES_WIDGET_STATE_PATH_PREFIX = "resources/widget-state";
 const RESOURCES_WIDGET_STATE_SHARED_PATH = `${RESOURCES_WIDGET_STATE_PATH_PREFIX}/shared.json`;
 const WIDGET_TEMPLATES_LOCKED = true;
-const UNLOCKED_WIDGET_INDICES = [16, 17] as const;
+const UNLOCKED_WIDGET_INDICES: readonly number[] = [];
 const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-01.png",
   "/resources/templates/widget-01.png",
@@ -94,8 +94,8 @@ const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-14.png",
   "/resources/templates/widget-15.png",
   "/resources/templates/widget-16.png",
-  "",
-  "",
+  "/resources/templates/widget-16.png",
+  "/resources/templates/widget-16.png",
 ] as const;
 type PersistedSignWidget = Pick<
   SignWidget,
@@ -496,7 +496,7 @@ function isTemplateLockedForIndex(widgetIndex: number) {
   if (!WIDGET_TEMPLATES_LOCKED) {
     return false;
   }
-  return !UNLOCKED_WIDGET_INDICES.includes(widgetIndex as (typeof UNLOCKED_WIDGET_INDICES)[number]);
+  return !UNLOCKED_WIDGET_INDICES.includes(widgetIndex);
 }
 
 function normalizeRole(value: string | null | undefined) {
@@ -535,25 +535,42 @@ function buildCheckoutQrUrl(params: {
   locationId: string;
   displayId: string;
   type: "hourly" | "daily";
+  price?: number | null;
   allowPromotionCodes?: boolean;
   promotionCodeLabel?: string;
+  useMobileScannerFormat?: boolean;
 }) {
-  const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
-    .trim()
-    .replace(/\/+$/, "");
   const query = new URLSearchParams({
-    loc: params.locationId,
     display_id: params.displayId,
-    flow: params.type === "daily" ? "reserve" : "park_now",
     type: params.type,
     t: Date.now().toString(),
   });
+  if (params.useMobileScannerFormat) {
+    query.set("location_id", params.locationId);
+  } else {
+    query.set("loc", params.locationId);
+    query.set("flow", "reserve");
+  }
+  if (typeof params.price === "number" && Number.isFinite(params.price) && params.price >= 0) {
+    query.set("price", params.price.toFixed(2));
+    query.set("amount", params.price.toFixed(2));
+    query.set("amount_cents", Math.round(params.price * 100).toString());
+  }
   const allowPromotionCodes = params.allowPromotionCodes !== false;
   if (allowPromotionCodes) {
     query.set("allow_promotion_codes", "1");
     const trimmedLabel = (params.promotionCodeLabel ?? "").trim();
     query.set("promotion_code_label", trimmedLabel || "FREE100");
   }
+  if (params.useMobileScannerFormat) {
+    const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://iafjygownkhedereaoxw.supabase.co")
+      .trim()
+      .replace(/\/+$/, "");
+    return `${supabaseBase}/functions/v1/create-checkout?${query.toString()}`;
+  }
+  const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
+    .trim()
+    .replace(/\/+$/, "");
   return `${appBase}/api/stripe/checkout?${query.toString()}`;
 }
 
@@ -1223,13 +1240,15 @@ export default function ResourcesPage() {
     const isWidgetFifteen = widgetIndex === 14;
     const isWidgetSixteen = widgetIndex === 15;
     const isWidgetSeventeen = widgetIndex === 16;
+    const isWidgetEighteen = widgetIndex === 17;
+    const isFixedTopQrWidget = isWidgetSeventeen || isWidgetEighteen;
     const isWidgetFourteenFamily = isWidgetFourteen || isWidgetSixteen;
     const isWidgetTwelveLike =
       isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
     const isWidgetTwelveBaseLike = isWidgetTwelve || isWidgetFifteen;
     const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
     const requiresLocationData =
-      widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike || isWidgetSeventeen;
+      widgetIndex < 2 || isGuestParkingWidget || isWidgetTwelveLike || isFixedTopQrWidget;
     if (requiresLocationData && !resource) {
       setError("Select a location before downloading sign.");
       return;
@@ -1434,7 +1453,7 @@ export default function ResourcesPage() {
       };
       const width = 400;
       const height = 600;
-      const outputScale = widgetIndex === 16 ? 4 : 2;
+      const outputScale = isFixedTopQrWidget ? 4 : 2;
       const buildQrDataUrl = async (value: string, width: number) => {
         const QRCodeModule = await import("qrcode");
         const qrModel = QRCodeModule.create(value, {
@@ -1508,10 +1527,6 @@ export default function ResourcesPage() {
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
         context.drawImage(templateImage, 0, 0, templateImage.width, templateImage.height);
-        if (widgetIndex === 17) {
-          await downloadCanvas(canvas);
-          return;
-        }
         let qrObjectUrl = "";
         let qrImage: HTMLImageElement;
         const shouldMatchWidget3Styling = widgetIndex === 2 || widgetIndex === 3;
@@ -1601,7 +1616,7 @@ export default function ResourcesPage() {
           widgetIndex !== 8 &&
           widgetIndex !== 9 &&
           widgetIndex !== 10 &&
-          !isWidgetSeventeen
+          !isFixedTopQrWidget
         ) {
           context.drawImage(qrImage, clampedX, clampedY, clampedWidth, clampedHeight);
         } else if (widgetIndex === 9) {
@@ -1616,7 +1631,7 @@ export default function ResourcesPage() {
           const qrHeight = qrTargetHeight * 0.9;
           context.drawImage(qrImage, qrX, qrY, qrWidth, qrHeight);
         }
-        if (isWidgetSeventeen) {
+        if (isFixedTopQrWidget) {
           const fixedQrLocationId = (widget.fixedQrLocationId ?? "").trim() || resourceForSign?.id || "";
           const fixedQrLocation =
             sortedLocations.find((item) => item.id === fixedQrLocationId) ?? resourceForSign;
@@ -1629,6 +1644,7 @@ export default function ResourcesPage() {
             type: fixedQrLocation.pricingMode,
             allowPromotionCodes: fixedQrLocation.allowPromotionCodes,
             promotionCodeLabel: fixedQrLocation.promotionCodeLabel,
+            useMobileScannerFormat: true,
           });
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const topQrStyling = new QRCodeStyling({
@@ -1658,7 +1674,7 @@ export default function ResourcesPage() {
           });
           const topQrRawData = await topQrStyling.getRawData("png");
           if (!(topQrRawData instanceof Blob)) {
-            throw new Error("Unable to generate widget 17 top QR.");
+            throw new Error("Unable to generate top QR.");
           }
           const topQrObjectUrl = URL.createObjectURL(topQrRawData);
           try {
@@ -1682,6 +1698,14 @@ export default function ResourcesPage() {
             context.fillStyle = "#ffffff";
             context.fillRect(topQrX - 3, topQrY - 3, topQrSize + 6, topQrSize + 6);
             context.drawImage(topQrImage, topQrX, topQrY, topQrSize, topQrSize);
+            const topQrCenterX = topQrX + topQrSize / 2;
+            const topQrCenterY = topQrY + topQrSize / 2;
+            const topQrBadgeDiameter = Math.max(18, topQrSize * 0.28);
+            context.beginPath();
+            context.arc(topQrCenterX, topQrCenterY, topQrBadgeDiameter / 2, 0, Math.PI * 2);
+            context.fillStyle = "#ffffff";
+            context.fill();
+            drawPayparqSticker(context, topQrCenterX, topQrCenterY, topQrBadgeDiameter);
             context.fillStyle = "#111111";
             context.textAlign = "center";
             context.textBaseline = "alphabetic";
@@ -2083,6 +2107,7 @@ export default function ResourcesPage() {
         type: resourceForSign.pricingMode,
         allowPromotionCodes: resourceForSign.allowPromotionCodes,
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
+        useMobileScannerFormat: isWidgetSixteen || isWidgetSeventeen,
       });
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;
@@ -2622,6 +2647,8 @@ export default function ResourcesPage() {
               const isWidgetFifteen = index === 14;
               const isWidgetSixteen = index === 15;
               const isWidgetSeventeen = index === 16;
+              const isWidgetEighteen = index === 17;
+              const isFixedTopQrWidget = isWidgetSeventeen || isWidgetEighteen;
               const isWidgetTwelveLike =
                 isWidgetTwelve || isWidgetFourteen || isWidgetFifteen || isWidgetSixteen;
               const isGuestParkingWidget = isWidgetFive || isWidgetSix || isWidgetSeven;
@@ -2687,7 +2714,11 @@ export default function ResourcesPage() {
                       This widget is optimized for high-resolution images. Large files will be compressed to fit automatically.
                     </p>
                   )}
-                  {(isGuestParkingWidget || isWidgetNine || isWidgetEleven || isWidgetTwelveLike) && (
+                      {(isGuestParkingWidget ||
+                        isWidgetNine ||
+                        isWidgetEleven ||
+                        isWidgetTwelveLike ||
+                        isFixedTopQrWidget) && (
                     <p className="text-[11px] text-white/65">
                       {isWidgetFive
                         ? "Widget 5 always uses Widget 2 template for the final output."
@@ -2705,6 +2736,8 @@ export default function ResourcesPage() {
                         ? "Widget 16 matches Widget 14 output with an extended top header and side padding for price visibility, while preserving 2:1 ratio."
                         : isWidgetSeventeen
                         ? "Widget 17 adds a fixed-location top QR + location ID label above the existing QR and uses price range fields like Widget 16."
+                        : isWidgetEighteen
+                        ? "Widget 18 matches Widget 17 QR placement and adds a fixed-location top QR + location ID label."
                         : isWidgetTwelve
                         ? "Widget 12 uses its own uploaded photo, keeps location ID + QR + HR/ENG footer, and has no top title."
                         : "Widget 9 always uses Widget 8 template for the final output."}
@@ -2749,7 +2782,7 @@ export default function ResourcesPage() {
                                       ...item,
                                       selectedLocationId: event.target.value,
                                       fixedQrLocationId:
-                                        isWidgetSeventeen && !(item.fixedQrLocationId ?? "").trim()
+                                        isFixedTopQrWidget && !(item.fixedQrLocationId ?? "").trim()
                                           ? event.target.value
                                           : item.fixedQrLocationId,
                                     }
@@ -2766,7 +2799,7 @@ export default function ResourcesPage() {
                           ))}
                         </select>
                       </label>
-                      {isWidgetSeventeen && (
+                      {isFixedTopQrWidget && (
                         <label className="space-y-1 block">
                           <span className="text-[11px] uppercase tracking-[0.16em] text-white/60">
                             Fixed QR location
