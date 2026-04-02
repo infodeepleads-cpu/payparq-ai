@@ -909,6 +909,21 @@ serve(async (req: Request) => {
     const checkOut = String(
       body["check_out"] ?? url.searchParams.get("check_out") ?? "",
     ).trim();
+    const reservationDescriptionOverride = String(
+      body["reservation_description"] ??
+        body["description"] ??
+        url.searchParams.get("reservation_description") ??
+        url.searchParams.get("description") ??
+        "",
+    ).trim();
+    const quantityOverrideRaw = String(
+      body["quantity"] ?? url.searchParams.get("quantity") ?? "",
+    ).trim();
+    const quantityOverrideParsed = Number.parseInt(quantityOverrideRaw, 10);
+    const quantityOverride =
+      Number.isFinite(quantityOverrideParsed) && quantityOverrideParsed > 0
+        ? quantityOverrideParsed
+        : null;
     const parsedActivationAt = checkIn ? new Date(checkIn) : null;
     const activationAt = parsedActivationAt && !Number.isNaN(parsedActivationAt.getTime())
       ? parsedActivationAt.toISOString()
@@ -1016,6 +1031,19 @@ serve(async (req: Request) => {
       if (!iso) return "";
       return parseDateInput(iso).display;
     };
+    const formatIsoNoSeconds = (iso: string): string => {
+      const withSeconds = formatIso(iso);
+      if (!withSeconds) return "";
+      return withSeconds.replace(/:(\d{2}) CET$/, " CET");
+    };
+    const formatTimeShort = (iso: string): string => {
+      const formatted = formatIso(iso);
+      const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\sCET$/);
+      if (match) {
+        return `${match[1]}:${match[2]}`;
+      }
+      return "";
+    };
 
     let reservationDescription = "";
 
@@ -1041,10 +1069,28 @@ serve(async (req: Request) => {
       if (unitAmountCents < 50) unitAmountCents = 50;
     }
     if (isReservationFlow && hasReservationWindow) {
-      const formattedCheckIn = formatIso(checkIn);
-      const formattedCheckOut = formatIso(checkOut);
-      reservationDescription = `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${(unitAmountCents / 100).toFixed(2)}`;
+      if (parkTaxiRequested) {
+        const parkTaxiLocationTitle = (locData?.name ?? "").toString().trim() || "Safe Parking by PayParq Split Airport/Trogir";
+        const formattedCheckIn = formatIsoNoSeconds(checkIn);
+        const formattedCheckOut = formatIsoNoSeconds(checkOut);
+        const startMs = parsedCheckIn.epochMs;
+        const endMs = parsedCheckOut.epochMs;
+        const dayDiff = startMs != null && endMs != null ? endMs - startMs : Number.NaN;
+        const parkTaxiDays = Number.isFinite(dayDiff) && dayDiff > 0
+          ? Math.max(1, Math.ceil(dayDiff / (1000 * 60 * 60 * 24)))
+          : 1;
+        const firstRideTime = formatTimeShort(checkIn) || "--:--";
+        reservationDescription = `${parkTaxiLocationTitle} • ID ${displayId} • Od ${formattedCheckIn} • Do ${formattedCheckOut} • Ukupno €${(unitAmountCents / 100).toFixed(2)} • Prva vožnja ${firstRideTime} • Uključeno ${parkTaxiDays} ${parkTaxiDays === 1 ? "dan" : "dana"} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      } else {
+        const formattedCheckIn = formatIso(checkIn);
+        const formattedCheckOut = formatIso(checkOut);
+        reservationDescription = `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${(unitAmountCents / 100).toFixed(2)}`;
+      }
     }
+    if (reservationDescriptionOverride.length > 0) {
+      reservationDescription = reservationDescriptionOverride;
+    }
+    const displayQuantity = quantityOverride ?? quantity;
     const checkoutQuantity = isReservationFlow ? 1 : quantity;
     const derivedCheckInIso = checkIn || now.toISOString();
     let derivedCheckOutIso = checkOut;
@@ -1123,6 +1169,13 @@ serve(async (req: Request) => {
     }
     const dailyHourlyCtaMessage = `${checkoutText.needHourly} [${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
     const hourlyDailyCtaMessage = `${checkoutText.needDaily} [${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
+    const submitMessageBase = type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage;
+    const reservationSubmitMessage = isReservationFlow
+      ? [reservationDescription, `Qty: ${displayQuantity}`].filter((part) => part && part.length > 0).join("\n")
+      : "";
+    const submitMessage = reservationSubmitMessage
+      ? `${reservationSubmitMessage}\n${submitMessageBase}`
+      : submitMessageBase;
     const nonReservationDescriptionBase =
       `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}`;
     const nonReservationDescription = parkTaxiRequested
@@ -1175,7 +1228,7 @@ serve(async (req: Request) => {
         ...((type === "daily" || type === "hourly")
           ? {
             submit: {
-              message: type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage,
+              message: submitMessage,
             },
           }
           : {}),
