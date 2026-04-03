@@ -94,8 +94,8 @@ const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-14.png",
   "/resources/templates/widget-15.png",
   "/resources/templates/widget-16.png",
-  "/resources/templates/widget-16.png",
-  "/resources/templates/widget-16.png",
+  "",
+  "",
 ] as const;
 type PersistedSignWidget = Pick<
   SignWidget,
@@ -433,8 +433,9 @@ function mergeWithDefaultWidgets(parsedWidgets: SignWidget[]) {
     if (!storedWidget) {
       return defaultWidget;
     }
-    const resolvedTemplateUrl = isTemplateLockedForIndex(index)
-      ? defaultWidget.templateUrl
+    const isLocked = isTemplateLockedForIndex(index);
+    const resolvedTemplateUrl = isLocked
+      ? defaultWidget.templateUrl || storedWidget.templateUrl
       : storedWidget.templateUrl || defaultWidget.templateUrl;
     return {
       ...defaultWidget,

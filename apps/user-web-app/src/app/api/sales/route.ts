@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const source = (formData.get("source") || "").toString().trim().toLowerCase() || "discover_how";
+    const isInsuranceApply = source === "insurance_apply";
     const firstName = (formData.get("first_name") || "").toString().trim();
     const lastName = (formData.get("last_name") || "").toString().trim();
     const workEmail = (formData.get("work_email") || "").toString().trim();
@@ -26,9 +28,19 @@ export async function POST(req: NextRequest) {
     const company = (formData.get("company") || "").toString().trim();
     const locations = (formData.get("locations") || "").toString().trim();
     const exploreSelections = formData.getAll("explore").map((value) => value.toString());
+    const licensePlate = (formData.get("license_plate") || "").toString().trim();
+    const vehicleMakeModel = (formData.get("vehicle_make_model") || "").toString().trim();
+    const vehicleYear = (formData.get("vehicle_year") || "").toString().trim();
+    const locationName = (formData.get("location_name") || "").toString().trim();
+    const coverageType = (formData.get("coverage_type") || "").toString().trim();
+    const notes = (formData.get("notes") || "").toString().trim();
     const mobilePhonePattern = /^\+?[0-9()\-\s]{7,20}$/;
 
-    if (!firstName || !lastName || !workEmail || !company || !mobilePhone) {
+    const hasRequiredSalesFields = !!firstName && !!lastName && !!workEmail && !!company && !!mobilePhone;
+    const hasRequiredInsuranceFields =
+      !!firstName && !!lastName && !!workEmail && !!mobilePhone && !!licensePlate && !!vehicleMakeModel;
+
+    if ((isInsuranceApply && !hasRequiredInsuranceFields) || (!isInsuranceApply && !hasRequiredSalesFields)) {
       return NextResponse.json(
         { error: "Missing required fields." },
         { status: 400 }
@@ -43,8 +55,20 @@ export async function POST(req: NextRequest) {
 
     const exploreSummary =
       exploreSelections.length > 0 ? exploreSelections.join(", ") : null;
+    const insuranceDetailParts = [
+      `Registracija: ${licensePlate || "Nije uneseno"}`,
+      `Vozilo: ${vehicleMakeModel || "Nije uneseno"}`,
+      `Godina vozila: ${vehicleYear || "Nije uneseno"}`,
+      `Lokacija: ${locationName || "Nije uneseno"}`,
+      `Vrsta pokrića: ${coverageType || "Nije odabrano"}`,
+      `Napomena: ${notes || "Nema napomene"}`,
+    ];
+    const insuranceSummary = insuranceDetailParts.join(" | ");
+    const dbCompany = isInsuranceApply ? `Insurance | ${vehicleMakeModel || "Vehicle not provided"}` : company;
+    const dbLocations = isInsuranceApply ? locationName || "Not provided" : locations;
+    const dbExploreOptions = isInsuranceApply ? insuranceSummary : exploreSummary;
+    const dbSource = isInsuranceApply ? "insurance_apply" : "discover_how";
 
-    // 1. Save to Supabase
     const client = supabaseAdmin ?? supabase;
     if (client) {
       const { error: insertError } = await client
@@ -53,10 +77,10 @@ export async function POST(req: NextRequest) {
           first_name: firstName,
           last_name: lastName,
           work_email: workEmail,
-          company,
-          locations,
-          explore_options: exploreSummary,
-          source: "discover_how",
+          company: dbCompany,
+          locations: dbLocations,
+          explore_options: dbExploreOptions,
+          source: dbSource,
         });
       if (insertError) {
         console.error("Error inserting sales request into Supabase:", insertError);
@@ -83,76 +107,117 @@ export async function POST(req: NextRequest) {
 
     const submittedAt = new Date().toISOString();
 
-    const summaryLines = [
-      `New "Talk to Sales" request from Discover How page`,
-      "",
-      `Submitted at (UTC): ${submittedAt}`,
-      `First name: ${firstName}`,
-      `Last name: ${lastName}`,
-      `Work email: ${workEmail}`,
-      `Mobile phone: ${mobilePhone}`,
-      `Company: ${company}`,
-      `Locations: ${locations || "Not provided"}`,
-      `Explore options: ${exploreSummary || "No specific options selected"}`,
-    ];
+    const summaryLines = isInsuranceApply
+      ? [
+          `New insurance application request from Members`,
+          "",
+          `Submitted at (UTC): ${submittedAt}`,
+          `First name: ${firstName}`,
+          `Last name: ${lastName}`,
+          `Work email: ${workEmail}`,
+          `Mobile phone: ${mobilePhone}`,
+          `License plate: ${licensePlate}`,
+          `Vehicle make/model: ${vehicleMakeModel}`,
+          `Vehicle year: ${vehicleYear || "Not provided"}`,
+          `Location: ${locationName || "Not provided"}`,
+          `Coverage type: ${coverageType || "Not selected"}`,
+          `Notes: ${notes || "No additional notes"}`,
+        ]
+      : [
+          `New "Talk to Sales" request from Discover How page`,
+          "",
+          `Submitted at (UTC): ${submittedAt}`,
+          `First name: ${firstName}`,
+          `Last name: ${lastName}`,
+          `Work email: ${workEmail}`,
+          `Mobile phone: ${mobilePhone}`,
+          `Company: ${company}`,
+          `Locations: ${locations || "Not provided"}`,
+          `Explore options: ${exploreSummary || "No specific options selected"}`,
+        ];
 
-    const confirmationLines = [
-      `Hi ${firstName},`,
-      "",
-      "Thanks for reaching out to Payparq.",
-      "Your request has been received and a member of our team will follow up",
-      "by the next business day, Monday through Saturday.",
-      "",
-      "We received the following details:",
-      `- First name: ${firstName}`,
-      `- Last name: ${lastName}`,
-      `- Work email: ${workEmail}`,
-      `- Mobile phone: ${mobilePhone}`,
-      `- Company: ${company}`,
-      `- Locations: ${locations || "Not provided"}`,
-      `- Explore options: ${exploreSummary || "No specific options selected"}`,
-      "",
-      "If you have any additional context to share before then, you can reply",
-      "directly to this email.",
-      "",
-      "Best,",
-      "The Payparq Team",
-    ];
+    const confirmationLines = isInsuranceApply
+      ? [
+          `Hi ${firstName},`,
+          "",
+          "Thanks for submitting your insurance application request with Payparq.",
+          "Your request has been received and our team will follow up by email.",
+          "",
+          "We received the following details:",
+          `- First name: ${firstName}`,
+          `- Last name: ${lastName}`,
+          `- Work email: ${workEmail}`,
+          `- Mobile phone: ${mobilePhone}`,
+          `- License plate: ${licensePlate}`,
+          `- Vehicle make/model: ${vehicleMakeModel}`,
+          `- Vehicle year: ${vehicleYear || "Not provided"}`,
+          `- Location: ${locationName || "Not provided"}`,
+          `- Coverage type: ${coverageType || "Not selected"}`,
+          `- Notes: ${notes || "No additional notes"}`,
+          "",
+          "Best,",
+          "The Payparq Team",
+        ]
+      : [
+          `Hi ${firstName},`,
+          "",
+          "Thanks for reaching out to Payparq.",
+          "Your request has been received and a member of our team will follow up",
+          "by the next business day, Monday through Saturday.",
+          "",
+          "We received the following details:",
+          `- First name: ${firstName}`,
+          `- Last name: ${lastName}`,
+          `- Work email: ${workEmail}`,
+          `- Mobile phone: ${mobilePhone}`,
+          `- Company: ${company}`,
+          `- Locations: ${locations || "Not provided"}`,
+          `- Explore options: ${exploreSummary || "No specific options selected"}`,
+          "",
+          "If you have any additional context to share before then, you can reply",
+          "directly to this email.",
+          "",
+          "Best,",
+          "The Payparq Team",
+        ];
+    const adminSubject = isInsuranceApply ? "New Payparq insurance application request" : "New Payparq sales request";
+    const confirmationSubject = isInsuranceApply
+      ? "We received your Payparq insurance application"
+      : "We received your Payparq request";
 
     if (resendApiKey) {
       console.log("Using Resend for email sending...");
       const resend = new Resend(resendApiKey);
       try {
-        // Admin notification
-        for (const recipient of adminRecipients) {
+        const adminTasks = adminRecipients.map(async (recipient) => {
           const adminSend = await resend.emails.send({
             from: fromEmail,
             to: recipient,
             replyTo: workEmail,
-            subject: "New Payparq sales request",
+            subject: adminSubject,
             text: summaryLines.join("\n"),
           });
           console.log("Admin email sent via Resend.", recipient, adminSend.data?.id ?? "no-id");
-        }
-
-        // Confirmation to user
-        if (workEmail) {
-          const confirmationSend = await resend.emails.send({
-            from: fromEmail,
-            to: workEmail,
-            subject: "We received your Payparq request",
-            text: confirmationLines.join("\n"),
-          });
+        });
+        const confirmationTask = workEmail
+          ? resend.emails.send({
+              from: fromEmail,
+              to: workEmail,
+              subject: confirmationSubject,
+              text: confirmationLines.join("\n"),
+            })
+          : null;
+        await Promise.all([...adminTasks, confirmationTask ?? Promise.resolve(null)]);
+        if (confirmationTask) {
+          const confirmationSend = await confirmationTask;
           console.log("Confirmation email sent via Resend.", confirmationSend.data?.id ?? "no-id");
         }
         return NextResponse.json({ success: true });
       } catch (err) {
         console.error("Resend error:", err);
-        // Fallback or error
       }
     }
 
-    // Fallback to Nodemailer if SMTP is configured
     const smtpHost = process.env.EMAIL_SERVER_HOST;
     const smtpPort = process.env.EMAIL_SERVER_PORT;
     const smtpUser = process.env.EMAIL_SERVER_USER;
@@ -171,24 +236,24 @@ export async function POST(req: NextRequest) {
       });
 
       try {
-        // Admin notification
-        await transporter.sendMail({
+        const adminTask = transporter.sendMail({
           from: fromEmail,
           to: adminRecipients,
           replyTo: workEmail,
-          subject: "New Payparq sales request",
+          subject: adminSubject,
           text: summaryLines.join("\n"),
         });
+        const confirmationTask = workEmail
+          ? transporter.sendMail({
+              from: fromEmail,
+              to: workEmail,
+              subject: confirmationSubject,
+              text: confirmationLines.join("\n"),
+            })
+          : null;
+        await Promise.all([adminTask, confirmationTask ?? Promise.resolve(null)]);
         console.log("Admin email sent via SMTP.");
-
-        // Confirmation to user
-        if (workEmail) {
-          await transporter.sendMail({
-            from: fromEmail,
-            to: workEmail,
-            subject: "We received your Payparq request",
-            text: confirmationLines.join("\n"),
-          });
+        if (confirmationTask) {
           console.log("Confirmation email sent via SMTP.");
         }
         return NextResponse.json({ success: true });

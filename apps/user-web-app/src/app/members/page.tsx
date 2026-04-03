@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useCallback } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
@@ -19,10 +19,13 @@ type NavItemId =
   | "rewards"
   | "help";
 type FlowType = "park_now" | "monthly" | "reserve";
+type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
+type ActionProcessing = FlowType | HomeWidgetId;
 type ActivityRow = {
   id: string;
   created_at?: string | null;
   location_id?: string | null;
+  location_display_id?: string | null;
   plate?: string | null;
   price?: number | null;
   currency?: string | null;
@@ -30,6 +33,21 @@ type ActivityRow = {
   status?: string | null;
   entry_time?: string | null;
   exit_time?: string | null;
+};
+type MembersHomeContext = {
+  sessionId: string;
+  locationId: string | null;
+  locationDisplayId?: string | null;
+  locationName: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  stripeSessionId: string | null;
+  amount: number | null;
+  currency: string | null;
+  insuranceUrl: string | null;
+  rideUrl: string | null;
+  invoiceAvailable: boolean;
+  parkTaxiIncluded: boolean;
 };
 
 function normalizeRole(value: unknown) {
@@ -69,8 +87,8 @@ export default function MembersPage() {
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
-  const [actionLocation, setActionLocation] = useState("");
-  const [actionProcessing, setActionProcessing] = useState<FlowType | null>(null);
+  const [actionLocation] = useState("");
+  const [actionProcessing, setActionProcessing] = useState<ActionProcessing | null>(null);
   const [actionError, setActionError] = useState("");
   const [activityFavorite, setActivityFavorite] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -84,8 +102,12 @@ export default function MembersPage() {
   const displayEmail =
     user?.email || (devSignedIn ? "dev@local.test" : "Unknown email");
 
-  const [homeFlow, setHomeFlow] = useState<"park_now" | "monthly" | "reserve">("park_now");
-  const [homeOpen, setHomeOpen] = useState(true);
+  const [homeContext, setHomeContext] = useState<MembersHomeContext | null>(null);
+  const [homeContextLoading, setHomeContextLoading] = useState(false);
+  const [homeFeedback, setHomeFeedback] = useState<
+    Partial<Record<HomeWidgetId, { type: "success" | "error"; text: string }>>
+  >({});
+  const [extendMinutes, setExtendMinutes] = useState("120");
 
   const isSignedIn = !!user || devSignedIn;
   const isEmailVerified = devSignedIn || Boolean((user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at);
@@ -303,14 +325,7 @@ export default function MembersPage() {
     }
     if (
       tab === "home" ||
-      tab === "monthly" ||
       tab === "activity" ||
-      tab === "company" ||
-      tab === "payment" ||
-      tab === "vehicles" ||
-      tab === "promotions" ||
-      tab === "rewards" ||
-      tab === "help" ||
       tab === "account"
     ) {
       setActiveItem(tab as NavItemId);
@@ -338,7 +353,38 @@ export default function MembersPage() {
           setActivityRows([]);
           return;
         }
-        setActivityRows((data ?? []) as ActivityRow[]);
+        const rawRows = (data ?? []) as ActivityRow[];
+        const locationKeys = Array.from(
+          new Set(
+            rawRows
+              .map((row) => (row.location_id ?? "").toString().trim())
+              .filter((value) => value.length > 0)
+          )
+        );
+        const uuidKeys = locationKeys.filter((value) => value.includes("-"));
+        let displayIdByLocationId = new Map<string, string>();
+        if (uuidKeys.length > 0) {
+          const { data: locationRows } = await client
+            .from("locations")
+            .select("id,display_id")
+            .in("id", uuidKeys);
+          displayIdByLocationId = new Map(
+            ((locationRows ?? []) as Array<{ id?: string | null; display_id?: string | null }>)
+              .map((row) => [String(row.id ?? "").trim(), String(row.display_id ?? "").trim()] as const)
+              .filter(([id, displayId]) => id.length > 0 && displayId.length > 0)
+          );
+        }
+        const resolvedRows = rawRows.map((row) => {
+          const rawLocation = (row.location_id ?? "").toString().trim();
+          const resolvedDisplayId = rawLocation.includes("-")
+            ? displayIdByLocationId.get(rawLocation) ?? null
+            : rawLocation || null;
+          return {
+            ...row,
+            location_display_id: resolvedDisplayId,
+          };
+        });
+        setActivityRows(resolvedRows);
       } catch {
         if (!active) return;
         setActivityRows([]);
@@ -440,41 +486,122 @@ export default function MembersPage() {
     }
     await supabase.auth.signOut();
   }
-  async function handleCheckout(flow: FlowType, location: string) {
-    const value = location.trim();
-    if (!value) {
-      setActionError("Enter a location ID or name from on-site signage.");
+  const getMemberAuthHeaders = useCallback(async () => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (supabase && isSupabaseConfigured) {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    if (!headers.Authorization && user?.email) {
+      headers["x-member-email"] = user.email;
+    }
+    return headers;
+  }, [user?.email]);
+  const refreshHomeContext = useCallback(async () => {
+    if (!isSignedIn) {
+      setHomeContext(null);
       return;
     }
-    setActionProcessing(flow);
-    setActionError("");
+    setHomeContextLoading(true);
     try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          location_id: value,
-          plate_number: "",
-          customer_email: user?.email,
-          flow_type: flow,
-        }),
+      const response = await fetch("/api/members/context", {
+        method: "GET",
+        headers: await getMemberAuthHeaders(),
       });
-      if (!res.ok) {
-        setActionError("Unable to start checkout. Please try again.");
-        setActionProcessing(null);
+      const payload = (await response.json().catch(() => null)) as
+        | { context?: MembersHomeContext | null; error?: string }
+        | null;
+      if (!response.ok || !payload?.context) {
+        setHomeContext(null);
         return;
       }
-      const data = (await res.json().catch(() => null)) as { url?: string } | null;
-      if (!data?.url) {
-        setActionError("Checkout link not available. Please try again.");
-        setActionProcessing(null);
+      setHomeContext(payload.context);
+    } finally {
+      setHomeContextLoading(false);
+    }
+  }, [getMemberAuthHeaders, isSignedIn]);
+  useEffect(() => {
+    if (!isSignedIn) {
+      setHomeContext(null);
+      return;
+    }
+    void refreshHomeContext();
+  }, [isSignedIn, refreshHomeContext]);
+  async function runHomeAction(
+    action: HomeWidgetId,
+    endpoint: string,
+    body?: Record<string, unknown>
+  ) {
+    setActionProcessing(action);
+    setActionError("");
+    setHomeFeedback((current) => {
+      const next = { ...current };
+      delete next[action];
+      return next;
+    });
+    try {
+      const response = await fetch(endpoint, {
+        method: body ? "POST" : "GET",
+        headers: await getMemberAuthHeaders(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; actionUrl?: string; error?: string }
+        | null;
+      if (!response.ok || !payload?.ok) {
+        const text = payload?.error || "Action failed. Please try again.";
+        setHomeFeedback((current) => ({
+          ...current,
+          [action]: { type: "error", text },
+        }));
         return;
       }
-      window.location.href = data.url;
+      if (payload.actionUrl) {
+        window.open(payload.actionUrl, "_blank", "noopener,noreferrer");
+      }
+      setHomeFeedback((current) => ({
+        ...current,
+        [action]: {
+          type: "success",
+          text: payload.message || "Done.",
+        },
+      }));
+      await refreshHomeContext();
     } catch {
-      setActionError("Something went wrong. Please try again.");
+      setHomeFeedback((current) => ({
+        ...current,
+        [action]: { type: "error", text: "Network error. Please try again." },
+      }));
+    } finally {
       setActionProcessing(null);
     }
+  }
+  function handleInsuranceAction() {
+    window.location.href = "/insurance/apply";
+  }
+  async function handleRideAction() {
+    await runHomeAction("ride", "/api/members/ride", {});
+  }
+  function handleUberAction() {
+    const url =
+      homeContext?.rideUrl ||
+      `/support?topic=ride&email=${encodeURIComponent(user?.email || "")}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+  async function handleExtendAction() {
+    const parsedMinutes = Number.parseInt(extendMinutes, 10);
+    const safeMinutes = Number.isFinite(parsedMinutes)
+      ? Math.min(720, Math.max(30, parsedMinutes))
+      : 120;
+    await runHomeAction("extend", "/api/members/extend", { minutes: safeMinutes });
+  }
+  async function handleInvoiceAction() {
+    await runHomeAction("invoice", "/api/members/invoice");
   }
   async function handleResetPassword() {
     if (!user?.email) {
@@ -670,85 +797,141 @@ export default function MembersPage() {
     if (activeItem === "home") {
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight text-black">
-                Welcome back
-              </h2>
-              <p className="text-sm text-black/70">
-                Use quick actions to pay, reserve, or start monthly in seconds.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setHomeOpen((v) => !v)}
-              className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
-            >
-              {homeOpen ? "Hide" : "Show"}
-            </button>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Nastavite u Members zoni
+            </h2>
+            <p className="text-sm text-black/70">
+              Osiguranje, Uber, produženje boravka i preuzimanje potvrde računa dostupni su unutar Members zone.
+            </p>
           </div>
-          {homeOpen && (
-            <div className="bg-white p-4 space-y-3">
-              <div className="flex flex-col md:flex-row gap-2">
-                <input
-                  type="text"
-                  value={actionLocation}
-                  onChange={(e) => setActionLocation(e.target.value)}
-                  placeholder="Location ID or name"
-                  className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-sm text-black bg-white outline-none focus:border-black/40"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-full border border-black/10 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setHomeFlow("park_now")}
-                    className={`px-3 py-1.5 text-[11px] font-semibold ${
-                      homeFlow === "park_now"
-                        ? "bg-black text-white"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    Park Now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHomeFlow("monthly")}
-                    className={`px-3 py-1.5 text-[11px] font-semibold ${
-                      homeFlow === "monthly"
-                        ? "bg-black text-white"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    Monthly
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHomeFlow("reserve")}
-                    className={`px-3 py-1.5 text-[11px] font-semibold ${
-                      homeFlow === "reserve"
-                        ? "bg-black text-white"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    Reserve
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCheckout(homeFlow as FlowType, actionLocation)
-                  }
-                  disabled={!!actionProcessing}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
-                >
-                  Continue
-                </button>
-              </div>
-              {actionError && (
-                <p className="text-[11px] text-red-600">{actionError}</p>
+          <div className="rounded-xl border border-black/10 bg-white p-4 space-y-1.5">
+            {homeContextLoading ? (
+              <p className="text-sm text-black/60">Loading your latest reservation...</p>
+            ) : homeContext ? (
+              <>
+                <p className="text-sm text-black/80">
+                  Aktivna lokacija:{" "}
+                  <span className="font-semibold">
+                    {homeContext.locationName || homeContext.locationDisplayId || homeContext.locationId || "N/A"}
+                  </span>
+                </p>
+                <p className="text-[11px] text-black/60">
+                  Boravak: {formatCroatianDateTime(homeContext.checkIn)} — {formatCroatianDateTime(homeContext.checkOut)}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-black/60">
+                Nema aktivne rezervacije. Za puni prikaz widgeta dovršite jednu uplatu.
+              </p>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+              <p className="text-sm font-semibold text-black">Osiguranje</p>
+              <p className="text-xs text-black/65">Aktivirajte osiguranje za trenutačnu rezervaciju.</p>
+              <button
+                type="button"
+                onClick={handleInsuranceAction}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+              >
+                Apliciraj
+              </button>
+              {homeFeedback.insurance && (
+                <p className={`text-[11px] ${homeFeedback.insurance.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.insurance.text}
+                </p>
               )}
             </div>
+            {homeContext?.parkTaxiIncluded ? (
+              <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+                <p className="text-sm font-semibold text-black">Park&Taxi</p>
+                <p className="text-xs text-black/65">Ride je uključen u Park&Taxi rezervaciju. Koristite praćenje vozača uživo ili Uber.</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRideAction}
+                    disabled={actionProcessing === "ride"}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                  >
+                    {actionProcessing === "ride" ? "Obrađujem..." : "24/7 Live tracking"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUberAction}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
+                  >
+                    Uber
+                  </button>
+                </div>
+                {homeFeedback.ride && (
+                  <p className={`text-[11px] ${homeFeedback.ride.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                    {homeFeedback.ride.text}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+                <p className="text-sm font-semibold text-black">Parq vožnja</p>
+                <p className="text-xs text-black/65">Parq može imati duže čekanje. Za najbolje iskustvo rezervirajte 60 minuta ranije.</p>
+                <button
+                  type="button"
+                  onClick={handleUberAction}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
+                >
+                  Uber
+                </button>
+              </div>
+            )}
+            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+              <p className="text-sm font-semibold text-black">Produženje boravka</p>
+              <p className="text-xs text-black/65">Automatski kreira plaćanje za dodatno vrijeme.</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={extendMinutes}
+                  onChange={(event) => setExtendMinutes(event.target.value)}
+                  className="rounded-lg border border-black/10 px-3 py-2 text-xs text-black bg-white outline-none focus:border-black/40"
+                >
+                  <option value="60">+60 min</option>
+                  <option value="120">+120 min</option>
+                  <option value="180">+180 min</option>
+                  <option value="240">+240 min</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleExtendAction}
+                  disabled={actionProcessing === "extend"}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                >
+                  {actionProcessing === "extend" ? "Obrađujem..." : "Produži"}
+                </button>
+              </div>
+              {homeFeedback.extend && (
+                <p className={`text-[11px] ${homeFeedback.extend.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.extend.text}
+                </p>
+              )}
+            </div>
+            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+              <p className="text-sm font-semibold text-black">Potvrda računa</p>
+              <p className="text-xs text-black/65">Preuzmite Stripe potvrdu računa zadnje transakcije.</p>
+              <button
+                type="button"
+                onClick={handleInvoiceAction}
+                disabled={actionProcessing === "invoice"}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+              >
+                {actionProcessing === "invoice" ? "Obrađujem..." : "Preuzmi račun"}
+              </button>
+              {homeFeedback.invoice && (
+                <p className={`text-[11px] ${homeFeedback.invoice.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.invoice.text}
+                </p>
+              )}
+            </div>
+          </div>
+          {actionError && (
+            <p className="text-[11px] text-red-600">{actionError}</p>
           )}
         </div>
       );
@@ -795,7 +978,7 @@ export default function MembersPage() {
                 <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold text-black">
-                      {row.plate || "Unknown plate"} · {row.location_id || "Unknown location"}
+                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
                     </p>
                     <p className="text-[11px] text-black/60">
                       {formatActivityDate(row.created_at)}
