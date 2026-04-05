@@ -104,6 +104,13 @@ final unifiedDashboardProvider =
     final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
     final window = resolveSessionWindow(item);
     final nowUtc = DateTime.now().toUtc();
+    final flow =
+        (stripeMeta['flow'] ?? stripeMeta['flow_type'] ?? '').toString().trim().toLowerCase();
+    final extendTargetSessionId =
+        (stripeMeta['extend_target_session_id'] ?? stripeMeta['extension_of_session_id'] ?? '')
+            .toString()
+            .trim();
+    final isFutureCheckoutFlow = flow == 'reserve' || extendTargetSessionId.isNotEmpty;
     final activationAt = parseAnyDate(item['activation_at']) ??
         (window['check_in']) ??
         parseAnyDate(stripeMeta['activation_at']) ??
@@ -112,14 +119,17 @@ final unifiedDashboardProvider =
     final isPending =
         paymentStatus == 'pending' || status == 'pending' || status == 'open';
     if (isPending) {
-      if (activationAt != null && nowUtc.isBefore(activationAt)) {
-        return 'inactive';
+      if (isFutureCheckoutFlow && activationAt != null && nowUtc.isBefore(activationAt)) {
+        return 'upcoming';
       }
       return 'pending';
     }
 
     if (endTime != null && nowUtc.isAfter(endTime)) {
       return 'expired';
+    }
+    if (isFutureCheckoutFlow && activationAt != null && nowUtc.isBefore(activationAt)) {
+      return 'upcoming';
     }
     if (activationAt != null && nowUtc.isBefore(activationAt)) {
       return 'inactive';
@@ -241,10 +251,10 @@ final unifiedDashboardProvider =
       }
     }
 
+    if (filter == 'Upcoming') return effectiveStatus == 'upcoming';
     if (filter == 'Active') return isActive || isPending;
-    if (filter == 'Inactive') {
-      return effectiveStatus == 'inactive' || effectiveStatus == 'expired';
-    }
+    if (filter == 'Expired') return effectiveStatus == 'expired';
+    if (filter == 'Inactive') return effectiveStatus == 'inactive';
     return true;
   }).toList();
 

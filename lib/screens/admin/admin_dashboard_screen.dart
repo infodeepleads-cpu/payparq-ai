@@ -310,10 +310,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             children: [
               _buildFilterButton('All', Lang.sel(isHr, 'All', 'Sve')),
               const SizedBox(width: 12),
+              _buildFilterButton(
+                  'Upcoming', Lang.sel(isHr, 'Upcoming', 'Nadolazeće')),
+              const SizedBox(width: 12),
               _buildFilterButton('Active', Lang.sel(isHr, 'Active', 'Aktivno')),
               const SizedBox(width: 12),
               _buildFilterButton(
-                  'Inactive', Lang.sel(isHr, 'Inactive', 'Neaktivno')),
+                  'Expired', Lang.sel(isHr, 'Expired', 'Isteklo')),
             ],
           ),
         ),
@@ -484,6 +487,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final effectiveStatus =
         (s['ui_effective_status'] ?? status).toString().trim().toLowerCase();
     final isPending = effectiveStatus == 'pending' || status == 'pending';
+    final isUpcoming = effectiveStatus == 'upcoming';
     final isExpired = effectiveStatus == 'expired';
     final isPaid = effectiveStatus == 'active' ||
         paymentStatus == 'paid' ||
@@ -617,9 +621,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildStatusBadge(
-              isPending
-                  ? 'PENDING'
-                  : (isExpired ? 'EXPIRED' : (isPaid ? 'ACTIVE' : 'INACTIVE')),
+              isUpcoming
+                  ? (isPending ? 'PENDING_UPCOMING' : 'UPCOMING')
+                  : (isPending
+                      ? 'PENDING'
+                      : (isExpired
+                          ? 'EXPIRED'
+                          : (isPaid ? 'ACTIVE' : 'INACTIVE'))),
               isPaid,
               isPending: isPending),
           const SizedBox(width: 24),
@@ -722,11 +730,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
 
     // 3. Tertiary check: calculate from time difference
-    final start = DateTime.tryParse(
-        (item['entry_time'] ?? item['start_time'] ?? item['created_at'] ?? '')
-            .toString());
+    final start = DateTime.tryParse((item['ui_entry_time'] ??
+            item['entry_time'] ??
+            item['start_time'] ??
+            item['created_at'] ??
+            '')
+        .toString());
     final end = DateTime.tryParse(
-        (item['exit_time'] ?? item['end_time'] ?? '').toString());
+        (item['ui_exit_time'] ?? item['exit_time'] ?? item['end_time'] ?? '')
+            .toString());
 
     if (start != null && end != null && end.isAfter(start)) {
       final diffMinutes = end.difference(start).inMinutes;
@@ -829,8 +841,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         : {
             ...s,
             'type': (s['type'] ?? 'hourly').toString(),
-            'start_time': s['entry_time'] ?? s['created_at'] ?? '',
-            'end_time': s['exit_time'] ?? s['end_time'] ?? '',
+            'start_time':
+                s['ui_entry_time'] ?? s['entry_time'] ?? s['created_at'] ?? '',
+            'end_time':
+                s['ui_exit_time'] ?? s['exit_time'] ?? s['end_time'] ?? '',
             'price': double.tryParse(s['price']?.toString() ?? '0') ?? 0.0,
             'contact_email': s['email'] ?? s['contact_email'] ?? '',
             'contact_phone': s['mobile'] ?? s['contact_phone'] ?? '',
@@ -889,11 +903,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       {bool isPending = false}) {
     final isHr = ref.watch(localeIsCroatianProvider);
     final normalized = status.toUpperCase();
-    final dotColor = isPending
-        ? Colors.orange[400]
-        : (normalized == 'EXPIRED'
-            ? Colors.grey[500]
-            : (isPaid ? Colors.green[400] : Colors.red[400]));
+    final isUpcoming =
+        normalized == 'UPCOMING' || normalized == 'PENDING_UPCOMING';
+    final dotColor = isUpcoming
+        ? Colors.blue[400]
+        : isPending
+            ? Colors.orange[400]
+            : (normalized == 'EXPIRED'
+                ? Colors.grey[500]
+                : (isPaid ? Colors.green[400] : Colors.red[400]));
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -924,6 +942,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               }
               if (s == 'PENDING') {
                 return Lang.sel(isHr, 'PENDING', 'NA ČEKANJU');
+              }
+              if (s == 'UPCOMING') {
+                return Lang.sel(isHr, 'UPCOMING', 'NADOLAZEĆE');
+              }
+              if (s == 'PENDING_UPCOMING') {
+                return Lang.sel(
+                    isHr, 'PENDING UPCOMING', 'NA ČEKANJU · NADOLAZEĆE');
               }
               if (s == 'EXPIRED') {
                 return Lang.sel(isHr, 'EXPIRED', 'ISTEKLO');
