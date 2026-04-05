@@ -44,6 +44,34 @@ final unifiedDashboardProvider =
     return {};
   }
 
+  Map<String, DateTime?> resolveSessionWindow(Map<String, dynamic> item) {
+    final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
+    final flow = (stripeMeta['flow'] ?? stripeMeta['flow_type'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final entryFromRow = parseAnyDate(item['entry_time']) ??
+        parseAnyDate(item['start_time']) ??
+        parseAnyDate(item['created_at']);
+    final entryFromMeta = parseAnyDate(stripeMeta['check_in']);
+    final prefersMetadataWindow = flow == 'reserve' && entryFromMeta != null;
+    final checkIn =
+        prefersMetadataWindow ? entryFromMeta : (entryFromRow ?? entryFromMeta);
+
+    final exitFromRow =
+        parseAnyDate(item['exit_time']) ?? parseAnyDate(item['end_time']);
+    final exitFromMeta = parseAnyDate(stripeMeta['check_out']);
+    DateTime? checkOut;
+    if (prefersMetadataWindow && exitFromMeta != null) {
+      checkOut = exitFromMeta;
+    } else if (exitFromRow != null) {
+      checkOut = exitFromRow;
+    } else {
+      checkOut = exitFromMeta;
+    }
+    return {'check_in': checkIn, 'check_out': checkOut};
+  }
+
   String deriveEffectiveStatus(Map<String, dynamic> item) {
     final amount = double.tryParse((item['price'] ?? 0).toString()) ?? 0.0;
     final paymentStatus =
@@ -73,18 +101,22 @@ final unifiedDashboardProvider =
                     .toString()
                     .contains('"checkout_session_id"')));
 
-    final isPending =
-        paymentStatus == 'pending' || status == 'pending' || status == 'open';
-    if (isPending) return 'pending';
-
     final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
+    final window = resolveSessionWindow(item);
     final nowUtc = DateTime.now().toUtc();
     final activationAt = parseAnyDate(item['activation_at']) ??
-        parseAnyDate(item['start_time']) ??
+        (window['check_in']) ??
         parseAnyDate(stripeMeta['activation_at']) ??
         parseAnyDate(stripeMeta['check_in']);
-    final endTime =
-        parseAnyDate(item['end_time']) ?? parseAnyDate(item['exit_time']);
+    final endTime = (window['check_out']);
+    final isPending =
+        paymentStatus == 'pending' || status == 'pending' || status == 'open';
+    if (isPending) {
+      if (activationAt != null && nowUtc.isBefore(activationAt)) {
+        return 'inactive';
+      }
+      return 'pending';
+    }
 
     if (endTime != null && nowUtc.isAfter(endTime)) {
       return 'expired';
@@ -106,10 +138,13 @@ final unifiedDashboardProvider =
           fallback: DateTime(2000),
         );
         final effectiveStatus = deriveEffectiveStatus(item);
+        final window = resolveSessionWindow(item);
         return {
           ...item,
           'ui_type': type,
           'ui_effective_status': effectiveStatus,
+          'ui_entry_time': window['check_in']?.toIso8601String(),
+          'ui_exit_time': window['check_out']?.toIso8601String(),
         };
       }).toList(),
       orElse: () => [],
@@ -191,15 +226,9 @@ final unifiedDashboardProvider =
 
     if (!matchesSearch) return false;
 
-    final paymentStatus =
-        (item['payment_status'] ?? '').toString().trim().toLowerCase();
-    final status = (item['status'] ?? '').toString().trim().toLowerCase();
     final effectiveStatus =
         (item['ui_effective_status'] ?? '').toString().toLowerCase();
-    final isPending = effectiveStatus == 'pending' ||
-        paymentStatus == 'pending' ||
-        status == 'pending' ||
-        status == 'open';
+    final isPending = effectiveStatus == 'pending';
     final isActive = effectiveStatus == 'active';
     final isGuest = (item['ui_type'] ?? '').toString().toUpperCase() == 'GUEST';
 

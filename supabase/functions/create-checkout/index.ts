@@ -245,15 +245,154 @@ const checkoutTextByLocale: Record<string, {
   },
 };
 
-function checkoutCustomFields(): any[] {
+function checkoutCustomFields(params?: { plate?: string; mobile?: string; allowPlateOverride?: boolean }): any[] {
+  const plate = String(params?.plate ?? "").trim().toUpperCase();
+  const mobile = normalizePhoneValue(params?.mobile ?? "");
+  const allowPlateOverride = Boolean(params?.allowPlateOverride);
+  const hasKnownPlate = plate.length > 0;
+  const label = hasKnownPlate
+    ? `Vehicle Plate Number (current: ${plate})`
+    : "Vehicle Plate Number (e.g. MA679XX)";
+  const textPrefill = (value: string) => ({ default_value: value, value });
   return [
     {
       key: "plate_number",
       type: "text",
-      label: { type: "custom", custom: "Vehicle Plate Number (e.g. MA679XX)" },
+      label: { type: "custom", custom: label },
+      optional: hasKnownPlate && allowPlateOverride,
+      text: hasKnownPlate ? textPrefill(plate) : undefined,
+    },
+    {
+      key: "phone_number",
+      type: "text",
+      label: {
+        type: "custom",
+        custom: mobile ? `Mobile Phone (current: ${mobile})` : "Mobile Phone",
+      },
       optional: false,
+      text: mobile ? textPrefill(mobile) : undefined,
     },
   ];
+}
+
+function normalizeEmailValue(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalizePhoneValue(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function parseStripeMetadataObject(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === "object") return value as Record<string, unknown>;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveCheckoutDefaults(email: string): Promise<{ plate: string; mobile: string }> {
+  const normalizedEmail = normalizeEmailValue(email);
+  if (!normalizedEmail) {
+    return { plate: "", mobile: "" };
+  }
+  const fillFromRows = (rows: Array<{
+    plate?: string | null;
+    mobile?: string | null;
+    stripe_metadata?: Record<string, unknown> | string | null;
+  }>) => {
+    let plate = "";
+    let mobile = "";
+    for (const row of rows) {
+      const metadata = parseStripeMetadataObject(row.stripe_metadata);
+      if (!plate) {
+        plate = String(
+          row.plate ??
+            metadata?.["plate"] ??
+            metadata?.["plate_number"] ??
+            "",
+        ).trim().toUpperCase();
+      }
+      if (!mobile) {
+        mobile = normalizePhoneValue(
+          row.mobile ??
+            metadata?.["mobile"] ??
+            metadata?.["phone"] ??
+            metadata?.["customer_phone"] ??
+            "",
+        );
+      }
+      if (plate && mobile) break;
+    }
+    return { plate, mobile };
+  };
+  const { data } = await admin
+    .from("parking_sessions")
+    .select("plate,mobile,stripe_metadata")
+    .ilike("email", normalizedEmail)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const directMatch = fillFromRows(
+    (data ?? []) as Array<{
+      plate?: string | null;
+      mobile?: string | null;
+      stripe_metadata?: Record<string, unknown> | string | null;
+    }>,
+  );
+  if (directMatch.plate && directMatch.mobile) {
+    return directMatch;
+  }
+  const { data: fallbackRows } = await admin
+    .from("parking_sessions")
+    .select("plate,mobile,stripe_metadata")
+    .not("stripe_metadata", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const metadataEmailRows = ((fallbackRows ?? []) as Array<{
+    plate?: string | null;
+    mobile?: string | null;
+    stripe_metadata?: Record<string, unknown> | string | null;
+  }>).filter((row) => {
+    const metadata = parseStripeMetadataObject(row.stripe_metadata);
+    const metadataEmail = normalizeEmailValue(
+      metadata?.["email"] ?? metadata?.["customer_email"] ?? "",
+    );
+    return metadataEmail === normalizedEmail;
+  });
+  const metadataMatch = fillFromRows(metadataEmailRows);
+  return {
+    plate: directMatch.plate || metadataMatch.plate,
+    mobile: directMatch.mobile || metadataMatch.mobile,
+  };
+}
+
+async function resolveCheckoutCustomer(params: { email: string; mobile: string }): Promise<string | null> {
+  const email = normalizeEmailValue(params.email);
+  const mobile = normalizePhoneValue(params.mobile);
+  if (!email) {
+    return null;
+  }
+  try {
+    const existing = await stripe.customers.list({ email, limit: 1 });
+    const customerId = existing.data[0]?.id ?? null;
+    if (customerId) {
+      if (mobile) {
+        await stripe.customers.update(customerId, { phone: mobile, email });
+      }
+      return customerId;
+    }
+    const created = await stripe.customers.create({
+      email,
+      phone: mobile || undefined,
+    });
+    return created.id ?? null;
+  } catch (_error) {
+    return null;
+  }
 }
 
 function isUuid(v: string): boolean {
@@ -475,10 +614,34 @@ async function persistCheckoutSession(
     console.error(`[V17] Error checking for existing session ${session.id}: ${existingError.message}`);
   }
 
-  const email = session.customer_details?.email || metadata.email || "";
-  const phone = session.customer_details?.phone || metadata.mobile || "";
+  const email = normalizeEmailValue(session.customer_details?.email || metadata.email || "");
+  let submittedPhone = "";
+  const phoneFromMetadata = normalizePhoneValue(
+    session.customer_details?.phone || metadata.mobile || metadata.phone || metadata.customer_phone || "",
+  );
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
+  const flow = String(metadata.flow ?? metadata.flow_type ?? "").trim().toLowerCase();
+  const metadataCheckIn = String(metadata.check_in ?? "").trim();
+  const metadataCheckOut = String(metadata.check_out ?? "").trim();
+  const metadataCheckInDate = metadataCheckIn ? new Date(metadataCheckIn) : null;
+  const metadataCheckOutDate = metadataCheckOut ? new Date(metadataCheckOut) : null;
+  const hasValidMetadataCheckIn = Boolean(
+    metadataCheckInDate && !Number.isNaN(metadataCheckInDate.getTime()),
+  );
+  const hasValidMetadataCheckOut = Boolean(
+    metadataCheckOutDate && !Number.isNaN(metadataCheckOutDate.getTime()),
+  );
+  const extendTargetSessionId = String(
+    metadata.extend_target_session_id ?? metadata.extension_of_session_id ?? "",
+  ).trim();
+  const extendMinutesParsed = Number.parseInt(String(metadata.extend_minutes ?? "0"), 10);
+  const extendMinutes = Number.isFinite(extendMinutesParsed) && extendMinutesParsed > 0 ? extendMinutesParsed : 0;
+  const isTargetedExtensionFlow =
+    flow === "reserve" &&
+    extendTargetSessionId.length > 0 &&
+    extendMinutes > 0 &&
+    email.length > 0;
   let checkoutQuantity = Number.parseInt((metadata.quantity ?? "1").toString(), 10);
   if (!Number.isFinite(checkoutQuantity) || checkoutQuantity < 1) {
     checkoutQuantity = 1;
@@ -491,7 +654,7 @@ async function persistCheckoutSession(
       const qty = Number(item?.quantity ?? 0);
       return Number.isFinite(qty) && qty > 0 ? sum + qty : sum;
     }, 0);
-    if (lineItemQuantity > 0) {
+    if (lineItemQuantity > 0 && flow !== "reserve") {
       checkoutQuantity = lineItemQuantity;
     }
   } catch (lineItemError) {
@@ -514,14 +677,20 @@ async function persistCheckoutSession(
   }
   const durationUnit =
     type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
-  const entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  let entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  if (hasValidMetadataCheckIn && metadataCheckInDate) {
+    entryTime = metadataCheckInDate;
+  }
   const durationMinutes =
     durationUnit === "month"
       ? checkoutQuantity * 30 * 24 * 60
       : durationUnit === "day"
       ? checkoutQuantity * 24 * 60
       : checkoutQuantity * 60;
-  const exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
+  let exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
+  if (hasValidMetadataCheckOut && metadataCheckOutDate) {
+    exitTime = metadataCheckOutDate;
+  }
   let couponCode = "";
   let discountAmount = 0;
   if (session.total_details?.breakdown?.discounts) {
@@ -544,10 +713,15 @@ async function persistCheckoutSession(
     if (plateField && plateField.text) {
       plateNumber = plateField.text.value || "";
     }
+    const phoneField = session.custom_fields.find((f) => f.key === "phone_number");
+    if (phoneField && phoneField.text) {
+      submittedPhone = normalizePhoneValue(phoneField.text.value || "");
+    }
   }
   if (!plateNumber && metadata.plate) {
     plateNumber = metadata.plate;
   }
+  const phone = submittedPhone || phoneFromMetadata;
 
   const insertData: any = {
     location_id: resolvedLocation.id,
@@ -579,6 +753,24 @@ async function persistCheckoutSession(
       payment_intent: session.payment_intent,
     }), // V17: Save full context
   };
+
+  if (isTargetedExtensionFlow) {
+    if (!hasValidMetadataCheckIn || !hasValidMetadataCheckOut) {
+      return { ok: false, status: 400, message: "extend_flow_requires_check_in_and_check_out" };
+    }
+    insertData.status = entryTime.getTime() > Date.now() ? "scheduled" : "active";
+    insertData.stripe_metadata = JSON.stringify({
+      ...metadata,
+      quantity: String(checkoutQuantity),
+      duration_unit: durationUnit,
+      stripe_id: session.id,
+      customer: session.customer,
+      payment_intent: session.payment_intent,
+      flow_type: flow || null,
+      extension_of_session_id: extendTargetSessionId,
+      extension_requested_minutes: extendMinutes,
+    });
+  }
 
   if (existing?.id) {
     console.log(`[V17] Updating existing session ${existing.id} for stripe_id ${session.id}`);
@@ -726,6 +918,13 @@ serve(async (req: Request) => {
         event.type === "checkout.session.async_payment_succeeded"
       ) {
         const session = event.data.object as Stripe.Checkout.Session;
+        const normalizedPaymentStatus = String(session.payment_status ?? "").trim().toLowerCase();
+        const shouldPersist =
+          event.type === "checkout.session.async_payment_succeeded" ||
+          normalizedPaymentStatus === "paid";
+        if (!shouldPersist) {
+          return json({ received: true });
+        }
         const persisted = await persistCheckoutSession(session);
         if (!persisted.ok) {
           return json({ error: persisted.message ?? "Failed to persist parking session" }, persisted.status ?? 500);
@@ -889,13 +1088,38 @@ serve(async (req: Request) => {
       body["promotion_code_label"] ?? url.searchParams.get("promotion_code_label") ?? "",
     ).trim();
 
-    const plate = String(
+    const requestedPlate = String(
       body["plate"] ?? url.searchParams.get("plate") ?? "",
     ).trim();
 
-    const mobile = String(
-      body["mobile"] ?? url.searchParams.get("mobile") ?? "",
+    const requestedMobile = String(
+      body["mobile"] ??
+        body["phone"] ??
+        url.searchParams.get("mobile") ??
+        url.searchParams.get("phone") ??
+        "",
     ).trim();
+    const checkoutDefaults = await resolveCheckoutDefaults(email);
+    const plate = (requestedPlate || checkoutDefaults.plate).trim().toUpperCase();
+    const mobile = normalizePhoneValue(requestedMobile || checkoutDefaults.mobile);
+    const allowPlateOverride =
+      parseOptionalBooleanValue(body["allow_plate_override"]) ??
+      parseOptionalBooleanValue(url.searchParams.get("allow_plate_override")) ??
+      false;
+    const seedInactivePending =
+      parseOptionalBooleanValue(body["seed_inactive_pending"]) ??
+      parseOptionalBooleanValue(url.searchParams.get("seed_inactive_pending")) ??
+      false;
+    const extendTargetSessionId = String(
+      body["extend_target_session_id"] ?? url.searchParams.get("extend_target_session_id") ?? "",
+    ).trim();
+    const extendMinutesRaw = Number.parseInt(
+      String(body["extend_minutes"] ?? url.searchParams.get("extend_minutes") ?? ""),
+      10,
+    );
+    const extendMinutes = Number.isFinite(extendMinutesRaw) && extendMinutesRaw > 0
+      ? extendMinutesRaw
+      : 0;
 
     const permitId = String(
       body["permit_id"] ?? url.searchParams.get("permit_id") ?? "",
@@ -946,6 +1170,40 @@ serve(async (req: Request) => {
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, parkTaxi=${parkTaxiRequested}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
     const now = new Date();
+    const resolveBerlinTzAbbreviation = (value: Date): string => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Berlin",
+          timeZoneName: "short",
+        }).formatToParts(value);
+        const tzName = parts.find((part) => part.type === "timeZoneName")?.value?.trim() ?? "";
+        return tzName || "CET";
+      } catch {
+        return "CET";
+      }
+    };
+    const resolveBerlinOffsetMinutes = (value: Date): number => {
+      try {
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Berlin",
+          timeZoneName: "shortOffset",
+        }).formatToParts(value);
+        const tzName = parts.find((part) => part.type === "timeZoneName")?.value?.trim() ?? "";
+        const offsetMatch = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/i);
+        if (!offsetMatch) {
+          return 60;
+        }
+        const sign = offsetMatch[1] === "-" ? -1 : 1;
+        const hours = Number(offsetMatch[2] ?? "0");
+        const minutes = Number(offsetMatch[3] ?? "0");
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+          return 60;
+        }
+        return sign * ((hours * 60) + minutes);
+      } catch {
+        return 60;
+      }
+    };
     const formatBerlinDateTime = (value: Date): string => {
       try {
         const parts = new Intl.DateTimeFormat("en-GB", {
@@ -959,12 +1217,13 @@ serve(async (req: Request) => {
           hour12: false,
         }).formatToParts(value);
         const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} CET`;
+        const tz = resolveBerlinTzAbbreviation(value);
+        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${tz}`;
       } catch {
-        return `${value.toISOString().replace("T", " ").split(".")[0]} CET`;
+        const tz = resolveBerlinTzAbbreviation(value);
+        return `${value.toISOString().replace("T", " ").split(".")[0]} ${tz}`;
       }
     };
-    const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
     const parseDateInput = (rawValue: string): { epochMs: number | null; display: string } => {
       const raw = rawValue.trim();
       if (!raw) {
@@ -989,11 +1248,15 @@ serve(async (req: Request) => {
         const minute = Number(naiveMatch[5]);
         const second = Number(naiveMatch[6] ?? "00");
         const millisecond = Number((naiveMatch[7] ?? "0").padEnd(3, "0"));
-        const utcLike = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
-        if (Number.isFinite(utcLike)) {
-          const tz = resolveBerlinTzAbbreviation(new Date(utcLike));
-          const formatted = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")} ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")} ${tz}`;
-          return { epochMs: utcLike, display: formatted };
+        const wallClockUtcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+        if (Number.isFinite(wallClockUtcMs)) {
+          const firstOffsetMinutes = resolveBerlinOffsetMinutes(new Date(wallClockUtcMs));
+          let berlinUtcMs = wallClockUtcMs - (firstOffsetMinutes * 60 * 1000);
+          const secondOffsetMinutes = resolveBerlinOffsetMinutes(new Date(berlinUtcMs));
+          if (secondOffsetMinutes !== firstOffsetMinutes) {
+            berlinUtcMs = wallClockUtcMs - (secondOffsetMinutes * 60 * 1000);
+          }
+          return { epochMs: berlinUtcMs, display: formatBerlinDateTime(new Date(berlinUtcMs)) };
         }
       }
       const parsed = new Date(raw);
@@ -1092,8 +1355,12 @@ serve(async (req: Request) => {
     }
     const displayQuantity = quantityOverride ?? quantity;
     const checkoutQuantity = isReservationFlow ? 1 : quantity;
-    const derivedCheckInIso = checkIn || now.toISOString();
-    let derivedCheckOutIso = checkOut;
+    const derivedCheckInIso = parsedCheckIn.epochMs != null
+      ? new Date(parsedCheckIn.epochMs).toISOString()
+      : (checkIn || now.toISOString());
+    let derivedCheckOutIso = parsedCheckOut.epochMs != null
+      ? new Date(parsedCheckOut.epochMs).toISOString()
+      : checkOut;
     if (!derivedCheckOutIso) {
       const baseStart = new Date(derivedCheckInIso);
       if (!Number.isNaN(baseStart.getTime())) {
@@ -1208,16 +1475,15 @@ serve(async (req: Request) => {
 
     await cleanupStalePendingGuestSessions();
 
+    const resolvedCustomerId = await resolveCheckoutCustomer({ email, mobile });
     const sessionOptions: any = {
       mode: "payment",
       payment_method_types: ["card"],
       success_url: resolvedSuccessUrl.toString(),
       cancel_url: cancelUrl,
       client_reference_id: locationUuid, // Use UUID if possible
-      customer_email: email || undefined,
-      phone_number_collection: {
-        enabled: true,
-      },
+      customer: resolvedCustomerId || undefined,
+      customer_email: resolvedCustomerId ? undefined : email || undefined,
       consent_collection: {
         terms_of_service: "required",
       },
@@ -1233,7 +1499,11 @@ serve(async (req: Request) => {
           }
           : {}),
       },
-      custom_fields: checkoutCustomFields(),
+      custom_fields: checkoutCustomFields({
+        plate,
+        mobile,
+        allowPlateOverride,
+      }),
       locale: checkoutLocale,
       line_items: [lineItem],
       metadata: {
@@ -1251,6 +1521,9 @@ serve(async (req: Request) => {
         check_in: derivedCheckInIso || undefined,
         check_out: derivedCheckOutIso || undefined,
         activation_at: activationAt || undefined,
+        allow_plate_override: allowPlateOverride ? "1" : "0",
+        extend_target_session_id: extendTargetSessionId || undefined,
+        extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
       },
     };
 
@@ -1333,8 +1606,31 @@ serve(async (req: Request) => {
 
     let pendingSeeded = false;
     let pendingSeedError = "";
-    // V20: Seeding pending session into database so it appears in the dashboard immediately
-    if (locationUuid) {
+    const hasFutureActivation = (() => {
+      const parsed = new Date(derivedCheckInIso);
+      return !Number.isNaN(parsed.getTime()) && parsed.getTime() > now.getTime();
+    })();
+    const isFutureCheckoutFlow = isReservationFlow || extendTargetSessionId.length > 0 || hasFutureActivation;
+    const shouldSeedPendingSession = Boolean(locationUuid) &&
+      (!isFutureCheckoutFlow || seedInactivePending);
+    if (shouldSeedPendingSession && locationUuid) {
+      const shouldSeedInactivePending = isFutureCheckoutFlow && seedInactivePending;
+      const inactiveEntryTime = shouldSeedInactivePending ? derivedCheckInIso : now.toISOString();
+      const inactiveExitTime = shouldSeedInactivePending ? derivedCheckOutIso : "";
+      const inactiveExitDate = inactiveExitTime ? new Date(inactiveExitTime) : null;
+      const inactiveDurationMinutes = (() => {
+        if (
+          shouldSeedInactivePending &&
+          inactiveExitDate &&
+          !Number.isNaN(inactiveExitDate.getTime())
+        ) {
+          const entryDate = new Date(inactiveEntryTime);
+          if (!Number.isNaN(entryDate.getTime()) && inactiveExitDate.getTime() > entryDate.getTime()) {
+            return Math.max(1, Math.round((inactiveExitDate.getTime() - entryDate.getTime()) / (60 * 1000)));
+          }
+        }
+        return type === "monthly" ? (quantity * 43200) : type === "daily" ? (quantity * 1440) : (quantity * 60);
+      })();
       const pendingInsertData: any = {
         location_id: locationUuid,
         plate: plate || "PENDING",
@@ -1342,7 +1638,7 @@ serve(async (req: Request) => {
         mobile: mobile,
         contact_name: "",
         type: type,
-        status: "pending",
+        status: shouldSeedInactivePending ? "scheduled" : "pending",
         payment_status: "pending",
         ui_type: "guest", // Added for dashboard filtering
         price: unitAmountCents / 100,
@@ -1353,19 +1649,21 @@ serve(async (req: Request) => {
         is_lpr_scan: false,
         is_whatsapp_linked: false,
         stripe_session_id: paymentSession.id,
-        activation_at: activationAt || undefined,
+        activation_at: shouldSeedInactivePending ? derivedCheckInIso : (activationAt || undefined),
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
-        entry_time: now.toISOString(),
-        // For pending, we don't know the final duration yet if it's adjustable, but we set a default
-        duration_minutes: type === "monthly" ? (quantity * 43200) : type === "daily" ? (quantity * 1440) : (quantity * 60),
+        entry_time: inactiveEntryTime,
+        duration_minutes: inactiveDurationMinutes,
         stripe_metadata: JSON.stringify({
           ...sessionOptions.metadata,
+          inactive_pending_seed: shouldSeedInactivePending ? "1" : "0",
           stripe_id: paymentSession.id,
         }),
       };
       
-      const exitTime = new Date(now.getTime() + pendingInsertData.duration_minutes * 60 * 1000);
+      const exitTime = shouldSeedInactivePending && inactiveExitDate && !Number.isNaN(inactiveExitDate.getTime())
+        ? inactiveExitDate
+        : new Date(now.getTime() + pendingInsertData.duration_minutes * 60 * 1000);
       pendingInsertData.exit_time = exitTime.toISOString();
       pendingInsertData.end_time = exitTime.toISOString();
 
@@ -1377,8 +1675,12 @@ serve(async (req: Request) => {
       } else {
         pendingSeeded = true;
       }
-    } else {
+    } else if (!locationUuid) {
       pendingSeedError = "location_uuid_not_resolved";
+    } else {
+      pendingSeedError = isFutureCheckoutFlow
+        ? "skipped_for_future_checkout_flow"
+        : "skipped";
     }
 
     if (req.method === "GET") {
