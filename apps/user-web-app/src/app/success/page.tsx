@@ -19,6 +19,9 @@ type SessionSummary = {
   location_display_id?: string | null;
   check_in: string | null;
   check_out: string | null;
+  wallet_topup_credit_cents?: number;
+  wallet_debit_applied_cents?: number;
+  loyalty_bonus_credit_cents?: number;
   membership_exists: boolean;
   email_verified: boolean;
 };
@@ -223,6 +226,24 @@ function SuccessContent() {
                     {parkTaxiUltrabrief}
                   </p>
                 )}
+                <div className="mt-3 rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 text-xs text-[#3E22C6] space-y-1">
+                  <p>
+                    <span className="font-semibold">Parking cost:</span>{" "}
+                    {formatAmount(summary?.amount_total ?? 0, summary?.currency ?? "EUR")}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Wallet debit used:</span>{" "}
+                    {formatAmount(summary?.wallet_debit_applied_cents ?? 0, summary?.currency ?? "EUR")}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Wallet top-up credit:</span>{" "}
+                    {formatAmount(summary?.wallet_topup_credit_cents ?? 0, summary?.currency ?? "EUR")}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Loyalty bonus credit:</span>{" "}
+                    {formatAmount(summary?.loyalty_bonus_credit_cents ?? 0, summary?.currency ?? "EUR")}
+                  </p>
+                </div>
                 {summary?.email && (
                   <p className="text-xs text-black/50 mt-2">
                     Membership is ready for {summary.email}. Verify email to unlock promotions.
@@ -267,7 +288,7 @@ function SuccessContent() {
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
               >
                 <Car size={14} />
-                Naruči Parq vožnju
+                Naruči Uber
               </Link>
             </div>
           </div>

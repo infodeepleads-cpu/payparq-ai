@@ -2856,6 +2856,9 @@ export default function ResourcesPage() {
                                 : "Auto"}
                             </span>
                           </p>
+                          {selectedLocation.signPrice != null && selectedLocation.signPrice < 0.5 ? (
+                            <p className="text-white/65">Sub-€0.50 lots charge €0.50 card min and keep extra as wallet credit.</p>
+                          ) : null}
                         </div>
                       )}
                       <label className="space-y-1 block">

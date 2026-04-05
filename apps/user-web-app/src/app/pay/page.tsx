@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type FlowType = "park_now" | "monthly" | "reserve";
 
@@ -20,6 +21,7 @@ export default function PayPage() {
   const [error, setError] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
+  const [amountCentsHint, setAmountCentsHint] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -27,6 +29,10 @@ export default function PayPage() {
     const loc = params.get("loc") || "";
     const inVal = params.get("in") || "";
     const outVal = params.get("out") || "";
+    const amountCentsRaw = params.get("amount_cents") || "";
+    const parsedAmountCents = Number.parseInt(amountCentsRaw, 10);
+    const normalizedAmountCents =
+      Number.isFinite(parsedAmountCents) && parsedAmountCents > 0 ? parsedAmountCents : null;
     const flowParam = params.get("flow");
     const flowFromParams: FlowType | null =
       flowParam === "park_now" || flowParam === "monthly" || flowParam === "reserve"
@@ -40,6 +46,7 @@ export default function PayPage() {
         setReserveLocation(loc);
         setCheckIn(inVal);
         setCheckOut(outVal);
+        setAmountCentsHint(normalizedAmountCents);
         if (flowFromParams) {
           setActiveTab(flowFromParams);
           return;
@@ -51,9 +58,17 @@ export default function PayPage() {
     if (flowFromParams) {
       Promise.resolve().then(() => {
         setActiveTab(flowFromParams);
+        setAmountCentsHint(normalizedAmountCents);
       });
+      return;
     }
+    Promise.resolve().then(() => {
+      setAmountCentsHint(normalizedAmountCents);
+    });
   }, []);
+
+  const showWalletTopupExplainer =
+    activeTab !== "monthly" && amountCentsHint !== null && amountCentsHint < 50;
 
   async function handleCheckout(flow: FlowType, location: string) {
     if (!location.trim()) {
@@ -65,15 +80,26 @@ export default function PayPage() {
     setError("");
 
     try {
+      let customerEmail: string | undefined = undefined;
+      let authToken: string | undefined = undefined;
+      if (supabase && isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        customerEmail = data.session?.user?.email?.trim().toLowerCase() || undefined;
+        authToken = data.session?.access_token || undefined;
+      }
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           location_id: location.trim(),
           plate_number: "",
-          customer_email: undefined,
+          customer_email: customerEmail,
           flow_type: flow,
           check_in: checkIn,
           check_out: checkOut,
@@ -457,6 +483,9 @@ export default function PayPage() {
               >
                 {processing === "park_now" ? "Redirecting…" : "Pay now"}
               </button>
+              {showWalletTopupExplainer ? (
+                <p className="text-[11px] text-black/65">Card min €0.50. Extra is added to wallet.</p>
+              ) : null}
             </form>
           )}
 
@@ -517,6 +546,9 @@ export default function PayPage() {
               >
                 {processing === "reserve" ? "Redirecting…" : "Reserve parking"}
               </button>
+              {showWalletTopupExplainer ? (
+                <p className="text-[11px] text-black/65">Card min €0.50. Extra is added to wallet.</p>
+              ) : null}
             </form>
           )}
 

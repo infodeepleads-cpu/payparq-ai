@@ -184,46 +184,61 @@ export async function POST(req: NextRequest) {
     const confirmationSubject = isInsuranceApply
       ? "We received your Payparq insurance application"
       : "We received your Payparq request";
-
-    if (resendApiKey) {
-      console.log("Using Resend for email sending...");
-      const resend = new Resend(resendApiKey);
-      try {
-        const adminTasks = adminRecipients.map(async (recipient) => {
-          const adminSend = await resend.emails.send({
-            from: fromEmail,
-            to: recipient,
-            replyTo: workEmail,
-            subject: adminSubject,
-            text: summaryLines.join("\n"),
-          });
-          console.log("Admin email sent via Resend.", recipient, adminSend.data?.id ?? "no-id");
-        });
-        const confirmationTask = workEmail
-          ? resend.emails.send({
-              from: fromEmail,
-              to: workEmail,
-              subject: confirmationSubject,
-              text: confirmationLines.join("\n"),
-            })
-          : null;
-        await Promise.all([...adminTasks, confirmationTask ?? Promise.resolve(null)]);
-        if (confirmationTask) {
-          const confirmationSend = await confirmationTask;
-          console.log("Confirmation email sent via Resend.", confirmationSend.data?.id ?? "no-id");
-        }
-        return NextResponse.json({ success: true });
-      } catch (err) {
-        console.error("Resend error:", err);
-      }
-    }
-
     const smtpHost = process.env.EMAIL_SERVER_HOST;
     const smtpPort = process.env.EMAIL_SERVER_PORT;
     const smtpUser = process.env.EMAIL_SERVER_USER;
     const smtpPass = process.env.EMAIL_SERVER_PASSWORD;
-
-    if (smtpHost && smtpUser && smtpPass) {
+    const hasResend = Boolean(resendApiKey);
+    const hasSmtp = Boolean(smtpHost && smtpUser && smtpPass);
+    if (!hasResend && !hasSmtp) {
+      console.error("No email service (Resend or SMTP) is correctly configured.");
+      return NextResponse.json(
+        { error: "Email configuration missing or incorrect.", warning: "email_not_sent" },
+        { status: 500 }
+      );
+    }
+    const sendWithResend = async () => {
+      if (!resendApiKey) {
+        return false;
+      }
+      console.log("Using Resend for email sending...");
+      const resend = new Resend(resendApiKey);
+      try {
+        const adminResults = await Promise.allSettled(
+          adminRecipients.map(async (recipient) => {
+            const adminSend = await resend.emails.send({
+              from: fromEmail,
+              to: recipient,
+              replyTo: workEmail,
+              subject: adminSubject,
+              text: summaryLines.join("\n"),
+            });
+            console.log("Admin email sent via Resend.", recipient, adminSend.data?.id ?? "no-id");
+          })
+        );
+        const adminSuccessCount = adminResults.filter((result) => result.status === "fulfilled").length;
+        const confirmationResults = workEmail
+          ? await Promise.allSettled([
+              resend.emails.send({
+                from: fromEmail,
+                to: workEmail,
+                subject: confirmationSubject,
+                text: confirmationLines.join("\n"),
+              }),
+            ])
+          : [];
+        const confirmationSucceeded =
+          !workEmail || confirmationResults.some((result) => result.status === "fulfilled");
+        return adminSuccessCount > 0 || confirmationSucceeded;
+      } catch (err) {
+        console.error("Resend error:", err);
+        return false;
+      }
+    };
+    const sendWithSmtp = async () => {
+      if (!smtpHost || !smtpUser || !smtpPass) {
+        return false;
+      }
       console.log("Using SMTP (Nodemailer) for email sending...");
       const transporter = nodemailer.createTransport({
         host: smtpHost,
@@ -234,39 +249,45 @@ export async function POST(req: NextRequest) {
           pass: smtpPass,
         },
       });
-
       try {
-        const adminTask = transporter.sendMail({
-          from: fromEmail,
-          to: adminRecipients,
-          replyTo: workEmail,
-          subject: adminSubject,
-          text: summaryLines.join("\n"),
-        });
-        const confirmationTask = workEmail
-          ? transporter.sendMail({
+        const adminResults = await Promise.allSettled(
+          adminRecipients.map((recipient) =>
+            transporter.sendMail({
               from: fromEmail,
-              to: workEmail,
-              subject: confirmationSubject,
-              text: confirmationLines.join("\n"),
+              to: recipient,
+              replyTo: workEmail,
+              subject: adminSubject,
+              text: summaryLines.join("\n"),
             })
-          : null;
-        await Promise.all([adminTask, confirmationTask ?? Promise.resolve(null)]);
-        console.log("Admin email sent via SMTP.");
-        if (confirmationTask) {
-          console.log("Confirmation email sent via SMTP.");
-        }
-        return NextResponse.json({ success: true });
+          )
+        );
+        const adminSuccessCount = adminResults.filter((result) => result.status === "fulfilled").length;
+        const confirmationResults = workEmail
+          ? await Promise.allSettled([
+              transporter.sendMail({
+                from: fromEmail,
+                to: workEmail,
+                subject: confirmationSubject,
+                text: confirmationLines.join("\n"),
+              }),
+            ])
+          : [];
+        const confirmationSucceeded =
+          !workEmail || confirmationResults.some((result) => result.status === "fulfilled");
+        return adminSuccessCount > 0 || confirmationSucceeded;
       } catch (err) {
         console.error("SMTP error:", err);
+        return false;
       }
-    }
-
-    console.error("No email service (Resend or SMTP) is correctly configured.");
-    return NextResponse.json(
-      { error: "Email configuration missing or incorrect.", warning: "email_not_sent" },
-      { status: 500 }
-    );
+    };
+    void (async () => {
+      const sentWithResend = await sendWithResend();
+      if (sentWithResend) {
+        return;
+      }
+      await sendWithSmtp();
+    })();
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error("Unexpected error handling sales request:", error);

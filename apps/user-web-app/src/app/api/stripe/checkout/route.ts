@@ -1,11 +1,14 @@
 import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 type PricingType = 'hourly' | 'daily' | 'monthly';
+const STRIPE_CARD_MIN_AMOUNT_CENTS = 50;
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';
 const unifiedStripeCancelUrl = 'https://www.payparq.com/success';
+const stripeApiVersion = '2025-03-31.basil' as unknown as Stripe.LatestApiVersion;
 
 function resolveStripeSecretKey(): string | null {
   const candidates = [
@@ -42,6 +45,11 @@ function buildSupabaseFunctionCheckoutUrl(params: {
   reservationDescription?: string;
   allowPromotionCodes: boolean;
   customerEmail?: string;
+  customerPhone?: string;
+  plateNumber?: string;
+  allowPlateOverride?: boolean;
+  extendTargetSessionId?: string;
+  extendMinutes?: number;
 }): string | null {
   const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '').trim();
   if (!supabaseBase) return null;
@@ -66,13 +74,29 @@ function buildSupabaseFunctionCheckoutUrl(params: {
   if (typeof params.quantity === 'number' && Number.isFinite(params.quantity) && params.quantity > 0) {
     url.searchParams.set('quantity', String(Math.max(1, Math.ceil(params.quantity))));
   }
-  const trimmedDescription = (params.reservationDescription ?? '').trim();
+  const trimmedDescription = forceCETLabel((params.reservationDescription ?? '').trim());
   if (trimmedDescription) {
     url.searchParams.set('description', trimmedDescription);
     url.searchParams.set('reservation_description', trimmedDescription);
   }
   if (params.customerEmail) {
     url.searchParams.set('email', params.customerEmail);
+  }
+  if (params.customerPhone) {
+    url.searchParams.set('phone', params.customerPhone);
+    url.searchParams.set('mobile', params.customerPhone);
+  }
+  if (params.plateNumber) {
+    url.searchParams.set('plate', params.plateNumber);
+  }
+  if (params.allowPlateOverride) {
+    url.searchParams.set('allow_plate_override', '1');
+  }
+  if (params.extendTargetSessionId) {
+    url.searchParams.set('extend_target_session_id', params.extendTargetSessionId);
+  }
+  if (typeof params.extendMinutes === 'number' && Number.isFinite(params.extendMinutes) && params.extendMinutes > 0) {
+    url.searchParams.set('extend_minutes', String(Math.round(params.extendMinutes)));
   }
   url.searchParams.set('allow_promotion_codes', params.allowPromotionCodes ? '1' : '0');
   url.searchParams.set('t', Date.now().toString());
@@ -107,6 +131,193 @@ function normalizeEmailValue(value: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function normalizePhoneValue(value: string | null | undefined): string | null {
+  const normalized = (value ?? '').trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizePlateValue(value: string | null | undefined): string | null {
+  const normalized = (value ?? '').trim().toUpperCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function firstDefinedStringValue(
+  metadata: Record<string, unknown> | null,
+  keys: string[]
+): string | null {
+  if (!metadata) return null;
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return null;
+}
+
+async function resolveMemberEmailFromRequest(req: NextRequest): Promise<string | null> {
+  const authHeader = req.headers.get('authorization') ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  if (token && supabaseAdmin) {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+    if (!error) {
+      return normalizeEmailValue(data.user?.email ?? null);
+    }
+  }
+  return normalizeEmailValue(req.headers.get('x-member-email'));
+}
+
+function toCents(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+function resolveCommissionRateFromMetadata(metadata: unknown): number {
+  if (!metadata || typeof metadata !== 'object') return 0.15;
+  const candidateKeys = [
+    'comm_regular_payment',
+    'commission_rate',
+    'commission',
+    'platform_commission',
+    'payparq_commission',
+  ];
+  for (const key of candidateKeys) {
+    const rawValue = (metadata as Record<string, unknown>)[key];
+    const numeric = Number(rawValue);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      if (numeric > 1) return Math.min(1, numeric / 100);
+      return Math.min(1, numeric);
+    }
+  }
+  return 0.15;
+}
+
+async function resolvePlannedWalletDebitCents(email: string | null, sessionAmountCents: number): Promise<number> {
+  const normalizedEmail = (email ?? '').trim().toLowerCase();
+  const safeSessionAmount = toCents(sessionAmountCents);
+  if (!normalizedEmail || safeSessionAmount <= 0) return 0;
+  const client = supabaseAdmin ?? supabase;
+  if (!client) return 0;
+  const { data } = await client
+    .from('wallet_accounts')
+    .select('balance_cents')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+  const balanceCents = toCents(Number((data as { balance_cents?: number | string } | null)?.balance_cents ?? 0));
+  if (balanceCents <= 0) return 0;
+  return Math.min(balanceCents, safeSessionAmount);
+}
+
+async function resolveMemberCheckoutDefaults(email: string | null): Promise<{
+  plateNumber: string | null;
+  customerPhone: string | null;
+}> {
+  const normalizedEmail = normalizeEmailValue(email);
+  if (!normalizedEmail) {
+    return { plateNumber: null, customerPhone: null };
+  }
+  const client = supabaseAdmin ?? supabase;
+  if (!client) {
+    return { plateNumber: null, customerPhone: null };
+  }
+  const parseMetadata = (value: Record<string, unknown> | string | null | undefined) => {
+    if (!value) return null;
+    if (typeof value === 'object') return value as Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+  const fillFromRows = (
+    rows: Array<{
+      plate?: string | null;
+      mobile?: string | null;
+      stripe_metadata?: Record<string, unknown> | string | null;
+    }>
+  ) => {
+    let plateNumber: string | null = null;
+    let customerPhone: string | null = null;
+    for (const row of rows) {
+      const metadata = parseMetadata(row.stripe_metadata);
+      if (!plateNumber) {
+        plateNumber = normalizePlateValue(
+          row.plate ??
+            firstDefinedStringValue(metadata, [
+              'plate',
+              'plate_number',
+              'plateNumber',
+              'license_plate',
+              'vehicle_plate',
+              'registration_number',
+            ]) ??
+            null
+        );
+      }
+      if (!customerPhone) {
+        customerPhone = normalizePhoneValue(
+          row.mobile ??
+            firstDefinedStringValue(metadata, [
+              'mobile',
+              'phone',
+              'customer_phone',
+              'customerPhone',
+              'phone_number',
+              'contact_phone',
+              'customer_mobile',
+            ]) ??
+            null
+        );
+      }
+      if (plateNumber && customerPhone) {
+        break;
+      }
+    }
+    return { plateNumber, customerPhone };
+  };
+  const { data } = await client
+    .from('parking_sessions')
+    .select('plate,mobile,stripe_metadata')
+    .ilike('email', normalizedEmail)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  const directMatch = fillFromRows(
+    (data ?? []) as Array<{
+      plate?: string | null;
+      mobile?: string | null;
+      stripe_metadata?: Record<string, unknown> | string | null;
+    }>
+  );
+  if (directMatch.plateNumber && directMatch.customerPhone) {
+    return directMatch;
+  }
+  const { data: fallbackRows } = await client
+    .from('parking_sessions')
+    .select('plate,mobile,stripe_metadata')
+    .not('stripe_metadata', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  const metadataEmailRows = ((fallbackRows ?? []) as Array<{
+    plate?: string | null;
+    mobile?: string | null;
+    stripe_metadata?: Record<string, unknown> | string | null;
+  }>).filter((row) => {
+    const metadata = parseMetadata(row.stripe_metadata);
+    const metadataEmail = normalizeEmailValue(
+      (metadata?.email as string | undefined) ??
+        (metadata?.customer_email as string | undefined) ??
+        null
+    );
+    return metadataEmail === normalizedEmail;
+  });
+  const metadataMatch = fillFromRows(metadataEmailRows);
+  return {
+    plateNumber: directMatch.plateNumber ?? metadataMatch.plateNumber,
+    customerPhone: directMatch.customerPhone ?? metadataMatch.customerPhone,
+  };
+}
+
 async function resolveStripeCustomerIdByEmail(
   stripe: Stripe,
   email: string | null
@@ -126,6 +337,34 @@ async function resolveStripeCustomerIdByEmail(
   }
 }
 
+async function resolveStripeCustomerForCheckout(params: {
+  stripe: Stripe;
+  customerEmail: string | null;
+  customerPhone: string | null;
+}) {
+  const customerId = await resolveStripeCustomerIdByEmail(params.stripe, params.customerEmail);
+  if (customerId) {
+    if (params.customerPhone) {
+      try {
+        await params.stripe.customers.update(customerId, { phone: params.customerPhone });
+      } catch {
+      }
+    }
+    return { customerId, customerEmail: params.customerEmail };
+  }
+  if (params.customerEmail || params.customerPhone) {
+    try {
+      const created = await params.stripe.customers.create({
+        email: params.customerEmail ?? undefined,
+        phone: params.customerPhone ?? undefined,
+      });
+      return { customerId: created.id, customerEmail: params.customerEmail };
+    } catch {
+    }
+  }
+  return { customerId: null, customerEmail: params.customerEmail };
+}
+
 function buildCheckoutCustomerParams(params: {
   customerId: string | null;
   customerEmail: string | null;
@@ -143,6 +382,42 @@ function buildCheckoutCustomerParams(params: {
     };
   }
   return {};
+}
+
+function buildCheckoutCustomFields(params: {
+  plateNumber: string;
+  customerPhone: string | null;
+  shouldRequirePlateField: boolean;
+  shouldAllowPlateOverride: boolean;
+}) {
+  const plateNumber = params.plateNumber.trim().toUpperCase();
+  const customerPhone = normalizePhoneValue(params.customerPhone);
+  const textPrefill = (value: string) => ({ default_value: value, value });
+  const customFields: Array<Record<string, unknown>> = [
+    {
+      key: 'plate_number',
+      label: {
+        type: 'custom',
+        custom: params.shouldRequirePlateField
+          ? 'License Plate Number (e.g. MA679XX)'
+          : `License Plate Number (current: ${plateNumber})`,
+      },
+      type: 'text',
+      optional: !params.shouldRequirePlateField || params.shouldAllowPlateOverride,
+      text: plateNumber ? textPrefill(plateNumber) : undefined,
+    },
+    {
+      key: 'phone_number',
+      label: {
+        type: 'custom',
+        custom: customerPhone ? `Mobile Phone (current: ${customerPhone})` : 'Mobile Phone',
+      },
+      type: 'text',
+      optional: false,
+      text: customerPhone ? textPrefill(customerPhone) : undefined,
+    },
+  ];
+  return customFields as unknown as Stripe.Checkout.SessionCreateParams.CustomField[];
 }
 
 function parseOptionalBooleanValue(value: unknown): boolean | undefined {
@@ -174,17 +449,15 @@ function formatBerlinDateTime(value: Date): string {
       second: '2-digit',
       hour12: false,
     }).formatToParts(value);
-    const tzFormatted = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Berlin',
-      timeZoneName: 'short',
-    }).format(value);
-    const tzMatch = tzFormatted.match(/\b(CET|CEST)\b/i);
-    const tz = (tzMatch?.[1] ?? 'CET').toUpperCase();
     const get = (type: string) => dateParts.find((p) => p.type === type)?.value ?? '';
-    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} ${tz}`;
+    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} CET`;
   } catch {
     return `${value.toISOString().replace('T', ' ').split('.')[0]} CET`;
   }
+}
+
+function forceCETLabel(value: string): string {
+  return value.replace(/\bCEST\b/g, 'CET');
 }
 
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
@@ -276,8 +549,20 @@ function buildSwitchCheckoutUrl(params: {
   targetType: PricingType;
   customerEmail?: string;
   allowPromotionCodes: boolean;
+  checkIn?: string;
+  checkOut?: string;
 }) {
-  const { baseUrl, locationId, displayId, flowType, targetType, customerEmail, allowPromotionCodes } = params;
+  const {
+    baseUrl,
+    locationId,
+    displayId,
+    flowType,
+    targetType,
+    customerEmail,
+    allowPromotionCodes,
+    checkIn,
+    checkOut,
+  } = params;
   const switchUrl = new URL('/api/stripe/checkout', baseUrl);
   switchUrl.searchParams.set('location_id', locationId);
   if (displayId) {
@@ -289,6 +574,12 @@ function buildSwitchCheckoutUrl(params: {
   switchUrl.searchParams.set('type', targetType);
   if (customerEmail) {
     switchUrl.searchParams.set('email', customerEmail);
+  }
+  if (checkIn) {
+    switchUrl.searchParams.set('in', checkIn);
+  }
+  if (checkOut) {
+    switchUrl.searchParams.set('out', checkOut);
   }
   switchUrl.searchParams.set('allow_promotion_codes', allowPromotionCodes ? '1' : '0');
   return switchUrl.toString();
@@ -302,7 +593,13 @@ function buildSubmitMessage(params: {
   flowType: string;
   customerEmail?: string;
   allowPromotionCodes: boolean;
+  checkIn?: string;
+  checkOut?: string;
+  minimumChargeApplied: boolean;
 }) {
+  const minimumChargeLine = params.minimumChargeApplied
+    ? 'Lots under €0.50/h: card min is €0.50, extra stays as wallet credit.'
+    : '';
   const termsLine =
     'By paying, you agree to our [Terms of Service](https://www.payparq.com/terms) and [Privacy Policy](https://www.payparq.com/privacy).';
   if (params.pricingType === 'daily') {
@@ -314,8 +611,10 @@ function buildSubmitMessage(params: {
       targetType: 'hourly',
       customerEmail: params.customerEmail,
       allowPromotionCodes: params.allowPromotionCodes,
+      checkIn: params.checkIn,
+      checkOut: params.checkOut,
     });
-    return `Need hourly for this location? [Open hourly checkout](${hourlyUrl})\n${termsLine}`;
+    return `Need hourly for this location? [Open hourly checkout](${hourlyUrl})\n${[minimumChargeLine, termsLine].filter(Boolean).join('\n')}`;
   }
   if (params.pricingType === 'hourly') {
     const dailyUrl = buildSwitchCheckoutUrl({
@@ -326,10 +625,12 @@ function buildSubmitMessage(params: {
       targetType: 'daily',
       customerEmail: params.customerEmail,
       allowPromotionCodes: params.allowPromotionCodes,
+      checkIn: params.checkIn,
+      checkOut: params.checkOut,
     });
-    return `Need daily for this location? [Open daily checkout](${dailyUrl})\n${termsLine}`;
+    return `Need daily for this location? [Open daily checkout](${dailyUrl})\n${[minimumChargeLine, termsLine].filter(Boolean).join('\n')}`;
   }
-  return termsLine;
+  return [minimumChargeLine, termsLine].filter(Boolean).join('\n');
 }
 
 type LocationPricingResolution = {
@@ -337,6 +638,7 @@ type LocationPricingResolution = {
   resolvedLocationId: string;
   resolvedDisplayId: string;
   resolvedLocationName: string;
+  lotCommissionRate: number;
 };
 
 async function resolveLocationPricing(
@@ -394,6 +696,9 @@ async function resolveLocationPricing(
     resolvedLocationId: String(data.id ?? locationId),
     resolvedDisplayId: String(data.display_id ?? displayId ?? ''),
     resolvedLocationName: String(data.name ?? '').trim(),
+    lotCommissionRate: resolveCommissionRateFromMetadata(
+      (data as { verification_metadata?: Record<string, unknown> | null }).verification_metadata ?? null
+    ),
   };
 }
 
@@ -408,7 +713,7 @@ export async function POST(req: NextRequest) {
     '';
   const display_id =
     (typeof body.display_id === 'string' && body.display_id) || url.searchParams.get('display_id') || '';
-  const plate_number = (typeof body.plate_number === 'string' && body.plate_number) || '';
+  const requestedPlateNumber = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
   const check_in = (body.check_in as string) || url.searchParams.get('in') || '';
@@ -418,12 +723,25 @@ export async function POST(req: NextRequest) {
   const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
+  const shouldAutoFillParkTaxiWindow = flow_type === 'park_now' && (!check_in || !check_out);
+  const defaultParkTaxiCheckIn = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const defaultParkTaxiCheckOut = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const shouldAutoFillHourlyWindow =
-    pricing_type === 'hourly' && flow_type === 'reserve' && !check_in && !check_out;
-  const effectiveCheckIn = shouldAutoFillHourlyWindow ? new Date().toISOString() : check_in;
-  const effectiveCheckOut = shouldAutoFillHourlyWindow
-    ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    : check_out;
+    !shouldAutoFillParkTaxiWindow &&
+    pricing_type === 'hourly' &&
+    flow_type === 'reserve' &&
+    !check_in &&
+    !check_out;
+  const effectiveCheckIn = shouldAutoFillParkTaxiWindow
+    ? defaultParkTaxiCheckIn
+    : shouldAutoFillHourlyWindow
+      ? new Date().toISOString()
+      : check_in;
+  const effectiveCheckOut = shouldAutoFillParkTaxiWindow
+    ? defaultParkTaxiCheckOut
+    : shouldAutoFillHourlyWindow
+      ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+      : check_out;
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
     url.searchParams.get('allow_promotion_codes')
@@ -440,6 +758,23 @@ export async function POST(req: NextRequest) {
     const v = (body as { customer_email?: unknown }).customer_email;
     if (typeof v === 'string') customer_email = v;
   }
+  let customer_phone: string | undefined = undefined;
+  if (typeof body === 'object' && body && 'customer_phone' in body) {
+    const v = (body as { customer_phone?: unknown }).customer_phone;
+    if (typeof v === 'string') customer_phone = v;
+  }
+  const allowPlateOverride = resolveAllowPromotionCodesDefaultOn(
+    (body as { allow_plate_override?: unknown }).allow_plate_override,
+    url.searchParams.get('allow_plate_override')
+  );
+  const extendTargetSessionId = ((body as { extend_target_session_id?: unknown }).extend_target_session_id ??
+    url.searchParams.get('extend_target_session_id') ??
+    '')
+    .toString()
+    .trim();
+  const extendMinutes = toCents(
+    Number((body as { extend_minutes?: unknown }).extend_minutes ?? url.searchParams.get('extend_minutes') ?? 0)
+  );
   const secret = resolveStripeSecretKey();
   if (!secret) {
     const fallbackCheckoutDetails = buildFallbackCheckoutDetails({
@@ -461,6 +796,11 @@ export async function POST(req: NextRequest) {
           reservationDescription: fallbackCheckoutDetails.reservationDescription,
           allowPromotionCodes,
           customerEmail: customer_email,
+          customerPhone: customer_phone,
+          plateNumber: requestedPlateNumber,
+          allowPlateOverride,
+          extendTargetSessionId,
+          extendMinutes,
         })
       : null;
     if (fallbackUrl) {
@@ -468,12 +808,23 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
   }
-  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
-  const normalizedCustomerEmail = normalizeEmailValue(customer_email ?? url.searchParams.get('email'));
-  const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
-  const checkoutCustomerParams = buildCheckoutCustomerParams({
-    customerId: existingCustomerId,
+  const stripe = new Stripe(secret, { apiVersion: stripeApiVersion });
+  const memberEmailFromRequest = await resolveMemberEmailFromRequest(req);
+  const normalizedCustomerEmail = normalizeEmailValue(
+    customer_email ?? url.searchParams.get('email') ?? memberEmailFromRequest
+  );
+  const requestedCustomerPhone = normalizePhoneValue(customer_phone ?? url.searchParams.get('phone'));
+  const checkoutDefaults = await resolveMemberCheckoutDefaults(normalizedCustomerEmail);
+  const normalizedCustomerPhone = requestedCustomerPhone ?? checkoutDefaults.customerPhone;
+  const plate_number = normalizePlateValue(requestedPlateNumber) ?? checkoutDefaults.plateNumber ?? '';
+  const existingCustomer = await resolveStripeCustomerForCheckout({
+    stripe,
     customerEmail: normalizedCustomerEmail,
+    customerPhone: normalizedCustomerPhone,
+  });
+  const checkoutCustomerParams = buildCheckoutCustomerParams({
+    customerId: existingCustomer.customerId,
+    customerEmail: existingCustomer.customerEmail,
   });
   if (flow_type === 'setup') {
     try {
@@ -551,10 +902,10 @@ export async function POST(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => formatIso(iso).replace(/:(\d{2}) CET$/, ' CET');
+  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:(\d{2}) (?:CET|CEST)$/, ' CET');
   const formatTimeShort = (iso: string) => {
-    const formatted = formatIso(iso);
-    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\sCET$/);
+    const formatted = forceCETLabel(formatIso(iso));
+    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\s(?:CET|CEST)$/);
     if (match) return `${match[1]}:${match[2]}`;
     return '';
   };
@@ -581,33 +932,49 @@ export async function POST(req: NextRequest) {
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
   let resolvedLocationName = '';
+  let lotCommissionRate = 0.15;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
     resolvedLocationName = pricingResolution.resolvedLocationName;
+    lotCommissionRate = pricingResolution.lotCommissionRate;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
+  const finalCheckOut = effectiveCheckOut;
   if (effectiveCheckIn && effectiveCheckOut) {
     if (isParkTaxiFlow) {
       const locationTitle = resolvedLocationName || 'Safe Parking by PayParq Split Airport/Trogir';
       const locationIdLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id || '—';
       const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || '--:--';
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(effectiveCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(finalCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
     } else {
-      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(effectiveCheckOut)}`;
+      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(finalCheckOut)}`;
       if (resolvedDisplayId || display_id) {
         reservationDescription += `\nLocation ID: ${resolvedDisplayId || display_id}`;
       }
     }
   }
-  const submitMessageBase = buildSubmitMessage({
+  const sessionAmountCents = toCents(unitAmount * quantity);
+  const walletDebitPlannedCents = await resolvePlannedWalletDebitCents(
+    normalizedCustomerEmail,
+    sessionAmountCents
+  );
+  const stripeShortfallCents = toCents(sessionAmountCents - walletDebitPlannedCents);
+  const chargedAmountCents = Math.max(stripeShortfallCents, STRIPE_CARD_MIN_AMOUNT_CENTS);
+  const minimumChargeApplied = chargedAmountCents > stripeShortfallCents;
+  if (minimumChargeApplied) {
+    const topupDelta = ((chargedAmountCents - stripeShortfallCents) / 100).toFixed(2);
+    reservationDescription += `\nStripe minimum applied (€${(STRIPE_CARD_MIN_AMOUNT_CENTS / 100).toFixed(2)}). €${topupDelta} will be credited to wallet.`;
+  }
+  reservationDescription = forceCETLabel(reservationDescription);
+  const submitMessageBase = forceCETLabel(buildSubmitMessage({
     pricingType: pricing_type,
     baseUrl: url.origin,
     locationId: resolvedLocationId,
@@ -615,19 +982,37 @@ export async function POST(req: NextRequest) {
     flowType: flow_type,
     customerEmail: customer_email,
     allowPromotionCodes,
-  });
-  const submitMessage = reservationDescription
-    ? `${reservationDescription}\n${submitMessageBase}`
-    : submitMessageBase;
-  const checkoutSuccessUrl = buildSuccessUrl({
-    locationId: resolvedLocationId,
-    displayId: resolvedDisplayId,
     checkIn: effectiveCheckIn || undefined,
-    checkOut: effectiveCheckOut || undefined,
-  });
+    checkOut: finalCheckOut || undefined,
+    minimumChargeApplied,
+  }));
+  const plateLine = plate_number ? `Plate: ${plate_number}` : '';
+  const submitMessage = forceCETLabel(reservationDescription
+    ? `${reservationDescription}${plateLine ? `\n${plateLine}` : ''}\n${submitMessageBase}`
+    : plateLine
+      ? `${plateLine}\n${submitMessageBase}`
+      : submitMessageBase);
+  const shouldRequirePlateField = !plate_number;
+  const shouldAllowPlateOverride = allowPlateOverride || Boolean(plate_number);
   try {
     // Attempt to create session with SEPA and Card
-    const session = await createSession(['card', 'sepa_debit']);
+    const fallbackSuccessUrl = buildSuccessUrl({
+      locationId: resolvedLocationId,
+      displayId: resolvedDisplayId,
+      checkIn: effectiveCheckIn || undefined,
+      checkOut: finalCheckOut || undefined,
+    });
+    const session = await createSessionWithComputedValues({
+      sessionQuantity: quantity,
+      reservationDescription,
+      checkOut: finalCheckOut,
+      checkoutSuccessUrl: fallbackSuccessUrl,
+      chargedAmountCents,
+      sessionAmountCents,
+      walletDebitPlannedCents,
+      lotCommissionRate,
+      paymentMethodTypes: ['card', 'sepa_debit'],
+    });
     return NextResponse.json({ url: session.url });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : '';
@@ -635,7 +1020,23 @@ export async function POST(req: NextRequest) {
     if (message.includes('sepa_debit') || message.includes('payment method type')) {
       console.warn('SEPA not enabled, falling back to Card only');
       try {
-        const session = await createSession(['card']);
+        const fallbackSuccessUrl = buildSuccessUrl({
+          locationId: resolvedLocationId,
+          displayId: resolvedDisplayId,
+          checkIn: effectiveCheckIn || undefined,
+          checkOut: finalCheckOut || undefined,
+        });
+        const session = await createSessionWithComputedValues({
+          sessionQuantity: quantity,
+          reservationDescription,
+          checkOut: finalCheckOut,
+          checkoutSuccessUrl: fallbackSuccessUrl,
+          chargedAmountCents,
+          sessionAmountCents,
+          walletDebitPlannedCents,
+          lotCommissionRate,
+          paymentMethodTypes: ['card'],
+        });
         return NextResponse.json({ url: session.url });
       } catch (retryErr: unknown) {
         const retryMessage = retryErr instanceof Error ? retryErr.message : 'stripe_retry_failed';
@@ -645,11 +1046,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message || 'stripe_payment_failed' }, { status: 400 });
   }
 
-  async function createSession(payment_method_types: Stripe.Checkout.SessionCreateParams.PaymentMethodType[]) {
+  async function createSessionWithComputedValues(params: {
+    sessionQuantity: number;
+    reservationDescription: string;
+    checkOut: string;
+    checkoutSuccessUrl: string;
+    chargedAmountCents: number;
+    sessionAmountCents: number;
+    walletDebitPlannedCents: number;
+    lotCommissionRate: number;
+    paymentMethodTypes?: Stripe.Checkout.SessionCreateParams.PaymentMethodType[];
+  }) {
+    const payment_method_types = params.paymentMethodTypes ?? ['card', 'sepa_debit'];
     return await stripe.checkout.sessions.create({
       mode: 'payment',
-      phone_number_collection: { enabled: true },
-      success_url: checkoutSuccessUrl,
+      success_url: params.checkoutSuccessUrl,
       cancel_url: unifiedStripeCancelUrl,
       payment_method_types,
       allow_promotion_codes: allowPromotionCodes,
@@ -660,23 +1071,23 @@ export async function POST(req: NextRequest) {
             product_data: { 
               name:
                 isParkTaxiFlow
-                  ? quantity > 1
-                    ? `Park & Taxi Package (${quantity} Days)`
+                  ? params.sessionQuantity > 1
+                    ? `Park & Taxi Package (${params.sessionQuantity} Days)`
                     : 'Park & Taxi Package (1 Day)'
                   : pricing_type === 'daily'
-                  ? quantity > 1
-                    ? `Parking Session (${quantity} Days)`
+                  ? params.sessionQuantity > 1
+                    ? `Parking Session (${params.sessionQuantity} Days)`
                     : 'Parking Session (1 Day)'
                   : pricing_type === 'monthly'
                     ? 'Parking Session (Monthly)'
-                    : quantity > 1
-                        ? `Parking Session (${quantity} Hours)`
+                    : params.sessionQuantity > 1
+                        ? `Parking Session (${params.sessionQuantity} Hours)`
                         : 'Parking Session (1 Hour)',
-              description: reservationDescription || undefined,
+              description: params.reservationDescription || undefined,
             },
-            unit_amount: unitAmount,
+            unit_amount: params.chargedAmountCents,
           },
-          quantity: quantity,
+          quantity: 1,
           adjustable_quantity: {
             enabled: false,
           },
@@ -687,23 +1098,32 @@ export async function POST(req: NextRequest) {
           message: submitMessage,
         },
       },
-      custom_fields: [
-        {
-          key: 'plate_number',
-          label: { type: 'custom', custom: 'License Plate Number (e.g. MA679XX)' },
-          type: 'text',
-          optional: false,
-        },
-      ],
+      custom_fields: buildCheckoutCustomFields({
+        plateNumber: plate_number,
+        customerPhone: normalizedCustomerPhone,
+        shouldRequirePlateField,
+        shouldAllowPlateOverride,
+      }),
       ...checkoutCustomerParams,
       metadata: {
         location_id: resolvedLocationId,
         display_id: resolvedDisplayId,
         plate_number,
+        customer_phone: normalizedCustomerPhone ?? '',
+        customer_email: normalizedCustomerEmail ?? '',
         flow_type,
         pricing_type,
         check_in: effectiveCheckIn,
-        check_out: effectiveCheckOut,
+        check_out: params.checkOut,
+        extend_target_session_id: extendTargetSessionId,
+        extend_minutes: String(extendMinutes),
+        session_amount_cents: String(params.sessionAmountCents),
+        charged_amount_cents: String(params.chargedAmountCents),
+        wallet_debit_planned_cents: String(params.walletDebitPlannedCents),
+        lot_commission_rate: params.lotCommissionRate.toFixed(4),
+        session_quantity: String(params.sessionQuantity),
+        session_unit_amount_cents: String(unitAmount),
+        minimum_charge_topup_cents: String(Math.max(0, params.chargedAmountCents - stripeShortfallCents)),
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -711,10 +1131,21 @@ export async function POST(req: NextRequest) {
           location_id: resolvedLocationId,
           display_id: resolvedDisplayId,
           plate_number,
+          customer_phone: normalizedCustomerPhone ?? '',
+          customer_email: normalizedCustomerEmail ?? '',
           flow_type,
           pricing_type,
           check_in: effectiveCheckIn,
-          check_out: effectiveCheckOut,
+          check_out: params.checkOut,
+          extend_target_session_id: extendTargetSessionId,
+          extend_minutes: String(extendMinutes),
+          session_amount_cents: String(params.sessionAmountCents),
+          charged_amount_cents: String(params.chargedAmountCents),
+          wallet_debit_planned_cents: String(params.walletDebitPlannedCents),
+          lot_commission_rate: params.lotCommissionRate.toFixed(4),
+          session_quantity: String(params.sessionQuantity),
+          session_unit_amount_cents: String(unitAmount),
+          minimum_charge_topup_cents: String(Math.max(0, params.chargedAmountCents - stripeShortfallCents)),
         },
       },
     });
@@ -725,19 +1156,32 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const location_id = url.searchParams.get('loc') || url.searchParams.get('location_id') || '';
   const display_id = url.searchParams.get('display_id') || '';
-  const plate_number = url.searchParams.get('plate') || '';
+  const requestedPlateNumber = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
   const check_in = url.searchParams.get('in') || '';
   const check_out = url.searchParams.get('out') || '';
   const normalizedPricingType = normalizePricingType(url.searchParams.get('type'), flow_type);
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
+  const shouldAutoFillParkTaxiWindow = flow_type === 'park_now' && (!check_in || !check_out);
+  const defaultParkTaxiCheckIn = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const defaultParkTaxiCheckOut = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const shouldAutoFillHourlyWindow =
-    pricing_type === 'hourly' && flow_type === 'reserve' && !check_in && !check_out;
-  const effectiveCheckIn = shouldAutoFillHourlyWindow ? new Date().toISOString() : check_in;
-  const effectiveCheckOut = shouldAutoFillHourlyWindow
-    ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-    : check_out;
+    !shouldAutoFillParkTaxiWindow &&
+    pricing_type === 'hourly' &&
+    flow_type === 'reserve' &&
+    !check_in &&
+    !check_out;
+  const effectiveCheckIn = shouldAutoFillParkTaxiWindow
+    ? defaultParkTaxiCheckIn
+    : shouldAutoFillHourlyWindow
+      ? new Date().toISOString()
+      : check_in;
+  const effectiveCheckOut = shouldAutoFillParkTaxiWindow
+    ? defaultParkTaxiCheckOut
+    : shouldAutoFillHourlyWindow
+      ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+      : check_out;
   const parkTaxiWindowError = validateParkTaxiReservationWindow(
     flow_type,
     effectiveCheckIn,
@@ -750,7 +1194,14 @@ export async function GET(req: NextRequest) {
     undefined,
     url.searchParams.get('allow_promotion_codes')
   );
+  const allowPlateOverride = resolveAllowPromotionCodesDefaultOn(
+    undefined,
+    url.searchParams.get('allow_plate_override')
+  );
+  const extendTargetSessionId = (url.searchParams.get('extend_target_session_id') ?? '').toString().trim();
+  const extendMinutes = toCents(Number(url.searchParams.get('extend_minutes') ?? 0));
   const customer_email = url.searchParams.get('email') || undefined;
+  const customer_phone = url.searchParams.get('phone') || undefined;
   const secret = resolveStripeSecretKey();
   if (!secret) {
     const fallbackCheckoutDetails = buildFallbackCheckoutDetails({
@@ -772,6 +1223,11 @@ export async function GET(req: NextRequest) {
           reservationDescription: fallbackCheckoutDetails.reservationDescription,
           allowPromotionCodes,
           customerEmail: customer_email,
+          customerPhone: customer_phone,
+          plateNumber: requestedPlateNumber,
+          allowPlateOverride,
+          extendTargetSessionId,
+          extendMinutes,
         })
       : null;
     if (fallbackUrl) {
@@ -779,12 +1235,21 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
   }
-  const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
-  const normalizedCustomerEmail = normalizeEmailValue(customer_email);
-  const existingCustomerId = await resolveStripeCustomerIdByEmail(stripe, normalizedCustomerEmail);
-  const checkoutCustomerParams = buildCheckoutCustomerParams({
-    customerId: existingCustomerId,
+  const stripe = new Stripe(secret, { apiVersion: stripeApiVersion });
+  const memberEmailFromRequest = await resolveMemberEmailFromRequest(req);
+  const normalizedCustomerEmail = normalizeEmailValue(customer_email ?? memberEmailFromRequest);
+  const requestedCustomerPhone = normalizePhoneValue(customer_phone);
+  const checkoutDefaults = await resolveMemberCheckoutDefaults(normalizedCustomerEmail);
+  const normalizedCustomerPhone = requestedCustomerPhone ?? checkoutDefaults.customerPhone;
+  const plate_number = normalizePlateValue(requestedPlateNumber) ?? checkoutDefaults.plateNumber ?? '';
+  const existingCustomer = await resolveStripeCustomerForCheckout({
+    stripe,
     customerEmail: normalizedCustomerEmail,
+    customerPhone: normalizedCustomerPhone,
+  });
+  const checkoutCustomerParams = buildCheckoutCustomerParams({
+    customerId: existingCustomer.customerId,
+    customerEmail: existingCustomer.customerEmail,
   });
   const hasTamperedAmountParams =
     url.searchParams.has('price') ||
@@ -841,10 +1306,10 @@ export async function GET(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => formatIso(iso).replace(/:(\d{2}) CET$/, ' CET');
+  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:(\d{2}) (?:CET|CEST)$/, ' CET');
   const formatTimeShort = (iso: string) => {
-    const formatted = formatIso(iso);
-    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\sCET$/);
+    const formatted = forceCETLabel(formatIso(iso));
+    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\s(?:CET|CEST)$/);
     if (match) return `${match[1]}:${match[2]}`;
     return '';
   };
@@ -870,39 +1335,55 @@ export async function GET(req: NextRequest) {
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
   let resolvedLocationName = '';
+  let lotCommissionRate = 0.15;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
     resolvedLocationName = pricingResolution.resolvedLocationName;
+    lotCommissionRate = pricingResolution.lotCommissionRate;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
       typeof error === 'object' && error && 'message' in error ? String(error.message) : 'pricing_resolution_failed';
     return NextResponse.json({ error: message }, { status });
   }
-  const checkoutSuccessUrl = buildSuccessUrl({
-    locationId: resolvedLocationId,
-    displayId: resolvedDisplayId,
-    checkIn: effectiveCheckIn || undefined,
-    checkOut: effectiveCheckOut || undefined,
-  });
+  const finalCheckOut = effectiveCheckOut;
   if (effectiveCheckIn && effectiveCheckOut) {
     if (isParkTaxiFlow) {
       const locationTitle = resolvedLocationName || 'Safe Parking by PayParq Split Airport/Trogir';
       const locationIdLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id || '—';
       const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || '--:--';
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(effectiveCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${formatIsoNoSeconds(effectiveCheckIn)} • Do ${formatIsoNoSeconds(finalCheckOut)} • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${quantity === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
     } else {
-      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(effectiveCheckOut)}`;
+      reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${formatIso(finalCheckOut)}`;
       if (resolvedDisplayId || display_id) {
         reservationDescription += `\nLocation ID: ${resolvedDisplayId || display_id}`;
       }
     }
   }
-  const submitMessageBase = buildSubmitMessage({
+  const sessionAmountCents = toCents(unitAmount * quantity);
+  const walletDebitPlannedCents = await resolvePlannedWalletDebitCents(
+    normalizedCustomerEmail,
+    sessionAmountCents
+  );
+  const stripeShortfallCents = toCents(sessionAmountCents - walletDebitPlannedCents);
+  const chargedAmountCents = Math.max(stripeShortfallCents, STRIPE_CARD_MIN_AMOUNT_CENTS);
+  const minimumChargeApplied = chargedAmountCents > stripeShortfallCents;
+  if (minimumChargeApplied) {
+    const topupDelta = ((chargedAmountCents - stripeShortfallCents) / 100).toFixed(2);
+    reservationDescription += `\nStripe minimum applied (€${(STRIPE_CARD_MIN_AMOUNT_CENTS / 100).toFixed(2)}). €${topupDelta} will be credited to wallet.`;
+  }
+  reservationDescription = forceCETLabel(reservationDescription);
+  const checkoutSuccessUrl = buildSuccessUrl({
+    locationId: resolvedLocationId,
+    displayId: resolvedDisplayId,
+    checkIn: effectiveCheckIn || undefined,
+    checkOut: finalCheckOut || undefined,
+  });
+  const submitMessageBase = forceCETLabel(buildSubmitMessage({
     pricingType: pricing_type,
     baseUrl: url.origin,
     locationId: resolvedLocationId,
@@ -910,14 +1391,21 @@ export async function GET(req: NextRequest) {
     flowType: flow_type,
     customerEmail: customer_email,
     allowPromotionCodes,
-  });
-  const submitMessage = reservationDescription
-    ? `${reservationDescription}\n${submitMessageBase}`
-    : submitMessageBase;
+    checkIn: effectiveCheckIn || undefined,
+    checkOut: finalCheckOut || undefined,
+    minimumChargeApplied,
+  }));
+  const plateLine = plate_number ? `Plate: ${plate_number}` : '';
+  const submitMessage = forceCETLabel(reservationDescription
+    ? `${reservationDescription}${plateLine ? `\n${plateLine}` : ''}\n${submitMessageBase}`
+    : plateLine
+      ? `${plateLine}\n${submitMessageBase}`
+      : submitMessageBase);
+  const shouldRequirePlateField = !plate_number;
+  const shouldAllowPlateOverride = allowPlateOverride || Boolean(plate_number);
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      phone_number_collection: { enabled: true },
       success_url: checkoutSuccessUrl,
       cancel_url: unifiedStripeCancelUrl,
       payment_method_types: ['card'],
@@ -943,9 +1431,9 @@ export async function GET(req: NextRequest) {
                         : 'Parking Session (1 Hour)',
               description: reservationDescription || undefined,
             },
-            unit_amount: unitAmount,
+            unit_amount: chargedAmountCents,
           },
-          quantity,
+          quantity: 1,
           adjustable_quantity: {
             enabled: false,
           },
@@ -956,23 +1444,32 @@ export async function GET(req: NextRequest) {
           message: submitMessage,
         },
       },
-      custom_fields: [
-        {
-          key: 'plate_number',
-          label: { type: 'custom', custom: 'License Plate Number (e.g. MA679XX)' },
-          type: 'text',
-          optional: false,
-        },
-      ],
+      custom_fields: buildCheckoutCustomFields({
+        plateNumber: plate_number,
+        customerPhone: normalizedCustomerPhone,
+        shouldRequirePlateField,
+        shouldAllowPlateOverride,
+      }),
       ...checkoutCustomerParams,
       metadata: {
         location_id: resolvedLocationId,
         display_id: resolvedDisplayId,
         plate_number,
+        customer_phone: normalizedCustomerPhone ?? '',
+        customer_email: normalizedCustomerEmail ?? '',
         flow_type,
         pricing_type,
         check_in: effectiveCheckIn,
-        check_out: effectiveCheckOut,
+        check_out: finalCheckOut,
+        extend_target_session_id: extendTargetSessionId,
+        extend_minutes: String(extendMinutes),
+        session_amount_cents: String(sessionAmountCents),
+        charged_amount_cents: String(chargedAmountCents),
+        wallet_debit_planned_cents: String(walletDebitPlannedCents),
+        lot_commission_rate: lotCommissionRate.toFixed(4),
+        session_quantity: String(quantity),
+        session_unit_amount_cents: String(unitAmount),
+        minimum_charge_topup_cents: String(Math.max(0, chargedAmountCents - stripeShortfallCents)),
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -980,10 +1477,21 @@ export async function GET(req: NextRequest) {
           location_id: resolvedLocationId,
           display_id: resolvedDisplayId,
           plate_number,
+          customer_phone: normalizedCustomerPhone ?? '',
+          customer_email: normalizedCustomerEmail ?? '',
           flow_type,
           pricing_type,
           check_in: effectiveCheckIn,
-          check_out: effectiveCheckOut,
+          check_out: finalCheckOut,
+          extend_target_session_id: extendTargetSessionId,
+          extend_minutes: String(extendMinutes),
+          session_amount_cents: String(sessionAmountCents),
+          charged_amount_cents: String(chargedAmountCents),
+          wallet_debit_planned_cents: String(walletDebitPlannedCents),
+          lot_commission_rate: lotCommissionRate.toFixed(4),
+          session_quantity: String(quantity),
+          session_unit_amount_cents: String(unitAmount),
+          minimum_charge_topup_cents: String(Math.max(0, chargedAmountCents - stripeShortfallCents)),
         },
       },
     });

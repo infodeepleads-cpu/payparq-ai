@@ -7,6 +7,7 @@ import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, Chevr
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
 import { normalizeLocationName, resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 type HubData = {
   id: string;
@@ -206,6 +207,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
   const parkTaxiTotalPriceLabel = `€${(totalDays * parkTaxiUnitPrice).toFixed(2)}`;
+  const reserveTotalAmountCents = Math.max(0, Math.round(reserveTotalAmount * 100));
+  const parkTaxiTotalAmountCents = Math.max(0, Math.round(totalDays * parkTaxiUnitPrice * 100));
+  const activeFlowAmountCents = activeTab === "park_now" ? parkTaxiTotalAmountCents : reserveTotalAmountCents;
+  const showMinChargeWalletExplainer = activeFlowAmountCents > 0 && activeFlowAmountCents < 50;
+  const minChargeWalletExplainerText = "Card min €0.50. Extra is added to wallet.";
   const monthlyPrice = resolveScannerTruthPriceEuro(hub, "monthly");
   const parqOneWayRidePrice = 4.5;
   const parqTwoWayRidePrice = 9;
@@ -215,7 +221,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const competitorDaily = dailyPrice + 7;
   const camperDailyPrice = 20;
   const busDailyPrice = 50;
-  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}&flow=${encodeURIComponent(activeTab)}`;
+  const checkoutHref = `/pay?loc=${encodeURIComponent(locationId)}&in=${encodeURIComponent(checkIn)}&out=${encodeURIComponent(checkOut)}&flow=${encodeURIComponent(activeTab)}&amount_cents=${encodeURIComponent(String(activeFlowAmountCents))}`;
 
   const parkTaxiMinCheckIn = (() => {
     const minDate = new Date(Date.now() + parkTaxiDefaultOffsetMinutes * 60 * 1000);
@@ -261,17 +267,29 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     setLoading(true);
     
     try {
+      let customerEmail: string | undefined = undefined;
+      let authToken: string | undefined = undefined;
+      if (supabase && isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        customerEmail = data.session?.user?.email?.trim().toLowerCase() || undefined;
+        authToken = data.session?.access_token || undefined;
+      }
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           location_id: locationId,
           display_id: hub.display_id,
           check_in: checkIn || undefined,
           check_out: checkOut || undefined,
           flow_type: activeTab,
+          customer_email: customerEmail,
           type: activeTab === 'park_now' || (activeTab === 'reserve' && reserveUsesDailyPricing) ? 'daily' : undefined,
           park_taxi: activeTab === 'park_now' ? 1 : undefined,
         }),
@@ -285,16 +303,23 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         }
         throw new Error(errData.error || "Checkout failed");
       }
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+      let checkoutUrl = "";
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      if (contentType.includes("application/json")) {
+        const data = (await res.json().catch(() => null)) as { url?: string } | null;
+        checkoutUrl = (data?.url || "").toString().trim();
+      } else if (res.redirected && res.url) {
+        checkoutUrl = res.url;
       }
+      if (checkoutUrl) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
+      setCheckoutError("Checkout link not available. Please try again.");
+      setLoading(false);
     } catch (err) {
       console.error(err);
-      if (!checkoutError) {
-        setCheckoutError("Checkout nije uspio. Pokušajte ponovno.");
-      }
+      setCheckoutError("Checkout nije uspio. Pokušajte ponovno.");
       setLoading(false);
     }
   }
@@ -695,7 +720,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   </div>
                 </Link>
               </div>
-              <div className="flex items-center justify-end gap-2 md:gap-3">
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center justify-end gap-2 md:gap-3">
                 <Link
                   href="/contact"
                   className="hidden md:inline-flex px-4 py-2 rounded-full border border-gray-300 text-[11px] font-semibold hover:bg-gray-100 transition-colors"
@@ -709,6 +735,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 >
                   {loading ? "Processing..." : (checkIn && checkOut ? `Lock in Price (${reserveTotalPriceLabel})` : `Lock in Price (${priceLabel}/hr)`)}
                 </Link>
+                </div>
+                {showMinChargeWalletExplainer ? (
+                  <p className="text-[10px] text-black/65">{minChargeWalletExplainerText}</p>
+                ) : null}
               </div>
             </div>
             {mobileOpen && (
@@ -840,6 +870,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   >
                     Book Parking ({priceLabel}/hr)
                   </Link>
+                  {showMinChargeWalletExplainer ? (
+                    <p className="mt-1 text-center text-[10px] text-black/65">{minChargeWalletExplainerText}</p>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -990,6 +1023,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 >
                   {loading ? "Processing..." : (activeTab === 'reserve' ? `Lock in Price (${priceLabel})` : "Zaključaj cijenu")}
                 </button>
+                {showMinChargeWalletExplainer ? (
+                  <p className="mb-2 text-[10px] text-gray-500">{minChargeWalletExplainerText}</p>
+                ) : null}
                 {activeTab === 'reserve' ? (
                   <>
                     <div className="space-y-3 mb-3">
@@ -1590,6 +1626,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
               >
                 {loading ? "Processing..." : (activeTab === 'reserve' ? "Lock in Price" : "Zaključaj cijenu")}
               </button>
+              {showMinChargeWalletExplainer ? (
+                <p className="mt-2 text-[10px] text-center text-gray-500">{minChargeWalletExplainerText}</p>
+              ) : null}
               {checkoutError ? <p className="mt-2 text-xs text-red-600 text-center">{checkoutError}</p> : null}
               
               <p className="mt-3 text-[10px] text-center text-gray-400">

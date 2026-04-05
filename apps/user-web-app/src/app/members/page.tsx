@@ -10,9 +10,8 @@ import type { User } from "@supabase/supabase-js";
 type NavItemId =
   | "account"
   | "home"
-  | "monthly"
+  | "permits"
   | "activity"
-  | "company"
   | "payment"
   | "vehicles"
   | "promotions"
@@ -23,6 +22,8 @@ type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
 type ActionProcessing = FlowType | HomeWidgetId;
 type ActivityRow = {
   id: string;
+  email?: string | null;
+  contact_email?: string | null;
   created_at?: string | null;
   location_id?: string | null;
   location_display_id?: string | null;
@@ -33,10 +34,24 @@ type ActivityRow = {
   status?: string | null;
   entry_time?: string | null;
   exit_time?: string | null;
+  end_time?: string | null;
   stripe_metadata?: Record<string, unknown> | string | null;
   ui_check_in?: string | null;
   ui_check_out?: string | null;
   ui_lifecycle?: "upcoming" | "active" | "expired" | "pending" | "inactive";
+};
+type PermitRow = {
+  id: string;
+  plate?: string | null;
+  type?: string | null;
+  status?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location_id?: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  created_at?: string | null;
+  stripe_metadata?: Record<string, unknown> | string | null;
 };
 type MembersHomeContext = {
   sessionId: string;
@@ -80,6 +95,15 @@ type RewardLoyaltyLedgerRow = {
   source: string;
   createdAt: string;
 };
+type ActivityDebugInfo = {
+  resolvedEmail: string;
+  source: "context" | "direct" | "fallback" | "none";
+  contextStatus: number | null;
+  contextCount: number;
+  directCount: number;
+  fallbackCount: number;
+  error: string;
+};
 
 function normalizeRole(value: unknown) {
   const normalized = (value ?? "")
@@ -113,18 +137,26 @@ function parseActivityDate(value: unknown) {
 }
 
 function parseStripeMetadata(
-  value: ActivityRow["stripe_metadata"]
+  value: Record<string, unknown> | string | null | undefined
 ): Record<string, unknown> {
   if (value && typeof value === "object") {
     return value as Record<string, unknown>;
   }
   if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (parsed && typeof parsed === "object") {
-        return parsed as Record<string, unknown>;
+    let current: unknown = value;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (current && typeof current === "object") {
+        return current as Record<string, unknown>;
       }
-    } catch {}
+      if (typeof current !== "string") {
+        break;
+      }
+      try {
+        current = JSON.parse(current);
+      } catch {
+        break;
+      }
+    }
   }
   return {};
 }
@@ -133,11 +165,13 @@ function resolveActivityWindow(row: ActivityRow) {
   const metadata = parseStripeMetadata(row.stripe_metadata);
   const metadataCheckIn = parseActivityDate(metadata["check_in"]);
   const metadataCheckOut = parseActivityDate(metadata["check_out"]);
+  const createdAt = parseActivityDate(row.created_at);
   const entry = parseActivityDate(row.entry_time);
   const exit = parseActivityDate(row.exit_time);
+  const endTime = parseActivityDate(row.end_time);
   return {
-    checkIn: metadataCheckIn ?? entry,
-    checkOut: metadataCheckOut ?? exit,
+    checkIn: metadataCheckIn ?? entry ?? createdAt,
+    checkOut: metadataCheckOut ?? exit ?? endTime,
   };
 }
 
@@ -194,12 +228,21 @@ export default function MembersPage() {
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
-  const [actionLocation] = useState("");
   const [actionProcessing, setActionProcessing] = useState<ActionProcessing | null>(null);
   const [actionError, setActionError] = useState("");
-  const [activityFavorite, setActivityFavorite] = useState(false);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
+  const [activityDebug, setActivityDebug] = useState<ActivityDebugInfo>({
+    resolvedEmail: "",
+    source: "none",
+    contextStatus: null,
+    contextCount: 0,
+    directCount: 0,
+    fallbackCount: 0,
+    error: "",
+  });
+  const [permitsRows, setPermitsRows] = useState<PermitRow[]>([]);
+  const [permitsLoading, setPermitsLoading] = useState(false);
 
   const [devSignedIn, setDevSignedIn] = useState(false);
 
@@ -279,16 +322,16 @@ export default function MembersPage() {
   function formatOtpError(message: string) {
     const normalized = message.toLowerCase();
     if (normalized.includes("redirect") && normalized.includes("allow")) {
-      return "Redirect URL nije dopušten u Supabase postavkama. Dodajte Members URL u Auth URL Configuration.";
+      return "Redirect URL nije dopušten u postavkama prijave. Dodajte Members URL u Auth URL Configuration.";
     }
     if (normalized.includes("error sending magic link email")) {
-      return "Pogreška pri slanju e-pošte s čarobnom vezom. U Supabase Auth provjerite Email provider, SMTP postavke i Redirect URL.";
+      return "Pogreška pri slanju e-pošte s čarobnom vezom. Provjerite Email provider, SMTP postavke i Redirect URL.";
     }
     if (normalized.includes("email address not authorized")) {
       return "Adresa e-pošte nije odobrena za slanje. Potvrdite sender domenu i mailbox u SMTP servisu.";
     }
     if (normalized.includes("signups not allowed")) {
-      return "Registracije su isključene u Supabase projektu. Uključite Email sign-in i dopustite kreiranje korisnika.";
+      return "Registracije su isključene u projektu. Uključite Email sign-in i dopustite kreiranje korisnika.";
     }
     if (normalized.includes("invalid login credentials")) {
       return "Prijava nije uspjela. Pokušajte ponovno kroz link iz e-pošte.";
@@ -455,78 +498,212 @@ export default function MembersPage() {
   }, []);
 
   const refreshActivity = useCallback(async () => {
-    const normalizedEmail = (user?.email ?? "").trim().toLowerCase();
-    if (!isSignedIn || !normalizedEmail || !supabase || !isSupabaseConfigured) {
+    const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
+    if (!isSignedIn || !normalizedEmail) {
+      setActivityRows([]);
+      setActivityDebug({
+        resolvedEmail: normalizedEmail,
+        source: "none",
+        contextStatus: null,
+        contextCount: 0,
+        directCount: 0,
+        fallbackCount: 0,
+        error: "missing_signin_or_email",
+      });
       return;
     }
-    const client = supabase;
     setActivityLoading(true);
     try {
-      const { data, error } = await client
-        .from("parking_sessions")
-        .select("id,created_at,location_id,plate,price,currency,payment_status,status,entry_time,exit_time,stripe_metadata")
-        .ilike("email", normalizedEmail)
-        .order("exit_time", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (supabase && isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+      }
+      if (!headers.Authorization) {
+        headers["x-member-email"] = normalizedEmail;
+      }
+      const response = await fetch("/api/members/context", {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            activity?: ActivityRow[] | null;
+          }
+        | null;
+      if (response.ok && payload) {
+        const contextRows = payload.activity ?? [];
+        setActivityRows(contextRows);
+        setActivityDebug({
+          resolvedEmail: normalizedEmail,
+          source: "context",
+          contextStatus: response.status,
+          contextCount: contextRows.length,
+          directCount: 0,
+          fallbackCount: 0,
+          error: "",
+        });
         return;
       }
-      const parsedRows = (data ?? []) as ActivityRow[];
-      const rawRows = parsedRows.filter((row) => {
-        const paymentStatus = (row.payment_status ?? "").toString().trim().toLowerCase();
-        if (
-          paymentStatus === "pending" ||
-          paymentStatus === "unpaid" ||
-          paymentStatus === "open" ||
-          paymentStatus === "requires_payment_method"
-        ) {
-          return false;
+      if (!supabase || !isSupabaseConfigured) {
+        setActivityRows([]);
+        setActivityDebug({
+          resolvedEmail: normalizedEmail,
+          source: "none",
+          contextStatus: response.status,
+          contextCount: 0,
+          directCount: 0,
+          fallbackCount: 0,
+          error: "context_failed_and_supabase_not_configured",
+        });
+        return;
+      }
+      const fields =
+        "id,email,contact_email,created_at,location_id,plate,price,currency,payment_status,status,entry_time,exit_time,end_time,stripe_metadata";
+      const { data: directRowsByEmail, error: directErrorByEmail } = await supabase
+        .from("parking_sessions")
+        .select(fields)
+        .ilike("email", normalizedEmail)
+        .order("created_at", { ascending: false })
+        .limit(300);
+      const { data: directRowsByContactEmail, error: directErrorByContactEmail } = await supabase
+        .from("parking_sessions")
+        .select(fields)
+        .ilike("contact_email", normalizedEmail)
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (directErrorByEmail && directErrorByContactEmail) {
+        setActivityRows([]);
+        setActivityDebug({
+          resolvedEmail: normalizedEmail,
+          source: "none",
+          contextStatus: response.status,
+          contextCount: 0,
+          directCount: 0,
+          fallbackCount: 0,
+          error: "direct_query_failed",
+        });
+        return;
+      }
+      let rowsForUi = Array.from(
+        new Map(
+          [...((directRowsByEmail ?? []) as ActivityRow[]), ...((directRowsByContactEmail ?? []) as ActivityRow[])]
+            .filter((row) => String(row.id ?? "").trim().length > 0)
+            .map((row) => [String(row.id), row] as const)
+        ).values()
+      );
+      const directCount = rowsForUi.length;
+      if (rowsForUi.length === 0) {
+        const { data: fallbackRowsData, error: fallbackError } = await supabase
+          .from("parking_sessions")
+          .select(fields)
+          .order("created_at", { ascending: false })
+          .limit(5000);
+        if (fallbackError) {
+          setActivityRows([]);
+          setActivityDebug({
+            resolvedEmail: normalizedEmail,
+            source: "none",
+            contextStatus: response.status,
+            contextCount: 0,
+            directCount,
+            fallbackCount: 0,
+            error: "fallback_query_failed",
+          });
+          return;
         }
-        return true;
-      });
+        rowsForUi = ((fallbackRowsData ?? []) as ActivityRow[]).filter((row) => {
+          const rowEmail = (row.email ?? "").toString().trim().toLowerCase();
+          const rowContactEmail = (row.contact_email ?? "").toString().trim().toLowerCase();
+          if (rowEmail === normalizedEmail || rowContactEmail === normalizedEmail) {
+            return true;
+          }
+          const metadata = parseStripeMetadata(row.stripe_metadata);
+          const metadataEmail = (
+            metadata["customer_email"] ??
+            metadata["email"] ??
+            metadata["contact_email"] ??
+            metadata["member_email"] ??
+            metadata["checkout_email"] ??
+            ""
+          )
+            .toString()
+            .trim()
+            .toLowerCase();
+          return metadataEmail === normalizedEmail;
+        });
+      }
+      const dedupedRows = Array.from(
+        new Map(
+          rowsForUi
+            .filter((row) => String(row.id ?? "").trim().length > 0)
+            .map((row) => [String(row.id), row] as const)
+        ).values()
+      );
       const locationKeys = Array.from(
         new Set(
-          rawRows
+          dedupedRows
             .map((row) => (row.location_id ?? "").toString().trim())
-            .filter((value) => value.length > 0)
+            .filter((value) => value.length > 0 && value.includes("-"))
         )
       );
-      const uuidKeys = locationKeys.filter((value) => value.includes("-"));
       let displayIdByLocationId = new Map<string, string>();
-      if (uuidKeys.length > 0) {
-        const { data: locationRows } = await client
+      if (locationKeys.length > 0) {
+        const { data: locationRows } = await supabase
           .from("locations")
           .select("id,display_id")
-          .in("id", uuidKeys);
+          .in("id", locationKeys);
         displayIdByLocationId = new Map(
           ((locationRows ?? []) as Array<{ id?: string | null; display_id?: string | null }>)
             .map((row) => [String(row.id ?? "").trim(), String(row.display_id ?? "").trim()] as const)
             .filter(([id, displayId]) => id.length > 0 && displayId.length > 0)
         );
       }
-      const resolvedRows = rawRows.map((row) => {
+      const resolvedRows = dedupedRows.map((row) => {
         const rawLocation = (row.location_id ?? "").toString().trim();
         const resolvedDisplayId = rawLocation.includes("-")
           ? displayIdByLocationId.get(rawLocation) ?? null
           : rawLocation || null;
         const window = resolveActivityWindow(row);
-        const lifecycle = resolveActivityLifecycle(row);
         return {
           ...row,
           location_display_id: resolvedDisplayId,
           ui_check_in: window.checkIn?.toISOString() ?? row.entry_time ?? null,
-          ui_check_out: window.checkOut?.toISOString() ?? row.exit_time ?? null,
-          ui_lifecycle: lifecycle,
+          ui_check_out: window.checkOut?.toISOString() ?? row.exit_time ?? row.end_time ?? null,
+          ui_lifecycle: resolveActivityLifecycle(row),
         };
       });
       setActivityRows(resolvedRows);
+      setActivityDebug({
+        resolvedEmail: normalizedEmail,
+        source: directCount > 0 ? "direct" : "fallback",
+        contextStatus: response.status,
+        contextCount: 0,
+        directCount,
+        fallbackCount: directCount > 0 ? 0 : rowsForUi.length,
+        error: "",
+      });
     } catch {
-      return;
+      setActivityRows([]);
+      setActivityDebug({
+        resolvedEmail: normalizedEmail,
+        source: "none",
+        contextStatus: null,
+        contextCount: 0,
+        directCount: 0,
+        fallbackCount: 0,
+        error: "unexpected_exception",
+      });
     } finally {
       setActivityLoading(false);
     }
-  }, [isSignedIn, user?.email]);
+  }, [email, isSignedIn, user?.email]);
 
   useEffect(() => {
     void refreshActivity();
@@ -550,8 +727,9 @@ export default function MembersPage() {
     const timers: number[] = [];
     const now = Date.now();
     for (const row of activityRows) {
-      if (!row.exit_time) continue;
-      const exitDate = new Date(row.exit_time);
+      const activityWindow = resolveActivityWindow(row);
+      if (!activityWindow.checkOut) continue;
+      const exitDate = activityWindow.checkOut;
       if (Number.isNaN(exitDate.getTime())) continue;
       const notifyAt = exitDate.getTime() - 10 * 60 * 1000;
       const message = `Sesija za lokaciju ${row.location_id || "Nepoznata lokacija"} istječe za 10 minuta. Otvorite Members za produljenje.`;
@@ -638,8 +816,14 @@ export default function MembersPage() {
     if (!headers.Authorization && user?.email) {
       headers["x-member-email"] = user.email;
     }
+    if (!headers.Authorization && !headers["x-member-email"]) {
+      const fallbackEmail = (email ?? "").trim().toLowerCase();
+      if (fallbackEmail) {
+        headers["x-member-email"] = fallbackEmail;
+      }
+    }
     return headers;
-  }, [user?.email]);
+  }, [email, user?.email]);
   const refreshHomeContext = useCallback(async (options?: { silent?: boolean }) => {
     const shouldSilentlyRefresh = Boolean(options?.silent);
     if (!isSignedIn) {
@@ -648,10 +832,12 @@ export default function MembersPage() {
       setLoyaltySummary(null);
       setRewardWalletLedger([]);
       setRewardLoyaltyLedger([]);
+      setPermitsRows([]);
       return null;
     }
-    if (!shouldSilentlyRefresh && !homeContext) {
+    if (!shouldSilentlyRefresh) {
       setHomeContextLoading(true);
+      setPermitsLoading(true);
     }
     try {
       const response = await fetch("/api/members/context", {
@@ -668,6 +854,7 @@ export default function MembersPage() {
               walletLedger?: RewardWalletLedgerRow[];
               loyaltyLedger?: RewardLoyaltyLedgerRow[];
             } | null;
+            permits?: PermitRow[] | null;
             error?: string;
           }
         | null;
@@ -677,6 +864,7 @@ export default function MembersPage() {
         setLoyaltySummary(null);
         setRewardWalletLedger([]);
         setRewardLoyaltyLedger([]);
+        setPermitsRows([]);
         return null;
       }
       setHomeContext(payload.context ?? null);
@@ -684,13 +872,15 @@ export default function MembersPage() {
       setLoyaltySummary(payload.loyalty ?? null);
       setRewardWalletLedger(payload.rewards?.walletLedger ?? []);
       setRewardLoyaltyLedger(payload.rewards?.loyaltyLedger ?? []);
+      setPermitsRows(payload.permits ?? []);
       return payload.context;
     } finally {
       if (!shouldSilentlyRefresh) {
         setHomeContextLoading(false);
+        setPermitsLoading(false);
       }
     }
-  }, [getMemberAuthHeaders, homeContext, isSignedIn]);
+  }, [getMemberAuthHeaders, isSignedIn]);
   const startExtendSyncPolling = useCallback((previousCheckOut: string | null) => {
     if (typeof window === "undefined") {
       return;
@@ -737,9 +927,6 @@ export default function MembersPage() {
       return;
     }
     const refreshNow = () => {
-      if (!extendSyncActive) {
-        return;
-      }
       void Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
     };
     const onVisibilityChange = () => {
@@ -754,6 +941,32 @@ export default function MembersPage() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [extendSyncActive, isSignedIn, refreshActivity, refreshHomeContext]);
+  async function downloadInvoicePdf(actionUrl: string) {
+    try {
+      const response = await fetch(actionUrl, { method: "GET" });
+      if (!response.ok) {
+        throw new Error("invoice_fetch_failed");
+      }
+      const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+      const isPdf = contentType.includes("application/pdf");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = isPdf ? "payparq-receipt.pdf" : "payparq-receipt";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      if (!isPdf) {
+        window.open(actionUrl, "_blank", "noopener,noreferrer");
+      }
+      return true;
+    } catch {
+      window.open(actionUrl, "_blank", "noopener,noreferrer");
+      return false;
+    }
+  }
   async function runHomeAction(
     action: HomeWidgetId,
     endpoint: string,
@@ -784,7 +997,11 @@ export default function MembersPage() {
         return;
       }
       if (payload.actionUrl) {
-        window.open(payload.actionUrl, "_blank", "noopener,noreferrer");
+        if (action === "invoice") {
+          await downloadInvoicePdf(payload.actionUrl);
+        } else {
+          window.open(payload.actionUrl, "_blank", "noopener,noreferrer");
+        }
       }
       setHomeFeedback((current) => ({
         ...current,
@@ -816,7 +1033,16 @@ export default function MembersPage() {
     return millis;
   }
   function handleInsuranceAction() {
-    window.location.href = "/insurance/apply";
+    const rawUrl = (homeContext?.insuranceUrl ?? "").toString().trim();
+    const url =
+      rawUrl === "/insurance" || rawUrl === "/insurance/"
+        ? "/insurance/apply"
+        : rawUrl || "/insurance/apply";
+    if (/^https?:\/\//i.test(url)) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    window.location.href = url;
   }
   async function handleRideAction() {
     await runHomeAction("ride", "/api/members/ride", {});
@@ -824,13 +1050,13 @@ export default function MembersPage() {
   function handleUberAction() {
     const url =
       homeContext?.rideUrl ||
-      `/support?topic=ride&email=${encodeURIComponent(user?.email || "")}`;
+      "https://m.uber.com/";
     window.open(url, "_blank", "noopener,noreferrer");
   }
   async function handleExtendAction() {
     const parsedMinutes = Number.parseInt(extendMinutes, 10);
     const safeMinutes = Number.isFinite(parsedMinutes)
-      ? Math.min(720, Math.max(30, parsedMinutes))
+      ? Math.min(2880, Math.max(60, parsedMinutes))
       : 120;
     await runHomeAction("extend", "/api/members/extend", { minutes: safeMinutes });
   }
@@ -1031,98 +1257,112 @@ export default function MembersPage() {
     if (activeItem === "home") {
       return (
         <div className="space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-black">
-              Nastavite u Members zoni
-            </h2>
-            <p className="text-sm text-black/70">
-              Osiguranje, Uber, produženje boravka i preuzimanje potvrde računa dostupni su unutar Members zone.
-            </p>
-          </div>
-          <div className="rounded-xl border border-black/10 bg-white p-4 space-y-1.5">
-            {homeContextLoading ? (
-              <p className="text-sm text-black/60">Loading your latest reservation...</p>
-            ) : homeContext ? (
-              <>
-                <p className="text-sm text-black/80">
-                  Aktivna lokacija:{" "}
-                  <span className="font-semibold">
-                    {homeContext.locationName || homeContext.locationDisplayId || homeContext.locationId || "N/A"}
-                  </span>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-black">
+                Members Home
+              </h2>
+              <p className="text-sm text-black/70">Brzi pregled i akcije.</p>
+            </div>
+            <div className="shrink-0 space-y-2">
+              <div className="rounded-lg border border-[#5F3DFC]/25 bg-[#F5F2FF] px-3 py-2 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3E22C6]/70">Wallet</p>
+                <p className="text-sm font-semibold text-[#3E22C6]">
+                  {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
                 </p>
-                <p className="text-[11px] text-black/60">
-                  Boravak: {formatCroatianDateTime(homeContext.checkIn)} — {formatCroatianDateTime(homeContext.checkOut)}
+                <p className="text-[11px] text-[#3E22C6]/85">
+                  {(loyaltySummary?.level || "level_1").replace("_", " ").toUpperCase()}
+                  {(loyaltySummary?.pointsYear ?? 0) > 0 ? ` · ${loyaltySummary?.pointsYear ?? 0} pts` : ""}
                 </p>
-              </>
-            ) : (
-              <p className="text-sm text-black/60">
-                Nema aktivne rezervacije. Za puni prikaz widgeta dovršite jednu uplatu.
-              </p>
-            )}
+                {loyaltySummary?.nextLevel && (
+                  <p className="text-[10px] text-[#3E22C6]/70">
+                    {loyaltySummary.nextLevelProgressPercent}% do {(loyaltySummary.nextLevel || "").replace("_", " ").toUpperCase()}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-4 space-y-2">
-            <p className="text-sm font-semibold text-[#3E22C6]">Wallet i Loyalty</p>
-            <p className="text-xs text-[#3E22C6]/80">
-              Wallet stanje:{" "}
-              <span className="font-semibold">
-                {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
-              </span>
-            </p>
-            <p className="text-xs text-[#3E22C6]/80">
-              Minimum card top-up:{" "}
-              <span className="font-semibold">
-                {formatMoneyFromCents(walletSummary?.minimumTopupCents ?? 50, walletSummary?.currency || "EUR")}
-              </span>
-            </p>
-            <p className="text-xs text-[#3E22C6]/80">
-              Loyalty:{" "}
-              <span className="font-semibold">
-                {(loyaltySummary?.level || "level_1").replace("_", " ").toUpperCase()}
-              </span>
-              {" · "}
-              {loyaltySummary?.pointsYear ?? 0} pts (year)
-            </p>
-            {loyaltySummary?.nextLevel && (
-              <p className="text-[11px] text-[#3E22C6]/70">
-                Progress do {loyaltySummary.nextLevel.replace("_", " ").toUpperCase()}:{" "}
-                {loyaltySummary.nextLevelProgressPercent}%
-              </p>
-            )}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
-              <p className="text-sm font-semibold text-black">Osiguranje</p>
-              <p className="text-xs text-black/65">Aktivirajte osiguranje za trenutačnu rezervaciju.</p>
+          <div className="rounded-xl border border-black/10 bg-white p-4">
+            <div className="space-y-1.5">
+              {homeContextLoading ? (
+                <p className="text-sm text-black/60">Učitavanje...</p>
+              ) : homeContext ? (
+                <>
+                  <p className="text-sm text-black/80">
+                    <span className="font-semibold">
+                      {homeContext.locationName || homeContext.locationDisplayId || homeContext.locationId || "N/A"}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-black/60">
+                    {formatCroatianDateTime(homeContext.checkIn)} — {formatCroatianDateTime(homeContext.checkOut)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-black/60">Nema aktivne rezervacije.</p>
+              )}
+            </div>
+            <div className="mt-3 border-t border-black/10 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-black/60">Potvrda računa</p>
               <button
                 type="button"
-                onClick={handleInsuranceAction}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                onClick={handleInvoiceAction}
+                disabled={actionProcessing === "invoice"}
+                className="mt-1 inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
               >
-                Apliciraj
+                {actionProcessing === "invoice" ? "Obrada..." : "Preuzmi PDF"}
               </button>
-              {homeFeedback.insurance && (
-                <p className={`text-[11px] ${homeFeedback.insurance.type === "error" ? "text-red-600" : "text-black/70"}`}>
-                  {homeFeedback.insurance.text}
+              {homeFeedback.invoice && (
+                <p className={`mt-1 text-[11px] ${homeFeedback.invoice.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.invoice.text}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
+              <p className="text-sm font-semibold text-black">Produženje boravka</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={extendMinutes}
+                  onChange={(event) => setExtendMinutes(event.target.value)}
+                  className="rounded-lg border border-black/10 px-2 py-1.5 text-xs text-black bg-white outline-none focus:border-black/40"
+                >
+                  <option value="60">+1h</option>
+                  <option value="120">+2h</option>
+                  <option value="1440">+1d</option>
+                  <option value="2880">+2d</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleExtendAction}
+                  disabled={actionProcessing === "extend"}
+                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                >
+                  {actionProcessing === "extend" ? "Obrada..." : "Produži"}
+                </button>
+              </div>
+              {homeFeedback.extend && (
+                <p className={`text-[11px] ${homeFeedback.extend.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.extend.text}
                 </p>
               )}
             </div>
             {homeContext?.parkTaxiIncluded ? (
-              <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
+              <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
                 <p className="text-sm font-semibold text-black">Park&Taxi</p>
-                <p className="text-xs text-black/65">Ride je uključen u Park&Taxi rezervaciju. Koristite praćenje vozača uživo ili Uber.</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleRideAction}
                     disabled={actionProcessing === "ride"}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
                   >
-                    {actionProcessing === "ride" ? "Obrađujem..." : "24/7 Live tracking"}
+                    {actionProcessing === "ride" ? "Obrada..." : "Ride"}
                   </button>
                   <button
                     type="button"
                     onClick={handleUberAction}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
                   >
                     Uber
                   </button>
@@ -1134,61 +1374,29 @@ export default function MembersPage() {
                 )}
               </div>
             ) : (
-              <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
-                <p className="text-sm font-semibold text-black">Parq vožnja</p>
-                <p className="text-xs text-black/65">Parq može imati duže čekanje. Za najbolje iskustvo rezervirajte 60 minuta ranije.</p>
+              <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
+                <p className="text-sm font-semibold text-black">Vožnja</p>
                 <button
                   type="button"
                   onClick={handleUberAction}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
+                  className="inline-flex items-center justify-center px-3 py-1.5 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
                 >
                   Uber
                 </button>
               </div>
             )}
-            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
-              <p className="text-sm font-semibold text-black">Produženje boravka</p>
-              <p className="text-xs text-black/65">Automatski kreira plaćanje za dodatno vrijeme.</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={extendMinutes}
-                  onChange={(event) => setExtendMinutes(event.target.value)}
-                  className="rounded-lg border border-black/10 px-3 py-2 text-xs text-black bg-white outline-none focus:border-black/40"
-                >
-                  <option value="60">+60 min</option>
-                  <option value="120">+120 min</option>
-                  <option value="180">+180 min</option>
-                  <option value="240">+240 min</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleExtendAction}
-                  disabled={actionProcessing === "extend"}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
-                >
-                  {actionProcessing === "extend" ? "Obrađujem..." : "Produži"}
-                </button>
-              </div>
-              {homeFeedback.extend && (
-                <p className={`text-[11px] ${homeFeedback.extend.type === "error" ? "text-red-600" : "text-black/70"}`}>
-                  {homeFeedback.extend.text}
-                </p>
-              )}
-            </div>
-            <div className="rounded-xl border border-black/10 bg-white p-4 space-y-2">
-              <p className="text-sm font-semibold text-black">Potvrda računa</p>
-              <p className="text-xs text-black/65">Preuzmite Stripe potvrdu računa zadnje transakcije.</p>
+            <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
+              <p className="text-sm font-semibold text-black">Osiguranje</p>
               <button
                 type="button"
-                onClick={handleInvoiceAction}
-                disabled={actionProcessing === "invoice"}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                onClick={handleInsuranceAction}
+                className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
               >
-                {actionProcessing === "invoice" ? "Obrađujem..." : "Preuzmi račun"}
+                Apliciraj
               </button>
-              {homeFeedback.invoice && (
-                <p className={`text-[11px] ${homeFeedback.invoice.type === "error" ? "text-red-600" : "text-black/70"}`}>
-                  {homeFeedback.invoice.text}
+              {homeFeedback.insurance && (
+                <p className={`text-[11px] ${homeFeedback.insurance.type === "error" ? "text-red-600" : "text-black/70"}`}>
+                  {homeFeedback.insurance.text}
                 </p>
               )}
             </div>
@@ -1200,25 +1408,60 @@ export default function MembersPage() {
       );
     }
 
-    if (activeItem === "monthly") {
+    if (activeItem === "permits") {
       return (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight text-black">
-            Monthly subscriptions
+            Permits & Subs
           </h2>
           <p className="text-sm text-black/70">
-            View-only list of your recurring permits connected to a plate or company.
+            All permits and subscriptions linked to your member account.
           </p>
-          <div className="bg-white p-4 space-y-3">
-            <p className="text-xs font-semibold text-black/70">Your monthly permits</p>
-            <p className="text-sm text-black/60">No active monthly subscriptions.</p>
-          </div>
+          {permitsLoading && (
+            <p className="text-xs text-black/60">Loading permits...</p>
+          )}
+          {!permitsLoading && permitsRows.length === 0 && (
+            <p className="text-xs text-black/60">
+              No permits or subscriptions found for this account yet.
+            </p>
+          )}
+          {!permitsLoading && permitsRows.length > 0 && (
+            <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
+              {permitsRows.map((row) => {
+                const metadata = parseStripeMetadata(row.stripe_metadata);
+                const sourceType = (row.type ?? metadata["type"] ?? metadata["billing_type"] ?? "permit")
+                  .toString()
+                  .trim();
+                const accessWindow = [
+                  formatCroatianDateTime(row.start_time || row.created_at),
+                  formatCroatianDateTime(row.end_time),
+                ].join(" — ");
+                const statusValue = (row.status ?? "active").toString().trim().toUpperCase();
+                return (
+                  <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-black">
+                        {row.plate || "Unknown plate"} · {row.location_id || "Unknown location"}
+                      </p>
+                      <p className="text-[11px] text-black/60">{statusValue}</p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                      <span>{sourceType}</span>
+                      <span>{row.contact_name || row.contact_email || "Member permit"}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-black/70">
+                      Vrijedi: {accessWindow}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }
 
     if (activeItem === "activity") {
-      const selectedActivityLocation = actionLocation.trim() || "Parking Trogir";
       const upcomingRows = activityRows.filter((row) => row.ui_lifecycle === "upcoming" || row.ui_lifecycle === "pending");
       const activeRows = activityRows.filter((row) => row.ui_lifecycle === "active");
       const expiredRows = activityRows.filter((row) => row.ui_lifecycle === "expired");
@@ -1228,17 +1471,29 @@ export default function MembersPage() {
             Activity
           </h2>
           <p className="text-sm text-black/70">
-            A timeline of recent sessions, payments, and enforcement outcomes.
+            A timeline of upcoming, active, and expired parking sessions.
           </p>
+          {process.env.NODE_ENV === "development" && (
+            <div className="rounded-lg border border-dashed border-black/20 bg-black/[0.03] px-3 py-2 text-[11px] text-black/70">
+              <p>Debug · email: {activityDebug.resolvedEmail || "none"}</p>
+              <p>
+                source: {activityDebug.source} · context_status: {activityDebug.contextStatus ?? "none"} · context_count: {activityDebug.contextCount}
+              </p>
+              <p>
+                direct_count: {activityDebug.directCount} · fallback_count: {activityDebug.fallbackCount} · final_count: {activityRows.length}
+              </p>
+              {activityDebug.error && <p className="text-red-600">error: {activityDebug.error}</p>}
+            </div>
+          )}
           {activityLoading && (
             <p className="text-xs text-black/60">Loading live activity...</p>
           )}
           {!activityLoading && activityRows.length === 0 && (
             <p className="text-xs text-black/60">
-              No sessions yet. Complete a checkout and this feed updates automatically.
+              No sessions yet. Complete a checkout and this list updates automatically.
             </p>
           )}
-          {!activityLoading && activityRows.length > 0 && (
+          {!activityLoading && (
             <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">NADOLAZEĆI ({upcomingRows.length})</p>
               {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">No upcoming reservations.</p>}
@@ -1299,63 +1554,6 @@ export default function MembersPage() {
               ))}
             </div>
           )}
-          <div className="rounded-xl border border-black/10 bg-white px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-black leading-tight truncate">
-                {selectedActivityLocation}
-              </p>
-              <button
-                type="button"
-                onClick={() => setActivityFavorite((value) => !value)}
-                className={`inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 transition-colors shrink-0 ${activityFavorite ? "text-red-500 hover:bg-red-50" : "text-black hover:bg-black/5"}`}
-                aria-label={activityFavorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill={activityFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="m12 21-1.45-1.32C5.4 15.03 2 11.95 2 8.25 2 5.17 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09A5.98 5.98 0 0 1 16.5 3C19.58 3 22 5.17 22 8.25c0 3.7-3.4 6.78-8.55 11.43z" />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] text-black/70">
-              <span className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M4 18h4" />
-                  <path d="M16 18h4" />
-                  <path d="M7 18V9a3 3 0 1 1 6 0v9" />
-                  <path d="M17 18V9a3 3 0 1 0-6 0" />
-                </svg>
-                2 min walk
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
-                  <path d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                </svg>
-                4.8 reviews
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#5F3DFC]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M12 3v18" />
-                  <path d="M3 12h18" />
-                  <path d="m5.6 5.6 12.8 12.8" />
-                  <path d="m18.4 5.6-12.8 12.8" />
-                </svg>
-                Extras available
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeItem === "company") {
-      return (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold tracking-tight text-black">
-            Company subscriptions
-          </h2>
-          <p className="text-sm text-black/70">
-            Manage shared allocations, visitor access, and team permits from a
-            single workspace.
-          </p>
         </div>
       );
     }
@@ -1686,7 +1884,7 @@ export default function MembersPage() {
                 </p>
                 {!isSupabaseConfigured && (
                   <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">
-                    Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and restart the server.
+                    Authentication is not configured. Add the required environment variables and restart the server.
                   </div>
                 )}
                 <form className="space-y-4" onSubmit={handleAuth}>
@@ -1723,9 +1921,8 @@ export default function MembersPage() {
                   </Link>
                 </div>
                 <p className="mt-4 text-[10px] text-black/60">
-                  Authentication uses your Supabase project settings. Configure
-                  email sign-in policies, confirmations, and SMTP inside your
-                  Supabase dashboard.
+                  Authentication uses your project settings. Configure email
+                  sign-in policies, confirmations, and SMTP in your dashboard.
                 </p>
                 {isLocalDevOverrideEnabled && (
                   <div className="mt-6 rounded-2xl border border-dashed border-black/15 bg-black/[0.02] p-3 text-[11px]">
@@ -1733,7 +1930,7 @@ export default function MembersPage() {
                       Local-only preview
                     </p>
                     <p className="mt-1 text-black/70">
-                      Supabase is not configured locally. You can still open the
+                      Authentication is not configured locally. You can still open the
                       Members dashboard layout without signing in.
                     </p>
                     <button
@@ -1741,7 +1938,7 @@ export default function MembersPage() {
                       onClick={() => setDevSignedIn(true)}
                       className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
                     >
-                      Continue to dashboard (no Supabase)
+                      Continue to dashboard (no sign-in backend)
                     </button>
                     <p className="mt-2 text-[10px] text-black/60">
                       Stripe checkout and real parking data will not work in
@@ -1796,14 +1993,14 @@ export default function MembersPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveItem("monthly")}
+                    onClick={() => setActiveItem("permits")}
                     className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "monthly"
+                      activeItem === "permits"
                         ? "bg-white text-black border-white"
                         : "border-white/20 text-white/80"
                     }`}
                   >
-                    <span>Monthly</span>
+                    <span>Permits & Subs</span>
                   </button>
                   <button
                     type="button"
@@ -1815,17 +2012,6 @@ export default function MembersPage() {
                     }`}
                   >
                     <span>Activity</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("company")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "company"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Company</span>
                   </button>
                   <button
                     type="button"
@@ -1912,9 +2098,9 @@ export default function MembersPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setActiveItem("monthly")}
+                      onClick={() => setActiveItem("permits")}
                       className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "monthly"
+                        activeItem === "permits"
                           ? "bg-white text-black"
                           : "text-white/70 hover:bg-white/5"
                       }`}
@@ -1922,7 +2108,7 @@ export default function MembersPage() {
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                         P
                       </span>
-                      <span>Monthly subscriptions</span>
+                      <span>Permits & Subs</span>
                     </button>
                     <button
                       type="button"
@@ -1937,20 +2123,6 @@ export default function MembersPage() {
                         A
                       </span>
                       <span>Activity</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("company")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "company"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        C
-                      </span>
-                      <span>Company subscriptions</span>
                     </button>
                     <button
                       type="button"
@@ -2071,12 +2243,10 @@ export default function MembersPage() {
                         ? "Account settings"
                         : activeItem === "home"
                         ? "Overview"
-                        : activeItem === "monthly"
-                        ? "Monthly subscriptions"
+                        : activeItem === "permits"
+                        ? "Permits & Subs"
                         : activeItem === "activity"
                         ? "Activity"
-                        : activeItem === "company"
-                        ? "Company subscriptions"
                         : activeItem === "payment"
                         ? "Payment"
                         : activeItem === "vehicles"
@@ -2092,9 +2262,8 @@ export default function MembersPage() {
                         {renderActiveContent()}
                       </div>
                       <div className="mt-6 text-[11px] text-black/50">
-                        This view is wired for your Supabase project. Connect
-                        real data from your parking sessions, permits, and
-                        enforcement events to power this workspace.
+                        This workspace shows your live sessions, permits,
+                        subscriptions, and rewards.
                       </div>
                     </div>
                   </div>
