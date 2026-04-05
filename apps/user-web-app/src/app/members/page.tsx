@@ -95,6 +95,14 @@ type RewardLoyaltyLedgerRow = {
   source: string;
   createdAt: string;
 };
+type PaymentMethodRow = {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number | null;
+  expYear: number | null;
+  isDefault: boolean;
+};
 type ActivityDebugInfo = {
   resolvedEmail: string;
   source: "context" | "direct" | "fallback" | "none";
@@ -175,42 +183,24 @@ function resolveActivityWindow(row: ActivityRow) {
   };
 }
 
-function resolveActivityLifecycle(row: ActivityRow) {
-  const paymentStatus = (row.payment_status ?? "")
-    .toString()
-    .trim()
-    .toLowerCase();
-  const status = (row.status ?? "").toString().trim().toLowerCase();
-  const { checkIn, checkOut } = resolveActivityWindow(row);
-  const now = Date.now();
-  if (checkOut && now >= checkOut.getTime()) {
-    return "expired" as const;
+function normalizePlateInput(value: string) {
+  return value.toString().trim().toUpperCase();
+}
+
+function readMemberPlates(currentUser: User | null) {
+  const metadata = (currentUser?.user_metadata ?? {}) as Record<string, unknown>;
+  const fromList = metadata["member_plates"];
+  if (Array.isArray(fromList)) {
+    const normalized = fromList
+      .map((value) => normalizePlateInput(String(value ?? "")))
+      .filter((value) => value.length > 0);
+    return Array.from(new Set(normalized));
   }
-  if (checkIn && now < checkIn.getTime()) {
-    if (
-      paymentStatus === "pending" ||
-      paymentStatus === "unpaid" ||
-      paymentStatus === "open" ||
-      status === "pending" ||
-      status === "open"
-    ) {
-      return "pending" as const;
-    }
-    return "upcoming" as const;
+  const fromDefault = normalizePlateInput(String(metadata["default_plate"] ?? ""));
+  if (fromDefault) {
+    return [fromDefault];
   }
-  if (checkIn && checkOut && now >= checkIn.getTime() && now < checkOut.getTime()) {
-    return "active" as const;
-  }
-  if (
-    paymentStatus === "pending" ||
-    paymentStatus === "unpaid" ||
-    paymentStatus === "open" ||
-    status === "pending" ||
-    status === "open"
-  ) {
-    return "pending" as const;
-  }
-  return "inactive" as const;
+  return [];
 }
 
 export default function MembersPage() {
@@ -227,7 +217,10 @@ export default function MembersPage() {
   const [activeItem, setActiveItem] = useState<NavItemId>("home");
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
-  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [plateSaving, setPlateSaving] = useState(false);
+  const [plateMessage, setPlateMessage] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRow[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [actionProcessing, setActionProcessing] = useState<ActionProcessing | null>(null);
   const [actionError, setActionError] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
@@ -481,6 +474,14 @@ export default function MembersPage() {
   }, []);
 
   useEffect(() => {
+    if (!isSignedIn || !user) {
+      setPlates([]);
+      return;
+    }
+    setPlates(readMemberPlates(user));
+  }, [isSignedIn, user]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const prefillEmail = (params.get("email") ?? "").trim().toLowerCase();
@@ -537,157 +538,31 @@ export default function MembersPage() {
             activity?: ActivityRow[] | null;
           }
         | null;
+      const contextStatus = response.status;
+      const contextRows = response.ok && payload ? payload.activity ?? [] : [];
+      const contextCount = contextRows.length;
       if (response.ok && payload) {
-        const contextRows = payload.activity ?? [];
         setActivityRows(contextRows);
         setActivityDebug({
           resolvedEmail: normalizedEmail,
           source: "context",
-          contextStatus: response.status,
-          contextCount: contextRows.length,
+          contextStatus,
+          contextCount,
           directCount: 0,
           fallbackCount: 0,
           error: "",
         });
         return;
       }
-      if (!supabase || !isSupabaseConfigured) {
-        setActivityRows([]);
-        setActivityDebug({
-          resolvedEmail: normalizedEmail,
-          source: "none",
-          contextStatus: response.status,
-          contextCount: 0,
-          directCount: 0,
-          fallbackCount: 0,
-          error: "context_failed_and_supabase_not_configured",
-        });
-        return;
-      }
-      const fields =
-        "id,email,contact_email,created_at,location_id,plate,price,currency,payment_status,status,entry_time,exit_time,end_time,stripe_metadata";
-      const { data: directRowsByEmail, error: directErrorByEmail } = await supabase
-        .from("parking_sessions")
-        .select(fields)
-        .ilike("email", normalizedEmail)
-        .order("created_at", { ascending: false })
-        .limit(300);
-      const { data: directRowsByContactEmail, error: directErrorByContactEmail } = await supabase
-        .from("parking_sessions")
-        .select(fields)
-        .ilike("contact_email", normalizedEmail)
-        .order("created_at", { ascending: false })
-        .limit(300);
-      if (directErrorByEmail && directErrorByContactEmail) {
-        setActivityRows([]);
-        setActivityDebug({
-          resolvedEmail: normalizedEmail,
-          source: "none",
-          contextStatus: response.status,
-          contextCount: 0,
-          directCount: 0,
-          fallbackCount: 0,
-          error: "direct_query_failed",
-        });
-        return;
-      }
-      let rowsForUi = Array.from(
-        new Map(
-          [...((directRowsByEmail ?? []) as ActivityRow[]), ...((directRowsByContactEmail ?? []) as ActivityRow[])]
-            .filter((row) => String(row.id ?? "").trim().length > 0)
-            .map((row) => [String(row.id), row] as const)
-        ).values()
-      );
-      const directCount = rowsForUi.length;
-      if (rowsForUi.length === 0) {
-        const { data: fallbackRowsData, error: fallbackError } = await supabase
-          .from("parking_sessions")
-          .select(fields)
-          .order("created_at", { ascending: false })
-          .limit(5000);
-        if (fallbackError) {
-          setActivityRows([]);
-          setActivityDebug({
-            resolvedEmail: normalizedEmail,
-            source: "none",
-            contextStatus: response.status,
-            contextCount: 0,
-            directCount,
-            fallbackCount: 0,
-            error: "fallback_query_failed",
-          });
-          return;
-        }
-        rowsForUi = ((fallbackRowsData ?? []) as ActivityRow[]).filter((row) => {
-          const rowEmail = (row.email ?? "").toString().trim().toLowerCase();
-          const rowContactEmail = (row.contact_email ?? "").toString().trim().toLowerCase();
-          if (rowEmail === normalizedEmail || rowContactEmail === normalizedEmail) {
-            return true;
-          }
-          const metadata = parseStripeMetadata(row.stripe_metadata);
-          const metadataEmail = (
-            metadata["customer_email"] ??
-            metadata["email"] ??
-            metadata["contact_email"] ??
-            metadata["member_email"] ??
-            metadata["checkout_email"] ??
-            ""
-          )
-            .toString()
-            .trim()
-            .toLowerCase();
-          return metadataEmail === normalizedEmail;
-        });
-      }
-      const dedupedRows = Array.from(
-        new Map(
-          rowsForUi
-            .filter((row) => String(row.id ?? "").trim().length > 0)
-            .map((row) => [String(row.id), row] as const)
-        ).values()
-      );
-      const locationKeys = Array.from(
-        new Set(
-          dedupedRows
-            .map((row) => (row.location_id ?? "").toString().trim())
-            .filter((value) => value.length > 0 && value.includes("-"))
-        )
-      );
-      let displayIdByLocationId = new Map<string, string>();
-      if (locationKeys.length > 0) {
-        const { data: locationRows } = await supabase
-          .from("locations")
-          .select("id,display_id")
-          .in("id", locationKeys);
-        displayIdByLocationId = new Map(
-          ((locationRows ?? []) as Array<{ id?: string | null; display_id?: string | null }>)
-            .map((row) => [String(row.id ?? "").trim(), String(row.display_id ?? "").trim()] as const)
-            .filter(([id, displayId]) => id.length > 0 && displayId.length > 0)
-        );
-      }
-      const resolvedRows = dedupedRows.map((row) => {
-        const rawLocation = (row.location_id ?? "").toString().trim();
-        const resolvedDisplayId = rawLocation.includes("-")
-          ? displayIdByLocationId.get(rawLocation) ?? null
-          : rawLocation || null;
-        const window = resolveActivityWindow(row);
-        return {
-          ...row,
-          location_display_id: resolvedDisplayId,
-          ui_check_in: window.checkIn?.toISOString() ?? row.entry_time ?? null,
-          ui_check_out: window.checkOut?.toISOString() ?? row.exit_time ?? row.end_time ?? null,
-          ui_lifecycle: resolveActivityLifecycle(row),
-        };
-      });
-      setActivityRows(resolvedRows);
+      setActivityRows([]);
       setActivityDebug({
         resolvedEmail: normalizedEmail,
-        source: directCount > 0 ? "direct" : "fallback",
-        contextStatus: response.status,
-        contextCount: 0,
-        directCount,
-        fallbackCount: directCount > 0 ? 0 : rowsForUi.length,
-        error: "",
+        source: "none",
+        contextStatus,
+        contextCount,
+        directCount: 0,
+        fallbackCount: 0,
+        error: "context_failed",
       });
     } catch {
       setActivityRows([]);
@@ -824,6 +699,85 @@ export default function MembersPage() {
     }
     return headers;
   }, [email, user?.email]);
+
+  const persistMemberPlates = useCallback(async (nextPlates: string[]) => {
+    if (!user || !supabase || !isSupabaseConfigured) {
+      return false;
+    }
+    const normalizedPlates = Array.from(new Set(nextPlates.map((plate) => normalizePlateInput(plate)).filter(Boolean)));
+    setPlateSaving(true);
+    setPlateMessage("");
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          ...(user.user_metadata ?? {}),
+          member_plates: normalizedPlates,
+          default_plate: normalizedPlates[0] ?? null,
+        },
+      });
+      if (error) {
+        setPlateMessage("Unable to save plates right now.");
+        return false;
+      }
+      setUser(data.user ?? user);
+      setPlates(normalizedPlates);
+      setPlateMessage("Plates saved.");
+      return true;
+    } catch {
+      setPlateMessage("Unable to save plates right now.");
+      return false;
+    } finally {
+      setPlateSaving(false);
+    }
+  }, [user]);
+
+  const refreshPaymentMethods = useCallback(async () => {
+    if (!isSignedIn || !user?.email) {
+      setPaymentMethods([]);
+      return;
+    }
+    setPaymentMethodsLoading(true);
+    try {
+      const response = await fetch("/api/members/payment-methods", {
+        method: "GET",
+        headers: await getMemberAuthHeaders(),
+        cache: "no-store",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { paymentMethods?: PaymentMethodRow[] | null }
+        | null;
+      if (!response.ok || !payload) {
+        setPaymentMethods([]);
+        return;
+      }
+      setPaymentMethods(payload.paymentMethods ?? []);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  }, [getMemberAuthHeaders, isSignedIn, user?.email]);
+
+  const handleRemovePaymentMethod = useCallback(async (paymentMethodId: string) => {
+    setActionError("");
+    try {
+      const response = await fetch("/api/members/payment-methods", {
+        method: "DELETE",
+        headers: await getMemberAuthHeaders(),
+        body: JSON.stringify({ paymentMethodId }),
+      });
+      if (!response.ok) {
+        setActionError("Unable to remove payment method.");
+        return;
+      }
+      await refreshPaymentMethods();
+    } catch {
+      setActionError("Unable to remove payment method.");
+    }
+  }, [getMemberAuthHeaders, refreshPaymentMethods]);
+
+  useEffect(() => {
+    void refreshPaymentMethods();
+  }, [refreshPaymentMethods]);
+
   const refreshHomeContext = useCallback(async (options?: { silent?: boolean }) => {
     const shouldSilentlyRefresh = Boolean(options?.silent);
     if (!isSignedIn) {
@@ -1063,23 +1017,6 @@ export default function MembersPage() {
   async function handleInvoiceAction() {
     await runHomeAction("invoice", "/api/members/invoice");
   }
-  async function handleResetPassword() {
-    if (!user?.email) {
-      setAuthError("No email available for reset.");
-      return;
-    }
-    if (!supabase || !isSupabaseConfigured) {
-      setAuthError("Reset is not configured for this environment.");
-      return;
-    }
-    try {
-      await supabase.auth.resetPasswordForEmail(user.email);
-      setAuthError("Check your email for the reset link.");
-    } catch {
-      setAuthError("Unable to send reset email right now.");
-    }
-  }
-
   async function handleAddPaymentMethod() {
     if (!user?.email) {
       setActionError("Sign in to add a payment method.");
@@ -1094,6 +1031,7 @@ export default function MembersPage() {
         body: JSON.stringify({
           flow_type: "setup",
           customer_email: user.email,
+          auto_charge_opt_in: true,
         }),
       });
       if (!res.ok) {
@@ -1187,20 +1125,6 @@ export default function MembersPage() {
                 )}
                 <button
                   type="button"
-                  onClick={handleResetPassword}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-black text-white text-[11px] font-semibold hover:bg-gray-900 transition-colors"
-                >
-                  Reset password
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigator.clipboard?.writeText(displayEmail)}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
-                >
-                  Copy email
-                </button>
-                <button
-                  type="button"
                   onClick={handleSignOut}
                   className="inline-flex items-center px-3 py-1.5 rounded-full border border-black/10 text-[11px] font-semibold hover:bg-black/5 transition-colors"
                 >
@@ -1229,25 +1153,6 @@ export default function MembersPage() {
               {verificationNotice && (
                 <p className="text-[11px] text-black/70">{verificationNotice}</p>
               )}
-            </div>
-            <div className="rounded-xl border border-black/5 bg-black/[0.02] p-4 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/60">
-                Quick summary
-              </p>
-              <p className="text-sm text-black/80">
-                Plates connected:{" "}
-                <span className="font-semibold">
-                  {plates.length > 0 ? plates.length : "None yet"}
-                </span>
-              </p>
-              <p className="text-sm text-black/80">
-                Payment methods:{" "}
-                <span className="font-semibold">
-                  {paymentMethods.length > 0
-                    ? paymentMethods.length
-                    : "None yet"}
-                </span>
-              </p>
             </div>
           </div>
         </div>
@@ -1566,14 +1471,16 @@ export default function MembersPage() {
               Payment
             </h2>
             <p className="text-sm text-black/70">
-              Add a card label so you can quickly recognise how each payment is
-              charged.
+              Manage saved cards that can be charged for future sessions.
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-semibold text-black/70">
               Saved payment methods
             </p>
+            {paymentMethodsLoading && (
+              <p className="text-sm text-black/60">Loading payment methods...</p>
+            )}
             {paymentMethods.length === 0 && (
               <p className="text-sm text-black/60">
                 No payment methods added yet.
@@ -1581,23 +1488,22 @@ export default function MembersPage() {
             )}
             {paymentMethods.length > 0 && (
               <ul className="space-y-2 text-sm text-black/80">
-                {paymentMethods.map((label) => (
+                {paymentMethods.map((method) => (
                   <li
-                    key={label}
+                    key={method.id}
                     className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2"
                   >
-                    <span>{label}</span>
+                    <span>
+                      {method.brand.toUpperCase()} •••• {method.last4}
+                      {method.expMonth && method.expYear ? ` · ${method.expMonth}/${method.expYear}` : ""}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] text-black/50">
-                        Card on file
+                        {method.isDefault ? "Default card" : "Card on file"}
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setPaymentMethods((current) =>
-                            current.filter((x) => x !== label)
-                          )
-                        }
+                        onClick={() => void handleRemovePaymentMethod(method.id)}
                         className="text-[11px] underline underline-offset-2 text-black/60 hover:text-black"
                       >
                         Remove
@@ -1623,7 +1529,7 @@ export default function MembersPage() {
               </button>
             </div>
             <p className="text-[11px] text-black/60">
-              Opens a secure Stripe page to save a tokenized payment method.
+              Opens secure Stripe setup and stores cards on your customer profile.
             </p>
             {actionError && (
               <p className="text-[11px] text-red-600">{actionError}</p>
@@ -1666,9 +1572,8 @@ export default function MembersPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() =>
-                        setPlates((current) => current.filter((x) => x !== plate))
-                      }
+                      onClick={() => void persistMemberPlates(plates.filter((value) => value !== plate))}
+                      disabled={plateSaving}
                       className="text-[10px] underline underline-offset-2 text-black/60 hover:text-black"
                     >
                       Remove
@@ -1693,24 +1598,24 @@ export default function MembersPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const trimmed = newPlate.trim();
-                  if (!trimmed) return;
-                  const value = trimmed.toUpperCase();
+                  const value = normalizePlateInput(newPlate);
+                  if (!value) return;
                   if (plates.includes(value)) {
                     setNewPlate("");
                     return;
                   }
-                  setPlates((current) => [...current, value]);
+                  void persistMemberPlates([...plates, value]);
                   setNewPlate("");
                 }}
+                disabled={plateSaving}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors"
               >
-                Add plate
+                {plateSaving ? "Saving..." : "Add plate"}
               </button>
             </div>
+            {plateMessage && <p className="text-[11px] text-black/60">{plateMessage}</p>}
             <p className="text-[11px] text-black/60">
-              In production, these plates will sync with your parking locations
-              and enforcement tools.
+              Saved plates sync to your account and are available on next sign-in.
             </p>
           </div>
         </div>
@@ -1835,12 +1740,18 @@ export default function MembersPage() {
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
           Help
         </h2>
         <p className="text-sm text-black/70">
           Find answers, raise a ticket, or reach the Payparq team for support.
+        </p>
+        <p className="text-sm text-black/80">
+          Email: <a className="underline" href="mailto:payparq@outlook.com">payparq@outlook.com</a>
+        </p>
+        <p className="text-sm text-black/80">
+          WhatsApp: <a className="underline" href="https://wa.me/385915963139">+385915963139</a>
         </p>
       </div>
     );

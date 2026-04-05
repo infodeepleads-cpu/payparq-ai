@@ -384,40 +384,21 @@ function buildCheckoutCustomerParams(params: {
   return {};
 }
 
-function buildCheckoutCustomFields(params: {
-  plateNumber: string;
-  customerPhone: string | null;
-  shouldRequirePlateField: boolean;
-  shouldAllowPlateOverride: boolean;
-}) {
-  const plateNumber = params.plateNumber.trim().toUpperCase();
-  const customerPhone = normalizePhoneValue(params.customerPhone);
+function buildCheckoutPlateCustomField(plateNumber: string) {
+  const normalizedPlate = plateNumber.trim().toUpperCase();
   const textPrefill = (value: string) => ({ default_value: value, value });
-  const customFields: Array<Record<string, unknown>> = [
+  return [
     {
       key: 'plate_number',
       label: {
         type: 'custom',
-        custom: params.shouldRequirePlateField
-          ? 'License Plate Number (e.g. MA679XX)'
-          : `License Plate Number (current: ${plateNumber})`,
-      },
-      type: 'text',
-      optional: !params.shouldRequirePlateField || params.shouldAllowPlateOverride,
-      text: plateNumber ? textPrefill(plateNumber) : undefined,
-    },
-    {
-      key: 'phone_number',
-      label: {
-        type: 'custom',
-        custom: customerPhone ? `Mobile Phone (current: ${customerPhone})` : 'Mobile Phone',
+        custom: 'License Plate Number (e.g. MA679XX)',
       },
       type: 'text',
       optional: false,
-      text: customerPhone ? textPrefill(customerPhone) : undefined,
+      text: normalizedPlate ? textPrefill(normalizedPlate) : undefined,
     },
-  ];
-  return customFields as unknown as Stripe.Checkout.SessionCreateParams.CustomField[];
+  ] as unknown as Stripe.Checkout.SessionCreateParams.CustomField[];
 }
 
 function parseOptionalBooleanValue(value: unknown): boolean | undefined {
@@ -480,9 +461,6 @@ function validateParkTaxiReservationWindow(flowType: string, checkIn: string, ch
   }
   if (end.getTime() <= start.getTime()) {
     return 'check_out_must_be_after_check_in';
-  }
-  if (start.getTime() < Date.now() + 60 * 60 * 1000) {
-    return 'park_taxi_requires_60_min_advance';
   }
   return null;
 }
@@ -724,7 +702,7 @@ export async function POST(req: NextRequest) {
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
   const shouldAutoFillParkTaxiWindow = flow_type === 'park_now' && (!check_in || !check_out);
-  const defaultParkTaxiCheckIn = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const defaultParkTaxiCheckIn = new Date().toISOString();
   const defaultParkTaxiCheckOut = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const shouldAutoFillHourlyWindow =
     !shouldAutoFillParkTaxiWindow &&
@@ -766,6 +744,10 @@ export async function POST(req: NextRequest) {
   const allowPlateOverride = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_plate_override?: unknown }).allow_plate_override,
     url.searchParams.get('allow_plate_override')
+  );
+  const autoChargeOptIn = resolveAllowPromotionCodesDefaultOn(
+    (body as { auto_charge_opt_in?: unknown }).auto_charge_opt_in,
+    url.searchParams.get('auto_charge_opt_in')
   );
   const extendTargetSessionId = ((body as { extend_target_session_id?: unknown }).extend_target_session_id ??
     url.searchParams.get('extend_target_session_id') ??
@@ -839,6 +821,10 @@ export async function POST(req: NextRequest) {
             location_id,
             plate_number,
             flow_type,
+            customer_email: normalizedCustomerEmail ?? '',
+            customer_phone: normalizedCustomerPhone ?? '',
+            stripe_customer_id: existingCustomer.customerId ?? '',
+            auto_charge_opt_in: autoChargeOptIn ? '1' : '0',
           },
         },
       });
@@ -992,8 +978,6 @@ export async function POST(req: NextRequest) {
     : plateLine
       ? `${plateLine}\n${submitMessageBase}`
       : submitMessageBase);
-  const shouldRequirePlateField = !plate_number;
-  const shouldAllowPlateOverride = allowPlateOverride || Boolean(plate_number);
   try {
     // Attempt to create session with SEPA and Card
     const fallbackSuccessUrl = buildSuccessUrl({
@@ -1098,12 +1082,10 @@ export async function POST(req: NextRequest) {
           message: submitMessage,
         },
       },
-      custom_fields: buildCheckoutCustomFields({
-        plateNumber: plate_number,
-        customerPhone: normalizedCustomerPhone,
-        shouldRequirePlateField,
-        shouldAllowPlateOverride,
-      }),
+      custom_fields: buildCheckoutPlateCustomField(plate_number),
+      phone_number_collection: {
+        enabled: true,
+      },
       ...checkoutCustomerParams,
       metadata: {
         location_id: resolvedLocationId,
@@ -1164,7 +1146,7 @@ export async function GET(req: NextRequest) {
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
   const shouldAutoFillParkTaxiWindow = flow_type === 'park_now' && (!check_in || !check_out);
-  const defaultParkTaxiCheckIn = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const defaultParkTaxiCheckIn = new Date().toISOString();
   const defaultParkTaxiCheckOut = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const shouldAutoFillHourlyWindow =
     !shouldAutoFillParkTaxiWindow &&
@@ -1197,6 +1179,10 @@ export async function GET(req: NextRequest) {
   const allowPlateOverride = resolveAllowPromotionCodesDefaultOn(
     undefined,
     url.searchParams.get('allow_plate_override')
+  );
+  const autoChargeOptIn = resolveAllowPromotionCodesDefaultOn(
+    undefined,
+    url.searchParams.get('auto_charge_opt_in')
   );
   const extendTargetSessionId = (url.searchParams.get('extend_target_session_id') ?? '').toString().trim();
   const extendMinutes = toCents(Number(url.searchParams.get('extend_minutes') ?? 0));
@@ -1269,6 +1255,10 @@ export async function GET(req: NextRequest) {
             location_id,
             plate_number,
             flow_type,
+            customer_email: normalizedCustomerEmail ?? '',
+            customer_phone: normalizedCustomerPhone ?? '',
+            stripe_customer_id: existingCustomer.customerId ?? '',
+            auto_charge_opt_in: autoChargeOptIn ? '1' : '0',
           },
         },
       });
@@ -1401,8 +1391,6 @@ export async function GET(req: NextRequest) {
     : plateLine
       ? `${plateLine}\n${submitMessageBase}`
       : submitMessageBase);
-  const shouldRequirePlateField = !plate_number;
-  const shouldAllowPlateOverride = allowPlateOverride || Boolean(plate_number);
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -1444,12 +1432,10 @@ export async function GET(req: NextRequest) {
           message: submitMessage,
         },
       },
-      custom_fields: buildCheckoutCustomFields({
-        plateNumber: plate_number,
-        customerPhone: normalizedCustomerPhone,
-        shouldRequirePlateField,
-        shouldAllowPlateOverride,
-      }),
+      custom_fields: buildCheckoutPlateCustomField(plate_number),
+      phone_number_collection: {
+        enabled: true,
+      },
       ...checkoutCustomerParams,
       metadata: {
         location_id: resolvedLocationId,

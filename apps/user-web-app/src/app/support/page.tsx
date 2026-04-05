@@ -325,11 +325,17 @@ export default function Support() {
             <h2 className="text-lg font-semibold text-black mb-3">Primary support channels</h2>
             <ul className="space-y-3 text-sm text-black/80">
               <li>
-          <span className="font-semibold">Email:</span>{" "}
-          <a href="mailto:payparq@outlook.com" className="underline">
-            payparq@outlook.com
-          </a>
-        </li>
+                <span className="font-semibold">Email:</span>{" "}
+                <a href="mailto:payparq@outlook.com" className="underline">
+                  payparq@outlook.com
+                </a>
+              </li>
+              <li>
+                <span className="font-semibold">WhatsApp:</span>{" "}
+                <a href="https://wa.me/385915963139" className="underline">
+                  +385915963139
+                </a>
+              </li>
               <li>
                 <span className="font-semibold">In-product links:</span> look for “Help” and “Support”
                 links inside the app for context-specific assistance.

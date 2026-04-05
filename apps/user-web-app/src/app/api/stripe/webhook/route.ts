@@ -5,6 +5,30 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
 
+function resolveStripeSecretKey(): string | null {
+  const candidates = [
+    process.env.STRIPE_SECRET_KEY,
+    process.env.STRIPE_SECRET,
+    process.env.STRIPE_KEY,
+    process.env.STRIPE_API_SECRET,
+    process.env.STRIPE_PRIVATE_KEY,
+    process.env.STRIPE_LIVE_SECRET_KEY,
+    process.env.STRIPE_TEST_SECRET_KEY,
+    process.env.NEXT_PRIVATE_STRIPE_SECRET_KEY,
+    process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY,
+  ];
+  for (const rawValue of candidates) {
+    const secret = (rawValue ?? '')
+      .trim()
+      .replace(/^['"]+|['"]+$/g, '');
+    if (!secret) continue;
+    if (!/^sk_(test|live)_/i.test(secret)) continue;
+    if (/your_stripe|replace_me|changeme|example/i.test(secret)) continue;
+    return secret;
+  }
+  return null;
+}
+
 function parseIso(value: string | null | undefined) {
   const raw = (value ?? '').trim();
   if (!raw) return null;
@@ -176,8 +200,62 @@ async function ensureMemberAccountByEmail(rawEmail: string | null | undefined) {
   return { ok: true, created: true };
 }
 
+function normalizePlateValue(value: unknown) {
+  return (value ?? '').toString().trim().toUpperCase();
+}
+
+function toBoolFromMetadata(value: unknown) {
+  const normalized = (value ?? '').toString().trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+async function updateMemberStripeDefaults(params: {
+  email: string | null;
+  stripeCustomerId: string | null;
+  defaultPaymentMethodId: string | null;
+  plateNumber: string | null;
+  autoChargeOptIn: boolean;
+}) {
+  const email = (params.email ?? '').trim().toLowerCase();
+  if (!email || !supabaseAdmin) return;
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (error) return;
+  const authUser = data.users.find((candidate) => (candidate.email ?? '').trim().toLowerCase() === email);
+  if (!authUser?.id) return;
+  const existingMetadata = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+  const existingPlates = Array.isArray(existingMetadata.member_plates)
+    ? existingMetadata.member_plates
+        .map((value) => normalizePlateValue(value))
+        .filter((value) => value.length > 0)
+    : [];
+  const incomingPlate = normalizePlateValue(params.plateNumber);
+  const mergedPlates = Array.from(new Set([...(incomingPlate ? [incomingPlate] : []), ...existingPlates]));
+  await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+    user_metadata: {
+      ...existingMetadata,
+      stripe_customer_id: params.stripeCustomerId ?? (existingMetadata.stripe_customer_id as string | undefined) ?? null,
+      default_payment_method: params.defaultPaymentMethodId ?? (existingMetadata.default_payment_method as string | undefined) ?? null,
+      auto_charge_opt_in:
+        params.autoChargeOptIn ||
+        toBoolFromMetadata(existingMetadata.auto_charge_opt_in),
+      member_plates: mergedPlates,
+      default_plate:
+        mergedPlates[0] ??
+        normalizePlateValue(existingMetadata.default_plate) ??
+        null,
+    },
+  });
+}
+
 export async function POST(req: Request) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' });
+  const stripeSecret = resolveStripeSecretKey();
+  if (!stripeSecret) {
+    return NextResponse.json({ error: 'stripe_not_configured' }, { status: 500 });
+  }
+  const stripe = new Stripe(stripeSecret, { apiVersion: '2025-03-31.basil' as unknown as Stripe.LatestApiVersion });
   const buf = Buffer.from(await req.arrayBuffer());
   const sig = (await headers()).get('stripe-signature') || '';
   let event: Stripe.Event;
@@ -191,13 +269,68 @@ export async function POST(req: Request) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    const paymentStatus = (session.payment_status ?? '').toString().trim().toLowerCase();
-    if (paymentStatus !== 'paid') {
-      return NextResponse.json({ received: true });
-    }
     console.log('✅ Checkout session completed:', session.id);
     if (session.mode === 'setup') {
-      console.log('🔐 Payment method setup completed.');
+      const sessionMetadata = session.metadata ?? {};
+      const metadataEmail = (sessionMetadata.customer_email ?? sessionMetadata.email ?? '').toString().trim().toLowerCase();
+      let memberEmail = metadataEmail || (session.customer_details?.email ?? session.customer_email ?? '').toString().trim().toLowerCase();
+      const customerIdFromSession = typeof session.customer === 'string' ? session.customer : null;
+      const customerIdFromMetadata = (sessionMetadata.stripe_customer_id ?? '').toString().trim();
+      let customerId =
+        customerIdFromSession ??
+        (customerIdFromMetadata || null);
+      if (!memberEmail && customerId) {
+        try {
+          const stripeCustomer = await stripe.customers.retrieve(customerId);
+          if (!('deleted' in stripeCustomer) && stripeCustomer.email) {
+            memberEmail = stripeCustomer.email.trim().toLowerCase();
+          }
+        } catch {
+        }
+      }
+      const setupIntentId = typeof session.setup_intent === 'string' ? session.setup_intent : null;
+      let paymentMethodId: string | null = null;
+      let autoChargeOptIn = toBoolFromMetadata(sessionMetadata.auto_charge_opt_in);
+      if (setupIntentId) {
+        try {
+          const setupIntent = await stripe.setupIntents.retrieve(setupIntentId, {
+            expand: ['payment_method'],
+          });
+          autoChargeOptIn = autoChargeOptIn || toBoolFromMetadata(setupIntent.metadata?.auto_charge_opt_in);
+          paymentMethodId =
+            typeof setupIntent.payment_method === 'string'
+              ? setupIntent.payment_method
+              : setupIntent.payment_method?.id ?? null;
+          if (!customerId) {
+            customerId =
+              typeof setupIntent.customer === 'string'
+                ? setupIntent.customer
+                : setupIntent.customer?.id ?? null;
+          }
+        } catch {
+        }
+      }
+      if (customerId && paymentMethodId) {
+        try {
+          await stripe.customers.update(customerId, {
+            invoice_settings: {
+              default_payment_method: paymentMethodId,
+            },
+          });
+        } catch {
+        }
+      }
+      await updateMemberStripeDefaults({
+        email: memberEmail || null,
+        stripeCustomerId: customerId,
+        defaultPaymentMethodId: paymentMethodId,
+        plateNumber: (sessionMetadata.plate_number ?? '').toString().trim() || null,
+        autoChargeOptIn,
+      });
+      return NextResponse.json({ received: true });
+    }
+    const paymentStatus = (session.payment_status ?? '').toString().trim().toLowerCase();
+    if (paymentStatus !== 'paid') {
       return NextResponse.json({ received: true });
     }
 
