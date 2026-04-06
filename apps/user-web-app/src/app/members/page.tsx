@@ -526,7 +526,7 @@ export default function MembersPage() {
       if (displayIdValue) {
         headers["x-member-display-id"] = displayIdValue;
       }
-      if (!headers.Authorization) {
+      if (normalizedMemberEmail) {
         headers["x-member-email"] = normalizedMemberEmail;
       }
       const activityQuery = new URLSearchParams({
@@ -673,10 +673,10 @@ export default function MembersPage() {
         headers.Authorization = `Bearer ${token}`;
       }
     }
-    if (!headers.Authorization && user?.email) {
+    if (user?.email) {
       headers["x-member-email"] = user.email;
     }
-    if (!headers.Authorization && !headers["x-member-email"]) {
+    if (!headers["x-member-email"]) {
       const fallbackEmail = (email ?? "").trim().toLowerCase();
       if (fallbackEmail) {
         headers["x-member-email"] = fallbackEmail;
