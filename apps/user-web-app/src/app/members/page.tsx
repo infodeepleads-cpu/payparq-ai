@@ -529,7 +529,13 @@ export default function MembersPage() {
       if (!headers.Authorization) {
         headers["x-member-email"] = normalizedMemberEmail;
       }
-      const response = await fetch("/api/members/context?include_activity=1&include_permits=0&include_rewards=0", {
+      const activityQuery = new URLSearchParams({
+        include_activity: "1",
+        include_permits: "0",
+        include_rewards: "0",
+        _ts: Date.now().toString(),
+      });
+      const response = await fetch(`/api/members/context?${activityQuery.toString()}`, {
         method: "GET",
         headers,
         cache: "no-store",
@@ -802,9 +808,10 @@ export default function MembersPage() {
       const includePermits = activeItem === "permits";
       const includeRewards = activeItem === "rewards";
       const query = new URLSearchParams({
-        include_activity: "0",
+        include_activity: "1",
         include_permits: includePermits ? "1" : "0",
         include_rewards: includeRewards ? "1" : "0",
+        _ts: Date.now().toString(),
       });
       const response = await fetch(`/api/members/context?${query.toString()}`, {
         method: "GET",
