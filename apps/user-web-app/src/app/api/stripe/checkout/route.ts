@@ -4,6 +4,9 @@ import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type PricingType = 'hourly' | 'daily' | 'monthly';
 const STRIPE_CARD_MIN_AMOUNT_CENTS = 50;
 const unifiedStripeSuccessUrl = 'https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}';

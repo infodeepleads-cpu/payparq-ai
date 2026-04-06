@@ -241,6 +241,8 @@ export default function MembersPage() {
   const [extendSyncActive, setExtendSyncActive] = useState(false);
 
   const isSignedIn = !!user || devSignedIn;
+  const normalizedMemberEmail = (user?.email ?? email).trim().toLowerCase();
+  const hasMemberIdentity = normalizedMemberEmail.length > 0;
   const isEmailVerified = devSignedIn || Boolean((user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at);
 
   function parseCurrency(value: string | null | undefined) {
@@ -482,8 +484,7 @@ export default function MembersPage() {
   }, []);
 
   const refreshActivity = useCallback(async () => {
-    const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
-    if (!normalizedEmail) {
+    if (!normalizedMemberEmail) {
       setActivityRows([]);
       return;
     }
@@ -526,7 +527,7 @@ export default function MembersPage() {
         headers["x-member-display-id"] = displayIdValue;
       }
       if (!headers.Authorization) {
-        headers["x-member-email"] = normalizedEmail;
+        headers["x-member-email"] = normalizedMemberEmail;
       }
       const response = await fetch("/api/members/context?include_activity=1&include_permits=0&include_rewards=0", {
         method: "GET",
@@ -549,7 +550,7 @@ export default function MembersPage() {
     } finally {
       setActivityLoading(false);
     }
-  }, [email, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
+  }, [normalizedMemberEmail, user?.app_metadata, user?.id, user?.user_metadata]);
 
   useEffect(() => {
     if (activeItem === "activity") {
@@ -557,10 +558,10 @@ export default function MembersPage() {
     }
   }, [activeItem, refreshActivity]);
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!hasMemberIdentity) {
       setActivityRows([]);
     }
-  }, [isSignedIn]);
+  }, [hasMemberIdentity]);
 
   useEffect(() => {
     if (!isSignedIn || typeof window === "undefined" || activityRows.length === 0) {
@@ -784,8 +785,7 @@ export default function MembersPage() {
 
   const refreshHomeContext = useCallback(async (options?: { silent?: boolean }) => {
     const shouldSilentlyRefresh = Boolean(options?.silent);
-    const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
-    if (!normalizedEmail) {
+    if (!normalizedMemberEmail) {
       setHomeContext(null);
       setWalletSummary(null);
       setLoyaltySummary(null);
@@ -854,7 +854,7 @@ export default function MembersPage() {
         setPermitsLoading(false);
       }
     }
-  }, [activeItem, email, getMemberAuthHeaders, user?.email]);
+  }, [activeItem, getMemberAuthHeaders, normalizedMemberEmail]);
   const startExtendSyncPolling = useCallback((previousCheckOut: string | null) => {
     if (typeof window === "undefined") {
       return;
@@ -892,15 +892,15 @@ export default function MembersPage() {
     }, delayMs);
   }, [activeItem, refreshActivity, refreshHomeContext]);
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!hasMemberIdentity) {
       setHomeContext(null);
       setExtendSyncActive(false);
       return;
     }
     void refreshHomeContext();
-  }, [isSignedIn, refreshHomeContext]);
+  }, [hasMemberIdentity, refreshHomeContext]);
   useEffect(() => {
-    if (!isSignedIn || typeof window === "undefined") {
+    if (!hasMemberIdentity || typeof window === "undefined") {
       return;
     }
     const refreshNow = () => {
@@ -915,15 +915,17 @@ export default function MembersPage() {
         refreshNow();
       }
     };
+    const intervalId = window.setInterval(refreshNow, 15000);
     window.addEventListener("focus", refreshNow);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("focus", refreshNow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [activeItem, extendSyncActive, isSignedIn, refreshActivity, refreshHomeContext]);
+  }, [activeItem, extendSyncActive, hasMemberIdentity, refreshActivity, refreshHomeContext]);
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!hasMemberIdentity) {
       return;
     }
     if (activeItem === "activity") {
@@ -933,7 +935,7 @@ export default function MembersPage() {
     if (activeItem === "permits" || activeItem === "rewards") {
       void refreshHomeContext({ silent: true });
     }
-  }, [activeItem, isSignedIn, refreshActivity, refreshHomeContext]);
+  }, [activeItem, hasMemberIdentity, refreshActivity, refreshHomeContext]);
   async function downloadInvoicePdf(actionUrl: string) {
     const isMembersInvoiceEndpoint = /^\/api\/members\/invoice(?:\?|$)/i.test(actionUrl);
     try {
