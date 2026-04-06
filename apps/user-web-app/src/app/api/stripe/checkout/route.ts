@@ -435,14 +435,30 @@ function formatBerlinDateTime(value: Date): string {
       hour12: false,
     }).formatToParts(value);
     const get = (type: string) => dateParts.find((p) => p.type === type)?.value ?? '';
-    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
+    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} CET`;
   } catch {
-    return value.toISOString().replace('T', ' ').split('.')[0];
+    return `${value.toISOString().replace('T', ' ').split('.')[0]} CET`;
   }
 }
 
+function isIsoWithoutTimezone(value: string): boolean {
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?$/.test(trimmed);
+}
+
+function formatNaiveIsoDateTime(value: string): string {
+  const trimmed = value.trim();
+  const normalized = trimmed.replace('T', ' ');
+  if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(normalized)) {
+    return `${normalized}:00 CET`;
+  }
+  return normalized.endsWith(' CET') ? normalized : `${normalized} CET`;
+}
+
 function forceCETLabel(value: string): string {
-  return value;
+  const normalized = value.replace(/\bCEST\b/g, 'CET').trim();
+  if (!normalized) return normalized;
+  return normalized.endsWith(' CET') ? normalized : `${normalized} CET`;
 }
 
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
@@ -479,6 +495,9 @@ function exceedsOneDayDuration(checkIn: string, checkOut: string): boolean {
 
 function formatCheckoutIso(iso: string): string {
   if (!iso) return '';
+  if (isIsoWithoutTimezone(iso)) {
+    return formatNaiveIsoDateTime(iso);
+  }
   try {
     const parsed = new Date(iso);
     if (!Number.isNaN(parsed.getTime())) {
@@ -861,6 +880,9 @@ export async function POST(req: NextRequest) {
   let reservationDescription = '';
   const formatIso = (iso: string) => {
     if (!iso) return '';
+    if (isIsoWithoutTimezone(iso)) {
+      return formatNaiveIsoDateTime(iso);
+    }
     try {
       const parsed = new Date(iso);
       if (!Number.isNaN(parsed.getTime())) {
@@ -871,7 +893,8 @@ export async function POST(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:\d{2}$/, '');
+  const formatIsoNoSeconds = (iso: string) =>
+    forceCETLabel(formatIso(iso)).replace(/:\d{2}(?:\sCET)?$/, ' CET');
   const formatTimeShort = (iso: string) => {
     try {
       const parsed = new Date(iso);
@@ -1285,6 +1308,9 @@ export async function GET(req: NextRequest) {
   let reservationDescription = '';
   const formatIso = (iso: string) => {
     if (!iso) return '';
+    if (isIsoWithoutTimezone(iso)) {
+      return formatNaiveIsoDateTime(iso);
+    }
     try {
       const parsed = new Date(iso);
       if (!Number.isNaN(parsed.getTime())) {
@@ -1295,7 +1321,8 @@ export async function GET(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:\d{2}$/, '');
+  const formatIsoNoSeconds = (iso: string) =>
+    forceCETLabel(formatIso(iso)).replace(/:\d{2}(?:\sCET)?$/, ' CET');
   const formatTimeShort = (iso: string) => {
     try {
       const parsed = new Date(iso);
