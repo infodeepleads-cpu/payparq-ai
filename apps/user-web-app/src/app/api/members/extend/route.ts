@@ -139,9 +139,65 @@ async function resolveMemberIdentity(req: NextRequest): Promise<MemberIdentity> 
   return { email, phones, plates, stripeCustomerIds };
 }
 
+function parseNaiveDateParts(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/
+  );
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    hour: Number(match[4]),
+    minute: Number(match[5]),
+    second: Number(match[6] ?? "0"),
+  };
+}
+
+function resolveTimeZoneOffsetMinutes(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const zonedAsUtc = Date.UTC(
+    get("year"),
+    Math.max(0, get("month") - 1),
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second")
+  );
+  return Math.round((zonedAsUtc - date.getTime()) / 60000);
+}
+
+function parseDateValue(value: string) {
+  const trimmed = value.trim();
+  if (/(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed)) {
+    return new Date(trimmed);
+  }
+  const naive = parseNaiveDateParts(trimmed);
+  if (!naive) {
+    return new Date(trimmed);
+  }
+  let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const offsetMinutes = resolveTimeZoneOffsetMinutes(new Date(utcMillis), "Europe/Zagreb");
+    utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second) - offsetMinutes * 60000;
+  }
+  return new Date(utcMillis);
+}
+
 function toValidDate(value: string | null | undefined) {
   if (!value) return null;
-  const parsed = new Date(value);
+  const parsed = parseDateValue(value);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
