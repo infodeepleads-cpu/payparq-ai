@@ -1096,9 +1096,17 @@ export default function MembersPage() {
       ? Math.min(2880, Math.max(60, parsedMinutes))
       : 120;
     const sessionId = (homeContext?.sessionId ?? "").toString().trim();
+    const locationId = (homeContext?.locationId ?? "").toString().trim();
+    const checkIn = (homeContext?.checkIn ?? "").toString().trim();
+    const checkOut = (homeContext?.checkOut ?? "").toString().trim();
+    const plate = (homeContext?.plate ?? "").toString().trim();
     await runHomeAction("extend", "/api/members/extend", {
       minutes: safeMinutes,
       session_id: sessionId || undefined,
+      fallback_location_id: locationId || undefined,
+      fallback_check_in: checkIn || undefined,
+      fallback_check_out: checkOut || undefined,
+      fallback_plate: plate || undefined,
     });
   }
   async function handleInvoiceAction() {
