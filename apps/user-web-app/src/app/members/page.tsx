@@ -56,6 +56,7 @@ type PermitRow = {
 };
 type MembersHomeContext = {
   sessionId: string;
+  plate?: string | null;
   locationId: string | null;
   locationDisplayId?: string | null;
   locationName: string | null;
@@ -527,7 +528,7 @@ export default function MembersPage() {
       if (!headers.Authorization) {
         headers["x-member-email"] = normalizedEmail;
       }
-      const response = await fetch("/api/members/context", {
+      const response = await fetch("/api/members/context?include_activity=1&include_permits=0&include_rewards=0", {
         method: "GET",
         headers,
         cache: "no-store",
@@ -551,8 +552,10 @@ export default function MembersPage() {
   }, [email, isSignedIn, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
 
   useEffect(() => {
-    void refreshActivity();
-  }, [refreshActivity]);
+    if (activeItem === "activity") {
+      void refreshActivity();
+    }
+  }, [activeItem, refreshActivity]);
   useEffect(() => {
     if (!isSignedIn) {
       setActivityRows([]);
@@ -652,8 +655,13 @@ export default function MembersPage() {
       "Content-Type": "application/json",
     };
     if (supabase && isSupabaseConfigured) {
+      let token = "";
       const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
+      token = data.session?.access_token ?? "";
+      if (!token) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        token = refreshed.session?.access_token ?? "";
+      }
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
@@ -790,7 +798,14 @@ export default function MembersPage() {
       setPermitsLoading(true);
     }
     try {
-      const response = await fetch("/api/members/context", {
+      const includePermits = activeItem === "permits";
+      const includeRewards = activeItem === "rewards";
+      const query = new URLSearchParams({
+        include_activity: "0",
+        include_permits: includePermits ? "1" : "0",
+        include_rewards: includeRewards ? "1" : "0",
+      });
+      const response = await fetch(`/api/members/context?${query.toString()}`, {
         method: "GET",
         headers: await getMemberAuthHeaders(),
         cache: "no-store",
@@ -812,17 +827,25 @@ export default function MembersPage() {
         setHomeContext(null);
         setWalletSummary(null);
         setLoyaltySummary(null);
-        setRewardWalletLedger([]);
-        setRewardLoyaltyLedger([]);
-        setPermitsRows([]);
+        if (includeRewards) {
+          setRewardWalletLedger([]);
+          setRewardLoyaltyLedger([]);
+        }
+        if (includePermits) {
+          setPermitsRows([]);
+        }
         return null;
       }
       setHomeContext(payload.context ?? null);
       setWalletSummary(payload.wallet ?? null);
       setLoyaltySummary(payload.loyalty ?? null);
-      setRewardWalletLedger(payload.rewards?.walletLedger ?? []);
-      setRewardLoyaltyLedger(payload.rewards?.loyaltyLedger ?? []);
-      setPermitsRows(payload.permits ?? []);
+      if (includeRewards) {
+        setRewardWalletLedger(payload.rewards?.walletLedger ?? []);
+        setRewardLoyaltyLedger(payload.rewards?.loyaltyLedger ?? []);
+      }
+      if (includePermits) {
+        setPermitsRows(payload.permits ?? []);
+      }
       return payload.context;
     } finally {
       if (!shouldSilentlyRefresh) {
@@ -830,7 +853,7 @@ export default function MembersPage() {
         setPermitsLoading(false);
       }
     }
-  }, [getMemberAuthHeaders, isSignedIn]);
+  }, [activeItem, getMemberAuthHeaders, isSignedIn]);
   const startExtendSyncPolling = useCallback((previousCheckOut: string | null) => {
     if (typeof window === "undefined") {
       return;
@@ -842,7 +865,10 @@ export default function MembersPage() {
     const previousCheckOutMillis = toMillis(previousCheckOut);
     const poll = async () => {
       attempts += 1;
-      const [nextContext] = await Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
+      const nextContext =
+        activeItem === "activity"
+          ? (await Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]))[0]
+          : await refreshHomeContext({ silent: true });
       const nextCheckOutMillis = toMillis(nextContext?.checkOut ?? null);
       if (
         previousCheckOutMillis != null &&
@@ -863,7 +889,7 @@ export default function MembersPage() {
     window.setTimeout(() => {
       void poll();
     }, delayMs);
-  }, [refreshActivity, refreshHomeContext]);
+  }, [activeItem, refreshActivity, refreshHomeContext]);
   useEffect(() => {
     if (!isSignedIn) {
       setHomeContext(null);
@@ -877,7 +903,11 @@ export default function MembersPage() {
       return;
     }
     const refreshNow = () => {
-      void Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
+      if (activeItem === "activity") {
+        void Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
+        return;
+      }
+      void refreshHomeContext({ silent: true });
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -890,10 +920,22 @@ export default function MembersPage() {
       window.removeEventListener("focus", refreshNow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [extendSyncActive, isSignedIn, refreshActivity, refreshHomeContext]);
+  }, [activeItem, extendSyncActive, isSignedIn, refreshActivity, refreshHomeContext]);
+  useEffect(() => {
+    if (!isSignedIn) {
+      return;
+    }
+    if (activeItem === "activity") {
+      void refreshActivity();
+      return;
+    }
+    if (activeItem === "permits" || activeItem === "rewards") {
+      void refreshHomeContext({ silent: true });
+    }
+  }, [activeItem, isSignedIn, refreshActivity, refreshHomeContext]);
   async function downloadInvoicePdf(actionUrl: string) {
+    const isMembersInvoiceEndpoint = /^\/api\/members\/invoice(?:\?|$)/i.test(actionUrl);
     try {
-      const isMembersInvoiceEndpoint = /^\/api\/members\/invoice(?:\?|$)/i.test(actionUrl);
       const response = await fetch(actionUrl, {
         method: "GET",
         headers: isMembersInvoiceEndpoint ? await getMemberAuthHeaders() : undefined,
@@ -907,17 +949,19 @@ export default function MembersPage() {
       const blobUrl = window.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = blobUrl;
-      anchor.download = isPdf ? "payparq-receipt.pdf" : "payparq-receipt";
+      anchor.download = isPdf ? "payparq-receipt.pdf" : "payparq-receipt.html";
       document.body.append(anchor);
       anchor.click();
       anchor.remove();
-      window.URL.revokeObjectURL(blobUrl);
-      if (!isPdf) {
+      if (!isPdf && !isMembersInvoiceEndpoint) {
         window.open(actionUrl, "_blank", "noopener,noreferrer");
       }
+      window.URL.revokeObjectURL(blobUrl);
       return true;
     } catch {
-      window.open(actionUrl, "_blank", "noopener,noreferrer");
+      if (!isMembersInvoiceEndpoint) {
+        window.open(actionUrl, "_blank", "noopener,noreferrer");
+      }
       return false;
     }
   }
@@ -952,7 +996,14 @@ export default function MembersPage() {
       }
       if (payload.actionUrl) {
         if (action === "invoice") {
-          await downloadInvoicePdf(payload.actionUrl);
+          const downloaded = await downloadInvoicePdf(payload.actionUrl);
+          if (!downloaded) {
+            setHomeFeedback((current) => ({
+              ...current,
+              [action]: { type: "error", text: "Unable to download receipt. Please refresh and try again." },
+            }));
+            return;
+          }
         } else {
           window.open(payload.actionUrl, "_blank", "noopener,noreferrer");
         }
@@ -965,7 +1016,11 @@ export default function MembersPage() {
         },
       }));
       const previousCheckOut = homeContext?.checkOut ?? null;
-      await Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
+      if (activeItem === "activity") {
+        await Promise.all([refreshHomeContext({ silent: true }), refreshActivity()]);
+      } else {
+        await refreshHomeContext({ silent: true });
+      }
       if (action === "extend") {
         startExtendSyncPolling(previousCheckOut);
       }
@@ -1040,17 +1095,49 @@ export default function MembersPage() {
     const safeMinutes = Number.isFinite(parsedMinutes)
       ? Math.min(2880, Math.max(60, parsedMinutes))
       : 120;
-    await runHomeAction("extend", "/api/members/extend", { minutes: safeMinutes });
+    const sessionId = (homeContext?.sessionId ?? "").toString().trim();
+    await runHomeAction("extend", "/api/members/extend", {
+      minutes: safeMinutes,
+      session_id: sessionId || undefined,
+    });
   }
   async function handleInvoiceAction() {
     const stripeSessionId = (homeContext?.stripeSessionId ?? "").toString().trim();
     const sessionId = (homeContext?.sessionId ?? "").toString().trim();
+    const plate = (homeContext?.plate ?? "").toString().trim();
+    const locationName = (homeContext?.locationName ?? "").toString().trim();
+    const locationId = (homeContext?.locationId ?? "").toString().trim();
+    const checkIn = (homeContext?.checkIn ?? "").toString().trim();
+    const checkOut = (homeContext?.checkOut ?? "").toString().trim();
+    const amount = Number(homeContext?.amount ?? 0);
+    const currency = (homeContext?.currency ?? "").toString().trim();
     const params = new URLSearchParams();
     if (stripeSessionId) {
       params.set("stripe_session_id", stripeSessionId);
+      params.set("fallback_stripe_session_id", stripeSessionId);
     }
     if (sessionId) {
       params.set("session_id", sessionId);
+    }
+    if (plate) {
+      params.set("fallback_plate", plate);
+    }
+    if (locationName) {
+      params.set("fallback_location_name", locationName);
+    } else if (locationId) {
+      params.set("fallback_location_id", locationId);
+    }
+    if (checkIn) {
+      params.set("fallback_check_in", checkIn);
+    }
+    if (checkOut) {
+      params.set("fallback_check_out", checkOut);
+    }
+    if (Number.isFinite(amount) && amount > 0) {
+      params.set("fallback_amount", amount.toFixed(2));
+    }
+    if (currency) {
+      params.set("fallback_currency", currency);
     }
     const endpoint = params.toString() ? `/api/members/invoice?${params.toString()}` : "/api/members/invoice";
     await runHomeAction("invoice", endpoint);
