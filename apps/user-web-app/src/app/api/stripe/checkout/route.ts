@@ -443,12 +443,13 @@ function formatBerlinDateTime(value: Date): string {
 
 function isIsoWithoutTimezone(value: string): boolean {
   const trimmed = value.trim();
-  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?$/.test(trimmed);
+  if (/(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed)) return false;
+  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(trimmed);
 }
 
 function formatNaiveIsoDateTime(value: string): string {
   const trimmed = value.trim();
-  const normalized = trimmed.replace('T', ' ');
+  const normalized = trimmed.replace('T', ' ').replace(/\.\d{1,3}$/, '');
   if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/.test(normalized)) {
     return `${normalized}:00 CET`;
   }
@@ -456,9 +457,7 @@ function formatNaiveIsoDateTime(value: string): string {
 }
 
 function forceCETLabel(value: string): string {
-  const normalized = value.replace(/\bCEST\b/g, 'CET').trim();
-  if (!normalized) return normalized;
-  return normalized.endsWith(' CET') ? normalized : `${normalized} CET`;
+  return value.replace(/\bCEST\b/g, 'CET');
 }
 
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
@@ -986,12 +985,7 @@ export async function POST(req: NextRequest) {
     checkOut: finalCheckOut || undefined,
     minimumChargeApplied,
   }));
-  const plateLine = plate_number ? `Plate: ${plate_number}` : '';
-  const submitMessage = forceCETLabel(reservationDescription
-    ? `${reservationDescription}${plateLine ? `\n${plateLine}` : ''}\n${submitMessageBase}`
-    : plateLine
-      ? `${plateLine}\n${submitMessageBase}`
-      : submitMessageBase);
+  const submitMessage = submitMessageBase;
   try {
     // Attempt to create session with SEPA and Card
     const fallbackSuccessUrl = buildSuccessUrl({
@@ -1419,12 +1413,7 @@ export async function GET(req: NextRequest) {
     checkOut: finalCheckOut || undefined,
     minimumChargeApplied,
   }));
-  const plateLine = plate_number ? `Plate: ${plate_number}` : '';
-  const submitMessage = forceCETLabel(reservationDescription
-    ? `${reservationDescription}${plateLine ? `\n${plateLine}` : ''}\n${submitMessageBase}`
-    : plateLine
-      ? `${plateLine}\n${submitMessageBase}`
-      : submitMessageBase);
+  const submitMessage = submitMessageBase;
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
