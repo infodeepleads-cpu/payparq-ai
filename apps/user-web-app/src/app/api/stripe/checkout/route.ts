@@ -447,6 +447,62 @@ function isIsoWithoutTimezone(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(trimmed);
 }
 
+function parseNaiveDateParts(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/
+  );
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+    hour: Number(match[4]),
+    minute: Number(match[5]),
+    second: Number(match[6] ?? '0'),
+  };
+}
+
+function resolveTimeZoneOffsetMinutes(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? '0');
+  const zonedAsUtc = Date.UTC(
+    get('year'),
+    Math.max(0, get('month') - 1),
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second')
+  );
+  return Math.round((zonedAsUtc - date.getTime()) / 60000);
+}
+
+function parseCheckoutDateValue(value: string): Date {
+  const trimmed = value.trim();
+  if (!isIsoWithoutTimezone(trimmed)) {
+    return new Date(trimmed);
+  }
+  const naive = parseNaiveDateParts(trimmed);
+  if (!naive) {
+    return new Date(trimmed);
+  }
+  let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const offsetMinutes = resolveTimeZoneOffsetMinutes(new Date(utcMillis), 'Europe/Berlin');
+    utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second) - offsetMinutes * 60000;
+  }
+  return new Date(utcMillis);
+}
+
 function formatNaiveIsoDateTime(value: string): string {
   const trimmed = value.trim();
   const normalized = trimmed.replace('T', ' ').replace(/\.\d{1,3}$/, '');
@@ -473,8 +529,8 @@ function validateParkTaxiReservationWindow(flowType: string, checkIn: string, ch
   if (!checkIn || !checkOut) {
     return 'park_taxi_requires_check_in_and_check_out';
   }
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
+  const start = parseCheckoutDateValue(checkIn);
+  const end = parseCheckoutDateValue(checkOut);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return 'invalid_check_in_or_check_out';
   }
@@ -486,8 +542,8 @@ function validateParkTaxiReservationWindow(flowType: string, checkIn: string, ch
 
 function exceedsOneDayDuration(checkIn: string, checkOut: string): boolean {
   if (!checkIn || !checkOut) return false;
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
+  const start = parseCheckoutDateValue(checkIn);
+  const end = parseCheckoutDateValue(checkOut);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
   return end.getTime() - start.getTime() > 24 * 60 * 60 * 1000;
 }
@@ -1332,8 +1388,8 @@ export async function GET(req: NextRequest) {
     }
   };
   if (effectiveCheckIn && effectiveCheckOut) {
-    const start = new Date(effectiveCheckIn);
-    const end = new Date(effectiveCheckOut);
+    const start = parseCheckoutDateValue(effectiveCheckIn);
+    const end = parseCheckoutDateValue(effectiveCheckOut);
     const diff = end.getTime() - start.getTime();
     if (diff > 0) {
       quantity = isParkTaxiFlow || isReserveDailyFlow
