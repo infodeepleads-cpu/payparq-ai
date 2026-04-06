@@ -440,12 +440,16 @@ void main() {
       content.contains('const desiredCountry =') &&
           content.contains('STRIPE_CONNECT_COUNTRY') &&
           content.contains('"HR"') &&
+          content.contains('STRIPE_CONNECT_BLOCKED_COUNTRIES') &&
+          content.contains('"EE"') &&
+          content.contains('function resolveTargetConnectCountry(') &&
+          content.contains('if (blockedConnectCountries.has(normalized))') &&
           content.contains('if (accountCountry !== targetCountry)') &&
           content.contains(
               'const replacement = await createExpressAccount(userId, targetCountry);'),
       isTrue,
       reason:
-          'Stripe Connect onboarding must default to Croatia and replace stale accounts created under another country.',
+          'Stripe Connect onboarding must default to Croatia, block Estonia fallback, and replace stale accounts created under another country.',
     );
   });
 }

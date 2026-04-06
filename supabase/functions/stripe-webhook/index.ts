@@ -168,6 +168,23 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const phone = session.customer_details?.phone || metadata.mobile || "";
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
+  const flow = String(metadata.flow ?? metadata.flow_type ?? "").trim().toLowerCase();
+  const extendTargetSessionId = String(metadata.extend_target_session_id ?? "").trim();
+  const metadataCheckIn = String(metadata.check_in ?? "").trim();
+  const metadataCheckOut = String(metadata.check_out ?? "").trim();
+  const metadataCheckInDate = metadataCheckIn ? new Date(metadataCheckIn) : null;
+  const metadataCheckOutDate = metadataCheckOut ? new Date(metadataCheckOut) : null;
+  const hasValidMetadataCheckIn = Boolean(
+    metadataCheckInDate && !Number.isNaN(metadataCheckInDate.getTime()),
+  );
+  const hasValidMetadataCheckOut = Boolean(
+    metadataCheckOutDate && !Number.isNaN(metadataCheckOutDate.getTime()),
+  );
+  const isReserveFlow = flow === "reserve";
+  const isTargetedExtensionFlow = isReserveFlow && extendTargetSessionId.length > 0;
+  if (isTargetedExtensionFlow && (!hasValidMetadataCheckIn || !hasValidMetadataCheckOut)) {
+    return { ok: false, status: 400, message: "extend_flow_requires_check_in_and_check_out" };
+  }
   let checkoutQuantity = Number.parseInt((metadata.quantity ?? "1").toString(), 10);
   if (!Number.isFinite(checkoutQuantity) || checkoutQuantity < 1) {
     checkoutQuantity = 1;
@@ -203,14 +220,21 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   }
   const durationUnit =
     type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
-  const entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  let entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  if (isReserveFlow && hasValidMetadataCheckIn && metadataCheckInDate) {
+    entryTime = metadataCheckInDate;
+  }
   const durationMinutes =
     durationUnit === "month"
       ? checkoutQuantity * 30 * 24 * 60
       : durationUnit === "day"
       ? checkoutQuantity * 24 * 60
       : checkoutQuantity * 60;
-  const exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
+  let exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
+  if (isReserveFlow && hasValidMetadataCheckOut && metadataCheckOutDate) {
+    exitTime = metadataCheckOutDate;
+  }
+  const statusValue = isReserveFlow && entryTime.getTime() > Date.now() ? "scheduled" : "active";
   
   let plateNumber = "";
   if (session.custom_fields) {
@@ -229,7 +253,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     contact_name: name,
     type: type,
     ui_type: "guest",
-    status: "active",
+    status: statusValue,
     payment_status: "paid",
     price: Number(session.amount_total ?? 0) / 100,
     amount_cents: Number(session.amount_total ?? 0),
@@ -250,6 +274,8 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
       ...metadata,
       quantity: String(checkoutQuantity),
       duration_unit: durationUnit,
+      flow_type: flow || null,
+      extend_target_session_id: extendTargetSessionId || null,
       stripe_id: session.id,
       customer: session.customer,
       payment_intent: session.payment_intent,
@@ -306,6 +332,13 @@ serve(async (req: Request) => {
 
     if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const session = event.data.object as Stripe.Checkout.Session;
+      const normalizedPaymentStatus = String(session.payment_status ?? "").trim().toLowerCase();
+      const shouldPersist =
+        event.type === "checkout.session.async_payment_succeeded" ||
+        normalizedPaymentStatus === "paid";
+      if (!shouldPersist) {
+        return json({ received: true });
+      }
       const persisted = await persistCheckoutSession(session);
       if (!persisted.ok) return json({ error: persisted.message ?? "Failed persist" }, persisted.status ?? 500);
     } else if (event.type === "checkout.session.expired") {

@@ -1170,40 +1170,8 @@ serve(async (req: Request) => {
     console.log(`[V17] Params: locationId=${locationId}, type=${type}, parkTaxi=${parkTaxiRequested}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
 
     const now = new Date();
-    const resolveBerlinTzAbbreviation = (value: Date): string => {
-      try {
-        const parts = new Intl.DateTimeFormat("en-GB", {
-          timeZone: "Europe/Berlin",
-          timeZoneName: "short",
-        }).formatToParts(value);
-        const tzName = parts.find((part) => part.type === "timeZoneName")?.value?.trim() ?? "";
-        return tzName || "CET";
-      } catch {
-        return "CET";
-      }
-    };
-    const resolveBerlinOffsetMinutes = (value: Date): number => {
-      try {
-        const parts = new Intl.DateTimeFormat("en-GB", {
-          timeZone: "Europe/Berlin",
-          timeZoneName: "shortOffset",
-        }).formatToParts(value);
-        const tzName = parts.find((part) => part.type === "timeZoneName")?.value?.trim() ?? "";
-        const offsetMatch = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/i);
-        if (!offsetMatch) {
-          return 60;
-        }
-        const sign = offsetMatch[1] === "-" ? -1 : 1;
-        const hours = Number(offsetMatch[2] ?? "0");
-        const minutes = Number(offsetMatch[3] ?? "0");
-        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
-          return 60;
-        }
-        return sign * ((hours * 60) + minutes);
-      } catch {
-        return 60;
-      }
-    };
+    const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
+    const resolveBerlinOffsetMinutes = (_value: Date): number => 60;
     const formatBerlinDateTime = (value: Date): string => {
       try {
         const parts = new Intl.DateTimeFormat("en-GB", {
@@ -1386,6 +1354,9 @@ serve(async (req: Request) => {
     if (derivedCheckOutIso) {
       resolvedSuccessUrl.searchParams.set("check_out", derivedCheckOutIso);
     }
+    const successUrl = resolvedSuccessUrl
+      .toString()
+      .replace("session_id=%7BCHECKOUT_SESSION_ID%7D", "session_id={CHECKOUT_SESSION_ID}");
     const reservationName = (locData?.name ?? "").toString().trim();
     const reservationTitle = reservationName.length > 0
       ? reservationName
@@ -1479,7 +1450,7 @@ serve(async (req: Request) => {
     const sessionOptions: any = {
       mode: "payment",
       payment_method_types: ["card"],
-      success_url: resolvedSuccessUrl.toString(),
+      success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: locationUuid, // Use UUID if possible
       customer: resolvedCustomerId || undefined,
@@ -1611,10 +1582,9 @@ serve(async (req: Request) => {
       return !Number.isNaN(parsed.getTime()) && parsed.getTime() > now.getTime();
     })();
     const isFutureCheckoutFlow = isReservationFlow || extendTargetSessionId.length > 0 || hasFutureActivation;
-    const shouldSeedPendingSession = Boolean(locationUuid) &&
-      (!isFutureCheckoutFlow || seedInactivePending);
+    const shouldSeedPendingSession = Boolean(locationUuid);
     if (shouldSeedPendingSession && locationUuid) {
-      const shouldSeedInactivePending = isFutureCheckoutFlow && seedInactivePending;
+      const shouldSeedInactivePending = isFutureCheckoutFlow;
       const inactiveEntryTime = shouldSeedInactivePending ? derivedCheckInIso : now.toISOString();
       const inactiveExitTime = shouldSeedInactivePending ? derivedCheckOutIso : "";
       const inactiveExitDate = inactiveExitTime ? new Date(inactiveExitTime) : null;

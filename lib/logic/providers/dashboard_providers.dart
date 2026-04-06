@@ -73,68 +73,26 @@ final unifiedDashboardProvider =
   }
 
   String deriveEffectiveStatus(Map<String, dynamic> item) {
-    final amount = double.tryParse((item['price'] ?? 0).toString()) ?? 0.0;
     final paymentStatus =
         (item['payment_status'] ?? '').toString().trim().toLowerCase();
     final status = (item['status'] ?? '').toString().trim().toLowerCase();
-    final isPaid = paymentStatus == 'paid' ||
-        paymentStatus == 'succeeded' ||
-        paymentStatus == 'complete' ||
-        paymentStatus == 'completed' ||
-        status == 'active' ||
-        status == 'paid' ||
-        status == 'succeeded' ||
-        status == 'complete' ||
-        status == 'completed' ||
-        amount == 0.0 ||
-        (item['stripe_metadata'] != null &&
-            (item['stripe_metadata']
-                    .toString()
-                    .contains('"status":"complete"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"payment_status":"paid"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"checkout.session.completed"') ||
-                item['stripe_metadata']
-                    .toString()
-                    .contains('"checkout_session_id"')));
-
-    final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
     final window = resolveSessionWindow(item);
     final nowUtc = DateTime.now().toUtc();
-    final flow =
-        (stripeMeta['flow'] ?? stripeMeta['flow_type'] ?? '').toString().trim().toLowerCase();
-    final extendTargetSessionId =
-        (stripeMeta['extend_target_session_id'] ?? stripeMeta['extension_of_session_id'] ?? '')
-            .toString()
-            .trim();
-    final isFutureCheckoutFlow = flow == 'reserve' || extendTargetSessionId.isNotEmpty;
-    final activationAt = parseAnyDate(item['activation_at']) ??
-        (window['check_in']) ??
-        parseAnyDate(stripeMeta['activation_at']) ??
-        parseAnyDate(stripeMeta['check_in']);
-    final endTime = (window['check_out']);
+    final checkIn = window['check_in'];
+    final checkOut = window['check_out'];
     final isPending =
         paymentStatus == 'pending' || status == 'pending' || status == 'open';
-    if (isPending) {
-      if (isFutureCheckoutFlow && activationAt != null && nowUtc.isBefore(activationAt)) {
+    if (checkIn != null && checkOut != null) {
+      if (nowUtc.isBefore(checkIn)) {
         return 'upcoming';
       }
-      return 'pending';
+      if (nowUtc.isAtSameMomentAs(checkOut) || nowUtc.isAfter(checkOut)) {
+        return 'expired';
+      }
+      return 'active';
     }
-
-    if (endTime != null && nowUtc.isAfter(endTime)) {
-      return 'expired';
-    }
-    if (isFutureCheckoutFlow && activationAt != null && nowUtc.isBefore(activationAt)) {
-      return 'upcoming';
-    }
-    if (activationAt != null && nowUtc.isBefore(activationAt)) {
-      return 'inactive';
-    }
-    return isPaid ? 'active' : 'inactive';
+    if (isPending) return 'pending';
+    return 'inactive';
   }
 
   List<Map<String, dynamic>> extractData(
@@ -149,12 +107,39 @@ final unifiedDashboardProvider =
         );
         final effectiveStatus = deriveEffectiveStatus(item);
         final window = resolveSessionWindow(item);
+        final stripeMeta = parseStripeMetadata(item['stripe_metadata']);
+        final metadataEmail =
+            (stripeMeta['email'] ?? '').toString().toLowerCase();
+        final metadataMobile =
+            (stripeMeta['mobile'] ?? '').toString().toLowerCase();
+        final metadataCoupon =
+            (stripeMeta['coupon_code'] ?? '').toString().toLowerCase();
+        final uiEmail =
+            (item['email'] ?? item['contact_email'] ?? metadataEmail)
+                .toString()
+                .toLowerCase();
+        final uiMobile =
+            (item['mobile'] ?? item['contact_phone'] ?? metadataMobile)
+                .toString()
+                .toLowerCase();
+        final uiCoupon =
+            (item['coupon_code'] ?? metadataCoupon).toString().toLowerCase();
+        final uiPlate = (item['plate'] ?? '').toString().toLowerCase();
+        final uiName = (item['contact_name'] ?? '').toString().toLowerCase();
+        final uiLocationDisplayId =
+            (item['location_display_id'] ?? '').toString().toLowerCase();
         return {
           ...item,
           'ui_type': type,
           'ui_effective_status': effectiveStatus,
           'ui_entry_time': window['check_in']?.toIso8601String(),
           'ui_exit_time': window['check_out']?.toIso8601String(),
+          'ui_search_plate': uiPlate,
+          'ui_search_email': uiEmail,
+          'ui_search_mobile': uiMobile,
+          'ui_search_name': uiName,
+          'ui_search_location_display_id': uiLocationDisplayId,
+          'ui_search_coupon': uiCoupon,
         };
       }).toList(),
       orElse: () => [],
@@ -181,37 +166,13 @@ final unifiedDashboardProvider =
 
   // Apply filtering
   final filtered = combined.where((item) {
-    // V14: Extract metadata for search if available
-    String? metadataEmail;
-    String? metadataMobile;
-    String? couponCode;
-    try {
-      if (item['stripe_metadata'] != null) {
-        final metaStr = item['stripe_metadata'].toString();
-        if (metaStr.startsWith('{')) {
-          final metaJson = jsonDecode(metaStr);
-          metadataEmail = metaJson['email']?.toString();
-          metadataMobile = metaJson['mobile']?.toString();
-          couponCode = metaJson['coupon_code']?.toString();
-        }
-      }
-    } catch (_) {}
-
-    final plate = (item['plate'] ?? '').toString().toLowerCase();
-    // Support both guest (email/mobile) and subscriber (contact_email/contact_phone) fields + metadata
-    final email =
-        (item['email'] ?? item['contact_email'] ?? metadataEmail ?? '')
-            .toString()
-            .toLowerCase();
-    final mobile =
-        (item['mobile'] ?? item['contact_phone'] ?? metadataMobile ?? '')
-            .toString()
-            .toLowerCase();
-    final name = (item['contact_name'] ?? '').toString().toLowerCase();
+    final plate = (item['ui_search_plate'] ?? '').toString();
+    final email = (item['ui_search_email'] ?? '').toString();
+    final mobile = (item['ui_search_mobile'] ?? '').toString();
+    final name = (item['ui_search_name'] ?? '').toString();
     final locationDisplayId =
-        (item['location_display_id'] ?? '').toString().toLowerCase();
-    final coupon =
-        (item['coupon_code'] ?? couponCode ?? '').toString().toLowerCase();
+        (item['ui_search_location_display_id'] ?? '').toString();
+    final coupon = (item['ui_search_coupon'] ?? '').toString();
 
     // V14: Multi-term search support (e.g. "ivo 56071")
     final searchTerms = search.split(' ').where((t) => t.isNotEmpty).toList();
@@ -252,7 +213,7 @@ final unifiedDashboardProvider =
     }
 
     if (filter == 'Upcoming') return effectiveStatus == 'upcoming';
-    if (filter == 'Active') return isActive || isPending;
+    if (filter == 'Active') return isActive;
     if (filter == 'Expired') return effectiveStatus == 'expired';
     if (filter == 'Inactive') return effectiveStatus == 'inactive';
     return true;

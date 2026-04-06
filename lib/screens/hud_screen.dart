@@ -14,6 +14,7 @@ import '../logic/providers/locale_provider.dart';
 import '../logic/utils/location_resolver.dart';
 import '../features/enforcement/providers/enforcement_controller.dart';
 import '../services/error_mapper.dart';
+import '../services/performance_monitor.dart';
 import '../utils/async_action_handler.dart';
 
 class HudScreen extends ConsumerStatefulWidget {
@@ -39,8 +40,10 @@ class _HudScreenState extends ConsumerState<HudScreen>
   bool _isBusy = false;
   bool _isAppActive = true;
   DateTime? _lastProcessAt;
-  final Duration _processCooldown = const Duration(milliseconds: 500);
+  final Duration _processCooldown = const Duration(milliseconds: 220);
   final List<ProviderSubscription<dynamic>> _streamSubs = [];
+  DateTime? _scanStartedAt;
+  int get _requiredHits => kIsWeb ? 1 : 2;
 
   // Frame averaging
   final List<String> _consecutiveHits = [];
@@ -180,7 +183,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
   void _startWebLPRTimer() {
     _webLPRTimer?.cancel();
     _webLPRTimer =
-        Timer.periodic(const Duration(milliseconds: 1500), (timer) async {
+        Timer.periodic(const Duration(milliseconds: 120), (timer) async {
       if (!_isScanning ||
           _isBusy ||
           !_isAppActive ||
@@ -243,11 +246,13 @@ class _HudScreenState extends ConsumerState<HudScreen>
     }
 
     if (foundPlate != null) {
+      _scanStartedAt ??= DateTime.now();
       _consecutiveHits.add(foundPlate);
-      // Require 2 identical hits instead of 3 for faster scanning in real world
-      if (_consecutiveHits.length > 2) _consecutiveHits.removeAt(0);
+      if (_consecutiveHits.length > _requiredHits) {
+        _consecutiveHits.removeAt(0);
+      }
 
-      if (_consecutiveHits.length == 2 &&
+      if (_consecutiveHits.length == _requiredHits &&
           _consecutiveHits.every((e) => e == foundPlate)) {
         _confirmPlate(foundPlate);
       }
@@ -257,6 +262,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
         // Just clear if we haven't seen anything for a few frames
         // In this stream-based approach, clearing on every 'null' might be too aggressive
         _consecutiveHits.clear();
+        _scanStartedAt = null;
       }
     }
   }
@@ -385,18 +391,34 @@ class _HudScreenState extends ConsumerState<HudScreen>
 
   void _confirmPlate(String plate) async {
     if (!_isScanning) return;
+    final isWeb = kIsWeb;
+    final detectionStartedAt = _scanStartedAt;
+    final detectionLatency = detectionStartedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(detectionStartedAt);
+    PerformanceMonitor.instance.recordMetric(
+      operation: 'lpr_plate_detection',
+      duration: detectionLatency,
+      success: true,
+      metadata: {
+        'plateLength': plate.length,
+        'platform': kIsWeb ? 'web' : 'mobile'
+      },
+    );
+    _scanStartedAt = null;
 
-    // 1. Initial Local State Update
     setState(() {
       _isScanning = false;
       _detectedPlate = plate;
-      _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-          "SEARCHING DASHBOARD...", "PRETRAŽIVANJE NADZORNE PLOČE...");
-      _statusColor = Colors.yellowAccent;
-      _showValidationPulse = true;
+      _statusMessage = isWeb
+          ? _statusMessage
+          : Lang.sel(ref.read(localeIsCroatianProvider),
+              "SEARCHING DASHBOARD...", "PRETRAŽIVANJE NADZORNE PLOČE...");
+      _statusColor = isWeb ? Colors.white : Colors.yellowAccent;
+      _showValidationPulse = !isWeb;
     });
 
-    // 2. Perform Dashboard Search
+    final dashboardStopwatch = Stopwatch()..start();
     try {
       final sessions = ref.read(sessionsStreamProvider).value ?? [];
       final permits = ref.read(permitsStreamProvider).value ?? [];
@@ -408,13 +430,15 @@ class _HudScreenState extends ConsumerState<HudScreen>
       );
 
       final platePermits = permits
-          .where((p) => p['plate']?.toString().toUpperCase() == plate.toUpperCase())
+          .where((p) =>
+              p['plate']?.toString().toUpperCase() == plate.toUpperCase())
           .toList();
       final activePermit = platePermits.firstWhere(
         (p) => _isPermitAllowedNow(p),
         orElse: () => {},
       );
-      final anyPermit = platePermits.isNotEmpty ? platePermits.first : <String, dynamic>{};
+      final anyPermit =
+          platePermits.isNotEmpty ? platePermits.first : <String, dynamic>{};
 
       final recentViolation = violations.firstWhere(
         (v) => v['plate']?.toString().toUpperCase() == plate.toUpperCase(),
@@ -462,16 +486,44 @@ class _HudScreenState extends ConsumerState<HudScreen>
         _statusMessage = "CONFIRMED (LOCAL)";
         _statusColor = Colors.greenAccent;
       });
+    } finally {
+      dashboardStopwatch.stop();
+      PerformanceMonitor.instance.recordMetric(
+        operation: 'lpr_dashboard_lookup',
+        duration: dashboardStopwatch.elapsed,
+        success: true,
+        metadata: {'plateLength': plate.length},
+      );
+      final totalLatency = detectionLatency + dashboardStopwatch.elapsed;
+      PerformanceMonitor.instance.recordMetric(
+        operation: 'lpr_total_to_result',
+        duration: totalLatency,
+        success: true,
+        metadata: {
+          'plateLength': plate.length,
+          'platform': kIsWeb ? 'web' : 'mobile'
+        },
+      );
+      final avgDetection =
+          PerformanceMonitor.instance.getAverageDuration('lpr_plate_detection');
+      final avgLookup = PerformanceMonitor.instance
+          .getAverageDuration('lpr_dashboard_lookup');
+      final avgTotal =
+          PerformanceMonitor.instance.getAverageDuration('lpr_total_to_result');
+      debugPrint(
+          'LPR_TIMING detection=${detectionLatency.inMilliseconds}ms dashboard=${dashboardStopwatch.elapsed.inMilliseconds}ms total=${totalLatency.inMilliseconds}ms plate=$plate');
+      debugPrint(
+          'LPR_AVG detection=${avgDetection.inMilliseconds}ms dashboard=${avgLookup.inMilliseconds}ms total=${avgTotal.inMilliseconds}ms');
     }
 
-    // Vibrate for high-end UX
-    if (await Vibration.hasVibrator()) {
+    if (!isWeb && await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 200);
     }
 
-    // Auto-trigger validation pulse effect
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) {
+    if (!isWeb) {
+      await Future.delayed(const Duration(seconds: 3));
+    }
+    if (!isWeb && mounted) {
       setState(() {
         _showValidationPulse = false;
       });
@@ -492,7 +544,8 @@ class _HudScreenState extends ConsumerState<HudScreen>
     final rawIs24_7 = metadata['is_24_7'];
     final is24_7 = rawIs24_7 is bool
         ? rawIs24_7
-        : (permit['daily_start_time'] == null && permit['daily_end_time'] == null);
+        : (permit['daily_start_time'] == null &&
+            permit['daily_end_time'] == null);
     if (is24_7) return true;
     final allowedWeekdays = _resolveAllowedWeekdays(permit, metadata);
     if (!allowedWeekdays.contains(now.weekday)) return false;
@@ -627,7 +680,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
           // Full Screen Validation Feedback Overlay
           Positioned.fill(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+              duration: Duration(milliseconds: kIsWeb ? 0 : 300),
               color: _showValidationPulse ? _statusColor : Colors.transparent,
             ),
           ),
@@ -765,6 +818,7 @@ class _HudScreenState extends ConsumerState<HudScreen>
                       setState(() {
                         _isScanning = true;
                         _detectedPlate = null;
+                        _scanStartedAt = null;
                         _statusMessage = Lang.sel(
                             ref.read(localeIsCroatianProvider),
                             "SCANNING...",
