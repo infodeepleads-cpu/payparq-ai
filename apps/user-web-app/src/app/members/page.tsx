@@ -179,6 +179,20 @@ function normalizePlateInput(value: string) {
   return value.toString().trim().toUpperCase();
 }
 
+function formatLoyaltyLevelLabel(value: string | null | undefined) {
+  const normalized = (value ?? "level_1").toString().trim().toLowerCase();
+  const match = normalized.match(/^level[_\s-]*(\d+)$/);
+  if (match) {
+    return `Level ${match[1]}`;
+  }
+  return normalized
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 function readMemberPlates(currentUser: User | null) {
   const metadata = (currentUser?.user_metadata ?? {}) as Record<string, unknown>;
   const fromList = metadata["member_plates"];
@@ -1319,12 +1333,12 @@ export default function MembersPage() {
                   {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
                 </p>
                 <p className="text-[11px] text-[#3E22C6]/85">
-                  {(loyaltySummary?.level || "level_1").replace("_", " ").toUpperCase()}
+                  {formatLoyaltyLevelLabel(loyaltySummary?.level)}
                   {(loyaltySummary?.pointsYear ?? 0) > 0 ? ` · ${loyaltySummary?.pointsYear ?? 0} pts` : ""}
                 </p>
                 {loyaltySummary?.nextLevel && (
                   <p className="text-[10px] text-[#3E22C6]/70">
-                    {loyaltySummary.nextLevelProgressPercent}% do {(loyaltySummary.nextLevel || "").replace("_", " ").toUpperCase()}
+                    {loyaltySummary.nextLevelProgressPercent}% do {formatLoyaltyLevelLabel(loyaltySummary.nextLevel)}
                   </p>
                 )}
               </div>
@@ -1830,7 +1844,7 @@ export default function MembersPage() {
           </p>
           <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-4 space-y-2">
             <p className="text-sm font-semibold text-[#3E22C6]">
-              {(loyaltySummary?.level || "level_1").replace("_", " ").toUpperCase()}
+              {formatLoyaltyLevelLabel(loyaltySummary?.level)}
             </p>
             <p className="text-xs text-[#3E22C6]/80">
               Points this year: <span className="font-semibold">{loyaltySummary?.pointsYear ?? 0}</span>
@@ -1844,7 +1858,7 @@ export default function MembersPage() {
             </p>
             {loyaltySummary?.nextLevel && (
               <p className="text-[11px] text-[#3E22C6]/70">
-                Next level: {loyaltySummary.nextLevel.replace("_", " ").toUpperCase()} ·{" "}
+                Next level: {formatLoyaltyLevelLabel(loyaltySummary.nextLevel)} ·{" "}
                 {loyaltySummary.nextLevelProgressPercent}% complete
               </p>
             )}

@@ -391,7 +391,6 @@ function buildCheckoutCustomerParams(params: {
 
 function buildCheckoutPlateCustomField(plateNumber: string) {
   const normalizedPlate = plateNumber.trim().toUpperCase();
-  const textPrefill = (value: string) => ({ default_value: value, value });
   return [
     {
       key: 'plate_number',
@@ -401,7 +400,7 @@ function buildCheckoutPlateCustomField(plateNumber: string) {
       },
       type: 'text',
       optional: false,
-      text: normalizedPlate ? textPrefill(normalizedPlate) : undefined,
+      text: normalizedPlate ? { default_value: normalizedPlate } : undefined,
     },
   ] as unknown as Stripe.Checkout.SessionCreateParams.CustomField[];
 }

@@ -6,6 +6,7 @@ import { Car } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type SessionSummary = {
   session_id: string;
@@ -32,6 +33,9 @@ function SuccessContent() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [extendMinutes, setExtendMinutes] = useState('1440');
+  const [extendLoading, setExtendLoading] = useState(false);
+  const [extendFeedback, setExtendFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fallbackDisplayId =
     searchParams.get('display_id') ||
     searchParams.get('displayId') ||
@@ -168,15 +172,6 @@ function SuccessContent() {
     if (!summary?.email) return '/members';
     return `/members?email=${encodeURIComponent(summary.email)}`;
   }, [summary?.email]);
-  const trackDriverHref = useMemo(() => {
-    const params = new URLSearchParams({
-      tab: 'activity',
-    });
-    if (summary?.email) {
-      params.set('email', summary.email);
-    }
-    return `/members?${params.toString()}`;
-  }, [summary?.email]);
   const orderParqRideHref = useMemo(() => {
     const params = new URLSearchParams({
       tab: 'home',
@@ -186,6 +181,78 @@ function SuccessContent() {
     }
     return `/members?${params.toString()}`;
   }, [summary?.email]);
+  const getMemberAuthHeaders = async () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (supabase && isSupabaseConfigured) {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token ?? '';
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const sessionEmail = data.session?.user?.email?.trim().toLowerCase() ?? '';
+      if (sessionEmail) {
+        headers['x-member-email'] = sessionEmail;
+      }
+    }
+    if (!headers['x-member-email']) {
+      const fallbackEmail = (summary?.email ?? '').trim().toLowerCase();
+      if (fallbackEmail) {
+        headers['x-member-email'] = fallbackEmail;
+      }
+    }
+    return headers;
+  };
+  const handleExtendAction = async () => {
+    const parsedMinutes = Number.parseInt(extendMinutes, 10);
+    const safeMinutes = Number.isFinite(parsedMinutes)
+      ? Math.min(2880, Math.max(60, parsedMinutes))
+      : 1440;
+    const targetSessionId = (summary?.session_id ?? sessionId ?? '').toString().trim();
+    const fallbackLocation = (summary?.location_id ?? fallbackLocationId ?? '').toString().trim();
+    const fallbackIn = (summary?.check_in ?? fallbackCheckIn ?? '').toString().trim();
+    const fallbackOut = (summary?.check_out ?? fallbackCheckOut ?? '').toString().trim();
+    setExtendLoading(true);
+    setExtendFeedback(null);
+    try {
+      const response = await fetch('/api/members/extend', {
+        method: 'POST',
+        headers: await getMemberAuthHeaders(),
+        body: JSON.stringify({
+          minutes: safeMinutes,
+          session_id: targetSessionId || undefined,
+          fallback_location_id: fallbackLocation || undefined,
+          fallback_check_in: fallbackIn || undefined,
+          fallback_check_out: fallbackOut || undefined,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; actionUrl?: string; error?: string }
+        | null;
+      if (!response.ok || !payload?.ok) {
+        setExtendFeedback({
+          type: 'error',
+          text: payload?.error || 'Action failed. Please try again.',
+        });
+        return;
+      }
+      if (payload.actionUrl) {
+        window.open(payload.actionUrl, '_blank', 'noopener,noreferrer');
+      }
+      setExtendFeedback({
+        type: 'success',
+        text: payload.message || 'Extension prepared.',
+      });
+    } catch {
+      setExtendFeedback({
+        type: 'error',
+        text: 'Action failed. Please try again.',
+      });
+    } finally {
+      setExtendLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -273,19 +340,40 @@ function SuccessContent() {
             <div className="grid md:grid-cols-3 gap-3">
               <Link
                 href={membersHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
               >
                 Otvori Members page
               </Link>
-              <Link
-                href={trackDriverHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-black/15 bg-white text-black text-xs font-semibold hover:bg-black/5 transition-colors"
-              >
-                24/7 tracking Parq vozača
-              </Link>
+              <div className="space-y-1">
+                <div className="inline-flex w-full items-center justify-center gap-2 px-4 py-1.5 rounded-full border border-black/15 bg-white">
+                  <select
+                    value={extendMinutes}
+                    onChange={(event) => setExtendMinutes(event.target.value)}
+                    className="rounded-full border border-black/10 px-2 py-1 text-xs text-black bg-white outline-none focus:border-black/40"
+                  >
+                    <option value="1440">+1d</option>
+                    <option value="2880">+2d</option>
+                    <option value="60">+1h</option>
+                    <option value="120">+2h</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleExtendAction}
+                    disabled={extendLoading}
+                    className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
+                  >
+                    {extendLoading ? 'Obrada...' : 'Produži'}
+                  </button>
+                </div>
+                {extendFeedback && (
+                  <p className={`text-[11px] ${extendFeedback.type === 'error' ? 'text-red-600' : 'text-black/70'}`}>
+                    {extendFeedback.text}
+                  </p>
+                )}
+              </div>
               <Link
                 href={orderParqRideHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
               >
                 <Car size={14} />
                 Naruči Uber
