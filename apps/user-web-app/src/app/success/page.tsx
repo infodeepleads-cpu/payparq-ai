@@ -340,7 +340,7 @@ function SuccessContent() {
             <div className="grid md:grid-cols-3 gap-3">
               <Link
                 href={membersHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
               >
                 Otvori Members page
               </Link>
@@ -373,7 +373,7 @@ function SuccessContent() {
               </div>
               <Link
                 href={orderParqRideHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
               >
                 <Car size={14} />
                 Naruči Uber

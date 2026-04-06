@@ -435,14 +435,14 @@ function formatBerlinDateTime(value: Date): string {
       hour12: false,
     }).formatToParts(value);
     const get = (type: string) => dateParts.find((p) => p.type === type)?.value ?? '';
-    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} CET`;
+    return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
   } catch {
-    return `${value.toISOString().replace('T', ' ').split('.')[0]} CET`;
+    return value.toISOString().replace('T', ' ').split('.')[0];
   }
 }
 
 function forceCETLabel(value: string): string {
-  return value.replace(/\bCEST\b/g, 'CET');
+  return value;
 }
 
 function normalizePricingType(rawType: string | null | undefined, flowType: string): PricingType {
@@ -698,8 +698,20 @@ export async function POST(req: NextRequest) {
   const requestedPlateNumber = (typeof body.plate_number === 'string' && body.plate_number) || '';
   const flow_type =
     (typeof body.flow_type === 'string' && body.flow_type) || url.searchParams.get('flow') || 'park_now';
-  const check_in = (body.check_in as string) || url.searchParams.get('in') || '';
-  const check_out = (body.check_out as string) || url.searchParams.get('out') || '';
+  const check_in =
+    (typeof body.check_in === 'string' && body.check_in) ||
+    (typeof (body as { checkIn?: unknown }).checkIn === 'string' && (body as { checkIn?: string }).checkIn) ||
+    url.searchParams.get('check_in') ||
+    url.searchParams.get('checkIn') ||
+    url.searchParams.get('in') ||
+    '';
+  const check_out =
+    (typeof body.check_out === 'string' && body.check_out) ||
+    (typeof (body as { checkOut?: unknown }).checkOut === 'string' && (body as { checkOut?: string }).checkOut) ||
+    url.searchParams.get('check_out') ||
+    url.searchParams.get('checkOut') ||
+    url.searchParams.get('out') ||
+    '';
   const rawPricingType =
     (typeof body.type === 'string' && body.type) || url.searchParams.get('type') || null;
   const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
@@ -859,12 +871,20 @@ export async function POST(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:(\d{2}) (?:CET|CEST)$/, ' CET');
+  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:\d{2}$/, '');
   const formatTimeShort = (iso: string) => {
-    const formatted = forceCETLabel(formatIso(iso));
-    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\s(?:CET|CEST)$/);
-    if (match) return `${match[1]}:${match[2]}`;
-    return '';
+    try {
+      const parsed = new Date(iso);
+      if (Number.isNaN(parsed.getTime())) return '';
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Berlin',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(parsed);
+    } catch {
+      return '';
+    }
   };
   if (check_in && check_out) {
     const start = new Date(check_in);
@@ -1111,8 +1131,16 @@ export async function GET(req: NextRequest) {
   const display_id = url.searchParams.get('display_id') || '';
   const requestedPlateNumber = url.searchParams.get('plate') || '';
   const flow_type = url.searchParams.get('flow') || 'park_now';
-  const check_in = url.searchParams.get('in') || '';
-  const check_out = url.searchParams.get('out') || '';
+  const check_in =
+    url.searchParams.get('check_in') ||
+    url.searchParams.get('checkIn') ||
+    url.searchParams.get('in') ||
+    '';
+  const check_out =
+    url.searchParams.get('check_out') ||
+    url.searchParams.get('checkOut') ||
+    url.searchParams.get('out') ||
+    '';
   const normalizedPricingType = normalizePricingType(url.searchParams.get('type'), flow_type);
   const pricing_type: PricingType =
     flow_type === 'reserve' && exceedsOneDayDuration(check_in, check_out) ? 'daily' : normalizedPricingType;
@@ -1267,12 +1295,20 @@ export async function GET(req: NextRequest) {
       return iso;
     }
   };
-  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:(\d{2}) (?:CET|CEST)$/, ' CET');
+  const formatIsoNoSeconds = (iso: string) => forceCETLabel(formatIso(iso)).replace(/:\d{2}$/, '');
   const formatTimeShort = (iso: string) => {
-    const formatted = forceCETLabel(formatIso(iso));
-    const match = formatted.match(/\b(\d{2}):(\d{2})(?::\d{2})?\s(?:CET|CEST)$/);
-    if (match) return `${match[1]}:${match[2]}`;
-    return '';
+    try {
+      const parsed = new Date(iso);
+      if (Number.isNaN(parsed.getTime())) return '';
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Berlin',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(parsed);
+    } catch {
+      return '';
+    }
   };
   if (effectiveCheckIn && effectiveCheckOut) {
     const start = new Date(effectiveCheckIn);

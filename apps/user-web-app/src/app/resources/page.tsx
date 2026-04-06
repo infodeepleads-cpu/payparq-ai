@@ -544,14 +544,11 @@ function buildCheckoutQrUrl(params: {
   const query = new URLSearchParams({
     display_id: params.displayId,
     type: params.type,
+    loc: params.locationId,
+    location_id: params.locationId,
+    flow: "reserve",
     t: Date.now().toString(),
   });
-  if (params.useMobileScannerFormat) {
-    query.set("location_id", params.locationId);
-  } else {
-    query.set("loc", params.locationId);
-    query.set("flow", "reserve");
-  }
   if (typeof params.price === "number" && Number.isFinite(params.price) && params.price >= 0) {
     query.set("price", params.price.toFixed(2));
     query.set("amount", params.price.toFixed(2));
@@ -562,12 +559,6 @@ function buildCheckoutQrUrl(params: {
     query.set("allow_promotion_codes", "1");
     const trimmedLabel = (params.promotionCodeLabel ?? "").trim();
     query.set("promotion_code_label", trimmedLabel || "FREE100");
-  }
-  if (params.useMobileScannerFormat) {
-    const supabaseBase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://iafjygownkhedereaoxw.supabase.co")
-      .trim()
-      .replace(/\/+$/, "");
-    return `${supabaseBase}/functions/v1/create-checkout?${query.toString()}`;
   }
   const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.payparq.com")
     .trim()
