@@ -337,15 +337,15 @@ function SuccessContent() {
                 </p>
               )}
             </div>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="grid md:grid-cols-3 gap-3 items-start">
               <Link
                 href={membersHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
+                className="inline-flex h-9 items-center justify-center gap-2 px-4 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
               >
                 Otvori Members page
               </Link>
               <div className="space-y-1">
-                <div className="inline-flex w-full items-center justify-center gap-2 px-4 py-1.5 rounded-full border border-black/15 bg-white">
+                <div className="inline-flex h-9 w-full items-center justify-center gap-2 px-4 rounded-full border border-black/15 bg-white">
                   <select
                     value={extendMinutes}
                     onChange={(event) => setExtendMinutes(event.target.value)}
@@ -365,15 +365,13 @@ function SuccessContent() {
                     {extendLoading ? 'Obrada...' : 'Produži'}
                   </button>
                 </div>
-                {extendFeedback && (
-                  <p className={`text-[11px] ${extendFeedback.type === 'error' ? 'text-red-600' : 'text-black/70'}`}>
-                    {extendFeedback.text}
-                  </p>
-                )}
+                <p className={`min-h-[16px] text-[11px] ${extendFeedback?.type === 'error' ? 'text-red-600' : 'text-black/70'}`}>
+                  {extendFeedback?.text ?? ''}
+                </p>
               </div>
               <Link
                 href={orderParqRideHref}
-                className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
+                className="inline-flex h-9 items-center justify-center gap-2 px-4 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
               >
                 <Car size={14} />
                 Naruči Uber
