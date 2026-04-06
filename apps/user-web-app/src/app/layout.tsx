@@ -38,6 +38,12 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body className={`${plusJakarta.className} antialiased`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});}if('caches' in window){window.caches.keys().then(function(keys){keys.forEach(function(k){window.caches.delete(k);});}).catch(function(){});}})();",
+          }}
+        />
         <LocaleProvider initialLocale={locale}>
           <RuntimeTextTranslator />
           {children}
