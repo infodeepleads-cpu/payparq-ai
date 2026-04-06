@@ -111,6 +111,10 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
 
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get('session_id')?.trim() ?? '';
+  const isCheckoutPlaceholderSessionId =
+    sessionId === '{CHECKOUT_SESSION_ID}' ||
+    sessionId.toUpperCase() === 'CHECKOUT_SESSION_ID' ||
+    /\{?CHECKOUT_SESSION_ID\}?/i.test(sessionId);
   const fallbackDisplayId =
     req.nextUrl.searchParams.get('display_id')?.trim() ??
     req.nextUrl.searchParams.get('displayId')?.trim() ??
@@ -136,6 +140,30 @@ export async function GET(req: NextRequest) {
     '';
   if (!sessionId) {
     return NextResponse.json({ error: 'missing_session_id' }, { status: 400 });
+  }
+  if (isCheckoutPlaceholderSessionId) {
+    return NextResponse.json(
+      {
+        error: 'checkout_session_id_not_resolved',
+        session_id: sessionId,
+        ref_id: 'PENDING',
+        email: null,
+        amount_total: 0,
+        currency: 'eur',
+        flow_type: null,
+        location_id: fallbackLocationId || fallbackDisplayId || null,
+        location_name: null,
+        location_display_id: fallbackDisplayId || null,
+        check_in: fallbackCheckIn || null,
+        check_out: fallbackCheckOut || null,
+        wallet_topup_credit_cents: 0,
+        wallet_debit_applied_cents: 0,
+        loyalty_bonus_credit_cents: 0,
+        membership_exists: false,
+        email_verified: false,
+      },
+      { status: 400 }
+    );
   }
   const secret = resolveStripeSecretKey();
   if (!secret) {

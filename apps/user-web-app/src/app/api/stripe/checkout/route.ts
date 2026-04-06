@@ -126,7 +126,9 @@ function buildSuccessUrl(params: {
   if (params.checkOut) {
     url.searchParams.set('check_out', params.checkOut);
   }
-  return url.toString();
+  return url
+    .toString()
+    .replace('session_id=%7BCHECKOUT_SESSION_ID%7D', 'session_id={CHECKOUT_SESSION_ID}');
 }
 
 function normalizeEmailValue(value: string | null | undefined): string | null {
@@ -744,10 +746,6 @@ export async function POST(req: NextRequest) {
     const v = (body as { customer_phone?: unknown }).customer_phone;
     if (typeof v === 'string') customer_phone = v;
   }
-  const allowPlateOverride = resolveAllowPromotionCodesDefaultOn(
-    (body as { allow_plate_override?: unknown }).allow_plate_override,
-    url.searchParams.get('allow_plate_override')
-  );
   const autoChargeOptIn = resolveAllowPromotionCodesDefaultOn(
     (body as { auto_charge_opt_in?: unknown }).auto_charge_opt_in,
     url.searchParams.get('auto_charge_opt_in')
@@ -762,35 +760,6 @@ export async function POST(req: NextRequest) {
   );
   const secret = resolveStripeSecretKey();
   if (!secret) {
-    const fallbackCheckoutDetails = buildFallbackCheckoutDetails({
-      flowType: flow_type,
-      pricingType: pricing_type,
-      checkIn: effectiveCheckIn,
-      checkOut: effectiveCheckOut,
-      displayId: display_id,
-    });
-    const fallbackUrl = location_id
-      ? buildSupabaseFunctionCheckoutUrl({
-          locationId: location_id,
-          displayId: display_id || undefined,
-          flowType: flow_type,
-          pricingType: pricing_type,
-          checkIn: effectiveCheckIn || undefined,
-          checkOut: effectiveCheckOut || undefined,
-          quantity: fallbackCheckoutDetails.quantity,
-          reservationDescription: fallbackCheckoutDetails.reservationDescription,
-          allowPromotionCodes,
-          customerEmail: customer_email,
-          customerPhone: customer_phone,
-          plateNumber: requestedPlateNumber,
-          allowPlateOverride,
-          extendTargetSessionId,
-          extendMinutes,
-        })
-      : null;
-    if (fallbackUrl) {
-      return NextResponse.json({ url: fallbackUrl });
-    }
     return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
   }
   const stripe = new Stripe(secret, { apiVersion: stripeApiVersion });
