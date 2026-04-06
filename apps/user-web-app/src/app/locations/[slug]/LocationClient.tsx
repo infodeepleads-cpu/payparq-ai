@@ -250,6 +250,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     if (errorValue === "invalid_check_in_or_check_out") return "Vrijeme dolaska i odlaska nije ispravno.";
     if (errorValue === "check_out_must_be_after_check_in") return "Vrijeme odlaska mora biti nakon vremena dolaska.";
     if (errorValue === "park_taxi_requires_60_min_advance") return "Početna vožnja mora biti rezervirana najmanje 60 minuta ranije.";
+    if (errorValue === "missing_location_id") return "Lokacija nije ispravno odabrana. Pokušajte ponovno.";
+    if (errorValue === "missing_or_invalid_stripe_secret") return "Plaćanje trenutno nije dostupno. Pokušajte ponovno za nekoliko minuta.";
+    if (errorValue === "pricing_resolution_failed") return "Ne mogu izračunati cijenu za ovu lokaciju. Pokušajte ponovno.";
     return errorValue;
   };
   const canSubmitCheckout = Boolean(checkIn && checkOut);
@@ -298,10 +301,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         console.error("Checkout error response:", errData);
-        if (typeof errData?.error === "string" && errData.error.trim()) {
-          setCheckoutError(mapCheckoutErrorMessage(errData.error));
-        }
-        throw new Error(errData.error || "Checkout failed");
+        const normalizedError =
+          typeof errData?.error === "string" && errData.error.trim()
+            ? mapCheckoutErrorMessage(errData.error)
+            : "Checkout nije uspio. Pokušajte ponovno.";
+        throw new Error(normalizedError);
       }
       let checkoutUrl = "";
       const contentType = (res.headers.get("content-type") || "").toLowerCase();
@@ -319,7 +323,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       setLoading(false);
     } catch (err) {
       console.error(err);
-      setCheckoutError("Checkout nije uspio. Pokušajte ponovno.");
+      const errorMessage =
+        err instanceof Error && err.message.trim().length > 0
+          ? err.message
+          : "Checkout nije uspio. Pokušajte ponovno.";
+      setCheckoutError(errorMessage);
       setLoading(false);
     }
   }

@@ -48,6 +48,7 @@ type PermitRow = {
   start_time?: string | null;
   end_time?: string | null;
   location_id?: string | null;
+  location_display_id?: string | null;
   contact_name?: string | null;
   contact_email?: string | null;
   created_at?: string | null;
@@ -103,16 +104,6 @@ type PaymentMethodRow = {
   expYear: number | null;
   isDefault: boolean;
 };
-type ActivityDebugInfo = {
-  resolvedEmail: string;
-  source: "context" | "direct" | "fallback" | "none";
-  contextStatus: number | null;
-  contextCount: number;
-  directCount: number;
-  fallbackCount: number;
-  error: string;
-};
-
 function normalizeRole(value: unknown) {
   const normalized = (value ?? "")
     .toString()
@@ -225,15 +216,6 @@ export default function MembersPage() {
   const [actionError, setActionError] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
-  const [activityDebug, setActivityDebug] = useState<ActivityDebugInfo>({
-    resolvedEmail: "",
-    source: "none",
-    contextStatus: null,
-    contextCount: 0,
-    directCount: 0,
-    fallbackCount: 0,
-    error: "",
-  });
   const [permitsRows, setPermitsRows] = useState<PermitRow[]>([]);
   const [permitsLoading, setPermitsLoading] = useState(false);
 
@@ -502,15 +484,6 @@ export default function MembersPage() {
     const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
     if (!isSignedIn || !normalizedEmail) {
       setActivityRows([]);
-      setActivityDebug({
-        resolvedEmail: normalizedEmail,
-        source: "none",
-        contextStatus: null,
-        contextCount: 0,
-        directCount: 0,
-        fallbackCount: 0,
-        error: "missing_signin_or_email",
-      });
       return;
     }
     setActivityLoading(true);
@@ -525,6 +498,32 @@ export default function MembersPage() {
           headers.Authorization = `Bearer ${token}`;
         }
       }
+      const userMetadata = ((user?.user_metadata ?? {}) as Record<string, unknown>) ?? {};
+      const appMetadata = ((user?.app_metadata ?? {}) as Record<string, unknown>) ?? {};
+      const roleValue =
+        (userMetadata.role ?? appMetadata.role ?? userMetadata.user_role ?? appMetadata.user_role ?? "")
+          .toString()
+          .trim();
+      const locationValue =
+        (userMetadata.location_id ?? userMetadata.locationId ?? userMetadata.selected_location_id ?? "")
+          .toString()
+          .trim();
+      const displayIdValue =
+        (userMetadata.display_id ?? userMetadata.displayId ?? userMetadata.selected_display_id ?? "")
+          .toString()
+          .trim();
+      if (user?.id) {
+        headers["x-member-id"] = user.id;
+      }
+      if (roleValue) {
+        headers["x-member-role"] = roleValue;
+      }
+      if (locationValue) {
+        headers["x-member-location-id"] = locationValue;
+      }
+      if (displayIdValue) {
+        headers["x-member-display-id"] = displayIdValue;
+      }
       if (!headers.Authorization) {
         headers["x-member-email"] = normalizedEmail;
       }
@@ -538,47 +537,18 @@ export default function MembersPage() {
             activity?: ActivityRow[] | null;
           }
         | null;
-      const contextStatus = response.status;
       const contextRows = response.ok && payload ? payload.activity ?? [] : [];
-      const contextCount = contextRows.length;
       if (response.ok && payload) {
         setActivityRows(contextRows);
-        setActivityDebug({
-          resolvedEmail: normalizedEmail,
-          source: "context",
-          contextStatus,
-          contextCount,
-          directCount: 0,
-          fallbackCount: 0,
-          error: "",
-        });
         return;
       }
       setActivityRows([]);
-      setActivityDebug({
-        resolvedEmail: normalizedEmail,
-        source: "none",
-        contextStatus,
-        contextCount,
-        directCount: 0,
-        fallbackCount: 0,
-        error: "context_failed",
-      });
     } catch {
       setActivityRows([]);
-      setActivityDebug({
-        resolvedEmail: normalizedEmail,
-        source: "none",
-        contextStatus: null,
-        contextCount: 0,
-        directCount: 0,
-        fallbackCount: 0,
-        error: "unexpected_exception",
-      });
     } finally {
       setActivityLoading(false);
     }
-  }, [email, isSignedIn, user?.email]);
+  }, [email, isSignedIn, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
 
   useEffect(() => {
     void refreshActivity();
@@ -697,8 +667,34 @@ export default function MembersPage() {
         headers["x-member-email"] = fallbackEmail;
       }
     }
+    const userMetadata = ((user?.user_metadata ?? {}) as Record<string, unknown>) ?? {};
+    const appMetadata = ((user?.app_metadata ?? {}) as Record<string, unknown>) ?? {};
+    const roleValue =
+      (userMetadata.role ?? appMetadata.role ?? userMetadata.user_role ?? appMetadata.user_role ?? "")
+        .toString()
+        .trim();
+    const locationValue =
+      (userMetadata.location_id ?? userMetadata.locationId ?? userMetadata.selected_location_id ?? "")
+        .toString()
+        .trim();
+    const displayIdValue =
+      (userMetadata.display_id ?? userMetadata.displayId ?? userMetadata.selected_display_id ?? "")
+        .toString()
+        .trim();
+    if (user?.id) {
+      headers["x-member-id"] = user.id;
+    }
+    if (roleValue) {
+      headers["x-member-role"] = roleValue;
+    }
+    if (locationValue) {
+      headers["x-member-location-id"] = locationValue;
+    }
+    if (displayIdValue) {
+      headers["x-member-display-id"] = displayIdValue;
+    }
     return headers;
-  }, [email, user?.email]);
+  }, [email, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
 
   const persistMemberPlates = useCallback(async (nextPlates: string[]) => {
     if (!user || !supabase || !isSupabaseConfigured) {
@@ -897,7 +893,11 @@ export default function MembersPage() {
   }, [extendSyncActive, isSignedIn, refreshActivity, refreshHomeContext]);
   async function downloadInvoicePdf(actionUrl: string) {
     try {
-      const response = await fetch(actionUrl, { method: "GET" });
+      const isMembersInvoiceEndpoint = /^\/api\/members\/invoice(?:\?|$)/i.test(actionUrl);
+      const response = await fetch(actionUrl, {
+        method: "GET",
+        headers: isMembersInvoiceEndpoint ? await getMemberAuthHeaders() : undefined,
+      });
       if (!response.ok) {
         throw new Error("invoice_fetch_failed");
       }
@@ -986,6 +986,34 @@ export default function MembersPage() {
     }
     return millis;
   }
+  function resolveActivityLifecycleForView(row: ActivityRow) {
+    const now = Date.now();
+    const checkInMs = toMillis(row.ui_check_in || row.entry_time || row.created_at);
+    const checkOutMs = toMillis(row.ui_check_out || row.exit_time || row.end_time);
+    const paymentStatus = (row.payment_status ?? "").toString().trim().toLowerCase();
+    const status = (row.status ?? "").toString().trim().toLowerCase();
+    const isPending =
+      paymentStatus === "pending" ||
+      paymentStatus === "unpaid" ||
+      paymentStatus === "open" ||
+      paymentStatus === "requires_payment_method" ||
+      paymentStatus === "requires_action" ||
+      status === "pending" ||
+      status === "open";
+    if (checkInMs != null && checkOutMs != null) {
+      if (now < checkInMs) {
+        return "upcoming";
+      }
+      if (now >= checkOutMs) {
+        return "expired";
+      }
+      return "active";
+    }
+    if (isPending) {
+      return "pending";
+    }
+    return "inactive";
+  }
   function handleInsuranceAction() {
     const rawUrl = (homeContext?.insuranceUrl ?? "").toString().trim();
     const url =
@@ -1015,7 +1043,17 @@ export default function MembersPage() {
     await runHomeAction("extend", "/api/members/extend", { minutes: safeMinutes });
   }
   async function handleInvoiceAction() {
-    await runHomeAction("invoice", "/api/members/invoice");
+    const stripeSessionId = (homeContext?.stripeSessionId ?? "").toString().trim();
+    const sessionId = (homeContext?.sessionId ?? "").toString().trim();
+    const params = new URLSearchParams();
+    if (stripeSessionId) {
+      params.set("stripe_session_id", stripeSessionId);
+    }
+    if (sessionId) {
+      params.set("session_id", sessionId);
+    }
+    const endpoint = params.toString() ? `/api/members/invoice?${params.toString()}` : "/api/members/invoice";
+    await runHomeAction("invoice", endpoint);
   }
   async function handleAddPaymentMethod() {
     if (!user?.email) {
@@ -1346,7 +1384,7 @@ export default function MembersPage() {
                   <div key={row.id} className="rounded-lg border border-black/10 px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-black">
-                        {row.plate || "Unknown plate"} · {row.location_id || "Unknown location"}
+                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
                       </p>
                       <p className="text-[11px] text-black/60">{statusValue}</p>
                     </div>
@@ -1367,9 +1405,19 @@ export default function MembersPage() {
     }
 
     if (activeItem === "activity") {
-      const upcomingRows = activityRows.filter((row) => row.ui_lifecycle === "upcoming" || row.ui_lifecycle === "pending");
-      const activeRows = activityRows.filter((row) => row.ui_lifecycle === "active");
-      const expiredRows = activityRows.filter((row) => row.ui_lifecycle === "expired");
+      const rowsWithLifecycle = activityRows.map((row) => ({
+        row,
+        lifecycle: resolveActivityLifecycleForView(row),
+      }));
+      const upcomingRows = rowsWithLifecycle
+        .filter((item) => item.lifecycle === "upcoming" || item.lifecycle === "pending")
+        .map((item) => item.row);
+      const activeRows = rowsWithLifecycle
+        .filter((item) => item.lifecycle === "active")
+        .map((item) => item.row);
+      const expiredRows = rowsWithLifecycle
+        .filter((item) => item.lifecycle === "expired")
+        .map((item) => item.row);
       return (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -1378,18 +1426,6 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             A timeline of upcoming, active, and expired parking sessions.
           </p>
-          {process.env.NODE_ENV === "development" && (
-            <div className="rounded-lg border border-dashed border-black/20 bg-black/[0.03] px-3 py-2 text-[11px] text-black/70">
-              <p>Debug · email: {activityDebug.resolvedEmail || "none"}</p>
-              <p>
-                source: {activityDebug.source} · context_status: {activityDebug.contextStatus ?? "none"} · context_count: {activityDebug.contextCount}
-              </p>
-              <p>
-                direct_count: {activityDebug.directCount} · fallback_count: {activityDebug.fallbackCount} · final_count: {activityRows.length}
-              </p>
-              {activityDebug.error && <p className="text-red-600">error: {activityDebug.error}</p>}
-            </div>
-          )}
           {activityLoading && (
             <p className="text-xs text-black/60">Loading live activity...</p>
           )}
@@ -1400,25 +1436,6 @@ export default function MembersPage() {
           )}
           {!activityLoading && (
             <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">NADOLAZEĆI ({upcomingRows.length})</p>
-              {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">No upcoming reservations.</p>}
-              {upcomingRows.map((row) => (
-                <div key={`upcoming-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-black">
-                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
-                    </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.created_at)}</p>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
-                    <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                    <span>{row.ui_lifecycle === "pending" ? "NA ČEKANJU · NADOLAZEĆI" : "NADOLAZEĆI"}</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-black/70">
-                    Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
-                  </div>
-                </div>
-              ))}
               <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">Active ({activeRows.length})</p>
               {activeRows.length === 0 && <p className="text-[11px] text-black/50">No active reservations.</p>}
               {activeRows.map((row) => (
@@ -1427,11 +1444,30 @@ export default function MembersPage() {
                     <p className="text-xs font-semibold text-black">
                       {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
                     </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.created_at)}</p>
+                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                     <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
                     <span>ACTIVE</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-black/70">
+                    Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                  </div>
+                </div>
+              ))}
+              <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">NADOLAZEĆI ({upcomingRows.length})</p>
+              {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">No upcoming reservations.</p>}
+              {upcomingRows.map((row) => (
+                <div key={`upcoming-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-black">
+                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                    </p>
+                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                    <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
+                    <span>{resolveActivityLifecycleForView(row) === "pending" ? "NA ČEKANJU · NADOLAZEĆI" : "NADOLAZEĆI"}</span>
                   </div>
                   <div className="mt-1 text-[11px] text-black/70">
                     Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
@@ -1446,7 +1482,7 @@ export default function MembersPage() {
                     <p className="text-xs font-semibold text-black">
                       {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
                     </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.created_at)}</p>
+                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
                   </div>
                   <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
                     <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
