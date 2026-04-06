@@ -483,7 +483,7 @@ export default function MembersPage() {
 
   const refreshActivity = useCallback(async () => {
     const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
-    if (!isSignedIn || !normalizedEmail) {
+    if (!normalizedEmail) {
       setActivityRows([]);
       return;
     }
@@ -549,7 +549,7 @@ export default function MembersPage() {
     } finally {
       setActivityLoading(false);
     }
-  }, [email, isSignedIn, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
+  }, [email, user?.app_metadata, user?.email, user?.id, user?.user_metadata]);
 
   useEffect(() => {
     if (activeItem === "activity") {
@@ -784,7 +784,8 @@ export default function MembersPage() {
 
   const refreshHomeContext = useCallback(async (options?: { silent?: boolean }) => {
     const shouldSilentlyRefresh = Boolean(options?.silent);
-    if (!isSignedIn) {
+    const normalizedEmail = (user?.email ?? email).trim().toLowerCase();
+    if (!normalizedEmail) {
       setHomeContext(null);
       setWalletSummary(null);
       setLoyaltySummary(null);
@@ -853,7 +854,7 @@ export default function MembersPage() {
         setPermitsLoading(false);
       }
     }
-  }, [activeItem, getMemberAuthHeaders, isSignedIn]);
+  }, [activeItem, email, getMemberAuthHeaders, user?.email]);
   const startExtendSyncPolling = useCallback((previousCheckOut: string | null) => {
     if (typeof window === "undefined") {
       return;
