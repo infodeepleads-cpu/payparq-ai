@@ -17,9 +17,9 @@ class FinanceController {
 
   FinanceController(this._repo);
 
-  Future<String> createConnectAccount() async {
+  Future<String> createConnectAccount({String? country}) async {
     try {
-      return await _repo.createConnectAccount();
+      return await _repo.createConnectAccount(country: country);
     } catch (e) {
       throw AppError('Stripe connect failed: $e', cause: e);
     }

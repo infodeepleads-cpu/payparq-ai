@@ -253,6 +253,10 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
                     final session =
                         Supabase.instance.client.auth.currentSession ??
                             snapshot.data?.session;
+                    if (session == null &&
+                        snapshot.connectionState == ConnectionState.waiting) {
+                      return const _StartupSplashScreen();
+                    }
                     if (session != null) {
                       return const MasterScaffold();
                     }

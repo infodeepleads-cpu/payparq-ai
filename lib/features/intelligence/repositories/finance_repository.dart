@@ -5,8 +5,10 @@ class FinanceRepository {
 
   FinanceRepository(this._client);
 
-  Future<String> createConnectAccount() async {
-    final response = await _client.functions.invoke('create-connect-account');
+  Future<String> createConnectAccount({String? country}) async {
+    final body = country == null || country.isEmpty ? null : {'country': country};
+    final response =
+        await _client.functions.invoke('create-connect-account', body: body);
     if (response.status != 200) {
       final error = response.data is Map ? response.data['error'] : null;
       throw Exception(

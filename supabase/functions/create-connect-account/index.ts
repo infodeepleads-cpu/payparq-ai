@@ -14,6 +14,7 @@ const blockedConnectCountries = new Set(
     .map((value) => value.trim().toUpperCase())
     .filter((value) => /^[A-Z]{2}$/.test(value))
 );
+blockedConnectCountries.add("EE");
 const refreshPath = (Deno.env.get("STRIPE_CONNECT_REFRESH_PATH") ?? "/#/finance").trim();
 const returnPath = (Deno.env.get("STRIPE_CONNECT_RETURN_PATH") ?? "/#/finance").trim();
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
@@ -47,6 +48,16 @@ function resolveTargetConnectCountry(raw: string): string {
   if (blockedConnectCountries.has(normalized)) {
     return "HR";
   }
+  return normalized;
+}
+
+function extractRequestedCountryFromBody(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const candidate = record.country ?? record.country_code ?? record.stripe_country;
+  if (typeof candidate !== "string") return null;
+  const normalized = candidate.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalized)) return null;
   return normalized;
 }
 
@@ -123,13 +134,20 @@ serve(async (req) => {
   }
 
   try {
+    let requestBody: unknown = null;
+    try {
+      requestBody = await req.json();
+    } catch {
+      requestBody = null;
+    }
     const userId = await resolveUserId(req);
     if (!userId) return json({ error: "Unauthorized" }, 401);
 
     const profile = await fetchProfile(userId);
     if (!profile) return json({ error: "Profile not found" }, 404);
 
-    const targetCountry = resolveTargetConnectCountry(desiredCountry);
+    const requestedCountry = extractRequestedCountryFromBody(requestBody);
+    const targetCountry = resolveTargetConnectCountry(requestedCountry ?? desiredCountry);
     let stripeAccountId = profile.stripe_account_id;
     let accountCountry = "";
 

@@ -61,39 +61,6 @@ flutter build web --release --no-wasm-dry-run \
   --dart-define=SUPABASE_FUNCTIONS_URL="${SUPABASE_FUNCTIONS_URL_VALUE}" \
   --dart-define=SUPABASE_REDIRECT_URL="${SUPABASE_REDIRECT_URL_VALUE}"
 
-echo "=== Hard-disable service worker and wipe browser caches ==="
-cat > build/web/flutter_service_worker.js <<'EOF'
-self.addEventListener('install', event => self.skipWaiting());
-self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map(key => caches.delete(key)));
-    await self.registration.unregister();
-    const clientsList = await self.clients.matchAll({type: 'window'});
-    for (const client of clientsList) {
-      client.navigate(client.url);
-    }
-  })());
-});
-EOF
-
-cat > build/web/sw-killer.js <<'EOF'
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(regs.map(r => r.unregister()));
-    if (window.caches && caches.keys) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-  });
-}
-EOF
-
-if [ -f build/web/index.html ] && ! grep -q "sw-killer.js" build/web/index.html; then
-  sed -i 's#</body>#  <script src="sw-killer.js"></script>\n</body>#' build/web/index.html
-fi
-
 COMMIT_SHA="${VERCEL_GIT_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-unknown}}"
 mkdir -p build/web
 if [ -f web/app-release.apk ]; then
@@ -110,9 +77,11 @@ cat > build/web/_headers <<'EOF'
 /version.json
   Cache-Control: no-cache
 /*.js
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Cache-Control: public, max-age=0, must-revalidate
 /*.map
-  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Cache-Control: public, max-age=0, must-revalidate
+/*.wasm
+  Cache-Control: public, max-age=0, must-revalidate
 EOF
 
 echo "=== Built Flutter web at build/web (sha: $COMMIT_SHA) ==="

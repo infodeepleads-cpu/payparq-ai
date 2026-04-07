@@ -20,13 +20,38 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   bool _isConnecting = false;
   bool _isLoadingDashboard = false;
 
+  String? _normalizeCountryCode(dynamic raw) {
+    if (raw == null) return null;
+    final value = raw.toString().trim().toUpperCase();
+    if (RegExp(r'^[A-Z]{2}$').hasMatch(value)) {
+      return value;
+    }
+    return null;
+  }
+
+  String _resolveConnectCountry(Map<String, dynamic>? profile) {
+    final fromProfile = _normalizeCountryCode(profile?['stripe_country']) ??
+        _normalizeCountryCode(profile?['country_code']) ??
+        _normalizeCountryCode(profile?['country']) ??
+        _normalizeCountryCode(profile?['billing_country']) ??
+        _normalizeCountryCode(profile?['legal_country']);
+    if (fromProfile != null) return fromProfile;
+    final localeCountry =
+        _normalizeCountryCode(Localizations.localeOf(context).countryCode);
+    return localeCountry ?? 'HR';
+  }
+
   Future<void> _handleStripeConnect() async {
     setState(() => _isConnecting = true);
+    final profile = ref.read(userProfileProvider).value;
+    final country = _resolveConnectCountry(profile);
 
     await AsyncActionHandler.run<void>(
       context: context,
       action: () async {
-        final url = await ref.read(financeControllerProvider).createConnectAccount();
+        final url = await ref
+            .read(financeControllerProvider)
+            .createConnectAccount(country: country);
         if (await canLaunchUrl(Uri.parse(url))) {
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {
@@ -47,7 +72,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
     await AsyncActionHandler.run<void>(
       context: context,
       action: () async {
-        final url = await ref.read(financeControllerProvider).getDashboardLink();
+        final url =
+            await ref.read(financeControllerProvider).getDashboardLink();
         if (await canLaunchUrl(Uri.parse(url))) {
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {

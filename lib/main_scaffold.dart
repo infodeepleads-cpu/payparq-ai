@@ -167,20 +167,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           return _buildScaffoldWithProfile(
               warmProfile, availableLocsAsync, selectedLocId, warmIsOfficer);
         }
-        return Scaffold(
-          backgroundColor: AppTheme.background,
-          body: Center(
-            child: Text(
-              'payparq.ai',
-              style: GoogleFonts.inter(
-                color: Colors.black,
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
-                letterSpacing: -0.6,
-              ),
-            ),
-          ),
-        );
+        return const _BrandLoadingScreen();
       } else {
         // Profile is null and not loading - this shouldn't happen with immediate fallback
         // Emergency fallback - use basic user data from session
@@ -203,20 +190,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     // Final null check - if profile is still null, show loading
     if (profile == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.background,
-        body: Center(
-          child: Text(
-            'payparq.ai',
-            style: GoogleFonts.inter(
-              color: Colors.black,
-              fontWeight: FontWeight.w900,
-              fontSize: 22,
-              letterSpacing: -0.6,
-            ),
-          ),
-        ),
-      );
+      return const _BrandLoadingScreen();
     }
 
     return _buildScaffoldWithProfile(
@@ -558,20 +532,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         return _buildScaffoldWithProfileDesktop(
             emergencyProfile, profileAsync, availableLocsAsync, selectedLocId);
       }
-      return Scaffold(
-        backgroundColor: AppTheme.background,
-        body: Center(
-          child: Text(
-            'payparq.ai',
-            style: GoogleFonts.inter(
-              color: Colors.black,
-              fontWeight: FontWeight.w900,
-              fontSize: 24,
-              letterSpacing: -0.6,
-            ),
-          ),
-        ),
-      );
+      return const _BrandLoadingScreen();
     }
 
     return _buildScaffoldWithProfileDesktop(
@@ -1041,5 +1002,73 @@ class _DeferredPageState extends State<_DeferredPage> {
       );
     }
     return widget.build();
+  }
+}
+
+class _BrandLoadingScreen extends StatelessWidget {
+  const _BrandLoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: _PulsingBrandWordmark(),
+      ),
+    );
+  }
+}
+
+class _PulsingBrandWordmark extends StatefulWidget {
+  const _PulsingBrandWordmark();
+
+  @override
+  State<_PulsingBrandWordmark> createState() => _PulsingBrandWordmarkState();
+}
+
+class _PulsingBrandWordmarkState extends State<_PulsingBrandWordmark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.62, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        'payparq.ai',
+        style: GoogleFonts.inter(
+          color: Colors.white,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+          shadows: const [
+            Shadow(
+              color: Color(0x3DFFFFFF),
+              blurRadius: 12,
+              offset: Offset(0, 0),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

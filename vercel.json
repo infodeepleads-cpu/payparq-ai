@@ -33,7 +33,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -42,7 +42,16 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, no-cache, must-revalidate, max-age=0"
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.wasm)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     },
@@ -98,7 +107,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json|.*\\.apk).*)",
+      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json|sw-killer\\.js|.*\\.apk).*)",
       "destination": "/"
     }
   ]
