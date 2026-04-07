@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../config/app_config.dart';
 
 class FinanceRepository {
   final SupabaseClient _client;
@@ -30,104 +28,80 @@ class FinanceRepository {
     required String operationLabel,
     Map<String, dynamic>? body,
   }) async {
-    try {
-      final response = await _invokeWithSessionRecovery(
-        functionName,
-        body: body,
-      );
-      final primaryPayload = _normalizePayload(response.data);
-      final primaryStatusOk = response.status >= 200 && response.status < 300;
-      final primaryUrl = primaryPayload['url'];
-      if (primaryStatusOk && primaryUrl != null) {
-        return primaryUrl.toString();
-      }
-
-      final shouldForceFallback = !primaryStatusOk ||
-          primaryUrl == null ||
-          _isJwtAuthError(status: response.status, payload: primaryPayload);
-      if (!shouldForceFallback) {
-        throw Exception('No URL returned');
-      }
-
-      final fallback = await _invokeFunctionOverHttp(
-        functionName,
-        body: body,
-        forceRefreshToken: true,
-      );
-      final fallbackPayload = _normalizePayload(fallback.data);
-      final fallbackStatusOk =
-          fallback.statusCode >= 200 && fallback.statusCode < 300;
-      final fallbackUrl = fallbackPayload['url'];
-      if (fallbackStatusOk && fallbackUrl != null) {
-        return fallbackUrl.toString();
-      }
-
-      final primaryError = _extractPayloadError(primaryPayload);
-      final fallbackError = _extractPayloadError(fallbackPayload);
-      throw Exception(
-        'Failed to $operationLabel: ${fallbackError ?? primaryError ?? 'Unknown error'}',
-      );
-    } catch (error) {
-      if (!_isAuthOrInvokeError(error)) {
-        rethrow;
-      }
-      final fallback = await _invokeFunctionOverHttp(
-        functionName,
-        body: body,
-        forceRefreshToken: true,
-      );
-      final fallbackPayload = _normalizePayload(fallback.data);
-      final fallbackStatusOk =
-          fallback.statusCode >= 200 && fallback.statusCode < 300;
-      final fallbackUrl = fallbackPayload['url'];
-      if (fallbackStatusOk && fallbackUrl != null) {
-        return fallbackUrl.toString();
-      }
-      final fallbackError = _extractPayloadError(fallbackPayload);
-      throw Exception(
-        'Failed to $operationLabel: ${fallbackError ?? error.toString()}',
-      );
+    final response = await _invokeWithSessionRecovery(
+      functionName,
+      body: body,
+      maxRetries: 3,
+    );
+    final payload = _normalizePayload(response.data);
+    final statusOk = response.status >= 200 && response.status < 300;
+    final url = payload['url'];
+    if (statusOk && url != null) {
+      return url.toString();
     }
+    final error = _extractPayloadError(payload);
+    throw Exception(
+      'Failed to $operationLabel: ${error ?? 'Unknown error'}',
+    );
   }
 
   Future<FunctionResponse> _invokeWithSessionRecovery(
     String functionName, {
     Map<String, dynamic>? body,
+    int maxRetries = 3,
   }) async {
-    FunctionResponse first;
-    try {
-      first = await _client.functions.invoke(functionName, body: body);
-    } catch (e) {
-      final text = e.toString().toLowerCase();
-      final isJwtFailure = text.contains('401') ||
-          text.contains('invalid jwt') ||
+    FunctionResponse? lastResponse;
+    Object? lastError;
+    for (var attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        final token = await _resolveValidAccessToken(
+          forceRefresh: attempt > 1,
+        );
+        final headers = <String, String>{};
+        if (token != null && token.isNotEmpty) {
+          headers['Authorization'] = 'Bearer $token';
+        }
+        final response = await _client.functions.invoke(
+          functionName,
+          body: body,
+          headers: headers.isEmpty ? null : headers,
+        );
+        lastResponse = response;
+        if (!_isJwtAuthResponse(response)) {
+          return response;
+        }
+      } catch (e) {
+        if (!_isAuthOrInvokeError(e)) rethrow;
+        lastError = e;
+      }
+      if (attempt < maxRetries) {
+        await _refreshSessionIfPossible();
+      }
+    }
+    if (lastResponse != null) {
+      return lastResponse;
+    }
+    if (lastError != null) {
+      final text = lastError.toString().toLowerCase();
+      if (text.contains('invalid jwt') ||
           text.contains('jwt') ||
-          text.contains('token') ||
-          text.contains('unauthorized');
-      if (!isJwtFailure) rethrow;
-      await _refreshSessionIfPossible();
-      return _client.functions.invoke(functionName, body: body);
+          text.contains('unauthorized') ||
+          text.contains('401')) {
+        throw Exception('Invalid JWT');
+      }
+      throw lastError;
     }
-
-    if (!_isJwtAuthResponse(first)) {
-      return first;
-    }
-
-    await _refreshSessionIfPossible();
-    return _client.functions.invoke(functionName, body: body);
+    throw Exception('Function invoke failed');
   }
 
   bool _isJwtAuthResponse(FunctionResponse response) {
     if (response.status != 401) return false;
     final raw = response.data;
-    if (raw is! Map) {
-      return raw.toString().toLowerCase().contains('jwt') ||
-          raw.toString().toLowerCase().contains('unauthorized');
-    }
+    final parsed = _normalizePayload(raw);
     final text = [
-      raw['error'],
-      raw['message'],
-      raw['msg'],
+      parsed['error'],
+      parsed['message'],
+      parsed['msg'],
       raw.toString(),
     ].join(' ').toLowerCase();
     return text.contains('invalid jwt') ||
@@ -137,97 +111,25 @@ class FinanceRepository {
   }
 
   Future<void> _refreshSessionIfPossible() async {
-    final session = _client.auth.currentSession;
-    if (session == null) return;
     try {
       await _client.auth.refreshSession();
     } catch (_) {}
   }
 
   Future<String?> _resolveValidAccessToken({bool forceRefresh = false}) async {
-    final current = _client.auth.currentSession;
+    Session? current = _client.auth.currentSession;
+    if (current == null || forceRefresh) {
+      await _refreshSessionIfPossible();
+      current = _client.auth.currentSession;
+    }
     if (current == null) return null;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final expiresAt = current.expiresAt ?? 0;
     final expiresSoon = expiresAt <= (now + 60);
-    if (forceRefresh || expiresSoon) {
+    if (expiresSoon) {
       await _refreshSessionIfPossible();
     }
     return _client.auth.currentSession?.accessToken;
-  }
-
-  Future<_HttpFunctionResponse> _invokeFunctionOverHttp(
-    String functionName, {
-    Map<String, dynamic>? body,
-    bool forceRefreshToken = false,
-  }) async {
-    final token =
-        await _resolveValidAccessToken(forceRefresh: forceRefreshToken);
-    if (token == null || token.isEmpty) {
-      return const _HttpFunctionResponse(
-        statusCode: 401,
-        data: {'error': 'Unauthorized'},
-      );
-    }
-    final url = Uri.parse('${_resolveFunctionsBaseUrl()}/$functionName');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'apikey': AppConfig.supabaseAnonKey,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body ?? const <String, dynamic>{}),
-    );
-    dynamic decoded;
-    final raw = response.body;
-    if (raw.isEmpty) {
-      decoded = {};
-    } else {
-      try {
-        decoded = jsonDecode(raw);
-      } catch (_) {
-        decoded = {'message': raw};
-      }
-    }
-    if (!forceRefreshToken &&
-        _isJwtAuthError(status: response.statusCode, payload: decoded)) {
-      return _invokeFunctionOverHttp(
-        functionName,
-        body: body,
-        forceRefreshToken: true,
-      );
-    }
-    return _HttpFunctionResponse(
-        statusCode: response.statusCode, data: decoded);
-  }
-
-  String _resolveFunctionsBaseUrl() {
-    final explicitBase = AppConfig.supabaseFunctionsBaseUrl
-        .trim()
-        .replaceAll('"', '')
-        .replaceAll("'", '');
-    final base = explicitBase.isNotEmpty
-        ? explicitBase
-        : '${AppConfig.supabaseUrl}/functions/v1';
-    return base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-  }
-
-  bool _isJwtAuthError({
-    required int status,
-    required dynamic payload,
-  }) {
-    if (status != 401) return false;
-    final text = [
-      payload is Map ? payload['error'] : null,
-      payload is Map ? payload['message'] : null,
-      payload is Map ? payload['msg'] : null,
-      payload?.toString(),
-    ].join(' ').toLowerCase();
-    return text.contains('invalid jwt') ||
-        text.contains('jwt') ||
-        text.contains('token') ||
-        text.contains('unauthorized');
   }
 
   Map<String, dynamic> _normalizePayload(dynamic payload) {
@@ -265,14 +167,4 @@ class FinanceRepository {
         text.contains('clientexception') ||
         text.contains('networkerror');
   }
-}
-
-class _HttpFunctionResponse {
-  final int statusCode;
-  final dynamic data;
-
-  const _HttpFunctionResponse({
-    required this.statusCode,
-    required this.data,
-  });
 }

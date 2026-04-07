@@ -462,14 +462,14 @@ void main() {
     expect(
       content.contains('_invokeWithSessionRecovery(') &&
           content.contains('_refreshSessionIfPossible()') &&
-          content.contains('_invokeFunctionOverHttp(') &&
-          content.contains('_resolveValidAccessToken(') &&
-          content.contains("'Authorization': 'Bearer \$token'") &&
+          content.contains('maxRetries = 3') &&
+          content.contains(
+              'for (var attempt = 1; attempt <= maxRetries; attempt++)') &&
           content.contains("text.contains('invalid jwt')") &&
-          content.contains('if (status != 401) return false;'),
+          content.contains('if (!_isJwtAuthResponse(response))'),
       isTrue,
       reason:
-          'Stripe function calls should recover from expired JWT with refresh and direct HTTP fallback, instead of hard-failing.',
+          'Stripe function calls should retry on JWT auth errors with session refresh and avoid single-shot failures.',
     );
   });
 
