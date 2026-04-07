@@ -1021,63 +1021,7 @@ class _BrandLoadingScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-              const _SleekLoadingBar(),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SleekLoadingBar extends StatefulWidget {
-  const _SleekLoadingBar();
-
-  @override
-  State<_SleekLoadingBar> createState() => _SleekLoadingBarState();
-}
-
-class _SleekLoadingBarState extends State<_SleekLoadingBar>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.55, end: 1).animate(_controller),
-      child: Container(
-        height: 3,
-        width: 160,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: 0.45,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
           ),
         ),
       ),

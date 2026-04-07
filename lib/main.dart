@@ -69,6 +69,7 @@ class PayParqApp extends StatefulWidget {
 class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   static const Duration _initGuardTimeout = Duration(seconds: 8);
   static const Duration _sessionTransitionHold = Duration(seconds: 1);
+  static const Duration _authStabilizationHold = Duration(milliseconds: 700);
   final List<String> _logs = [];
 
   bool _isRecoveryMode = false;
@@ -78,8 +79,10 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   bool _initLoopRunning = false;
   bool _startupSplashCompleted = false;
   DateTime? _sessionTransitionUntil;
+  DateTime? _authStabilizeUntil;
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _sessionTransitionTimer;
+  Timer? _authStabilizeTimer;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -104,6 +107,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   void dispose() {
     _authSubscription?.cancel();
     _sessionTransitionTimer?.cancel();
+    _authStabilizeTimer?.cancel();
     super.dispose();
   }
 
@@ -119,6 +123,22 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
   bool get _isSessionTransitionHoldActive {
     final until = _sessionTransitionUntil;
+    if (until == null) return false;
+    return DateTime.now().isBefore(until);
+  }
+
+  void _bumpAuthStabilizationHold() {
+    if (_startupSplashCompleted) return;
+    _authStabilizeUntil = DateTime.now().add(_authStabilizationHold);
+    _authStabilizeTimer?.cancel();
+    _authStabilizeTimer = Timer(_authStabilizationHold, () {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  bool get _isAuthStabilizationHoldActive {
+    final until = _authStabilizeUntil;
     if (until == null) return false;
     return DateTime.now().isBefore(until);
   }
@@ -237,7 +257,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       if (_activeSession != null) {
         _armSessionTransitionHold();
       }
-      _authResolved = true;
+      _bumpAuthStabilizationHold();
       _attachAuthListener();
     } catch (e) {
       _addLog('Initialization ERROR: $e');
@@ -259,6 +279,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         setState(() {
           _isRecoveryMode = true;
           _authResolved = true;
+          _bumpAuthStabilizationHold();
           _activeSession = nextSession;
           if (nextSession != null) {
             _armSessionTransitionHold();
@@ -272,6 +293,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         setState(() {
           _isRecoveryMode = false;
           _authResolved = true;
+          _bumpAuthStabilizationHold();
           _activeSession = nextSession;
           if (nextSession != null) {
             _armSessionTransitionHold();
@@ -284,7 +306,10 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final shouldShowStartupSplash = !_startupSplashCompleted &&
-        (!_supabaseReady || !_authResolved || _isSessionTransitionHoldActive);
+        (!_supabaseReady ||
+            !_authResolved ||
+            _isSessionTransitionHoldActive ||
+            _isAuthStabilizationHoldActive);
     if (!shouldShowStartupSplash) {
       _startupSplashCompleted = true;
     }
@@ -299,18 +324,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       title: 'payparq.ai',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        child: homeScreen,
-      ),
+      home: homeScreen,
     );
   }
 }
@@ -345,63 +359,7 @@ class _StartupSplashScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 18),
-              _SleekLoadingBar(),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SleekLoadingBar extends StatefulWidget {
-  const _SleekLoadingBar();
-
-  @override
-  State<_SleekLoadingBar> createState() => _SleekLoadingBarState();
-}
-
-class _SleekLoadingBarState extends State<_SleekLoadingBar>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween<double>(begin: 0.55, end: 1).animate(_controller),
-      child: Container(
-        height: 3,
-        width: 160,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: 0.45,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
           ),
         ),
       ),
