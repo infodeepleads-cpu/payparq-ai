@@ -522,6 +522,21 @@ void main() {
     );
   });
 
+  test('Master scaffold skips post-auth profile preload screen', () async {
+    final file = File('lib/main_scaffold.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('_fallbackProfileFromAuth()') &&
+          content.contains(
+              'profile ?? _lastResolvedProfile ?? _fallbackProfileFromAuth()') &&
+          !content.contains("ValueKey('mobile-profile-loading')"),
+      isTrue,
+      reason:
+          'After auth, dashboard should render immediately without waiting on a full-screen profile preload gate.',
+    );
+  });
+
   test('Finance screen treats existing Stripe account as connected state',
       () async {
     final file = File('lib/features/intelligence/screens/finance_screen.dart');
@@ -531,13 +546,14 @@ void main() {
       content.contains('final String accountId =') &&
           content.contains(
               'final bool hasStripeAccount = accountId.isNotEmpty;') &&
-          content.contains(
-              'final bool isConnected = hasStripeAccount || onboardingComplete;') &&
-          content.contains(
-              'final bool needsOnboarding = hasStripeAccount && !onboardingComplete;') &&
+          content.contains('hasStripeAccount || onboardingComplete') &&
+          content.contains('hasStripeAccount && !onboardingComplete') &&
           content.contains('COMPLETE ONBOARDING') &&
           content.contains('AppLifecycleState.resumed') &&
-          content.contains('ref.invalidate(userProfileProvider);'),
+          content.contains('ref.invalidate(userProfileProvider);') &&
+          content.contains(
+              'if (state == AppLifecycleState.resumed && _refreshProfileOnResume)') &&
+          content.contains('_refreshProfileOnResume = true;'),
       isTrue,
       reason:
           'Finance UI should stop showing plain connect state after account creation and refresh profile when returning from Stripe.',
@@ -578,6 +594,23 @@ void main() {
       isTrue,
       reason:
           'Verification upload should avoid parallel timeout spikes and provide clearer actionable failures.',
+    );
+  });
+
+  test('Locations photo picker removes hard cap and limits preview rendering',
+      () async {
+    final file = File('lib/features/management/screens/locations_screen.dart');
+    final content = await file.readAsString();
+
+    expect(
+      !content.contains('Maximum 12 location photos allowed.') &&
+          !content.contains('availableSlots = 12 - currentTotal') &&
+          content.contains('const int maxPreviewPhotos = 24;') &&
+          content.contains('itemCount: editablePhotoUrls.length > 24') &&
+          content.contains('itemCount: newlySelectedPhotos.length > 24'),
+      isTrue,
+      reason:
+          'Locations should allow unrestricted selection while capping preview render count to keep UI smooth.',
     );
   });
 }

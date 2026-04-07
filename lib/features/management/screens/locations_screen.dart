@@ -721,6 +721,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         String currentName = (effectiveLoc['name'] ?? 'Unnamed Lot').toString();
         bool saving = false;
         String? uploadStatusText;
+        int lastProgressUiUpdateMs = 0;
         bool showLocationPicker = false;
         final ImagePicker picker = ImagePicker();
         final Map<String, Uint8List> localPhotoPreviewBytes = {};
@@ -756,26 +757,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 final navigator = Navigator.of(dialogContext);
                 Future<void> pickLocationPhotos(ImageSource source) async {
                   if (!canEdit) return;
-                  final currentTotal =
-                      editablePhotoUrls.length + newlySelectedPhotos.length;
-                  if (currentTotal >= 12) {
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(Lang.sel(
-                            ref.watch(localeIsCroatianProvider),
-                            'Maximum 12 location photos allowed.',
-                            'Maksimalno 12 fotografija lokacije.')),
-                      ),
-                    );
-                    return;
-                  }
                   if (source == ImageSource.gallery) {
                     final picked = await picker.pickMultiImage();
                     if (picked.isEmpty) return;
-                    final availableSlots = 12 - currentTotal;
                     setState(() {
-                      newlySelectedPhotos
-                          .addAll(picked.take(availableSlots).toList());
+                      newlySelectedPhotos.addAll(picked);
                     });
                     return;
                   }
@@ -862,6 +848,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 images: List<XFile>.from(newlySelectedPhotos),
                                 onProgress: (current, total) {
                                   if (!dialogContext.mounted) return;
+                                  final nowMs =
+                                      DateTime.now().millisecondsSinceEpoch;
+                                  final shouldUpdate = current >= total ||
+                                      nowMs - lastProgressUiUpdateMs >= 250;
+                                  if (!shouldUpdate) return;
+                                  lastProgressUiUpdateMs = nowMs;
                                   setState(() {
                                     uploadStatusText = Lang.sel(
                                       ref.watch(localeIsCroatianProvider),
@@ -1151,6 +1143,39 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 10),
+                              Builder(builder: (_) {
+                                const int maxPreviewPhotos = 24;
+                                final existingHidden =
+                                    editablePhotoUrls.length > maxPreviewPhotos
+                                        ? editablePhotoUrls.length -
+                                            maxPreviewPhotos
+                                        : 0;
+                                final selectedHidden =
+                                    newlySelectedPhotos.length >
+                                            maxPreviewPhotos
+                                        ? newlySelectedPhotos.length -
+                                            maxPreviewPhotos
+                                        : 0;
+                                if (existingHidden == 0 &&
+                                    selectedHidden == 0) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Text(
+                                    Lang.sel(
+                                      ref.watch(localeIsCroatianProvider),
+                                      'Showing first 24 previews for smooth performance. Hidden: ${existingHidden + selectedHidden}',
+                                      'Prikazujemo prvih 24 pregleda radi glatkog rada. Skriveno: ${existingHidden + selectedHidden}',
+                                    ),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                );
+                              }),
                               if (editablePhotoUrls.isNotEmpty)
                                 GridView.builder(
                                   shrinkWrap: true,
@@ -1161,7 +1186,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
                                   ),
-                                  itemCount: editablePhotoUrls.length,
+                                  itemCount: editablePhotoUrls.length > 24
+                                      ? 24
+                                      : editablePhotoUrls.length,
                                   itemBuilder: (context, index) {
                                     final photoUrl = editablePhotoUrls[index];
                                     return InkWell(
@@ -1257,7 +1284,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
                                   ),
-                                  itemCount: newlySelectedPhotos.length,
+                                  itemCount: newlySelectedPhotos.length > 24
+                                      ? 24
+                                      : newlySelectedPhotos.length,
                                   itemBuilder: (context, index) {
                                     final localFile =
                                         newlySelectedPhotos[index];

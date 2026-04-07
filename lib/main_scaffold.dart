@@ -45,6 +45,22 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   bool _initialScreenReady = true;
   Map<String, dynamic>? _lastResolvedProfile;
 
+  Map<String, dynamic> _fallbackProfileFromAuth() {
+    final user = ref.read(authControllerProvider).currentUser();
+    final rawRole = (user?.userMetadata?['role'] ?? 'officer')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+    final role = rawRole.isEmpty ? 'officer' : rawRole;
+    return {
+      'role': role,
+      'email': user?.email ?? 'admin@payparq.ai',
+      'location_id': user?.userMetadata?['location_id'],
+    };
+  }
+
   Future<void> _hydrateLocationSelection() async {
     if (!mounted) return;
     ref.invalidate(guaranteedLocationSelectionProvider);
@@ -150,12 +166,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (profile != null) {
       _lastResolvedProfile = profile;
     }
-    final resolvedProfile = profile ?? _lastResolvedProfile;
-    if (resolvedProfile == null) {
-      return const _BrandLoadingScreen(
-        key: ValueKey('mobile-profile-loading'),
-      );
-    }
+    final resolvedProfile =
+        profile ?? _lastResolvedProfile ?? _fallbackProfileFromAuth();
     final isOfficer = resolvedProfile['role'] == 'officer';
 
     return _buildScaffoldWithProfile(
@@ -490,11 +502,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (profile != null) {
       _lastResolvedProfile = profile;
     }
-    final resolvedProfile = profile ?? _lastResolvedProfile;
-
-    if (resolvedProfile == null) {
-      return const _BrandLoadingScreen();
-    }
+    final resolvedProfile =
+        profile ?? _lastResolvedProfile ?? _fallbackProfileFromAuth();
 
     return _buildScaffoldWithProfileDesktop(
         resolvedProfile, profileAsync, availableLocsAsync, selectedLocId);

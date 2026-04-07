@@ -21,6 +21,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   bool _isConnecting = false;
   bool _isLoadingDashboard = false;
   String? _selectedCountryCode;
+  bool _refreshProfileOnResume = false;
+  Map<String, dynamic>? _lastProfile;
 
   @override
   void initState() {
@@ -36,7 +38,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _refreshProfileOnResume) {
+      _refreshProfileOnResume = false;
       ref.invalidate(userProfileProvider);
     }
   }
@@ -134,6 +137,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
             .read(financeControllerProvider)
             .createConnectAccount(country: country);
         if (await canLaunchUrl(Uri.parse(url))) {
+          _refreshProfileOnResume = true;
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {
           throw Exception('Could not launch onboarding URL');
@@ -157,6 +161,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
         final url =
             await ref.read(financeControllerProvider).getDashboardLink();
         if (await canLaunchUrl(Uri.parse(url))) {
+          _refreshProfileOnResume = true;
           await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         } else {
           throw Exception('Could not launch dashboard URL');
@@ -175,60 +180,67 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
     final isHr = ref.watch(localeIsCroatianProvider);
+    final profile = profileAsync.value;
+    if (profile != null) {
+      _lastProfile = profile;
+    }
+    final resolvedProfile = profile ?? _lastProfile;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: profileAsync.when(
-        data: (profile) {
-          final String accountId =
-              (profile?['stripe_account_id'] ?? '').toString().trim();
-          final bool hasStripeAccount = accountId.isNotEmpty;
-          final bool onboardingComplete =
-              profile?['stripe_onboarding_complete'] == true;
-          final bool isConnected = hasStripeAccount || onboardingComplete;
-          final bool needsOnboarding = hasStripeAccount && !onboardingComplete;
+      body: (resolvedProfile == null && profileAsync.isLoading)
+          ? const Center(child: CircularProgressIndicator())
+          : Builder(
+              builder: (_) {
+                final String accountId =
+                    (resolvedProfile?['stripe_account_id'] ?? '')
+                        .toString()
+                        .trim();
+                final bool hasStripeAccount = accountId.isNotEmpty;
+                final bool onboardingComplete =
+                    resolvedProfile?['stripe_onboarding_complete'] == true;
+                final bool isConnected = hasStripeAccount || onboardingComplete;
+                final bool needsOnboarding =
+                    hasStripeAccount && !onboardingComplete;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(48),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Lang.sel(isHr, 'Finance', 'Financije'),
-                  style: GoogleFonts.inter(
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: -1,
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(48),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        Lang.sel(isHr, 'Finance', 'Financije'),
+                        style: GoogleFonts.inter(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        Lang.sel(
+                            isHr,
+                            'Manage your payouts, commissions, and Stripe connection.',
+                            'Upravljajte isplatama, provizijama i Stripe povezivanjem.'),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      _buildStripeStatusCard(
+                        isConnected: isConnected,
+                        onboardingComplete: onboardingComplete,
+                        needsOnboarding: needsOnboarding,
+                        accountId: hasStripeAccount ? accountId : null,
+                        profile: resolvedProfile,
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  Lang.sel(
-                      isHr,
-                      'Manage your payouts, commissions, and Stripe connection.',
-                      'Upravljajte isplatama, provizijama i Stripe povezivanjem.'),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildStripeStatusCard(
-                  isConnected: isConnected,
-                  onboardingComplete: onboardingComplete,
-                  needsOnboarding: needsOnboarding,
-                  accountId: hasStripeAccount ? accountId : null,
-                  profile: profile,
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            Center(child: Text(Lang.sel(isHr, 'Error: $e', 'Greška: $e'))),
-      ),
     );
   }
 
