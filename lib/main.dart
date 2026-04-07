@@ -72,6 +72,8 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
   bool _isRecoveryMode = false;
   bool _supabaseReady = false;
+  bool _authResolved = false;
+  Session? _activeSession;
   bool _initLoopRunning = false;
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -210,6 +212,8 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
+      _activeSession = Supabase.instance.client.auth.currentSession;
+      _authResolved = true;
       _attachAuthListener();
     } catch (e) {
       _addLog('Initialization ERROR: $e');
@@ -224,15 +228,25 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     _authSubscription =
         Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
+      final nextSession =
+          data.session ?? Supabase.instance.client.auth.currentSession;
       if (data.event == AuthChangeEvent.passwordRecovery &&
           _hasRecoveryTokenInUrl()) {
-        setState(() => _isRecoveryMode = true);
+        setState(() {
+          _isRecoveryMode = true;
+          _authResolved = true;
+          _activeSession = nextSession;
+        });
       } else if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.signedOut ||
-          data.event == AuthChangeEvent.userUpdated) {
-        if (_isRecoveryMode) {
-          setState(() => _isRecoveryMode = false);
-        }
+          data.event == AuthChangeEvent.userUpdated ||
+          data.event == AuthChangeEvent.tokenRefreshed ||
+          data.event == AuthChangeEvent.initialSession) {
+        setState(() {
+          _isRecoveryMode = false;
+          _authResolved = true;
+          _activeSession = nextSession;
+        });
       }
     });
   }
@@ -245,24 +259,11 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       debugShowCheckedModeBanner: false,
       home: _showResetPasswordScreen
           ? const UpdatePasswordScreen()
-          : !_supabaseReady
+          : (!_supabaseReady || !_authResolved)
               ? const _StartupSplashScreen()
-              : StreamBuilder<AuthState>(
-                  stream: Supabase.instance.client.auth.onAuthStateChange,
-                  builder: (context, snapshot) {
-                    final session =
-                        Supabase.instance.client.auth.currentSession ??
-                            snapshot.data?.session;
-                    if (session == null &&
-                        snapshot.connectionState == ConnectionState.waiting) {
-                      return const _StartupSplashScreen();
-                    }
-                    if (session != null) {
-                      return const MasterScaffold();
-                    }
-                    return const AuthScreen();
-                  },
-                ),
+              : _activeSession != null
+                  ? const MasterScaffold()
+                  : const AuthScreen(),
     );
   }
 }

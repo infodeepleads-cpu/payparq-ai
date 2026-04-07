@@ -462,12 +462,14 @@ void main() {
     expect(
       content.contains('_invokeWithSessionRecovery(') &&
           content.contains('_refreshSessionIfPossible()') &&
-          content.contains('await _client.auth.refreshSession();') &&
+          content.contains('_invokeFunctionOverHttp(') &&
+          content.contains('_resolveValidAccessToken(') &&
+          content.contains("'Authorization': 'Bearer \$token'") &&
           content.contains("text.contains('invalid jwt')") &&
-          content.contains('response.status != 401'),
+          content.contains('if (status != 401) return false;'),
       isTrue,
       reason:
-          'Stripe function calls should automatically recover from expired JWT sessions instead of hard-failing.',
+          'Stripe function calls should recover from expired JWT with refresh and direct HTTP fallback, instead of hard-failing.',
     );
   });
 
@@ -484,6 +486,24 @@ void main() {
       isTrue,
       reason:
           'Startup should show stable brand loading until first deferred screen is ready, without artificial delay.',
+    );
+  });
+
+  test('App auth gate keeps black splash until auth state is resolved',
+      () async {
+    final file = File('lib/main.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('bool _authResolved = false;') &&
+          content.contains('Session? _activeSession;') &&
+          content.contains(
+              '_activeSession = Supabase.instance.client.auth.currentSession;') &&
+          content.contains('(!_supabaseReady || !_authResolved)') &&
+          content.contains('AuthChangeEvent.initialSession'),
+      isTrue,
+      reason:
+          'Login transition should stay on brand splash until auth is fully resolved, preventing auth-to-dashboard flicker.',
     );
   });
 }
