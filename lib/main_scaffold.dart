@@ -42,6 +42,7 @@ class MasterScaffold extends ConsumerStatefulWidget {
 class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
   int _selectedIndex = 2;
+  bool _initialScreenReady = false;
 
   Future<void> _hydrateLocationSelection() async {
     for (int attempt = 0; attempt < 4; attempt++) {
@@ -64,11 +65,18 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   void initState() {
     super.initState();
     Future.microtask(_hydrateLocationSelection);
-    // Pre-load dashboard and other critical deferred modules
-    Future.delayed(const Duration(milliseconds: 500), () {
-      admin_mod.loadLibrary().catchError((_) {});
+    Future.microtask(_prepareInitialScreen);
+  }
+
+  Future<void> _prepareInitialScreen() async {
+    try {
+      await admin_mod.loadLibrary();
       hud_mod.loadLibrary().catchError((_) {});
       cases_mod.loadLibrary().catchError((_) {});
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _initialScreenReady = true;
     });
   }
 
@@ -142,6 +150,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildMobileScaffold() {
+    if (!_initialScreenReady) {
+      return const _BrandLoadingScreen();
+    }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
 
@@ -472,6 +483,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   // Desktop: Custom Sidebar Navigation
   Widget _buildDesktopScaffold() {
+    if (!_initialScreenReady) {
+      return const _BrandLoadingScreen();
+    }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
     final profileAsync = ref.watch(userProfileProvider);

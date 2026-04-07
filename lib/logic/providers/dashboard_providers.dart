@@ -82,6 +82,12 @@ final unifiedDashboardProvider =
     final checkOut = window['check_out'];
     final isPending =
         paymentStatus == 'pending' || status == 'pending' || status == 'open';
+    if (isPending) {
+      if (checkIn != null && nowUtc.isBefore(checkIn)) {
+        return 'pending_upcoming';
+      }
+      return 'pending';
+    }
     if (checkIn != null && checkOut != null) {
       if (nowUtc.isBefore(checkIn)) {
         return 'upcoming';
@@ -91,7 +97,6 @@ final unifiedDashboardProvider =
       }
       return 'active';
     }
-    if (isPending) return 'pending';
     return 'inactive';
   }
 
@@ -199,7 +204,8 @@ final unifiedDashboardProvider =
 
     final effectiveStatus =
         (item['ui_effective_status'] ?? '').toString().toLowerCase();
-    final isPending = effectiveStatus == 'pending';
+    final isPending =
+        effectiveStatus == 'pending' || effectiveStatus == 'pending_upcoming';
     final isActive = effectiveStatus == 'active';
     final isGuest = (item['ui_type'] ?? '').toString().toUpperCase() == 'GUEST';
 
@@ -215,6 +221,7 @@ final unifiedDashboardProvider =
     if (filter == 'Active') return isActive;
     if (filter == 'Other') {
       return effectiveStatus == 'upcoming' ||
+          effectiveStatus == 'pending_upcoming' ||
           effectiveStatus == 'expired' ||
           effectiveStatus == 'inactive' ||
           effectiveStatus == 'pending';

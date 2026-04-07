@@ -452,4 +452,38 @@ void main() {
           'Stripe Connect onboarding must default to Croatia, block Estonia fallback, and replace stale accounts created under another country.',
     );
   });
+
+  test('Finance repository retries Stripe functions after JWT refresh',
+      () async {
+    final file =
+        File('lib/features/intelligence/repositories/finance_repository.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('_invokeWithSessionRecovery(') &&
+          content.contains('_refreshSessionIfPossible()') &&
+          content.contains('await _client.auth.refreshSession();') &&
+          content.contains("text.contains('invalid jwt')") &&
+          content.contains('response.status != 401'),
+      isTrue,
+      reason:
+          'Stripe function calls should automatically recover from expired JWT sessions instead of hard-failing.',
+    );
+  });
+
+  test('Initial scaffold load avoids delayed broken-state transition',
+      () async {
+    final file = File('lib/main_scaffold.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('bool _initialScreenReady = false;') &&
+          content.contains('Future.microtask(_prepareInitialScreen);') &&
+          content.contains('if (!_initialScreenReady) {') &&
+          !content.contains('Future.delayed(const Duration(milliseconds: 500)'),
+      isTrue,
+      reason:
+          'Startup should show stable brand loading until first deferred screen is ready, without artificial delay.',
+    );
+  });
 }
