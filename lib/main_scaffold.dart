@@ -147,51 +147,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
-
-    final isOfficer = profile?['role'] == 'officer';
-
-    // Handle profile loading states
-    if (profile == null) {
-      if (profileAsync.isLoading) {
-        final user = ref.read(authControllerProvider).currentUser();
-        if (user != null) {
-          final warmProfile = {
-            'id': user.id,
-            'email': user.email,
-            'role': user.userMetadata?['role'] ?? 'officer',
-            'location_id': user.userMetadata?['location_id'],
-            'full_name': user.userMetadata?['name'] ?? 'User',
-            '_warm_fallback': true,
-          };
-          final warmIsOfficer = warmProfile['role'] == 'officer';
-          return _buildScaffoldWithProfile(
-              warmProfile, availableLocsAsync, selectedLocId, warmIsOfficer);
-        }
-        return const _BrandLoadingScreen();
-      } else {
-        // Profile is null and not loading - this shouldn't happen with immediate fallback
-        // Emergency fallback - use basic user data from session
-        final user = ref.read(authControllerProvider).currentUser();
-        if (user != null) {
-          final emergencyProfile = {
-            'id': user.id,
-            'email': user.email,
-            'role': user.userMetadata?['role'] ?? 'officer',
-            'location_id': user.userMetadata?['location_id'],
-            'full_name': user.userMetadata?['name'] ?? 'User',
-            '_emergency_fallback': true,
-          };
-          // Continue with emergency profile
-          return _buildScaffoldWithProfile(
-              emergencyProfile, availableLocsAsync, selectedLocId, isOfficer);
-        }
-      }
-    }
-
-    // Final null check - if profile is still null, show loading
     if (profile == null) {
       return const _BrandLoadingScreen();
     }
+    final isOfficer = profile['role'] == 'officer';
 
     return _buildScaffoldWithProfile(
         profile, availableLocsAsync, selectedLocId, isOfficer);
@@ -519,19 +478,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     final profile = profileAsync.value;
 
     if (profile == null) {
-      final user = ref.read(authControllerProvider).currentUser();
-      if (user != null) {
-        final emergencyProfile = {
-          'id': user.id,
-          'email': user.email,
-          'role': user.userMetadata?['role'] ?? 'admin',
-          'location_id': user.userMetadata?['location_id'],
-          'full_name': user.userMetadata?['name'] ?? 'User',
-          '_emergency_fallback': true,
-        };
-        return _buildScaffoldWithProfileDesktop(
-            emergencyProfile, profileAsync, availableLocsAsync, selectedLocId);
-      }
       return const _BrandLoadingScreen();
     }
 
@@ -1010,63 +956,24 @@ class _BrandLoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: _PulsingBrandWordmark(),
-      ),
-    );
-  }
-}
-
-class _PulsingBrandWordmark extends StatefulWidget {
-  const _PulsingBrandWordmark();
-
-  @override
-  State<_PulsingBrandWordmark> createState() => _PulsingBrandWordmarkState();
-}
-
-class _PulsingBrandWordmarkState extends State<_PulsingBrandWordmark>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.62, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Text(
-        'payparq.ai',
-        style: GoogleFonts.inter(
-          color: Colors.white,
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.4,
-          shadows: const [
-            Shadow(
-              color: Color(0x3DFFFFFF),
-              blurRadius: 12,
-              offset: Offset(0, 0),
-            ),
-          ],
+        child: Text(
+          'payparq.ai',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+            shadows: const [
+              Shadow(
+                color: Color(0x3DFFFFFF),
+                blurRadius: 12,
+                offset: Offset(0, 0),
+              ),
+            ],
+          ),
         ),
       ),
     );

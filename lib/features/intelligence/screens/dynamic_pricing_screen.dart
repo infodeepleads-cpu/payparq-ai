@@ -9,7 +9,6 @@ import '../../../logic/providers/auth_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../logic/providers/locale_provider.dart';
 import '../providers/dynamic_pricing_controller.dart';
-import '../../../screens/instructions_screen.dart';
 import '../../../services/error_mapper.dart';
 import '../../../config/app_config.dart';
 
@@ -457,8 +456,6 @@ class _DynamicPricingScreenState extends ConsumerState<DynamicPricingScreen> {
             nextParkTaxi > 0 ? nextParkTaxi.toString() : '';
         _enforcementPricingMode = _resolveEnforcementPricingMode(data);
       });
-      ref.invalidate(selectedDownloadLocationProvider);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

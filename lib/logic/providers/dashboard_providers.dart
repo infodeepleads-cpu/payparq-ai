@@ -212,10 +212,13 @@ final unifiedDashboardProvider =
       }
     }
 
-    if (filter == 'Upcoming') return effectiveStatus == 'upcoming';
     if (filter == 'Active') return isActive;
-    if (filter == 'Expired') return effectiveStatus == 'expired';
-    if (filter == 'Inactive') return effectiveStatus == 'inactive';
+    if (filter == 'Other') {
+      return effectiveStatus == 'upcoming' ||
+          effectiveStatus == 'expired' ||
+          effectiveStatus == 'inactive' ||
+          effectiveStatus == 'pending';
+    }
     return true;
   }).toList();
 

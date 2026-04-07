@@ -35,10 +35,11 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
         _normalizeCountryCode(profile?['country']) ??
         _normalizeCountryCode(profile?['billing_country']) ??
         _normalizeCountryCode(profile?['legal_country']);
-    if (fromProfile != null) return fromProfile;
+    if (fromProfile != null && fromProfile != 'EE') return fromProfile;
     final localeCountry =
         _normalizeCountryCode(Localizations.localeOf(context).countryCode);
-    return localeCountry ?? 'HR';
+    if (localeCountry != null && localeCountry != 'EE') return localeCountry;
+    return 'HR';
   }
 
   Future<void> _handleStripeConnect() async {

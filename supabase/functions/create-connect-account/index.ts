@@ -161,6 +161,12 @@ serve(async (req) => {
           stripeAccountId = replacementId;
           accountCountry = String(replacement.country ?? "").toUpperCase();
           await persistStripeAccount(userId, replacementId);
+        } else if (blockedConnectCountries.has(accountCountry) || !accountCountry) {
+          const replacement = await createExpressAccount(userId, targetCountry);
+          const replacementId = replacement.id;
+          stripeAccountId = replacementId;
+          accountCountry = String(replacement.country ?? "").toUpperCase();
+          await persistStripeAccount(userId, replacementId);
         }
       } catch {
         stripeAccountId = null;

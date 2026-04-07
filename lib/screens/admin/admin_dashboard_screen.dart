@@ -310,13 +310,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             children: [
               _buildFilterButton('All', Lang.sel(isHr, 'All', 'Sve')),
               const SizedBox(width: 12),
-              _buildFilterButton(
-                  'Upcoming', Lang.sel(isHr, 'Upcoming', 'Nadolazeće')),
-              const SizedBox(width: 12),
               _buildFilterButton('Active', Lang.sel(isHr, 'Active', 'Aktivno')),
               const SizedBox(width: 12),
-              _buildFilterButton(
-                  'Expired', Lang.sel(isHr, 'Expired', 'Isteklo')),
+              _buildFilterButton('Other', Lang.sel(isHr, 'Other', 'Ostalo')),
             ],
           ),
         ),

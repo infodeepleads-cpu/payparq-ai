@@ -275,61 +275,22 @@ class _StartupSplashScreen extends StatelessWidget {
     return const Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: _PulsingBrandWordmark(),
-      ),
-    );
-  }
-}
-
-class _PulsingBrandWordmark extends StatefulWidget {
-  const _PulsingBrandWordmark();
-
-  @override
-  State<_PulsingBrandWordmark> createState() => _PulsingBrandWordmarkState();
-}
-
-class _PulsingBrandWordmarkState extends State<_PulsingBrandWordmark>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.62, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: const Text(
-        'payparq.ai',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.4,
-          fontFamily: 'sans-serif',
-          shadows: [
-            Shadow(
-              color: Color(0x3DFFFFFF),
-              blurRadius: 12,
-              offset: Offset(0, 0),
-            ),
-          ],
+        child: Text(
+          'payparq.ai',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+            fontFamily: 'sans-serif',
+            shadows: [
+              Shadow(
+                color: Color(0x3DFFFFFF),
+                blurRadius: 12,
+                offset: Offset(0, 0),
+              ),
+            ],
+          ),
         ),
       ),
     );
