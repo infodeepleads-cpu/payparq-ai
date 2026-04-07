@@ -67,31 +67,15 @@ class PayParqApp extends StatefulWidget {
 }
 
 class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
-  static const Duration _initGuardTimeout = Duration(seconds: 8);
-  static const Duration _sessionTransitionHold = Duration(seconds: 1);
-  static const Duration _authStabilizationHold = Duration(milliseconds: 700);
-  final List<String> _logs = [];
-
   bool _isRecoveryMode = false;
   bool _supabaseReady = false;
   bool _authResolved = false;
   Session? _activeSession;
-  bool _initLoopRunning = false;
   bool _startupSplashCompleted = false;
-  DateTime? _sessionTransitionUntil;
-  DateTime? _authStabilizeUntil;
   StreamSubscription<AuthState>? _authSubscription;
-  Timer? _sessionTransitionTimer;
-  Timer? _authStabilizeTimer;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
-    if (mounted) {
-      setState(() {
-        _logs.add(
-            '[${DateTime.now().toIso8601String().split('T').last.substring(0, 8)}] $msg');
-      });
-    }
   }
 
   @override
@@ -100,47 +84,13 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     _addLog('App starting...');
     _logBuildInfo();
     _isRecoveryMode = _isRecoveryRequestFromUrl();
-    _startInitLoop();
+    _initializeApp();
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
-    _sessionTransitionTimer?.cancel();
-    _authStabilizeTimer?.cancel();
     super.dispose();
-  }
-
-  void _armSessionTransitionHold() {
-    if (_startupSplashCompleted) return;
-    _sessionTransitionUntil = DateTime.now().add(_sessionTransitionHold);
-    _sessionTransitionTimer?.cancel();
-    _sessionTransitionTimer = Timer(_sessionTransitionHold, () {
-      if (!mounted) return;
-      setState(() {});
-    });
-  }
-
-  bool get _isSessionTransitionHoldActive {
-    final until = _sessionTransitionUntil;
-    if (until == null) return false;
-    return DateTime.now().isBefore(until);
-  }
-
-  void _bumpAuthStabilizationHold() {
-    if (_startupSplashCompleted) return;
-    _authStabilizeUntil = DateTime.now().add(_authStabilizationHold);
-    _authStabilizeTimer?.cancel();
-    _authStabilizeTimer = Timer(_authStabilizationHold, () {
-      if (!mounted) return;
-      setState(() {});
-    });
-  }
-
-  bool get _isAuthStabilizationHoldActive {
-    final until = _authStabilizeUntil;
-    if (until == null) return false;
-    return DateTime.now().isBefore(until);
   }
 
   bool _isResetPasswordPath() {
@@ -183,32 +133,18 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       (_isResetPasswordPath() && _hasRecoveryTokenInUrl()) ||
       _isRecoveryRequestFromUrl();
 
-  Future<bool> _initWithGuard() async {
-    _addLog('Initializing with watchdog (8s)...');
+  Future<void> _initializeApp() async {
     try {
-      await _initSupabase().timeout(_initGuardTimeout);
-      return true;
+      await _initSupabase();
+      _addLog('Supabase ready');
     } catch (e) {
-      _addLog('Init attempt failed: $e');
-      return false;
+      _addLog('Initialization failed: $e');
     }
-  }
-
-  Future<void> _startInitLoop() async {
-    if (_initLoopRunning) return;
-    _initLoopRunning = true;
-    while (mounted && !_supabaseReady) {
-      final ready = await _initWithGuard();
-      if (!mounted) return;
-      if (ready) {
-        setState(() {
-          _supabaseReady = true;
-        });
-        _addLog('Supabase ready');
-        break;
-      }
-      await Future.delayed(const Duration(seconds: 2));
-    }
+    if (!mounted) return;
+    setState(() {
+      _supabaseReady = true;
+      _authResolved = true;
+    });
   }
 
   Future<void> _logBuildInfo() async {
@@ -254,10 +190,6 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
       _activeSession = Supabase.instance.client.auth.currentSession;
-      if (_activeSession != null) {
-        _armSessionTransitionHold();
-      }
-      _bumpAuthStabilizationHold();
       _attachAuthListener();
     } catch (e) {
       _addLog('Initialization ERROR: $e');
@@ -279,11 +211,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         setState(() {
           _isRecoveryMode = true;
           _authResolved = true;
-          _bumpAuthStabilizationHold();
           _activeSession = nextSession;
-          if (nextSession != null) {
-            _armSessionTransitionHold();
-          }
         });
       } else if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.signedOut ||
@@ -293,11 +221,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
         setState(() {
           _isRecoveryMode = false;
           _authResolved = true;
-          _bumpAuthStabilizationHold();
           _activeSession = nextSession;
-          if (nextSession != null) {
-            _armSessionTransitionHold();
-          }
         });
       }
     });
@@ -305,11 +229,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final shouldShowStartupSplash = !_startupSplashCompleted &&
-        (!_supabaseReady ||
-            !_authResolved ||
-            _isSessionTransitionHoldActive ||
-            _isAuthStabilizationHoldActive);
+    final shouldShowStartupSplash = !kIsWeb &&
+        !_startupSplashCompleted &&
+        (!_supabaseReady || !_authResolved);
     if (!shouldShowStartupSplash) {
       _startupSplashCompleted = true;
     }

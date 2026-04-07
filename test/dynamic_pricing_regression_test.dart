@@ -478,13 +478,14 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('bool _initialScreenReady = false;') &&
+      content.contains('bool _initialScreenReady = true;') &&
           content.contains('Future.microtask(_prepareInitialScreen);') &&
-          content.contains('if (!_initialScreenReady) {') &&
+          !content.contains(
+              "return const _BrandLoadingScreen(key: ValueKey('mobile-preload'));") &&
           !content.contains('Future.delayed(const Duration(milliseconds: 500)'),
       isTrue,
       reason:
-          'Startup should show stable brand loading until first deferred screen is ready, without artificial delay.',
+          'Startup should not block on deferred module preload before showing scaffold.',
     );
   });
 
@@ -494,23 +495,13 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('bool _authResolved = false;') &&
-          content.contains('Session? _activeSession;') &&
-          content.contains('bool _startupSplashCompleted = false;') &&
-          content.contains(
-              'static const Duration _sessionTransitionHold = Duration(seconds: 1);') &&
-          content.contains('if (_startupSplashCompleted) return;') &&
-          content.contains('_armSessionTransitionHold()') &&
-          content.contains(
-              '_activeSession = Supabase.instance.client.auth.currentSession;') &&
-          content.contains(
-              'final shouldShowStartupSplash = !_startupSplashCompleted &&') &&
-          content.contains('_isSessionTransitionHoldActive') &&
-          content.contains('if (!shouldShowStartupSplash) {') &&
-          content.contains('AuthChangeEvent.initialSession'),
+      !content.contains('_SleekLoadingBar') &&
+          !content.contains('_sessionTransitionHold') &&
+          !content.contains('_authStabilizationHold') &&
+          content.contains('!kIsWeb &&'),
       isTrue,
       reason:
-          'Login transition should stay on brand splash until auth is fully resolved, preventing auth-to-dashboard flicker.',
+          'Login transition should remain deterministic: black splash only until auth resolves, without time-bar animations or extra hold-induced lag.',
     );
   });
 

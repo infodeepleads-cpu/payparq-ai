@@ -42,23 +42,15 @@ class MasterScaffold extends ConsumerStatefulWidget {
 class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
   int _selectedIndex = 2;
-  bool _initialScreenReady = false;
+  bool _initialScreenReady = true;
   Map<String, dynamic>? _lastResolvedProfile;
 
   Future<void> _hydrateLocationSelection() async {
-    for (int attempt = 0; attempt < 4; attempt++) {
-      if (!mounted) return;
-      ref.invalidate(availableLocationsProvider);
-      ref.invalidate(guaranteedLocationSelectionProvider);
-      try {
-        final selection =
-            await ref.read(guaranteedLocationSelectionProvider.future);
-        if (!mounted) return;
-        final selected = (selection.displayId ?? '').trim();
-        if (selected.isNotEmpty) return;
-      } catch (_) {}
-      await Future.delayed(Duration(milliseconds: 250 * (attempt + 1)));
-    }
+    if (!mounted) return;
+    ref.invalidate(guaranteedLocationSelectionProvider);
+    try {
+      await ref.read(guaranteedLocationSelectionProvider.future);
+    } catch (_) {}
   }
 
   @override
@@ -150,9 +142,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Widget _buildMobileScaffold() {
-    if (!_initialScreenReady) {
-      return const _BrandLoadingScreen(key: ValueKey('mobile-preload'));
-    }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
 
@@ -163,22 +152,14 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     }
     final resolvedProfile = profile ?? _lastResolvedProfile;
     if (resolvedProfile == null) {
-      return const _BrandLoadingScreen(key: ValueKey('mobile-profile-loading'));
+      return const _BootstrapScaffoldPlaceholder(
+        key: ValueKey('mobile-profile-loading'),
+      );
     }
     final isOfficer = resolvedProfile['role'] == 'officer';
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 240),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: KeyedSubtree(
-        key: ValueKey(
-          'mobile-shell-${resolvedProfile['id'] ?? resolvedProfile['email'] ?? 'user'}-$_selectedIndex',
-        ),
-        child: _buildScaffoldWithProfile(
-            resolvedProfile, availableLocsAsync, selectedLocId, isOfficer),
-      ),
-    );
+    return _buildScaffoldWithProfile(
+        resolvedProfile, availableLocsAsync, selectedLocId, isOfficer);
   }
 
   Widget _buildScaffoldWithProfile(
@@ -498,7 +479,9 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Desktop: Custom Sidebar Navigation
   Widget _buildDesktopScaffold() {
     if (!_initialScreenReady) {
-      return const _BrandLoadingScreen(key: ValueKey('desktop-preload'));
+      return const _BootstrapScaffoldPlaceholder(
+        key: ValueKey('desktop-preload'),
+      );
     }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
@@ -510,7 +493,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     final resolvedProfile = profile ?? _lastResolvedProfile;
 
     if (resolvedProfile == null) {
-      return const _BrandLoadingScreen();
+      return const _BootstrapScaffoldPlaceholder();
     }
 
     return _buildScaffoldWithProfileDesktop(
@@ -958,7 +941,7 @@ class _DeferredPageState extends State<_DeferredPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Widget child = !_loaded
+    return !_loaded
         ? Padding(
             key: const ValueKey('deferred-loading'),
             padding: const EdgeInsets.all(24.0),
@@ -983,47 +966,54 @@ class _DeferredPageState extends State<_DeferredPage> {
             key: const ValueKey('deferred-loaded'),
             child: widget.build(),
           );
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: child,
-    );
   }
 }
 
-class _BrandLoadingScreen extends StatelessWidget {
-  const _BrandLoadingScreen({super.key});
+class _BootstrapScaffoldPlaceholder extends StatelessWidget {
+  const _BootstrapScaffoldPlaceholder({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'payparq.ai',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                  shadows: const [
-                    Shadow(
-                      color: Color(0x3DFFFFFF),
-                      blurRadius: 12,
-                      offset: Offset(0, 0),
-                    ),
-                  ],
-                ),
+      backgroundColor: AppTheme.background,
+      body: Column(
+        children: [
+          Container(
+            height: 64,
+            width: double.infinity,
+            color: AppTheme.headerBackground,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'payparq.ai',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: -0.5,
               ),
-            ],
+            ),
           ),
-        ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  SkeletonLoader(height: 28, width: 220),
+                  SizedBox(height: 16),
+                  SkeletonLoader(height: 16, width: 320),
+                  SizedBox(height: 12),
+                  SkeletonLoader(height: 16, width: 260),
+                  SizedBox(height: 24),
+                  SkeletonLoader(height: 84),
+                  SizedBox(height: 12),
+                  SkeletonLoader(height: 84),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
