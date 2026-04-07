@@ -156,10 +156,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   
   const locationName = normalizeLocationName(hub.name) || "Parking Trogir";
   const locationId = hub.id || "parkng split airport";
+  const slugKey = (hub.canonical_slug || "").toString().trim().toLowerCase();
+  const locationKey = `${locationName} ${slugKey}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const isBaskaVodaPuntaRataLocation =
+    locationKey.includes("baska voda") ||
+    locationKey.includes("baska-voda") ||
+    locationKey.includes("punta rata") ||
+    locationKey.includes("punta-rata");
+  const isInsigniaLocation = locationKey.includes("insignia");
   const compactTravelTime = travelTime.replace("minutes", "min").replace("minute", "min");
-  const totalReviews = 27;
-  const averageRating = "4.9";
-  const reviewsLabel = `${averageRating} (${totalReviews}) reviews`;
   const extrasLabel = "Extras available";
 
   useEffect(() => {
@@ -390,7 +398,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const cityManagerMessageHref = cityManagerWhatsapp
     ? `https://wa.me/${cityManagerWhatsapp}?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}` 
     : `https://wa.me/?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}`;
-  const allReviewItems = [
+  const defaultReviewItems = [
     { quote: "Čisto, brzo i bez čekanja. Ušli smo i izašli bez papira.", author: "Ana M.", rating: "5.0" },
     { quote: "Podrška je odmah odgovorila i pomogla oko promjene termina.", author: "Marko R.", rating: "4.9" },
     { quote: "Lokacija je jednostavna, cijena jasna i sve je prošlo bez stresa.", author: "Ivana K.", rating: "4.8" },
@@ -419,6 +427,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { quote: "Sve preporuke, opet koristim.", author: "Marta Š.", rating: "5.0" },
     { quote: "Transparentno i profesionalno.", author: "Roko P.", rating: "4.8" },
   ];
+  const allReviewItems = isBaskaVodaPuntaRataLocation
+    ? []
+    : (isInsigniaLocation ? defaultReviewItems : defaultReviewItems);
+  const totalReviews = allReviewItems.length;
+  const averageRatingNumeric = totalReviews > 0
+    ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews
+    : 0;
+  const averageRating = totalReviews > 0 ? averageRatingNumeric.toFixed(1) : "—";
+  const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "No reviews yet";
   const reviewItems = allReviewItems.slice(0, 3);
 
   const handlePrevPhoto = () => {
@@ -570,16 +587,57 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     }
     return "Your City";
   })();
-  const referencePoints = {
-    airport: { lat: 43.5389, lng: 16.2976, name: "Aerodrom Kaštela" },
-    trogir: { lat: 43.5157, lng: 16.2502, name: "Trogir centar" },
-    marina: { lat: 43.5126, lng: 16.1112, name: "Closest Beach" },
+  const referencePoints = isBaskaVodaPuntaRataLocation
+    ? {
+        airport: { lat: 43.3687, lng: 16.9318, name: "Plaža Punta Rata (Brela)" },
+        trogir: { lat: 43.3561, lng: 16.9502, name: "Plaža Baška Voda" },
+        marina: { lat: 43.3559, lng: 16.9512, name: "Centar Baška Voda" },
+      }
+    : {
+        airport: { lat: 43.5389, lng: 16.2976, name: "Aerodrom Kaštela" },
+        trogir: { lat: 43.5157, lng: 16.2502, name: "Trogir centar" },
+        marina: { lat: 43.5126, lng: 16.1112, name: "Closest Beach" },
+      };
+  const distanceToReferenceMeters = (targetLat: number, targetLng: number) => {
+    if (typeof hub.latitude !== "number" || typeof hub.longitude !== "number") return null;
+    const earthRadiusKm = 6371;
+    const dLat = (targetLat - hub.latitude) * (Math.PI / 180);
+    const dLon = (targetLng - hub.longitude) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(hub.latitude * (Math.PI / 180)) *
+        Math.cos(targetLat * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c * 1000;
   };
-  const distAirportDisplay = "700 m";
-  const distTrogirDisplay = "4.9 km";
-  const distMarinaDisplay = "200m";
+  const formatDistance = (meters: number | null, fallback: string) => {
+    if (meters == null || Number.isNaN(meters)) return fallback;
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+  const distAirportDisplay = formatDistance(
+    distanceToReferenceMeters(referencePoints.airport.lat, referencePoints.airport.lng),
+    isBaskaVodaPuntaRataLocation ? "1.0 km" : "700 m",
+  );
+  const distTrogirDisplay = formatDistance(
+    distanceToReferenceMeters(referencePoints.trogir.lat, referencePoints.trogir.lng),
+    isBaskaVodaPuntaRataLocation ? "900 m" : "4.9 km",
+  );
+  const distMarinaDisplay = formatDistance(
+    distanceToReferenceMeters(referencePoints.marina.lat, referencePoints.marina.lng),
+    isBaskaVodaPuntaRataLocation ? "1.1 km" : "200 m",
+  );
   const defaultFaq = [
-    { q: `Koliko je PayParq blizu zračne luke Split?`, a: `Udaljenost pješice je oko 5 minuta, a moguć je i transfer koji traje manje od minute.` },
+    {
+      q: isBaskaVodaPuntaRataLocation
+        ? `Koliko je PayParq blizu Punta Rate i plaže Baška Voda?`
+        : `Koliko je PayParq blizu zračne luke Split?`,
+      a: isBaskaVodaPuntaRataLocation
+        ? `Do plaže Punta Rata (Brela) stižete kratkom vožnjom, a do plaže i centra Baške Vode možete pješice.`
+        : `Udaljenost pješice je oko 5 minuta, a moguć je i transfer koji traje manje od minute.`,
+    },
     { q: `Is the car park secure?`, a: `Yes. We use AI‑powered cameras to monitor every entry and exit 24/7. The lot is remote but digitally supervised at all times.` },
     { q: `Do I need to display a ticket?`, a: `No. Your license plate is your digital permit. Our system recognises your car automatically.` },
     { q: `Can I cancel or change my booking?`, a: `Yes. You can cancel for a full refund up to 1 hour before your arrival time.` },
@@ -1351,7 +1409,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             { q: "Coordinates", a: typeof hub.latitude === "number" && typeof hub.longitude === "number" ? `${hub.latitude.toFixed(5)}, ${hub.longitude.toFixed(5)}` : "N/A" },
                             { q: `Udaljenost do ${referencePoints.airport.name}`, a: distAirportDisplay },
                             { q: `Udaljenost do ${referencePoints.trogir.name}`, a: distTrogirDisplay },
-                            { q: "Closest Beach", a: distMarinaDisplay },
+                            { q: `Udaljenost do ${referencePoints.marina.name}`, a: distMarinaDisplay },
                             { q: "Typical transfer time", a: travelTime },
                             { q: "Parking types", a: "Open‑air and covered bays" },
                             { q: "sati", a: "24/7 operacije" },
@@ -1412,13 +1470,19 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           </button>
                         </div>
                         <div className="grid gap-3 md:grid-cols-3">
-                          {reviewItems.map((item) => (
+                          {reviewItems.length > 0 ? reviewItems.map((item) => (
                             <div key={item.author} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
                               <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
                               <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
                               <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
                             </div>
-                          ))}
+                          )) : (
+                            <div className="md:col-span-3 rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
+                              <p className="text-xs leading-relaxed text-black/80">
+                                Recenzije su premještene na lokaciju New Object PayParq Insignia.
+                              </p>
+                            </div>
+                          )}
                         </div>
                         {openAllReviews ? (
                           <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4">
