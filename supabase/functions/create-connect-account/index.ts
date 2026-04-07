@@ -96,12 +96,16 @@ async function fetchProfile(userId: string): Promise<ProfileRow | null> {
   };
 }
 
-async function persistStripeAccount(userId: string, accountId: string): Promise<void> {
+async function persistStripeAccount(
+  userId: string,
+  accountId: string,
+  onboardingComplete: boolean,
+): Promise<void> {
   const { error } = await admin
     .from("profiles")
     .update({
       stripe_account_id: accountId,
-      stripe_onboarding_complete: false,
+      stripe_onboarding_complete: onboardingComplete,
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId);
@@ -155,18 +159,21 @@ serve(async (req) => {
       try {
         const existing = await stripe.accounts.retrieve(stripeAccountId);
         accountCountry = String(existing.country ?? "").toUpperCase();
+        const onboardingComplete = Boolean(existing.details_submitted);
         if (accountCountry !== targetCountry) {
           const replacement = await createExpressAccount(userId, targetCountry);
           const replacementId = replacement.id;
           stripeAccountId = replacementId;
           accountCountry = String(replacement.country ?? "").toUpperCase();
-          await persistStripeAccount(userId, replacementId);
+          await persistStripeAccount(userId, replacementId, false);
         } else if (blockedConnectCountries.has(accountCountry) || !accountCountry) {
           const replacement = await createExpressAccount(userId, targetCountry);
           const replacementId = replacement.id;
           stripeAccountId = replacementId;
           accountCountry = String(replacement.country ?? "").toUpperCase();
-          await persistStripeAccount(userId, replacementId);
+          await persistStripeAccount(userId, replacementId, false);
+        } else {
+          await persistStripeAccount(userId, stripeAccountId, onboardingComplete);
         }
       } catch {
         stripeAccountId = null;
@@ -178,7 +185,7 @@ serve(async (req) => {
       const createdId = created.id;
       stripeAccountId = createdId;
       accountCountry = String(created.country ?? "").toUpperCase();
-      await persistStripeAccount(userId, createdId);
+      await persistStripeAccount(userId, createdId, false);
     }
 
     if (!stripeAccountId) {

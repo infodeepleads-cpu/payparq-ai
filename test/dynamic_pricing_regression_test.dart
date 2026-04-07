@@ -496,14 +496,17 @@ void main() {
     expect(
       content.contains('bool _authResolved = false;') &&
           content.contains('Session? _activeSession;') &&
+          content.contains('bool _startupSplashCompleted = false;') &&
           content.contains(
               'static const Duration _sessionTransitionHold = Duration(seconds: 1);') &&
+          content.contains('if (_startupSplashCompleted) return;') &&
           content.contains('_armSessionTransitionHold()') &&
           content.contains(
               '_activeSession = Supabase.instance.client.auth.currentSession;') &&
-          content.contains(': (!_supabaseReady ||') &&
-          content.contains('!_authResolved ||') &&
+          content.contains(
+              'final shouldShowStartupSplash = !_startupSplashCompleted &&') &&
           content.contains('_isSessionTransitionHoldActive') &&
+          content.contains('if (!shouldShowStartupSplash) {') &&
           content.contains('AuthChangeEvent.initialSession'),
       isTrue,
       reason:
@@ -525,6 +528,28 @@ void main() {
       isTrue,
       reason:
           'Dashboard should not blink between loading and content when profile stream refreshes.',
+    );
+  });
+
+  test('Finance screen treats existing Stripe account as connected state',
+      () async {
+    final file = File('lib/features/intelligence/screens/finance_screen.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final String accountId =') &&
+          content.contains(
+              'final bool hasStripeAccount = accountId.isNotEmpty;') &&
+          content.contains(
+              'final bool isConnected = hasStripeAccount || onboardingComplete;') &&
+          content.contains(
+              'final bool needsOnboarding = hasStripeAccount && !onboardingComplete;') &&
+          content.contains('COMPLETE ONBOARDING') &&
+          content.contains('AppLifecycleState.resumed') &&
+          content.contains('ref.invalidate(userProfileProvider);'),
+      isTrue,
+      reason:
+          'Finance UI should stop showing plain connect state after account creation and refresh profile when returning from Stripe.',
     );
   });
 }

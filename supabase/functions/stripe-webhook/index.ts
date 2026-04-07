@@ -317,6 +317,37 @@ async function cleanupExpiredCheckoutSession(session: Stripe.Checkout.Session): 
   }
 }
 
+async function syncStripeOnboardingState(account: Stripe.Account): Promise<void> {
+  const accountId = String(account.id ?? "").trim();
+  if (!accountId) return;
+  const metadata = account.metadata ?? {};
+  const profileId = String(metadata.profile_id ?? "").trim();
+  const onboardingComplete = Boolean(account.details_submitted);
+
+  let query = admin
+    .from("profiles")
+    .update({
+      stripe_onboarding_complete: onboardingComplete,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_account_id", accountId);
+
+  if (isUuid(profileId)) {
+    query = query.eq("id", profileId);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error(
+      `[V21] Failed onboarding sync for ${accountId}: ${error.message}`,
+    );
+  } else {
+    console.log(
+      `[V21] Synced onboarding for ${accountId}: ${onboardingComplete}`,
+    );
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   
@@ -344,6 +375,25 @@ serve(async (req: Request) => {
     } else if (event.type === "checkout.session.expired") {
       const session = event.data.object as Stripe.Checkout.Session;
       await cleanupExpiredCheckoutSession(session);
+    } else if (event.type === "account.updated") {
+      const account = event.data.object as Stripe.Account;
+      await syncStripeOnboardingState(account);
+    } else if (event.type === "account.application.deauthorized") {
+      const accountId = String((event.data.object as Stripe.Application)?.account ?? "").trim();
+      if (accountId) {
+        const { error } = await admin
+          .from("profiles")
+          .update({
+            stripe_onboarding_complete: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_account_id", accountId);
+        if (error) {
+          console.error(
+            `[V21] Failed deauthorization sync for ${accountId}: ${error.message}`,
+          );
+        }
+      }
     }
 
     return json({ received: true });

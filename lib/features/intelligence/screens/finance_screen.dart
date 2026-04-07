@@ -16,10 +16,30 @@ class FinanceScreen extends ConsumerStatefulWidget {
   ConsumerState<FinanceScreen> createState() => _FinanceScreenState();
 }
 
-class _FinanceScreenState extends ConsumerState<FinanceScreen> {
+class _FinanceScreenState extends ConsumerState<FinanceScreen>
+    with WidgetsBindingObserver {
   bool _isConnecting = false;
   bool _isLoadingDashboard = false;
   String? _selectedCountryCode;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(userProfileProvider);
+    }
+  }
 
   String? _normalizeCountryCode(dynamic raw) {
     if (raw == null) return null;
@@ -124,6 +144,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
         if (mounted) setState(() => _isConnecting = false);
       },
     );
+    ref.invalidate(userProfileProvider);
     if (mounted) setState(() => _isConnecting = false);
   }
 
@@ -146,6 +167,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
         if (mounted) setState(() => _isLoadingDashboard = false);
       },
     );
+    ref.invalidate(userProfileProvider);
     if (mounted) setState(() => _isLoadingDashboard = false);
   }
 
@@ -158,9 +180,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
       backgroundColor: AppTheme.background,
       body: profileAsync.when(
         data: (profile) {
-          final bool isConnected =
-              profile?['stripe_onboarding_complete'] ?? false;
-          final String? accountId = profile?['stripe_account_id'];
+          final String accountId =
+              (profile?['stripe_account_id'] ?? '').toString().trim();
+          final bool hasStripeAccount = accountId.isNotEmpty;
+          final bool onboardingComplete =
+              profile?['stripe_onboarding_complete'] == true;
+          final bool isConnected = hasStripeAccount || onboardingComplete;
+          final bool needsOnboarding = hasStripeAccount && !onboardingComplete;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(48),
@@ -188,7 +214,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildStripeStatusCard(isConnected, accountId, profile),
+                _buildStripeStatusCard(
+                  isConnected: isConnected,
+                  onboardingComplete: onboardingComplete,
+                  needsOnboarding: needsOnboarding,
+                  accountId: hasStripeAccount ? accountId : null,
+                  profile: profile,
+                ),
               ],
             ),
           );
@@ -200,11 +232,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
     );
   }
 
-  Widget _buildStripeStatusCard(
-    bool isConnected,
-    String? accountId,
-    Map<String, dynamic>? profile,
-  ) {
+  Widget _buildStripeStatusCard({
+    required bool isConnected,
+    required bool onboardingComplete,
+    required bool needsOnboarding,
+    required String? accountId,
+    required Map<String, dynamic>? profile,
+  }) {
     final isHr = ref.watch(localeIsCroatianProvider);
     final selectedCountry = _effectiveConnectCountry(profile);
     return Container(
@@ -237,10 +271,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        isConnected
+                        onboardingComplete
                             ? Lang.sel(isHr, 'CONNECTED', 'POVEZANO')
-                            : Lang.sel(
-                                isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA'),
+                            : isConnected
+                                ? Lang.sel(isHr, 'SETUP IN PROGRESS',
+                                    'POSTAVLJANJE U TIJEKU')
+                                : Lang.sel(
+                                    isHr, 'ACTION REQUIRED', 'POTREBNA AKCIJA'),
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 10,
@@ -262,15 +299,20 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  isConnected
+                  onboardingComplete
                       ? Lang.sel(
                           isHr,
                           'Your account is ready to receive payouts.',
                           'Vaš račun je spreman za primanje isplata.')
-                      : Lang.sel(
-                          isHr,
-                          'Connect your Stripe Express account to start receiving automated payouts.',
-                          'Povežite svoj Stripe Express račun za automatske isplate.'),
+                      : (needsOnboarding
+                          ? Lang.sel(
+                              isHr,
+                              'Finish Stripe onboarding to enable payouts and full account access.',
+                              'Dovršite Stripe uključivanje za isplate i puni pristup računu.')
+                          : Lang.sel(
+                              isHr,
+                              'Connect your Stripe Express account to start receiving automated payouts.',
+                              'Povežite svoj Stripe Express račun za automatske isplate.')),
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 24,
@@ -280,21 +322,26 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isConnected
+                  onboardingComplete
                       ? Lang.sel(
                           isHr,
                           'All parking revenue (minus commissions) is automatically transferred to your IBAN.',
                           'Sav prihod od parkiranja (minus provizije) automatski se prenosi na vaš IBAN.')
-                      : Lang.sel(
-                          isHr,
-                          'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
-                          'Uključivanje traje manje od 2 minute putem sigurnog Stripe sustava.'),
+                      : (needsOnboarding
+                          ? Lang.sel(
+                              isHr,
+                              'You can reopen onboarding at any time to complete pending Stripe requirements.',
+                              'Uključivanje možete ponovno otvoriti u bilo kojem trenutku za dovršavanje Stripe zahtjeva.')
+                          : Lang.sel(
+                              isHr,
+                              'Onboarding takes less than 2 minutes via Stripe\'s secure platform.',
+                              'Uključivanje traje manje od 2 minute putem sigurnog Stripe sustava.')),
                   style: GoogleFonts.inter(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 14,
                   ),
                 ),
-                if (!isConnected) ...[
+                if (!onboardingComplete) ...[
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -355,11 +402,14 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                           Icon(isConnected ? Icons.dashboard : Icons.add_link),
                           const SizedBox(width: 12),
                           Text(
-                            isConnected
+                            onboardingComplete
                                 ? Lang.sel(isHr, 'OPEN DASHBOARD',
                                     'OTVORI NADZORNU PLOČU')
-                                : Lang.sel(
-                                    isHr, 'CONNECT STRIPE', 'POVEŽI STRIPE'),
+                                : (needsOnboarding
+                                    ? Lang.sel(isHr, 'COMPLETE ONBOARDING',
+                                        'DOVRŠI UKLJUČIVANJE')
+                                    : Lang.sel(isHr, 'CONNECT STRIPE',
+                                        'POVEŽI STRIPE')),
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,

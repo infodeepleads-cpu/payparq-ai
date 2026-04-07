@@ -76,6 +76,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   bool _authResolved = false;
   Session? _activeSession;
   bool _initLoopRunning = false;
+  bool _startupSplashCompleted = false;
   DateTime? _sessionTransitionUntil;
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _sessionTransitionTimer;
@@ -107,6 +108,7 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   }
 
   void _armSessionTransitionHold() {
+    if (_startupSplashCompleted) return;
     _sessionTransitionUntil = DateTime.now().add(_sessionTransitionHold);
     _sessionTransitionTimer?.cancel();
     _sessionTransitionTimer = Timer(_sessionTransitionHold, () {
@@ -281,15 +283,18 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final shouldShowStartupSplash = !_startupSplashCompleted &&
+        (!_supabaseReady || !_authResolved || _isSessionTransitionHoldActive);
+    if (!shouldShowStartupSplash) {
+      _startupSplashCompleted = true;
+    }
     return MaterialApp(
       title: 'payparq.ai',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
       home: _showResetPasswordScreen
           ? const UpdatePasswordScreen()
-          : (!_supabaseReady ||
-                  !_authResolved ||
-                  _isSessionTransitionHoldActive)
+          : shouldShowStartupSplash
               ? const _StartupSplashScreen()
               : _activeSession != null
                   ? const MasterScaffold()
