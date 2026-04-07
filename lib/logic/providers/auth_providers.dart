@@ -66,17 +66,6 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
   final controller = StreamController<Map<String, dynamic>?>(sync: true);
 
-  // IMMEDIATE FALLBACK: Send minimal profile immediately
-  final immediateFallback = {
-    'id': user.id,
-    'email': user.email,
-    'role': _normalizeRole(user.userMetadata?['role']?.toString()),
-    'location_id': user.userMetadata?['location_id'],
-    'full_name': user.userMetadata?['name'] ?? 'User',
-    '_immediate': true,
-  };
-  controller.add(immediateFallback);
-
   // 1. Initial fetch with timeout and RETRY
   final stopwatch = Stopwatch()..start();
 

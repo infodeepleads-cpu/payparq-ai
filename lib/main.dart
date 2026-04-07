@@ -68,6 +68,7 @@ class PayParqApp extends StatefulWidget {
 
 class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   static const Duration _initGuardTimeout = Duration(seconds: 8);
+  static const Duration _sessionTransitionHold = Duration(seconds: 1);
   final List<String> _logs = [];
 
   bool _isRecoveryMode = false;
@@ -75,7 +76,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   bool _authResolved = false;
   Session? _activeSession;
   bool _initLoopRunning = false;
+  DateTime? _sessionTransitionUntil;
   StreamSubscription<AuthState>? _authSubscription;
+  Timer? _sessionTransitionTimer;
 
   void _addLog(String msg) {
     debugPrint('BOOT_LOG: $msg');
@@ -99,7 +102,23 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _sessionTransitionTimer?.cancel();
     super.dispose();
+  }
+
+  void _armSessionTransitionHold() {
+    _sessionTransitionUntil = DateTime.now().add(_sessionTransitionHold);
+    _sessionTransitionTimer?.cancel();
+    _sessionTransitionTimer = Timer(_sessionTransitionHold, () {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  bool get _isSessionTransitionHoldActive {
+    final until = _sessionTransitionUntil;
+    if (until == null) return false;
+    return DateTime.now().isBefore(until);
   }
 
   bool _isResetPasswordPath() {
@@ -213,6 +232,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       stopwatch.stop();
       _addLog('Supabase initialized in ${stopwatch.elapsedMilliseconds}ms');
       _activeSession = Supabase.instance.client.auth.currentSession;
+      if (_activeSession != null) {
+        _armSessionTransitionHold();
+      }
       _authResolved = true;
       _attachAuthListener();
     } catch (e) {
@@ -236,6 +258,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
           _isRecoveryMode = true;
           _authResolved = true;
           _activeSession = nextSession;
+          if (nextSession != null) {
+            _armSessionTransitionHold();
+          }
         });
       } else if (data.event == AuthChangeEvent.signedIn ||
           data.event == AuthChangeEvent.signedOut ||
@@ -246,6 +271,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
           _isRecoveryMode = false;
           _authResolved = true;
           _activeSession = nextSession;
+          if (nextSession != null) {
+            _armSessionTransitionHold();
+          }
         });
       }
     });
@@ -259,7 +287,9 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
       debugShowCheckedModeBanner: false,
       home: _showResetPasswordScreen
           ? const UpdatePasswordScreen()
-          : (!_supabaseReady || !_authResolved)
+          : (!_supabaseReady ||
+                  !_authResolved ||
+                  _isSessionTransitionHoldActive)
               ? const _StartupSplashScreen()
               : _activeSession != null
                   ? const MasterScaffold()

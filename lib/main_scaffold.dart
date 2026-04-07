@@ -43,11 +43,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Default to 2 (Main Dashboard) to match new order
   int _selectedIndex = 2;
   bool _initialScreenReady = false;
+  Map<String, dynamic>? _lastResolvedProfile;
 
   Future<void> _hydrateLocationSelection() async {
     for (int attempt = 0; attempt < 4; attempt++) {
       if (!mounted) return;
-      ref.invalidate(userProfileProvider);
       ref.invalidate(availableLocationsProvider);
       ref.invalidate(guaranteedLocationSelectionProvider);
       try {
@@ -158,13 +158,17 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
-    if (profile == null) {
+    if (profile != null) {
+      _lastResolvedProfile = profile;
+    }
+    final resolvedProfile = profile ?? _lastResolvedProfile;
+    if (resolvedProfile == null) {
       return const _BrandLoadingScreen();
     }
-    final isOfficer = profile['role'] == 'officer';
+    final isOfficer = resolvedProfile['role'] == 'officer';
 
     return _buildScaffoldWithProfile(
-        profile, availableLocsAsync, selectedLocId, isOfficer);
+        resolvedProfile, availableLocsAsync, selectedLocId, isOfficer);
   }
 
   Widget _buildScaffoldWithProfile(
@@ -490,13 +494,17 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     final selectedLocId = ref.watch(selectedLocationIdProvider);
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
+    if (profile != null) {
+      _lastResolvedProfile = profile;
+    }
+    final resolvedProfile = profile ?? _lastResolvedProfile;
 
-    if (profile == null) {
+    if (resolvedProfile == null) {
       return const _BrandLoadingScreen();
     }
 
     return _buildScaffoldWithProfileDesktop(
-        profile, profileAsync, availableLocsAsync, selectedLocId);
+        resolvedProfile, profileAsync, availableLocsAsync, selectedLocId);
   }
 
   Widget _buildScaffoldWithProfileDesktop(

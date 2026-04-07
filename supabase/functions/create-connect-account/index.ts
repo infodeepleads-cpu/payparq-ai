@@ -9,12 +9,11 @@ const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const appBaseUrl = (Deno.env.get("STRIPE_CONNECT_APP_URL") ?? "https://mobile-scanner-ruddy.vercel.app").trim().replace(/\/+$/, "");
 const desiredCountry = (Deno.env.get("STRIPE_CONNECT_COUNTRY") ?? "HR").trim().toUpperCase();
 const blockedConnectCountries = new Set(
-  (Deno.env.get("STRIPE_CONNECT_BLOCKED_COUNTRIES") ?? "EE")
+  (Deno.env.get("STRIPE_CONNECT_BLOCKED_COUNTRIES") ?? "")
     .split(",")
     .map((value) => value.trim().toUpperCase())
     .filter((value) => /^[A-Z]{2}$/.test(value))
 );
-blockedConnectCountries.add("EE");
 const refreshPath = (Deno.env.get("STRIPE_CONNECT_REFRESH_PATH") ?? "/#/finance").trim();
 const returnPath = (Deno.env.get("STRIPE_CONNECT_RETURN_PATH") ?? "/#/finance").trim();
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
@@ -38,15 +37,16 @@ function json(data: Record<string, unknown>, status = 200): Response {
   });
 }
 
-function normalizeCountry(raw: string): string {
+function normalizeCountry(raw: string, fallbackCountry: string): string {
   const value = raw.trim().toUpperCase();
-  return /^[A-Z]{2}$/.test(value) ? value : "HR";
+  return /^[A-Z]{2}$/.test(value) ? value : fallbackCountry;
 }
 
 function resolveTargetConnectCountry(raw: string): string {
-  const normalized = normalizeCountry(raw);
+  const fallbackCountry = normalizeCountry(desiredCountry, "HR");
+  const normalized = normalizeCountry(raw, fallbackCountry);
   if (blockedConnectCountries.has(normalized)) {
-    return "HR";
+    return fallbackCountry;
   }
   return normalized;
 }

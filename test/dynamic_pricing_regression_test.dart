@@ -431,7 +431,7 @@ void main() {
     );
   });
 
-  test('Stripe connect account creation enforces Croatia country default',
+  test('Stripe connect account creation allows requested country override',
       () async {
     final file = File('supabase/functions/create-connect-account/index.ts');
     final content = await file.readAsString();
@@ -439,17 +439,16 @@ void main() {
     expect(
       content.contains('const desiredCountry =') &&
           content.contains('STRIPE_CONNECT_COUNTRY') &&
-          content.contains('"HR"') &&
           content.contains('STRIPE_CONNECT_BLOCKED_COUNTRIES') &&
-          content.contains('"EE"') &&
           content.contains('function resolveTargetConnectCountry(') &&
+          content.contains('const fallbackCountry =') &&
           content.contains('if (blockedConnectCountries.has(normalized))') &&
           content.contains('if (accountCountry !== targetCountry)') &&
           content.contains(
               'const replacement = await createExpressAccount(userId, targetCountry);'),
       isTrue,
       reason:
-          'Stripe Connect onboarding must default to Croatia, block Estonia fallback, and replace stale accounts created under another country.',
+          'Stripe Connect onboarding should honor requested country, fallback to configured default only when needed, and replace stale accounts created under another country.',
     );
   });
 
@@ -498,12 +497,34 @@ void main() {
       content.contains('bool _authResolved = false;') &&
           content.contains('Session? _activeSession;') &&
           content.contains(
+              'static const Duration _sessionTransitionHold = Duration(seconds: 1);') &&
+          content.contains('_armSessionTransitionHold()') &&
+          content.contains(
               '_activeSession = Supabase.instance.client.auth.currentSession;') &&
-          content.contains('(!_supabaseReady || !_authResolved)') &&
+          content.contains(': (!_supabaseReady ||') &&
+          content.contains('!_authResolved ||') &&
+          content.contains('_isSessionTransitionHoldActive') &&
           content.contains('AuthChangeEvent.initialSession'),
       isTrue,
       reason:
           'Login transition should stay on brand splash until auth is fully resolved, preventing auth-to-dashboard flicker.',
+    );
+  });
+
+  test('Master scaffold keeps stable view while profile stream refreshes',
+      () async {
+    final file = File('lib/main_scaffold.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('Map<String, dynamic>? _lastResolvedProfile;') &&
+          content.contains(
+              'final resolvedProfile = profile ?? _lastResolvedProfile;') &&
+          !content.contains(
+              'Future<void> _hydrateLocationSelection() async {\n    for (int attempt = 0; attempt < 4; attempt++) {\n      if (!mounted) return;\n      ref.invalidate(userProfileProvider);'),
+      isTrue,
+      reason:
+          'Dashboard should not blink between loading and content when profile stream refreshes.',
     );
   });
 }

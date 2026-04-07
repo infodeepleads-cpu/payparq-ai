@@ -19,6 +19,7 @@ class FinanceScreen extends ConsumerStatefulWidget {
 class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   bool _isConnecting = false;
   bool _isLoadingDashboard = false;
+  String? _selectedCountryCode;
 
   String? _normalizeCountryCode(dynamic raw) {
     if (raw == null) return null;
@@ -35,17 +36,76 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
         _normalizeCountryCode(profile?['country']) ??
         _normalizeCountryCode(profile?['billing_country']) ??
         _normalizeCountryCode(profile?['legal_country']);
-    if (fromProfile != null && fromProfile != 'EE') return fromProfile;
+    if (fromProfile != null) return fromProfile;
     final localeCountry =
         _normalizeCountryCode(Localizations.localeOf(context).countryCode);
-    if (localeCountry != null && localeCountry != 'EE') return localeCountry;
+    if (localeCountry != null) return localeCountry;
     return 'HR';
+  }
+
+  String _effectiveConnectCountry(Map<String, dynamic>? profile) {
+    return _normalizeCountryCode(_selectedCountryCode) ??
+        _resolveConnectCountry(profile);
+  }
+
+  Future<void> _pickStripeCountry(Map<String, dynamic>? profile) async {
+    final isHr = ref.read(localeIsCroatianProvider);
+    final controller = TextEditingController(
+      text: _effectiveConnectCountry(profile),
+    );
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          Lang.sel(isHr, 'Stripe Country', 'Stripe država'),
+        ),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 2,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: Lang.sel(isHr, 'Country Code', 'Kod države'),
+            hintText: 'US',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(Lang.sel(isHr, 'Cancel', 'Odustani')),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final code = _normalizeCountryCode(controller.text);
+              if (code == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      Lang.sel(
+                        isHr,
+                        'Use a valid 2-letter country code.',
+                        'Unesite ispravan dvoslovni kod države.',
+                      ),
+                    ),
+                  ),
+                );
+                return;
+              }
+              Navigator.of(context).pop(code);
+            },
+            child: Text(Lang.sel(isHr, 'Save', 'Spremi')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() => _selectedCountryCode = selected);
   }
 
   Future<void> _handleStripeConnect() async {
     setState(() => _isConnecting = true);
     final profile = ref.read(userProfileProvider).value;
-    final country = _resolveConnectCountry(profile);
+    final country = _effectiveConnectCountry(profile);
 
     await AsyncActionHandler.run<void>(
       context: context,
@@ -128,7 +188,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildStripeStatusCard(isConnected, accountId),
+                _buildStripeStatusCard(isConnected, accountId, profile),
               ],
             ),
           );
@@ -140,8 +200,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
     );
   }
 
-  Widget _buildStripeStatusCard(bool isConnected, String? accountId) {
+  Widget _buildStripeStatusCard(
+    bool isConnected,
+    String? accountId,
+    Map<String, dynamic>? profile,
+  ) {
     final isHr = ref.watch(localeIsCroatianProvider);
+    final selectedCountry = _effectiveConnectCountry(profile);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(40),
@@ -229,6 +294,32 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                     fontSize: 14,
                   ),
                 ),
+                if (!isConnected) ...[
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Text(
+                        '${Lang.sel(isHr, 'Country', 'Država')}: $selectedCountry',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      TextButton(
+                        onPressed: () => _pickStripeCountry(profile),
+                        child: Text(
+                          Lang.sel(isHr, 'Change', 'Promijeni'),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
