@@ -152,7 +152,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     }
     final resolvedProfile = profile ?? _lastResolvedProfile;
     if (resolvedProfile == null) {
-      return const _BootstrapScaffoldPlaceholder(
+      return const _BrandLoadingScreen(
         key: ValueKey('mobile-profile-loading'),
       );
     }
@@ -479,7 +479,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Desktop: Custom Sidebar Navigation
   Widget _buildDesktopScaffold() {
     if (!_initialScreenReady) {
-      return const _BootstrapScaffoldPlaceholder(
+      return const _BrandLoadingScreen(
         key: ValueKey('desktop-preload'),
       );
     }
@@ -493,7 +493,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     final resolvedProfile = profile ?? _lastResolvedProfile;
 
     if (resolvedProfile == null) {
-      return const _BootstrapScaffoldPlaceholder();
+      return const _BrandLoadingScreen();
     }
 
     return _buildScaffoldWithProfileDesktop(
@@ -969,51 +969,30 @@ class _DeferredPageState extends State<_DeferredPage> {
   }
 }
 
-class _BootstrapScaffoldPlaceholder extends StatelessWidget {
-  const _BootstrapScaffoldPlaceholder({super.key});
+class _BrandLoadingScreen extends StatelessWidget {
+  const _BrandLoadingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Column(
-        children: [
-          Container(
-            height: 64,
-            width: double.infinity,
-            color: AppTheme.headerBackground,
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'payparq.ai',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: -0.5,
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Text(
+          'payparq.ai',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+            shadows: const [
+              Shadow(
+                color: Color(0x3DFFFFFF),
+                blurRadius: 12,
+                offset: Offset(0, 0),
               ),
-            ),
+            ],
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  SkeletonLoader(height: 28, width: 220),
-                  SizedBox(height: 16),
-                  SkeletonLoader(height: 16, width: 320),
-                  SizedBox(height: 12),
-                  SkeletonLoader(height: 16, width: 260),
-                  SizedBox(height: 24),
-                  SkeletonLoader(height: 84),
-                  SizedBox(height: 12),
-                  SkeletonLoader(height: 84),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

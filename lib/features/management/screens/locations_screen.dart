@@ -844,6 +844,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           latitude: pendingLatitude,
                           longitude: pendingLongitude,
                           capacity: newCapacity,
+                          invalidateStream: false,
                         );
                     if (photosChanged) {
                       setState(() {
@@ -880,6 +881,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           .updateVerificationPhotos(
                             id: loc['id'].toString(),
                             photoUrls: nextPhotoUrls,
+                            invalidateStream: false,
                           );
                       editablePhotoUrls
                         ..clear()
@@ -908,6 +910,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         _locOverrides.remove(loc['id'].toString());
                       });
                     }
+                    ref.invalidate(locationsStreamProvider);
                     if (dialogContext.mounted) {
                       messenger.showSnackBar(
                         SnackBar(

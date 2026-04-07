@@ -543,4 +543,23 @@ void main() {
           'Finance UI should stop showing plain connect state after account creation and refresh profile when returning from Stripe.',
     );
   });
+
+  test('Location upload defers stream invalidation until final save', () async {
+    final controllerFile =
+        File('lib/features/management/providers/locations_controller.dart');
+    final screenFile =
+        File('lib/features/management/screens/locations_screen.dart');
+    final controllerContent = await controllerFile.readAsString();
+    final screenContent = await screenFile.readAsString();
+
+    expect(
+      controllerContent.contains('bool invalidateStream = true,') &&
+          controllerContent.contains('if (invalidateStream) {') &&
+          screenContent.contains('invalidateStream: false,') &&
+          screenContent.contains('ref.invalidate(locationsStreamProvider);'),
+      isTrue,
+      reason:
+          'Location edit + photo upload should avoid repeated stream rebuilds mid-upload and refresh once after save.',
+    );
+  });
 }

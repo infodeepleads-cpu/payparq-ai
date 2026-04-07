@@ -163,6 +163,7 @@ class LocationsController {
     required double latitude,
     required double longitude,
     required int capacity,
+    bool invalidateStream = true,
   }) async {
     try {
       await _repo.updateLocationDetails(
@@ -173,7 +174,9 @@ class LocationsController {
         longitude: longitude,
         capacity: capacity,
       );
-      _ref.invalidate(locationsStreamProvider);
+      if (invalidateStream) {
+        _ref.invalidate(locationsStreamProvider);
+      }
     } catch (e) {
       throw AppError('Update failed: $e', cause: e);
     }
@@ -182,10 +185,13 @@ class LocationsController {
   Future<void> updateVerificationPhotos({
     required String id,
     required List<String> photoUrls,
+    bool invalidateStream = true,
   }) async {
     try {
       await _repo.updateVerificationPhotos(id, photoUrls);
-      _ref.invalidate(locationsStreamProvider);
+      if (invalidateStream) {
+        _ref.invalidate(locationsStreamProvider);
+      }
     } catch (e) {
       throw AppError('Update photos failed: $e', cause: e);
     }
