@@ -562,4 +562,22 @@ void main() {
           'Location edit + photo upload should avoid repeated stream rebuilds mid-upload and refresh once after save.',
     );
   });
+
+  test('Verification upload uses sequential guarded uploads', () async {
+    final file =
+        File('lib/features/management/providers/verification_controller.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('static const int _maxVerificationPhotoBytes') &&
+          content.contains('.uploadVerificationFile(') &&
+          content.contains('.timeout(const Duration(seconds: 90))') &&
+          content.contains(
+              'Upload timed out. Please retry with a stronger connection or smaller photos.') &&
+          !content.contains('Future.wait(uploadFutures)'),
+      isTrue,
+      reason:
+          'Verification upload should avoid parallel timeout spikes and provide clearer actionable failures.',
+    );
+  });
 }
