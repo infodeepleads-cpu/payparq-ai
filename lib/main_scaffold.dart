@@ -151,7 +151,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Widget _buildMobileScaffold() {
     if (!_initialScreenReady) {
-      return const _BrandLoadingScreen();
+      return const _BrandLoadingScreen(key: ValueKey('mobile-preload'));
     }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
@@ -163,12 +163,22 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     }
     final resolvedProfile = profile ?? _lastResolvedProfile;
     if (resolvedProfile == null) {
-      return const _BrandLoadingScreen();
+      return const _BrandLoadingScreen(key: ValueKey('mobile-profile-loading'));
     }
     final isOfficer = resolvedProfile['role'] == 'officer';
 
-    return _buildScaffoldWithProfile(
-        resolvedProfile, availableLocsAsync, selectedLocId, isOfficer);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: KeyedSubtree(
+        key: ValueKey(
+          'mobile-shell-${resolvedProfile['id'] ?? resolvedProfile['email'] ?? 'user'}-$_selectedIndex',
+        ),
+        child: _buildScaffoldWithProfile(
+            resolvedProfile, availableLocsAsync, selectedLocId, isOfficer),
+      ),
+    );
   }
 
   Widget _buildScaffoldWithProfile(
@@ -488,7 +498,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   // Desktop: Custom Sidebar Navigation
   Widget _buildDesktopScaffold() {
     if (!_initialScreenReady) {
-      return const _BrandLoadingScreen();
+      return const _BrandLoadingScreen(key: ValueKey('desktop-preload'));
     }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
@@ -948,53 +958,126 @@ class _DeferredPageState extends State<_DeferredPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) {
-      return Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SkeletonLoader(height: 40, width: 200),
-            const SizedBox(height: 16),
-            const SkeletonLoader(height: 20, width: double.infinity),
-            const SizedBox(height: 32),
-            Expanded(
-              child: ListView.separated(
-                itemCount: 5,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (_, __) => const SkeletonLoader(height: 80),
-              ),
+    final Widget child = !_loaded
+        ? Padding(
+            key: const ValueKey('deferred-loading'),
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SkeletonLoader(height: 40, width: 200),
+                const SizedBox(height: 16),
+                const SkeletonLoader(height: 20, width: double.infinity),
+                const SizedBox(height: 32),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: 5,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, __) => const SkeletonLoader(height: 80),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
-    return widget.build();
+          )
+        : KeyedSubtree(
+            key: const ValueKey('deferred-loaded'),
+            child: widget.build(),
+          );
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: child,
+    );
   }
 }
 
 class _BrandLoadingScreen extends StatelessWidget {
-  const _BrandLoadingScreen();
+  const _BrandLoadingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: Text(
-          'payparq.ai',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.4,
-            shadows: const [
-              Shadow(
-                color: Color(0x3DFFFFFF),
-                blurRadius: 12,
-                offset: Offset(0, 0),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'payparq.ai',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  shadows: const [
+                    Shadow(
+                      color: Color(0x3DFFFFFF),
+                      blurRadius: 12,
+                      offset: Offset(0, 0),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(height: 18),
+              const _SleekLoadingBar(),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SleekLoadingBar extends StatefulWidget {
+  const _SleekLoadingBar();
+
+  @override
+  State<_SleekLoadingBar> createState() => _SleekLoadingBarState();
+}
+
+class _SleekLoadingBarState extends State<_SleekLoadingBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.55, end: 1).animate(_controller),
+      child: Container(
+        height: 3,
+        width: 160,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: 0.45,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
           ),
         ),
       ),

@@ -288,44 +288,120 @@ class _PayParqAppState extends State<PayParqApp> with TickerProviderStateMixin {
     if (!shouldShowStartupSplash) {
       _startupSplashCompleted = true;
     }
+    final Widget homeScreen = _showResetPasswordScreen
+        ? const UpdatePasswordScreen(key: ValueKey('update-password'))
+        : shouldShowStartupSplash
+            ? const _StartupSplashScreen(key: ValueKey('startup-splash'))
+            : _activeSession != null
+                ? const MasterScaffold(key: ValueKey('master-scaffold'))
+                : const AuthScreen(key: ValueKey('auth-screen'));
     return MaterialApp(
       title: 'payparq.ai',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: _showResetPasswordScreen
-          ? const UpdatePasswordScreen()
-          : shouldShowStartupSplash
-              ? const _StartupSplashScreen()
-              : _activeSession != null
-                  ? const MasterScaffold()
-                  : const AuthScreen(),
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        child: homeScreen,
+      ),
     );
   }
 }
 
 class _StartupSplashScreen extends StatelessWidget {
-  const _StartupSplashScreen();
+  const _StartupSplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
-        child: Text(
-          'payparq.ai',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.4,
-            fontFamily: 'sans-serif',
-            shadows: [
-              Shadow(
-                color: Color(0x3DFFFFFF),
-                blurRadius: 12,
-                offset: Offset(0, 0),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text(
+                'payparq.ai',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  fontFamily: 'sans-serif',
+                  shadows: [
+                    Shadow(
+                      color: Color(0x3DFFFFFF),
+                      blurRadius: 12,
+                      offset: Offset(0, 0),
+                    ),
+                  ],
+                ),
               ),
+              SizedBox(height: 18),
+              _SleekLoadingBar(),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SleekLoadingBar extends StatefulWidget {
+  const _SleekLoadingBar();
+
+  @override
+  State<_SleekLoadingBar> createState() => _SleekLoadingBarState();
+}
+
+class _SleekLoadingBarState extends State<_SleekLoadingBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.55, end: 1).animate(_controller),
+      child: Container(
+        height: 3,
+        width: 160,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            widthFactor: 0.45,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
           ),
         ),
       ),
