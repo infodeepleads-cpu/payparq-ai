@@ -166,12 +166,14 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (profile != null) {
       _lastResolvedProfile = profile;
     }
-    final resolvedProfile =
+    final resolvedProfile = profile ?? _lastResolvedProfile;
+    final effectiveProfile =
         profile ?? _lastResolvedProfile ?? _fallbackProfileFromAuth();
-    final isOfficer = resolvedProfile['role'] == 'officer';
+    final isOfficer =
+        (resolvedProfile ?? effectiveProfile)['role'] == 'officer';
 
     return _buildScaffoldWithProfile(
-        resolvedProfile, availableLocsAsync, selectedLocId, isOfficer);
+        effectiveProfile, availableLocsAsync, selectedLocId, isOfficer);
   }
 
   Widget _buildScaffoldWithProfile(
@@ -436,14 +438,17 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
       children: [
         _DeferredPage(
+          pageKey: 'mobile-admin-dashboard',
           load: () => admin_mod.loadLibrary(),
           build: () => admin_mod.buildAdminDashboard(),
         ),
         _DeferredPage(
+          pageKey: 'mobile-hud',
           load: () => hud_mod.loadLibrary(),
           build: () => hud_mod.buildHudScreen(),
         ),
         _DeferredPage(
+          pageKey: 'mobile-cases',
           load: () => cases_mod.loadLibrary(),
           build: () => cases_mod.buildCasesListView(),
         ),
@@ -502,11 +507,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (profile != null) {
       _lastResolvedProfile = profile;
     }
-    final resolvedProfile =
+    final resolvedProfile = profile ?? _lastResolvedProfile;
+    final effectiveProfile =
         profile ?? _lastResolvedProfile ?? _fallbackProfileFromAuth();
 
-    return _buildScaffoldWithProfileDesktop(
-        resolvedProfile, profileAsync, availableLocsAsync, selectedLocId);
+    return _buildScaffoldWithProfileDesktop(resolvedProfile ?? effectiveProfile,
+        profileAsync, availableLocsAsync, selectedLocId);
   }
 
   Widget _buildScaffoldWithProfileDesktop(
@@ -749,47 +755,58 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           index: _selectedIndex,
                           children: [
                             _DeferredPage(
+                              pageKey: 'desktop-cases',
                               load: () => cases_mod.loadLibrary(),
                               build: () => cases_mod.buildCasesListView(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-upload-case',
                               load: () => upload_case_mod.loadLibrary(),
                               build: () =>
                                   upload_case_mod.buildUploadCaseForm(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-admin-dashboard',
                               load: () => admin_mod.loadLibrary(),
                               build: () => admin_mod.buildAdminDashboard(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-passes',
                               load: () => passes_mod.loadLibrary(),
                               build: () => passes_mod.buildPassesListScreen(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-locations',
                               load: () => locations_mod.loadLibrary(),
                               build: () => locations_mod.buildLocationsScreen(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-staff',
                               load: () => staff_mod.loadLibrary(),
                               build: () => staff_mod.buildAddStaffScreen(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-pricing',
                               load: () => pricing_mod.loadLibrary(),
                               build: () => pricing_mod.buildDynamicPricing(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-analytics',
                               load: () => analytics_mod.loadLibrary(),
                               build: () => analytics_mod.buildAnalytics(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-settings',
                               load: () => settings_mod.loadLibrary(),
                               build: () => settings_mod.buildSettingsScreen(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-finance',
                               load: () => finance_mod.loadLibrary(),
                               build: () => finance_mod.buildFinance(),
                             ),
                             _DeferredPage(
+                              pageKey: 'desktop-verification-inbox',
                               load: () => verification_mod.loadLibrary(),
                               build: () => verification_mod
                                   .buildVerificationInboxScreen(),
@@ -927,24 +944,34 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 }
 
 class _DeferredPage extends StatefulWidget {
+  final String pageKey;
   final Future<void> Function() load;
   final Widget Function() build;
-  const _DeferredPage({required this.load, required this.build});
+  const _DeferredPage({
+    required this.pageKey,
+    required this.load,
+    required this.build,
+  });
   @override
   State<_DeferredPage> createState() => _DeferredPageState();
 }
 
 class _DeferredPageState extends State<_DeferredPage> {
-  bool _loaded = false;
+  static final Set<String> _loadedKeys = <String>{};
+  late bool _loaded = _loadedKeys.contains(widget.pageKey);
   @override
   void initState() {
     super.initState();
+    if (_loaded) {
+      return;
+    }
     widget.load().then((_) {
       if (mounted) {
         setState(() {
           _loaded = true;
         });
       }
+      _loadedKeys.add(widget.pageKey);
     });
   }
 

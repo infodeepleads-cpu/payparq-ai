@@ -20,7 +20,6 @@ final locationsControllerProvider = Provider<LocationsController>((ref) {
 class LocationsController {
   final Ref _ref;
   final LocationsRepository _repo;
-  static const int _maxLocationPhotoBytes = 8 * 1024 * 1024;
 
   LocationsController(this._ref, this._repo);
 
@@ -209,13 +208,6 @@ class LocationsController {
         final image = images[i];
         onProgress?.call(i + 1, total);
         final bytes = await image.readAsBytes();
-        if (bytes.lengthInBytes > _maxLocationPhotoBytes) {
-          final maxMb =
-              (_maxLocationPhotoBytes / (1024 * 1024)).toStringAsFixed(0);
-          throw AppError(
-            'Photo ${i + 1} is too large (${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)}MB). Max allowed is ${maxMb}MB.',
-          );
-        }
         final format = _resolveImageFormat(image, bytes);
         final fileExt = format.ext;
         final mimeType = format.mimeType;

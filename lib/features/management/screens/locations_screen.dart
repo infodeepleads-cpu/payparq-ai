@@ -758,14 +758,23 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 Future<void> pickLocationPhotos(ImageSource source) async {
                   if (!canEdit) return;
                   if (source == ImageSource.gallery) {
-                    final picked = await picker.pickMultiImage();
+                    final picked = await picker.pickMultiImage(
+                      imageQuality: 92,
+                      maxWidth: 2560,
+                      maxHeight: 2560,
+                    );
                     if (picked.isEmpty) return;
                     setState(() {
                       newlySelectedPhotos.addAll(picked);
                     });
                     return;
                   }
-                  final picked = await picker.pickImage(source: source);
+                  final picked = await picker.pickImage(
+                    source: source,
+                    imageQuality: 92,
+                    maxWidth: 2560,
+                    maxHeight: 2560,
+                  );
                   if (picked == null) return;
                   setState(() {
                     newlySelectedPhotos.add(picked);

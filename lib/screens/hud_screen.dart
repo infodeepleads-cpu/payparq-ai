@@ -94,6 +94,15 @@ class _HudScreenState extends ConsumerState<HudScreen>
     return true;
   }
 
+  void _setStatus(String message, Color color) {
+    if (!mounted) return;
+    if (_statusMessage == message && _statusColor == color) return;
+    setState(() {
+      _statusMessage = message;
+      _statusColor = color;
+    });
+  }
+
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
@@ -359,32 +368,32 @@ class _HudScreenState extends ConsumerState<HudScreen>
       if (foundPlate != null) {
         _confirmPlate(foundPlate);
       } else {
-        setState(() {
-          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-              "NO PLATE DETECTED", "NEMA REGISTRACIJE");
-          _statusColor = Colors.orange;
-        });
+        _setStatus(
+          Lang.sel(ref.read(localeIsCroatianProvider), "NO PLATE DETECTED",
+              "NEMA REGISTRACIJE"),
+          Colors.orange,
+        );
         await Future.delayed(const Duration(seconds: 2));
       }
     } catch (e) {
       debugPrint("Manual Validation Error: $e");
-      setState(() {
-        _statusMessage = kIsWeb
+      _setStatus(
+        kIsWeb
             ? Lang.sel(ref.read(localeIsCroatianProvider),
                 "USE MOBILE FOR SCAN", "KORISTITE MOBILNI ZA SKENIRANJE")
             : Lang.sel(ref.read(localeIsCroatianProvider), "SCAN ERROR",
-                "POGREŠKA SKENIRANJA");
-        _statusColor = Colors.redAccent;
-      });
+                "POGREŠKA SKENIRANJA"),
+        Colors.redAccent,
+      );
       await Future.delayed(const Duration(seconds: 2));
     } finally {
       _isBusy = false;
       if (mounted && _isScanning) {
-        setState(() {
-          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-              "SCANNING...", "SKENIRANJE...");
-          _statusColor = Colors.white;
-        });
+        _setStatus(
+          Lang.sel(ref.read(localeIsCroatianProvider), "SCANNING...",
+              "SKENIRANJE..."),
+          Colors.white,
+        );
       }
     }
   }
@@ -446,46 +455,43 @@ class _HudScreenState extends ConsumerState<HudScreen>
       );
 
       if (activeSession.isNotEmpty) {
-        setState(() {
-          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-              "ACTIVE SESSION FOUND", "AKTIVNA SESIJA PRONAĐENA");
-          _statusColor = Colors.greenAccent;
-        });
+        _setStatus(
+          Lang.sel(ref.read(localeIsCroatianProvider), "ACTIVE SESSION FOUND",
+              "AKTIVNA SESIJA PRONAĐENA"),
+          Colors.greenAccent,
+        );
       } else if (activePermit.isNotEmpty) {
-        setState(() {
-          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-              "VALID PERMIT FOUND", "VALJANA DOZVOLA PRONAĐENA");
-          _statusColor = Colors.greenAccent;
-        });
+        _setStatus(
+          Lang.sel(ref.read(localeIsCroatianProvider), "VALID PERMIT FOUND",
+              "VALJANA DOZVOLA PRONAĐENA"),
+          Colors.greenAccent,
+        );
       } else if (anyPermit.isNotEmpty) {
-        setState(() {
-          _statusMessage = Lang.sel(
+        _setStatus(
+          Lang.sel(
               ref.read(localeIsCroatianProvider),
               "PERMIT FOUND, OUTSIDE ACCESS WINDOW",
-              "DOZVOLA POSTOJI, IZVAN VREMENA PRISTUPA");
-          _statusColor = Colors.orangeAccent;
-        });
+              "DOZVOLA POSTOJI, IZVAN VREMENA PRISTUPA"),
+          Colors.orangeAccent,
+        );
       } else if (recentViolation.isNotEmpty) {
-        setState(() {
-          _statusMessage = Lang.sel(
+        _setStatus(
+          Lang.sel(
               ref.read(localeIsCroatianProvider),
               "RECENT VIOLATION: ${recentViolation['violation_type']}",
-              "NEDAVNI PREKRŠAJ: ${recentViolation['violation_type']}");
-          _statusColor = Colors.orangeAccent;
-        });
+              "NEDAVNI PREKRŠAJ: ${recentViolation['violation_type']}"),
+          Colors.orangeAccent,
+        );
       } else {
-        setState(() {
-          _statusMessage = Lang.sel(ref.read(localeIsCroatianProvider),
-              "NO ACTIVE RECORD", "NEMA AKTIVNOG ZAPISA");
-          _statusColor = Colors.redAccent;
-        });
+        _setStatus(
+          Lang.sel(ref.read(localeIsCroatianProvider), "NO ACTIVE RECORD",
+              "NEMA AKTIVNOG ZAPISA"),
+          Colors.redAccent,
+        );
       }
     } catch (e) {
       debugPrint("Dashboard Search Error: $e");
-      setState(() {
-        _statusMessage = "CONFIRMED (LOCAL)";
-        _statusColor = Colors.greenAccent;
-      });
+      _setStatus("CONFIRMED (LOCAL)", Colors.greenAccent);
     } finally {
       dashboardStopwatch.stop();
       PerformanceMonitor.instance.recordMetric(
@@ -1082,8 +1088,6 @@ class _HudScreenState extends ConsumerState<HudScreen>
         });
         return;
       }
-
-      setState(() {});
 
       final plate = confirmedPlate;
       final controller = ref.read(enforcementControllerProvider);

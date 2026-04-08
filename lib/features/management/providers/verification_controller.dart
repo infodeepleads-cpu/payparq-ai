@@ -41,7 +41,6 @@ final verificationControllerProvider = Provider<VerificationController>((ref) {
 
 class VerificationController {
   final VerificationRepository _repo;
-  static const int _maxVerificationPhotoBytes = 8 * 1024 * 1024;
 
   VerificationController(this._repo);
 
@@ -169,13 +168,6 @@ class VerificationController {
       for (var i = 0; i < images.length; i++) {
         final image = images[i];
         final bytes = await image.readAsBytes();
-        if (bytes.lengthInBytes > _maxVerificationPhotoBytes) {
-          final maxMb =
-              (_maxVerificationPhotoBytes / (1024 * 1024)).toStringAsFixed(0);
-          throw AppError(
-            'Photo ${i + 1} is too large (${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)}MB). Max allowed is ${maxMb}MB.',
-          );
-        }
         final format = _resolveImageFormat(image, bytes);
         final fileExt = format.ext;
         final mimeType = format.mimeType;
@@ -190,13 +182,11 @@ class VerificationController {
             .timeout(const Duration(seconds: 90));
         uploadedUrls.add(_repo.getVerificationPublicUrl(fileName));
       }
-      await _repo
-          .updateVerificationStatus(locationId, {
-            'verification_status': 'pending',
-            'verification_photos': uploadedUrls,
-            'verification_submitted_at': DateTime.now().toIso8601String(),
-          })
-          .timeout(const Duration(seconds: 20));
+      await _repo.updateVerificationStatus(locationId, {
+        'verification_status': 'pending',
+        'verification_photos': uploadedUrls,
+        'verification_submitted_at': DateTime.now().toIso8601String(),
+      }).timeout(const Duration(seconds: 20));
     } on TimeoutException {
       throw const AppError(
         'Upload timed out. Please retry with a stronger connection or smaller photos.',

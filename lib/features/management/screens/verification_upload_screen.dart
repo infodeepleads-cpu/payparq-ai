@@ -48,15 +48,11 @@ class _VerificationUploadScreenState
   }
 
   Future<void> _pickImage() async {
-    if (_selectedImages.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 5 photos allowed.')),
-      );
-      return;
-    }
-
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
+      imageQuality: 92,
+      maxWidth: 2560,
+      maxHeight: 2560,
     );
 
     if (image != null) {
@@ -67,18 +63,15 @@ class _VerificationUploadScreenState
   }
 
   Future<void> _pickFromGallery() async {
-    if (_selectedImages.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 5 photos allowed.')),
-      );
-      return;
-    }
-
-    final List<XFile> images = await _picker.pickMultiImage();
+    final List<XFile> images = await _picker.pickMultiImage(
+      imageQuality: 92,
+      maxWidth: 2560,
+      maxHeight: 2560,
+    );
 
     if (images.isNotEmpty) {
       setState(() {
-        _selectedImages.addAll(images.take(5 - _selectedImages.length));
+        _selectedImages.addAll(images);
       });
     }
   }
@@ -409,8 +402,8 @@ class _VerificationUploadScreenState
           const SizedBox(height: 32),
         ],
         Text(
-          Lang.sel(isHr, 'Upload Photos (${_selectedImages.length}/5)',
-              'Prenesite fotografije (${_selectedImages.length}/5)'),
+          Lang.sel(isHr, 'Upload Photos (${_selectedImages.length})',
+              'Prenesite fotografije (${_selectedImages.length})'),
           style: GoogleFonts.inter(
             color: Colors.black,
             fontSize: 18,

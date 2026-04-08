@@ -585,8 +585,7 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('static const int _maxVerificationPhotoBytes') &&
-          content.contains('.uploadVerificationFile(') &&
+      content.contains('.uploadVerificationFile(') &&
           content.contains('.timeout(const Duration(seconds: 90))') &&
           content.contains(
               'Upload timed out. Please retry with a stronger connection or smaller photos.') &&
