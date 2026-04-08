@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 import '../../features/management/repositories/parking_repository.dart';
 import 'auth_providers.dart';
 
@@ -148,6 +149,75 @@ final analyticsProvider =
     if (start != null && now.isBefore(start)) return false;
     if (end != null && now.isAfter(end)) return false;
     return true;
+  }
+
+  DateTime? parseAnyDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw.toUtc();
+    final parsed = DateTime.tryParse(raw.toString());
+    return parsed?.toUtc();
+  }
+
+  Map<String, dynamic> parseStripeMetadata(dynamic raw) {
+    try {
+      if (raw is Map<String, dynamic>) return raw;
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      if (raw is String && raw.trim().startsWith('{')) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  Map<String, DateTime?> resolveSessionWindow(Map<String, dynamic> session) {
+    final stripeMeta = parseStripeMetadata(session['stripe_metadata']);
+    final flow = (stripeMeta['flow'] ?? stripeMeta['flow_type'] ?? '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final entryFromRow = parseAnyDate(session['entry_time']) ??
+        parseAnyDate(session['start_time']) ??
+        parseAnyDate(session['created_at']);
+    final entryFromMeta = parseAnyDate(stripeMeta['check_in']);
+    final prefersMetadataWindow = flow == 'reserve' && entryFromMeta != null;
+    final checkIn =
+        prefersMetadataWindow ? entryFromMeta : (entryFromRow ?? entryFromMeta);
+
+    final exitFromRow =
+        parseAnyDate(session['exit_time']) ?? parseAnyDate(session['end_time']);
+    final exitFromMeta = parseAnyDate(stripeMeta['check_out']);
+    DateTime? checkOut;
+    if (prefersMetadataWindow && exitFromMeta != null) {
+      checkOut = exitFromMeta;
+    } else if (exitFromRow != null) {
+      checkOut = exitFromRow;
+    } else {
+      checkOut = exitFromMeta;
+    }
+    return {'check_in': checkIn, 'check_out': checkOut};
+  }
+
+  bool isSessionActiveNow(Map<String, dynamic> session) {
+    final paymentStatus =
+        (session['payment_status'] ?? '').toString().trim().toLowerCase();
+    final status = (session['status'] ?? '').toString().trim().toLowerCase();
+    if (paymentStatus == 'pending' || paymentStatus == 'unpaid') return false;
+    if (status == 'pending' || status == 'open') return false;
+
+    final nowUtc = DateTime.now().toUtc();
+    final window = resolveSessionWindow(session);
+    final checkIn = window['check_in'];
+    final checkOut = window['check_out'];
+    if (checkIn != null && checkOut != null) {
+      if (nowUtc.isBefore(checkIn)) return false;
+      if (nowUtc.isAtSameMomentAs(checkOut) || nowUtc.isAfter(checkOut)) {
+        return false;
+      }
+      return true;
+    }
+    return status == 'active';
   }
 
   // 1. REVENUE CALCULATIONS
@@ -310,7 +380,7 @@ final analyticsProvider =
   }
 
   int currentActiveSessions =
-      scopedSessions.where((s) => s['status'] == 'active').length;
+      scopedSessions.where((s) => isSessionActiveNow(s)).length;
   int currentActivePermits =
       scopedPermits.where((p) => isPermitActiveNow(p)).length;
   final activeSpotsTaken = currentActiveSessions + currentActivePermits;

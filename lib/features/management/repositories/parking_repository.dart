@@ -49,6 +49,14 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
   });
 }
 
+Stream<List<Map<String, dynamic>>> _cachedOnlyStream(String key) async* {
+  final prefs = await SharedPreferences.getInstance();
+  final cached = prefs.getString(key);
+  if (cached != null) {
+    yield _decodeList(cached);
+  }
+}
+
 String _normalizeRoleValue(String? rawRole) {
   final role = (rawRole ?? '')
       .toString()
@@ -289,7 +297,14 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
       caseSensitive: false);
 
   if (isSuperAdmin) {
-    final effUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final effUuidAsync = ref.watch(selectedEffectiveLocationUuidProvider);
+    final effUuid = effUuidAsync.value;
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    if ((effUuid == null || effUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream('${cacheKey}_super');
+    }
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effUuid)
         : repo.getPermitsStream();
@@ -316,8 +331,14 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   }
 
   if (isAdmin || isManager || isOfficer) {
-    final effectiveUuid =
-        ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final effectiveUuidAsync = ref.watch(selectedEffectiveLocationUuidProvider);
+    final effectiveUuid = effectiveUuidAsync.value;
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    if ((effectiveUuid == null || effectiveUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream(cacheKey);
+    }
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effectiveUuid)
         : repo.getPermitsStream();
@@ -426,7 +447,14 @@ final sessionsStreamProvider =
       caseSensitive: false);
 
   if (isSuperAdmin) {
-    final effUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final effUuidAsync = ref.watch(selectedEffectiveLocationUuidProvider);
+    final effUuid = effUuidAsync.value;
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    if ((effUuid == null || effUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream('${cacheKey}_super');
+    }
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effUuid)
         : repo.getSessionsStream();
@@ -453,8 +481,14 @@ final sessionsStreamProvider =
   }
 
   if (isAdmin || isManager || isOfficer) {
-    final effectiveUuid =
-        ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final effectiveUuidAsync = ref.watch(selectedEffectiveLocationUuidProvider);
+    final effectiveUuid = effectiveUuidAsync.value;
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    if ((effectiveUuid == null || effectiveUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream(cacheKey);
+    }
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effectiveUuid)
         : repo.getSessionsStream();
@@ -821,6 +855,11 @@ final violationsStreamProvider =
     final effUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
     final selectedDisplayId = ref.watch(selectedLocationIdProvider);
     final cacheKey = 'violations_${selectedDisplayId ?? effUuid ?? 'all'}';
+    if ((effUuid == null || effUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream(cacheKey);
+    }
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getViolationsStream(locationId: effUuid)
         : repo.getViolationsStream();
@@ -873,7 +912,15 @@ final violationsStreamProvider =
   if (isOfficer) {
     final cacheKey = 'violations_officer_${user.id}';
     final selectedDisplayId = ref.watch(selectedLocationIdProvider);
-    final baseStream = repo.getViolationsStream();
+    final locationUuid = ref.watch(selectedLocationUuidProvider).value;
+    if ((locationUuid == null || locationUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream(cacheKey);
+    }
+    final baseStream = (locationUuid != null && locationUuid.isNotEmpty)
+        ? repo.getViolationsStream(locationId: locationUuid)
+        : repo.getViolationsStream();
     final locsAsync = ref.watch(availableLocationsProvider);
     final Map<String, String> idToDisplay = {};
     if (locsAsync.hasValue) {
@@ -909,7 +956,17 @@ final violationsStreamProvider =
 
   if (isAdmin || isManager) {
     final cacheKey = 'violations_${role}_${user.id}_all';
-    return _cachedStream(cacheKey, repo.getViolationsStream());
+    final effectiveUuid = ref.watch(selectedEffectiveLocationUuidProvider).value;
+    final selectedDisplayId = ref.watch(selectedLocationIdProvider);
+    if ((effectiveUuid == null || effectiveUuid.isEmpty) &&
+        selectedDisplayId != null &&
+        selectedDisplayId.isNotEmpty) {
+      return _cachedOnlyStream(cacheKey);
+    }
+    final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
+        ? repo.getViolationsStream(locationId: effectiveUuid)
+        : repo.getViolationsStream();
+    return _cachedStream(cacheKey, baseStream);
   }
 
   final locationFilter = locationUuid ?? displayId ?? fallbackLocId;
