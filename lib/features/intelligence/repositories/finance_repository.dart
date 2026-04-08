@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../config/app_config.dart';
 
 class FinanceRepository {
   final SupabaseClient _client;
@@ -21,6 +23,48 @@ class FinanceRepository {
       functionName: 'get-stripe-dashboard-link',
       operationLabel: 'get dashboard link',
     );
+  }
+
+  Future<String> sendManualPayout({
+    required String recipientId,
+    required String role,
+    required int amountCents,
+    String? weekLabel,
+    String? note,
+  }) async {
+    final token = await _resolveValidAccessToken(forceRefresh: false);
+    if (token == null || token.isEmpty) {
+      throw Exception('Sign in again to send payouts.');
+    }
+    final baseUrl = AppConfig.webAppBaseUrl;
+    final uri = Uri.parse('$baseUrl/api/admin/payouts/manual');
+    final body = <String, dynamic>{
+      'recipientId': recipientId,
+      'role': role,
+      'amountCents': amountCents,
+      'weekLabel': (weekLabel ?? '').trim(),
+      'note': (note ?? '').trim(),
+    };
+    final response = await http.post(
+      uri,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+    final payload = _normalizePayload(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = _extractPayloadError(payload) ?? 'Unable to send payout.';
+      throw Exception(error);
+    }
+    final ok = payload['ok'] == true;
+    if (!ok) {
+      final error = _extractPayloadError(payload) ?? 'Unable to send payout.';
+      throw Exception(error);
+    }
+    final transferId = payload['transferId']?.toString().trim() ?? '';
+    return transferId;
   }
 
   Future<String> _invokeStripeUrlFunction({

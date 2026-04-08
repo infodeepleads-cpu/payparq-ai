@@ -21,6 +21,8 @@ class AppConfig {
       String.fromEnvironment('SUPABASE_REDIRECT_URL', defaultValue: '');
   static const _webSignOutStartupFlag =
       String.fromEnvironment('FORCE_WEB_SIGNOUT_ON_STARTUP', defaultValue: '0');
+  static const _rawWebAppBaseUrl =
+      String.fromEnvironment('WEB_APP_BASE_URL', defaultValue: 'https://payparq.com');
   static const _rawApkDownloadUrl = String.fromEnvironment('APK_DOWNLOAD_URL',
       defaultValue:
           'https://github.com/kzamic-prog/payparq.ai/releases/download/apk-latest/app-release.apk');
@@ -73,6 +75,8 @@ class AppConfig {
 
   static bool get forceWebSignOutOnStartup =>
       _webSignOutStartupFlag.trim() != '0';
+  static String get webAppBaseUrl =>
+      _rawWebAppBaseUrl.trim().replaceAll('"', '').replaceAll("'", "");
 
   static const zeroPriceSetupLink =
       String.fromEnvironment('ZERO_PRICE_SETUP_LINK', defaultValue: '');

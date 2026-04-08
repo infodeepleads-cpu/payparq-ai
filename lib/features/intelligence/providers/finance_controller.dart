@@ -32,4 +32,24 @@ class FinanceController {
       throw AppError('Dashboard link failed: $e', cause: e);
     }
   }
+
+  Future<String> sendManualPayout({
+    required String recipientId,
+    required String role,
+    required int amountCents,
+    String? weekLabel,
+    String? note,
+  }) async {
+    try {
+      return await _repo.sendManualPayout(
+        recipientId: recipientId,
+        role: role,
+        amountCents: amountCents,
+        weekLabel: weekLabel,
+        note: note,
+      );
+    } catch (e) {
+      throw AppError('Manual payout failed: $e', cause: e);
+    }
+  }
 }
