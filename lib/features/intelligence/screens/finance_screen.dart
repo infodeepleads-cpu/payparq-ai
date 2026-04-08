@@ -236,6 +236,10 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                         accountId: hasStripeAccount ? accountId : null,
                         profile: resolvedProfile,
                       ),
+                      const SizedBox(height: 20),
+                      _buildSplitPolicyCard(
+                        onboardingComplete: onboardingComplete,
+                      ),
                     ],
                   ),
                 );
@@ -450,5 +454,108 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     );
   }
 
-  // Removed finance metric cards per instruction
+  Widget _buildSplitPolicyCard({
+    required bool onboardingComplete,
+  }) {
+    final isHr = ref.watch(localeIsCroatianProvider);
+    final rows = <MapEntry<String, String>>[
+      MapEntry(
+        Lang.sel(isHr, 'Hourly / Daily / Reservation', 'Satno / Dnevno / Rezervacija'),
+        Lang.sel(isHr, '50% owner · 50% platform', '50% vlasnik · 50% platforma'),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Monthly', 'Mjesečno'),
+        Lang.sel(isHr, '90% owner · 10% platform', '90% vlasnik · 10% platforma'),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Park & Taxi', 'Park & Taxi'),
+        Lang.sel(
+          isHr,
+          'Split base is 50% of daily ticket value; rides are excluded from split.',
+          'Baza za podjelu je 50% vrijednosti dnevne karte; vožnje su isključene iz podjele.',
+        ),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Calculation order', 'Redoslijed izračuna'),
+        Lang.sel(
+          isHr,
+          'Expenses + tax are deducted first, then the split is applied.',
+          'Prvo se oduzimaju troškovi i porez, zatim se primjenjuje podjela.',
+        ),
+      ),
+    ];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            Lang.sel(isHr, 'Split Payout Policy', 'Pravila podjele isplate'),
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            onboardingComplete
+                ? Lang.sel(
+                    isHr,
+                    'Active for Stripe-connected lots. Non-onboarded lots fall back to platform-only collection.',
+                    'Aktivno za lotove povezane na Stripe. Lotovi bez dovršenog uključivanja koriste naplatu samo na platformu.',
+                  )
+                : Lang.sel(
+                    isHr,
+                    'Connect Stripe to activate automated owner/platform split payouts.',
+                    'Povežite Stripe za aktivaciju automatske podjele isplata između vlasnika i platforme.',
+                  ),
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...rows.map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Text(
+                      row.key,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 6,
+                    child: Text(
+                      row.value,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.black.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
