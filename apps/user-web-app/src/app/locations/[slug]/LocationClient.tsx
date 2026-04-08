@@ -167,7 +167,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     locationKey.includes("punta rata") ||
     locationKey.includes("punta-rata");
   const isInsigniaLocation = locationKey.includes("insignia");
-  const compactTravelTime = travelTime.replace("minutes", "min").replace("minute", "min");
+  const walkingDistanceLabel = isBaskaVodaPuntaRataLocation
+    ? "6-13 min Baška Voda"
+    : "7-12 min Trogir";
   const extrasLabel = "Extras available";
 
   useEffect(() => {
@@ -435,7 +437,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews
     : 0;
   const averageRating = totalReviews > 0 ? averageRatingNumeric.toFixed(1) : "—";
-  const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "No reviews yet";
+  const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "New Object";
   const reviewItems = allReviewItems.slice(0, 3);
 
   const handlePrevPhoto = () => {
@@ -969,7 +971,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <circle cx="10.5" cy="4.8" r="1.8" />
                     <path d="M9.5 7.2h2.3l1.4 3 2.4 1.2-.9 1.6-2.7-1.4-.8-1.6-.8 3 1.9 2 1.3 4.9h-2l-1.1-4.1-1.8-1.9-.7 3.3-2.2 2.3-1.2-1.1 1.8-2 1.5-6.9z" />
                   </svg>
-                  {compactTravelTime}
+                  {walkingDistanceLabel}
                 </span>
                 <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                   <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#5F3DFC]" fill="currentColor" aria-hidden="true">
