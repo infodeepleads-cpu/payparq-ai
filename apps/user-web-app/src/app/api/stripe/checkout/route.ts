@@ -197,6 +197,122 @@ function resolveCommissionRateFromMetadata(metadata: unknown): number {
   return 0.15;
 }
 
+function resolveRateValue(raw: unknown, fallback: number): number {
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric)) return fallback;
+  if (numeric <= 0) return 0;
+  if (numeric > 1) return Math.min(1, numeric / 100);
+  return Math.min(1, numeric);
+}
+
+function asMetadataRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function resolveSplitExpenseRate(metadata: Record<string, unknown>): number {
+  const metadataRate =
+    metadata.split_expense_rate ??
+    metadata.expense_rate ??
+    metadata.shared_expense_rate ??
+    metadata.processing_expense_rate;
+  const envRate =
+    process.env.PAYPARQ_SPLIT_EXPENSE_RATE ??
+    process.env.NEXT_PUBLIC_PAYPARQ_SPLIT_EXPENSE_RATE ??
+    null;
+  return resolveRateValue(metadataRate ?? envRate, 0.079);
+}
+
+function resolveSplitTaxRate(metadata: Record<string, unknown>): number {
+  const metadataRate =
+    metadata.split_tax_rate ??
+    metadata.tax_rate ??
+    metadata.vat_rate ??
+    metadata.pdv_rate;
+  const envRate =
+    process.env.PAYPARQ_SPLIT_TAX_RATE ??
+    process.env.NEXT_PUBLIC_PAYPARQ_SPLIT_TAX_RATE ??
+    null;
+  return resolveRateValue(metadataRate ?? envRate, 0);
+}
+
+function resolveSplitFixedExpenseCents(metadata: Record<string, unknown>): number {
+  const metadataValue =
+    metadata.split_fixed_expense_cents ??
+    metadata.fixed_expense_cents ??
+    metadata.processing_fixed_fee_cents;
+  const envValue =
+    process.env.PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS ??
+    process.env.NEXT_PUBLIC_PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS ??
+    null;
+  const numeric = Number(metadataValue ?? envValue);
+  if (!Number.isFinite(numeric) || numeric < 0) return 30;
+  return Math.max(0, Math.round(numeric));
+}
+
+type StripeSplitPlan = {
+  destinationAccountId: string;
+  applicationFeeAmount: number;
+  ownerPayoutCents: number;
+  splitBaseCents: number;
+  expenseCents: number;
+  taxCents: number;
+  distributableCents: number;
+  ownerShareRate: number;
+  platformShareRate: number;
+  splitRule: 'monthly_90_10' | 'standard_50_50' | 'park_taxi_50pct_base';
+};
+
+function buildStripeSplitPlan(params: {
+  chargedAmountCents: number;
+  sessionAmountCents: number;
+  parkTaxiDailyTicketTotalCents: number;
+  pricingType: PricingType;
+  flowType: string;
+  destinationAccountId: string;
+  expenseRate: number;
+  taxRate: number;
+  fixedExpenseCents: number;
+}): StripeSplitPlan {
+  const charged = toCents(params.chargedAmountCents);
+  const sessionAmount = toCents(params.sessionAmountCents);
+  const parkTaxiDailyTicketTotalCents = toCents(params.parkTaxiDailyTicketTotalCents);
+  const isParkTaxi = params.flowType === 'park_now';
+  const ownerShareRate = isParkTaxi ? 1 : params.pricingType === 'monthly' ? 0.9 : 0.5;
+  const platformShareRate = 1 - ownerShareRate;
+  const baseFromPolicy = isParkTaxi ? Math.round(parkTaxiDailyTicketTotalCents * 0.5) : sessionAmount;
+  const splitBaseCents = Math.max(0, Math.min(charged, baseFromPolicy));
+  const expenseByRate = Math.round(splitBaseCents * Math.max(0, params.expenseRate));
+  const expenseCents = Math.max(0, Math.min(splitBaseCents, expenseByRate + Math.max(0, params.fixedExpenseCents)));
+  const taxableBase = Math.max(0, splitBaseCents - expenseCents);
+  const taxCents = Math.max(0, Math.min(taxableBase, Math.round(taxableBase * Math.max(0, params.taxRate))));
+  const distributableCents = Math.max(0, splitBaseCents - expenseCents - taxCents);
+  const ownerPayoutCents = Math.max(
+    0,
+    Math.min(charged, isParkTaxi ? distributableCents : Math.round(distributableCents * ownerShareRate))
+  );
+  const applicationFeeAmount = Math.max(0, Math.min(charged, charged - ownerPayoutCents));
+  const splitRule: StripeSplitPlan['splitRule'] = isParkTaxi
+    ? 'park_taxi_50pct_base'
+    : params.pricingType === 'monthly'
+      ? 'monthly_90_10'
+      : 'standard_50_50';
+  return {
+    destinationAccountId: params.destinationAccountId,
+    applicationFeeAmount,
+    ownerPayoutCents,
+    splitBaseCents,
+    expenseCents,
+    taxCents,
+    distributableCents,
+    ownerShareRate,
+    platformShareRate,
+    splitRule,
+  };
+}
+
 async function resolvePlannedWalletDebitCents(email: string | null, sessionAmountCents: number): Promise<number> {
   const normalizedEmail = (email ?? '').trim().toLowerCase();
   const safeSessionAmount = toCents(sessionAmountCents);
@@ -691,10 +807,16 @@ function buildSubmitMessage(params: {
 
 type LocationPricingResolution = {
   unitAmountCents: number;
+  dailyTicketUnitAmountCents: number;
   resolvedLocationId: string;
   resolvedDisplayId: string;
   resolvedLocationName: string;
   lotCommissionRate: number;
+  ownerStripeAccountId: string | null;
+  ownerStripeReady: boolean;
+  splitExpenseRate: number;
+  splitTaxRate: number;
+  splitFixedExpenseCents: number;
 };
 
 async function resolveLocationPricing(
@@ -708,7 +830,7 @@ async function resolveLocationPricing(
   }
 
   const selectedColumns =
-    'id,display_id,name,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling';
+    'id,display_id,name,owner_id,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling';
 
   const fallbackDisplayId = displayId || locationId;
   let data: Record<string, unknown> | null = null;
@@ -742,19 +864,50 @@ async function resolveLocationPricing(
 
   const isParkTaxiFlow = flowType === 'park_now';
   const parkTaxiEuro = isParkTaxiFlow ? resolveParkTaxiPriceEuro(data) : 0;
+  const dailyTicketEuro = resolveScannerTruthPriceEuro(data, 'daily');
   const resolvedEuro = parkTaxiEuro > 0 ? parkTaxiEuro : resolveScannerTruthPriceEuro(data, pricingType);
+  const dailyTicketCents = Math.round(dailyTicketEuro * 100);
   const resolvedCents = Math.round(resolvedEuro * 100);
-  if (!Number.isFinite(resolvedCents) || resolvedCents < 0) {
+  if (!Number.isFinite(resolvedCents) || resolvedCents < 0 || !Number.isFinite(dailyTicketCents) || dailyTicketCents < 0) {
     throw { status: 500, message: 'invalid_resolved_amount' };
+  }
+  const verificationMetadata = asMetadataRecord(
+    (data as { verification_metadata?: Record<string, unknown> | null }).verification_metadata ?? null
+  );
+  const ownerId = String((data as { owner_id?: string | null }).owner_id ?? '').trim();
+  let ownerStripeAccountId: string | null = null;
+  let ownerStripeReady = false;
+  if (ownerId) {
+    const client = supabaseAdmin ?? supabase;
+    if (client) {
+      const { data: ownerProfile } = await client
+        .from('profiles')
+        .select('stripe_account_id,stripe_onboarding_complete')
+        .eq('id', ownerId)
+        .maybeSingle();
+      const accountId = String(
+        (ownerProfile as { stripe_account_id?: string | null } | null)?.stripe_account_id ?? ''
+      ).trim();
+      const onboardingComplete =
+        (ownerProfile as { stripe_onboarding_complete?: boolean | null } | null)?.stripe_onboarding_complete === true;
+      if (accountId && onboardingComplete) {
+        ownerStripeAccountId = accountId;
+        ownerStripeReady = true;
+      }
+    }
   }
   return {
     unitAmountCents: resolvedCents,
+    dailyTicketUnitAmountCents: dailyTicketCents,
     resolvedLocationId: String(data.id ?? locationId),
     resolvedDisplayId: String(data.display_id ?? displayId ?? ''),
     resolvedLocationName: String(data.name ?? '').trim(),
-    lotCommissionRate: resolveCommissionRateFromMetadata(
-      (data as { verification_metadata?: Record<string, unknown> | null }).verification_metadata ?? null
-    ),
+    lotCommissionRate: resolveCommissionRateFromMetadata(verificationMetadata),
+    ownerStripeAccountId,
+    ownerStripeReady,
+    splitExpenseRate: resolveSplitExpenseRate(verificationMetadata),
+    splitTaxRate: resolveSplitTaxRate(verificationMetadata),
+    splitFixedExpenseCents: resolveSplitFixedExpenseCents(verificationMetadata),
   };
 }
 
@@ -984,17 +1137,29 @@ export async function POST(req: NextRequest) {
   }
 
   let unitAmount = 0;
+  let dailyTicketUnitAmountCents = 0;
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
   let resolvedLocationName = '';
   let lotCommissionRate = 0.15;
+  let ownerStripeAccountId: string | null = null;
+  let ownerStripeReady = false;
+  let splitExpenseRate = 0.079;
+  let splitTaxRate = 0;
+  let splitFixedExpenseCents = 30;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
+    dailyTicketUnitAmountCents = pricingResolution.dailyTicketUnitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
     resolvedLocationName = pricingResolution.resolvedLocationName;
     lotCommissionRate = pricingResolution.lotCommissionRate;
+    ownerStripeAccountId = pricingResolution.ownerStripeAccountId;
+    ownerStripeReady = pricingResolution.ownerStripeReady;
+    splitExpenseRate = pricingResolution.splitExpenseRate;
+    splitTaxRate = pricingResolution.splitTaxRate;
+    splitFixedExpenseCents = pricingResolution.splitFixedExpenseCents;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
@@ -1106,6 +1271,20 @@ export async function POST(req: NextRequest) {
     paymentMethodTypes?: Stripe.Checkout.SessionCreateParams.PaymentMethodType[];
   }) {
     const payment_method_types = params.paymentMethodTypes ?? ['card', 'sepa_debit'];
+    const splitPlan =
+      ownerStripeReady && ownerStripeAccountId
+        ? buildStripeSplitPlan({
+            chargedAmountCents: params.chargedAmountCents,
+            sessionAmountCents: params.sessionAmountCents,
+            parkTaxiDailyTicketTotalCents: toCents(dailyTicketUnitAmountCents * params.sessionQuantity),
+            pricingType: pricing_type,
+            flowType: flow_type,
+            destinationAccountId: ownerStripeAccountId,
+            expenseRate: splitExpenseRate,
+            taxRate: splitTaxRate,
+            fixedExpenseCents: splitFixedExpenseCents,
+          })
+        : null;
     return await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: params.checkoutSuccessUrl,
@@ -1170,9 +1349,28 @@ export async function POST(req: NextRequest) {
         session_quantity: String(params.sessionQuantity),
         session_unit_amount_cents: String(unitAmount),
         minimum_charge_topup_cents: String(Math.max(0, params.chargedAmountCents - stripeShortfallCents)),
+        split_enabled: splitPlan ? '1' : '0',
+        split_destination_account_id: splitPlan?.destinationAccountId ?? '',
+        split_application_fee_cents: String(splitPlan?.applicationFeeAmount ?? 0),
+        split_owner_payout_cents: String(splitPlan?.ownerPayoutCents ?? 0),
+        split_base_cents: String(splitPlan?.splitBaseCents ?? 0),
+        split_expense_cents: String(splitPlan?.expenseCents ?? 0),
+        split_tax_cents: String(splitPlan?.taxCents ?? 0),
+        split_distributable_cents: String(splitPlan?.distributableCents ?? 0),
+        split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
+        split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
+        split_rule: splitPlan?.splitRule ?? '',
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
+        ...(splitPlan
+          ? {
+              transfer_data: {
+                destination: splitPlan.destinationAccountId,
+              },
+              application_fee_amount: splitPlan.applicationFeeAmount,
+            }
+          : {}),
         metadata: {
           location_id: resolvedLocationId,
           display_id: resolvedDisplayId,
@@ -1192,6 +1390,17 @@ export async function POST(req: NextRequest) {
           session_quantity: String(params.sessionQuantity),
           session_unit_amount_cents: String(unitAmount),
           minimum_charge_topup_cents: String(Math.max(0, params.chargedAmountCents - stripeShortfallCents)),
+          split_enabled: splitPlan ? '1' : '0',
+          split_destination_account_id: splitPlan?.destinationAccountId ?? '',
+          split_application_fee_cents: String(splitPlan?.applicationFeeAmount ?? 0),
+          split_owner_payout_cents: String(splitPlan?.ownerPayoutCents ?? 0),
+          split_base_cents: String(splitPlan?.splitBaseCents ?? 0),
+          split_expense_cents: String(splitPlan?.expenseCents ?? 0),
+          split_tax_cents: String(splitPlan?.taxCents ?? 0),
+          split_distributable_cents: String(splitPlan?.distributableCents ?? 0),
+          split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
+          split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
+          split_rule: splitPlan?.splitRule ?? '',
         },
       },
     });
@@ -1406,17 +1615,29 @@ export async function GET(req: NextRequest) {
     reservationDescription += `\n(End time depends on selected days)`;
   }
   let unitAmount = 0;
+  let dailyTicketUnitAmountCents = 0;
   let resolvedLocationId = location_id;
   let resolvedDisplayId = display_id;
   let resolvedLocationName = '';
   let lotCommissionRate = 0.15;
+  let ownerStripeAccountId: string | null = null;
+  let ownerStripeReady = false;
+  let splitExpenseRate = 0.079;
+  let splitTaxRate = 0;
+  let splitFixedExpenseCents = 30;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
+    dailyTicketUnitAmountCents = pricingResolution.dailyTicketUnitAmountCents;
     resolvedLocationId = pricingResolution.resolvedLocationId;
     resolvedDisplayId = pricingResolution.resolvedDisplayId;
     resolvedLocationName = pricingResolution.resolvedLocationName;
     lotCommissionRate = pricingResolution.lotCommissionRate;
+    ownerStripeAccountId = pricingResolution.ownerStripeAccountId;
+    ownerStripeReady = pricingResolution.ownerStripeReady;
+    splitExpenseRate = pricingResolution.splitExpenseRate;
+    splitTaxRate = pricingResolution.splitTaxRate;
+    splitFixedExpenseCents = pricingResolution.splitFixedExpenseCents;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
@@ -1471,6 +1692,20 @@ export async function GET(req: NextRequest) {
   }));
   const submitMessage = submitMessageBase;
   try {
+    const splitPlan =
+      ownerStripeReady && ownerStripeAccountId
+        ? buildStripeSplitPlan({
+            chargedAmountCents,
+            sessionAmountCents,
+            parkTaxiDailyTicketTotalCents: toCents(dailyTicketUnitAmountCents * quantity),
+            pricingType: pricing_type,
+            flowType: flow_type,
+            destinationAccountId: ownerStripeAccountId,
+            expenseRate: splitExpenseRate,
+            taxRate: splitTaxRate,
+            fixedExpenseCents: splitFixedExpenseCents,
+          })
+        : null;
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: checkoutSuccessUrl,
@@ -1535,9 +1770,28 @@ export async function GET(req: NextRequest) {
         session_quantity: String(quantity),
         session_unit_amount_cents: String(unitAmount),
         minimum_charge_topup_cents: String(Math.max(0, chargedAmountCents - stripeShortfallCents)),
+        split_enabled: splitPlan ? '1' : '0',
+        split_destination_account_id: splitPlan?.destinationAccountId ?? '',
+        split_application_fee_cents: String(splitPlan?.applicationFeeAmount ?? 0),
+        split_owner_payout_cents: String(splitPlan?.ownerPayoutCents ?? 0),
+        split_base_cents: String(splitPlan?.splitBaseCents ?? 0),
+        split_expense_cents: String(splitPlan?.expenseCents ?? 0),
+        split_tax_cents: String(splitPlan?.taxCents ?? 0),
+        split_distributable_cents: String(splitPlan?.distributableCents ?? 0),
+        split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
+        split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
+        split_rule: splitPlan?.splitRule ?? '',
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
+        ...(splitPlan
+          ? {
+              transfer_data: {
+                destination: splitPlan.destinationAccountId,
+              },
+              application_fee_amount: splitPlan.applicationFeeAmount,
+            }
+          : {}),
         metadata: {
           location_id: resolvedLocationId,
           display_id: resolvedDisplayId,
@@ -1557,6 +1811,17 @@ export async function GET(req: NextRequest) {
           session_quantity: String(quantity),
           session_unit_amount_cents: String(unitAmount),
           minimum_charge_topup_cents: String(Math.max(0, chargedAmountCents - stripeShortfallCents)),
+          split_enabled: splitPlan ? '1' : '0',
+          split_destination_account_id: splitPlan?.destinationAccountId ?? '',
+          split_application_fee_cents: String(splitPlan?.applicationFeeAmount ?? 0),
+          split_owner_payout_cents: String(splitPlan?.ownerPayoutCents ?? 0),
+          split_base_cents: String(splitPlan?.splitBaseCents ?? 0),
+          split_expense_cents: String(splitPlan?.expenseCents ?? 0),
+          split_tax_cents: String(splitPlan?.taxCents ?? 0),
+          split_distributable_cents: String(splitPlan?.distributableCents ?? 0),
+          split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
+          split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
+          split_rule: splitPlan?.splitRule ?? '',
         },
       },
     });
