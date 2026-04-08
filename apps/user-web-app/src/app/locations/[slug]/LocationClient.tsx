@@ -169,7 +169,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const isInsigniaLocation = locationKey.includes("insignia");
   const walkingDistanceLabel = isBaskaVodaPuntaRataLocation
     ? "6-13 min Baška Voda"
-    : "7-12 min Trogir";
+    : "7-12 min";
   const extrasLabel = "Extras available";
 
   useEffect(() => {
@@ -223,8 +223,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const showMinChargeWalletExplainer = activeFlowAmountCents > 0 && activeFlowAmountCents < 50;
   const minChargeWalletExplainerText = "Card min €0.50. Extra is added to wallet.";
   const monthlyPrice = resolveScannerTruthPriceEuro(hub, "monthly");
-  const parqOneWayRidePrice = 4.5;
-  const parqTwoWayRidePrice = 9;
   const uberOneWayRidePrice = 5;
   const uberTwoWayRidePrice = 10;
   const competitorHourly = 1.5;
@@ -1053,36 +1051,34 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 </div>
               </div>
 
-              <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
-                    <div className="mt-2 space-y-1.5 text-xs text-black/85">
-                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Dnevni parking i 2 vožnje do 5km) Trogir/Airport</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(parqOneWayRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Parq Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(parqTwoWayRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Kamperi</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
-                      <div className="flex items-center justify-between"><span>Autobusi</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
+              <div className="md:hidden w-full rounded-2xl border border-black/10 bg-white p-2.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[#5F3DFC]/20">
+                      <Image
+                        src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
+                        alt="Domaćin Ivo"
+                        fill
+                        sizes="40px"
+                        quality={100}
+                        unoptimized={currentPhotoIsSupabase}
+                        className="object-cover"
+                      />
+                      <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5F3DFC] px-1 text-[8px] font-semibold text-white">★</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-semibold text-black">Domaćin je Ivo</p>
+                      <p className="truncate text-[10px] text-black/60">Fleeting opportunity! Lock your price now.</p>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
-                    <div className="mt-2 space-y-1.5 text-xs text-black/80">
-                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
-                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(uberOneWayRidePrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(uberTwoWayRidePrice)}</span></div>
-                    </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">Superhost</span>
+                    <span className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">24/7 Support</span>
                   </div>
                 </div>
-                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 min prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
               </div>
-              
-              <div className="md:hidden bg-white rounded-3xl p-4 shadow-sm border border-gray-100 w-full -mt-2">
-                <h2 className="text-base font-bold mb-3">Check price & availability</h2>
+
+              <div className="md:hidden bg-white rounded-3xl p-3 shadow-sm border border-gray-100 w-full">
                 <button
                   type="button"
                   onClick={handleBook}
@@ -1195,6 +1191,59 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 {checkoutError ? <p className="mt-2 text-[11px] text-red-600">{checkoutError}</p> : null}
               </div>
 
+              <div className="hidden md:block w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+                <div className="mt-2.5 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-10 w-10 rounded-full overflow-hidden border border-[#5F3DFC]/20">
+                      <Image
+                        src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
+                        alt="Domaćin Ivo"
+                        fill
+                        sizes="40px"
+                        quality={100}
+                        unoptimized={currentPhotoIsSupabase}
+                        className="object-cover"
+                      />
+                      <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5F3DFC] px-1 text-[8px] font-semibold text-white">★</span>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-black">Domaćin je Ivo</p>
+                      <p className="text-[10px] text-black/60">Fleeting opportunity! Lock your price now.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">Superhost</span>
+                    <span className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">24/7 Support</span>
+                  </div>
+                </div>
+              </div>
+
+              <div data-no-translate="true" className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
+                    <div className="mt-2 space-y-1.5 text-xs text-black/85">
+                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Dnevni parking i 2 vožnje do 5km)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Kamperi</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Autobusi</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
+                    <div className="mt-2 space-y-1.5 text-xs text-black/80">
+                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
+                      <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(uberOneWayRidePrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(uberTwoWayRidePrice)}</span></div>
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] md:text-xs text-black/65">Napomena: početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 min prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
+              </div>
+              
               <div className="w-full rounded-2xl border border-black/10 bg-white p-3 md:p-4">
                 <div className="flex items-center gap-2">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 text-[#5F3DFC]" aria-hidden="true">
