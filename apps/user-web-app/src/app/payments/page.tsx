@@ -51,7 +51,7 @@ export default function PaymentsPage() {
     {
       q: "What happens if I don’t pay my notice?",
       a:
-        "Failure to pay in a timely manner may result in PayParq or its operating partners taking additional action, including referral to collections or other legal processes. Please resolve your notice today.",
+        "Failure to pay in a timely manner may result in additional action, including referral to collections or other legal processes. Please resolve your notice today.",
     },
     {
       q: "How do I pay or dispute a parking notice?",
@@ -100,7 +100,7 @@ export default function PaymentsPage() {
   }
 
   const amountDue = typeof result?.case?.amount_due === "number" ? result.case.amount_due : null;
-  const amountNow = amountDue !== null ? Number((amountDue * 0.5).toFixed(2)) : null;
+  const amountNow = amountDue !== null ? Number(amountDue.toFixed(2)) : null;
   const hubReference = result?.case?.case_number || result?.case?.notice_number || caseNumber || "000000000";
   const hub3aText = [
     "HUB3A",
@@ -244,7 +244,7 @@ export default function PaymentsPage() {
                       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                         <h3 className="font-semibold text-base mb-2">Croatia Invoice HUB3A</h3>
                         <p className="text-sm text-gray-600 mb-4">
-                          Pay 50% of the fine now using the invoice details or euro QR code.
+                          Pay the full notice amount to the platform using the invoice details or euro QR code.
                         </p>
                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs space-y-2">
                           <div className="flex justify-between gap-3"><span className="text-gray-500">Primatelj</span><span className="font-medium text-right">{payeeName}</span></div>

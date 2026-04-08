@@ -51,3 +51,4 @@ app.*.map.json
 CANONICAL_BACKUP_20260130/
 apps/
 apps 2/
+.env*.local

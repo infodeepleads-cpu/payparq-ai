@@ -13,6 +13,13 @@ function toPublicEvidenceUrl(client: NonNullable<typeof supabaseAdmin> | NonNull
   return data.publicUrl;
 }
 
+function resolveOwnerCaseProcessFeeCents() {
+  const raw = process.env.CASE_OWNER_PROCESS_FEE_CENTS ?? process.env.NEXT_PUBLIC_CASE_OWNER_PROCESS_FEE_CENTS ?? "0";
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.round(value);
+}
+
  export async function GET(req: NextRequest) {
    const client = supabaseAdmin ?? supabase;
    const url = new URL(req.url);
@@ -119,6 +126,7 @@ function toPublicEvidenceUrl(client: NonNullable<typeof supabaseAdmin> | NonNull
       ? locationData.verification_photos[0]
       : null;
   const evidencePhotos = [primaryPhotoUrl, secondaryPhotoUrl || locationPhoto].filter((value): value is string => Boolean(value));
+  const ownerCaseProcessFeeCents = resolveOwnerCaseProcessFeeCents();
 
   return NextResponse.json({
     found: true,
@@ -150,6 +158,10 @@ function toPublicEvidenceUrl(client: NonNullable<typeof supabaseAdmin> | NonNull
       photos: (locationData?.verification_photos as string[] | null | undefined) ?? null,
       latitude: (locationData?.latitude as number | null | undefined) ?? null,
       longitude: (locationData?.longitude as number | null | undefined) ?? null,
+    },
+    finance: {
+      model: "platform_case_fixed_owner_fee",
+      owner_case_process_fee_cents: ownerCaseProcessFeeCents,
     },
     supportEmail: "payparq@outlook.com",
   });

@@ -252,6 +252,20 @@ function resolveSplitFixedExpenseCents(metadata: Record<string, unknown>): numbe
   return Math.max(0, Math.round(numeric));
 }
 
+function resolveCaseOwnerFixedPayoutCents(metadata: Record<string, unknown>): number {
+  const metadataValue =
+    metadata.owner_case_process_fee_cents ??
+    metadata.case_owner_process_fee_cents ??
+    metadata.case_owner_fixed_payout_cents;
+  const envValue =
+    process.env.CASE_OWNER_PROCESS_FEE_CENTS ??
+    process.env.NEXT_PUBLIC_CASE_OWNER_PROCESS_FEE_CENTS ??
+    null;
+  const numeric = Number(metadataValue ?? envValue);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+  return Math.max(0, Math.round(numeric));
+}
+
 type StripeSplitPlan = {
   destinationAccountId: string;
   applicationFeeAmount: number;
@@ -262,7 +276,7 @@ type StripeSplitPlan = {
   distributableCents: number;
   ownerShareRate: number;
   platformShareRate: number;
-  splitRule: 'monthly_90_10' | 'standard_50_50' | 'park_taxi_50pct_base';
+  splitRule: 'monthly_90_10' | 'standard_50_50' | 'park_taxi_50pct_base' | 'case_fixed_owner_fee';
 };
 
 function buildStripeSplitPlan(params: {
@@ -275,11 +289,31 @@ function buildStripeSplitPlan(params: {
   expenseRate: number;
   taxRate: number;
   fixedExpenseCents: number;
+  caseOwnerFixedPayoutCents: number;
 }): StripeSplitPlan {
   const charged = toCents(params.chargedAmountCents);
   const sessionAmount = toCents(params.sessionAmountCents);
   const parkTaxiDailyTicketTotalCents = toCents(params.parkTaxiDailyTicketTotalCents);
   const isParkTaxi = params.flowType === 'park_now';
+  const isCaseFlow = params.flowType === 'cases' || params.flowType === 'case_payment';
+  if (isCaseFlow) {
+    const ownerPayoutCents = Math.max(0, Math.min(charged, toCents(params.caseOwnerFixedPayoutCents)));
+    const applicationFeeAmount = Math.max(0, Math.min(charged, charged - ownerPayoutCents));
+    const ownerShareRate = charged > 0 ? ownerPayoutCents / charged : 0;
+    const platformShareRate = 1 - ownerShareRate;
+    return {
+      destinationAccountId: params.destinationAccountId,
+      applicationFeeAmount,
+      ownerPayoutCents,
+      splitBaseCents: charged,
+      expenseCents: 0,
+      taxCents: 0,
+      distributableCents: charged,
+      ownerShareRate,
+      platformShareRate,
+      splitRule: 'case_fixed_owner_fee',
+    };
+  }
   const ownerShareRate = isParkTaxi ? 1 : params.pricingType === 'monthly' ? 0.9 : 0.5;
   const platformShareRate = 1 - ownerShareRate;
   const baseFromPolicy = isParkTaxi ? Math.round(parkTaxiDailyTicketTotalCents * 0.5) : sessionAmount;
@@ -817,6 +851,7 @@ type LocationPricingResolution = {
   splitExpenseRate: number;
   splitTaxRate: number;
   splitFixedExpenseCents: number;
+  caseOwnerFixedPayoutCents: number;
 };
 
 async function resolveLocationPricing(
@@ -908,6 +943,7 @@ async function resolveLocationPricing(
     splitExpenseRate: resolveSplitExpenseRate(verificationMetadata),
     splitTaxRate: resolveSplitTaxRate(verificationMetadata),
     splitFixedExpenseCents: resolveSplitFixedExpenseCents(verificationMetadata),
+    caseOwnerFixedPayoutCents: resolveCaseOwnerFixedPayoutCents(verificationMetadata),
   };
 }
 
@@ -1147,6 +1183,7 @@ export async function POST(req: NextRequest) {
   let splitExpenseRate = 0.079;
   let splitTaxRate = 0;
   let splitFixedExpenseCents = 30;
+  let caseOwnerFixedPayoutCents = 0;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
@@ -1160,6 +1197,7 @@ export async function POST(req: NextRequest) {
     splitExpenseRate = pricingResolution.splitExpenseRate;
     splitTaxRate = pricingResolution.splitTaxRate;
     splitFixedExpenseCents = pricingResolution.splitFixedExpenseCents;
+    caseOwnerFixedPayoutCents = pricingResolution.caseOwnerFixedPayoutCents;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
@@ -1283,6 +1321,7 @@ export async function POST(req: NextRequest) {
             expenseRate: splitExpenseRate,
             taxRate: splitTaxRate,
             fixedExpenseCents: splitFixedExpenseCents,
+            caseOwnerFixedPayoutCents,
           })
         : null;
     return await stripe.checkout.sessions.create({
@@ -1360,6 +1399,7 @@ export async function POST(req: NextRequest) {
         split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
         split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
         split_rule: splitPlan?.splitRule ?? '',
+        split_case_owner_fixed_payout_cents: String(caseOwnerFixedPayoutCents),
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -1401,6 +1441,7 @@ export async function POST(req: NextRequest) {
           split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
           split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
           split_rule: splitPlan?.splitRule ?? '',
+          split_case_owner_fixed_payout_cents: String(caseOwnerFixedPayoutCents),
         },
       },
     });
@@ -1625,6 +1666,7 @@ export async function GET(req: NextRequest) {
   let splitExpenseRate = 0.079;
   let splitTaxRate = 0;
   let splitFixedExpenseCents = 30;
+  let caseOwnerFixedPayoutCents = 0;
   try {
     const pricingResolution = await resolveLocationPricing(location_id, display_id, pricing_type, flow_type);
     unitAmount = pricingResolution.unitAmountCents;
@@ -1638,6 +1680,7 @@ export async function GET(req: NextRequest) {
     splitExpenseRate = pricingResolution.splitExpenseRate;
     splitTaxRate = pricingResolution.splitTaxRate;
     splitFixedExpenseCents = pricingResolution.splitFixedExpenseCents;
+    caseOwnerFixedPayoutCents = pricingResolution.caseOwnerFixedPayoutCents;
   } catch (error) {
     const status = typeof error === 'object' && error && 'status' in error ? Number(error.status) : 500;
     const message =
@@ -1704,6 +1747,7 @@ export async function GET(req: NextRequest) {
             expenseRate: splitExpenseRate,
             taxRate: splitTaxRate,
             fixedExpenseCents: splitFixedExpenseCents,
+            caseOwnerFixedPayoutCents,
           })
         : null;
     const session = await stripe.checkout.sessions.create({
@@ -1781,6 +1825,7 @@ export async function GET(req: NextRequest) {
         split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
         split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
         split_rule: splitPlan?.splitRule ?? '',
+        split_case_owner_fixed_payout_cents: String(caseOwnerFixedPayoutCents),
       },
       payment_intent_data: {
         setup_future_usage: 'off_session',
@@ -1822,6 +1867,7 @@ export async function GET(req: NextRequest) {
           split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : '',
           split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : '',
           split_rule: splitPlan?.splitRule ?? '',
+          split_case_owner_fixed_payout_cents: String(caseOwnerFixedPayoutCents),
         },
       },
     });
