@@ -616,17 +616,8 @@ function resolveMetadataBoolean(
 export default function ResourcesPage() {
   const [user, setUser] = useState<User | null>(null);
   const [roleState, setRoleState] = useState<RoleState>("loading");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [payoutRecipientId, setPayoutRecipientId] = useState("");
-  const [payoutRole, setPayoutRole] = useState<"officer" | "admin">("officer");
-  const [payoutAmountEuro, setPayoutAmountEuro] = useState("");
-  const [payoutWeekLabel, setPayoutWeekLabel] = useState("");
-  const [payoutNote, setPayoutNote] = useState("");
-  const [payoutSubmitting, setPayoutSubmitting] = useState(false);
-  const [payoutError, setPayoutError] = useState("");
-  const [payoutSuccess, setPayoutSuccess] = useState("");
   const [locations, setLocations] = useState<ResourceLocation[]>([]);
   const [widgets, setWidgets] = useState<SignWidget[]>(() => createInitialWidgets());
   const [hasLoadedRemoteWidgets, setHasLoadedRemoteWidgets] = useState(false);
@@ -637,7 +628,6 @@ export default function ResourcesPage() {
     if (!supabase || !isSupabaseConfigured) {
       setError("Supabase is not configured for this environment.");
       setRoleState("not_admin");
-      setIsSuperAdmin(false);
       setLoading(false);
       return;
     }
@@ -655,7 +645,6 @@ export default function ResourcesPage() {
         if (authError || !authData.user) {
           setUser(null);
           setRoleState("not_admin");
-          setIsSuperAdmin(false);
           setLoading(false);
           return;
         }
@@ -679,7 +668,6 @@ export default function ResourcesPage() {
           resolvedRole === "admin" ||
           resolvedRole === "super_admin" ||
           resolvedRole === "manager";
-        setIsSuperAdmin(resolvedRole === "super_admin");
         setRoleState(
           resolvedRole === "manager"
             ? "manager"
@@ -867,7 +855,6 @@ export default function ResourcesPage() {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setRoleState("not_admin");
-        setIsSuperAdmin(false);
       }
     });
 
@@ -1018,76 +1005,6 @@ export default function ResourcesPage() {
       }
     };
   }, [widgets, user?.id, canAccess, hasLoadedRemoteWidgets]);
-
-  async function handleManualPayoutSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPayoutError("");
-    setPayoutSuccess("");
-    if (!supabase) {
-      setPayoutError("Supabase client unavailable.");
-      return;
-    }
-    const recipientId = payoutRecipientId.trim();
-    if (!recipientId) {
-      setPayoutError("Enter recipient profile ID.");
-      return;
-    }
-    const parsedAmount = Number(payoutAmountEuro.replace(",", "."));
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setPayoutError("Enter a valid amount in EUR.");
-      return;
-    }
-    const amountCents = Math.round(parsedAmount * 100);
-    if (amountCents <= 0) {
-      setPayoutError("Amount must be greater than zero.");
-      return;
-    }
-    setPayoutSubmitting(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token ?? "";
-      if (!token) {
-        throw new Error("Sign in again to send payouts.");
-      }
-      const response = await fetch("/api/admin/payouts/manual", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          recipientId,
-          role: payoutRole,
-          amountCents,
-          weekLabel: payoutWeekLabel.trim(),
-          note: payoutNote.trim(),
-        }),
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            error?: string;
-            transferId?: string;
-          }
-        | null;
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || "Unable to send payout.");
-      }
-      setPayoutSuccess(`Payout sent successfully. Transfer: ${payload.transferId ?? "created"}`);
-      setPayoutAmountEuro("");
-      setPayoutNote("");
-    } catch (unknownError) {
-      setPayoutError(
-        unknownError instanceof Error ? unknownError.message : "Unable to send payout."
-      );
-    } finally {
-      setPayoutSubmitting(false);
-    }
-  }
-
-  const canSendRolePayouts = canAccess && isSuperAdmin;
 
   function createWidget() {
     if (WIDGET_TEMPLATES_LOCKED) {
@@ -2697,69 +2614,6 @@ export default function ResourcesPage() {
 
         {!loading && canAccess && (
           <div className="space-y-4">
-            {canSendRolePayouts && (
-              <form
-                onSubmit={handleManualPayoutSubmit}
-                className="rounded-2xl border border-white/15 bg-white/[0.05] p-4 md:p-5 space-y-3"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-white">Super Admin Payouts</p>
-                    <p className="text-xs text-white/65">
-                      Use this to send manual payouts to officer and admin connected accounts.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <input
-                    value={payoutRecipientId}
-                    onChange={(event) => setPayoutRecipientId(event.target.value)}
-                    placeholder="Recipient profile ID"
-                    className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  />
-                  <select
-                    value={payoutRole}
-                    onChange={(event) => setPayoutRole(event.target.value as "officer" | "admin")}
-                    className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  >
-                    <option value="officer">Officer</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <input
-                    value={payoutAmountEuro}
-                    onChange={(event) => setPayoutAmountEuro(event.target.value)}
-                    placeholder="Amount EUR (e.g. 120.50)"
-                    className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  />
-                  <input
-                    value={payoutWeekLabel}
-                    onChange={(event) => setPayoutWeekLabel(event.target.value)}
-                    placeholder="Week label (optional)"
-                    className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                  />
-                </div>
-                <input
-                  value={payoutNote}
-                  onChange={(event) => setPayoutNote(event.target.value)}
-                  placeholder="Note (optional)"
-                  className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-                />
-                {payoutError && <p className="text-xs text-red-300">{payoutError}</p>}
-                {payoutSuccess && <p className="text-xs text-emerald-300">{payoutSuccess}</p>}
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-white/60">
-                    Manager finances are paid immediately through Stripe Connect destination splits on each payment.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={payoutSubmitting}
-                    className="inline-flex items-center justify-center rounded-full bg-emerald-400 px-4 py-2 text-xs font-semibold text-black hover:bg-emerald-300 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {payoutSubmitting ? "Sending..." : "Send Payout"}
-                  </button>
-                </div>
-              </form>
-            )}
             <div className="flex items-center justify-between">
               <p className="text-sm text-white/75">
                 Templates are now hardcoded and locked for all accounts.
