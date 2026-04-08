@@ -13,25 +13,7 @@ final verificationRepositoryProvider = Provider<VerificationRepository>((ref) {
 final pendingVerificationsProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(verificationRepositoryProvider);
-  return (() async* {
-    List<Map<String, dynamic>> last = const [];
-    try {
-      last = await repo.fetchPendingVerifications();
-      yield last;
-    } catch (_) {}
-    while (true) {
-      await Future.delayed(const Duration(seconds: 3));
-      try {
-        final fresh = await repo.fetchPendingVerifications();
-        last = fresh;
-        yield fresh;
-      } catch (_) {
-        if (last.isNotEmpty) {
-          yield last;
-        }
-      }
-    }
-  })();
+  return repo.streamPendingVerifications();
 });
 
 final verificationControllerProvider = Provider<VerificationController>((ref) {

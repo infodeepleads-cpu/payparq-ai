@@ -113,6 +113,43 @@ final analyticsProvider =
   final startOfMonth = DateTime(now.year, now.month, 1);
   final daysInMonth = now.day;
 
+  DateTime? parseDateValue(dynamic raw) {
+    if (raw == null) return null;
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    return DateTime.tryParse(text);
+  }
+
+  DateTime? firstParsedDate(Map<String, dynamic> item, List<String> keys) {
+    for (final key in keys) {
+      final parsed = parseDateValue(item[key]);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  bool isPermitActiveNow(Map<String, dynamic> permit) {
+    final status = (permit['status'] ?? '').toString().toLowerCase();
+    if (status != 'active') return false;
+    final start = firstParsedDate(permit, [
+      'start_time',
+      'starts_at',
+      'start_at',
+      'valid_from',
+    ]);
+    final end = firstParsedDate(permit, [
+      'end_time',
+      'expires_at',
+      'expiry_date',
+      'end_date',
+      'valid_until',
+      'valid_to',
+    ]);
+    if (start != null && now.isBefore(start)) return false;
+    if (end != null && now.isAfter(end)) return false;
+    return true;
+  }
+
   // 1. REVENUE CALCULATIONS
   double dailyRev = 0;
   double monthlyRev = 0;
@@ -275,7 +312,7 @@ final analyticsProvider =
   int currentActiveSessions =
       scopedSessions.where((s) => s['status'] == 'active').length;
   int currentActivePermits =
-      scopedPermits.where((p) => p['status'] == 'active').length;
+      scopedPermits.where((p) => isPermitActiveNow(p)).length;
   final activeSpotsTaken = currentActiveSessions + currentActivePermits;
   double dailyOcc = totalSpots > 0 ? (activeSpotsTaken / totalSpots) * 100 : 0;
   if (dailyOcc > 100) dailyOcc = 100;

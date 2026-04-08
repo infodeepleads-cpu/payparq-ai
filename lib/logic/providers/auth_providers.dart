@@ -65,6 +65,17 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   }
 
   final controller = StreamController<Map<String, dynamic>?>(sync: true);
+  final metadata = user.userMetadata;
+  if (metadata != null && !controller.isClosed) {
+    controller.add({
+      'id': user.id,
+      'email': user.email,
+      'role': _normalizeRole(metadata['role']?.toString()),
+      'location_id': metadata['location_id'],
+      'full_name': metadata['name'] ?? 'User',
+      '_jwt_warm_start': true,
+    });
+  }
 
   // 1. Initial fetch with timeout and RETRY
   final stopwatch = Stopwatch()..start();
@@ -114,8 +125,6 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         controller.add(data);
       }
     } else {
-      // If data is null (failed after retries), use metadata fallback
-      final metadata = user.userMetadata;
       if (metadata != null && !controller.isClosed) {
         final fallback = {
           'id': user.id,
@@ -177,7 +186,12 @@ final userLocationIdProvider = Provider<String?>((ref) {
 
 // The currently selected location display_id (5-digit)
 final selectedLocationIdProvider = StateProvider<String?>((ref) {
-  final user = Supabase.instance.client.auth.currentUser;
+  User? user;
+  try {
+    user = Supabase.instance.client.auth.currentUser;
+  } catch (_) {
+    return null;
+  }
   final metadataId = user?.userMetadata?['location_id']?.toString();
 
   // If we have a metadata ID and it looks like a display ID (5 digits), use it immediately
@@ -319,13 +333,26 @@ final availableLocationsProvider =
       (profile?['email'] ?? user.email)?.toString().trim().toLowerCase();
 
   final controller = StreamController<List<Map<String, dynamic>>>();
+  var hasEmitted = false;
+
+  void emit(List<Map<String, dynamic>> value) {
+    if (controller.isClosed) return;
+    hasEmitted = true;
+    controller.add(value);
+  }
+
+  var fetchInFlight = false;
+  DateTime? lastFetchAt;
 
   // IMMEDIATE SYNC EMIT: Provide basic data from metadata/SharedPreferences as fast as possible
-  final prefs = ref.read(sharedPreferencesProvider);
-  final savedId = prefs.getString(_selectedLocationDisplayKeyFor(user.id)) ??
-      prefs.getString('selected_location_display_id');
-  final savedUuid = prefs.getString(_selectedLocationUuidKeyFor(user.id)) ??
-      prefs.getString('selected_location_uuid');
+  SharedPreferences? prefs;
+  try {
+    prefs = ref.read(sharedPreferencesProvider);
+  } catch (_) {}
+  final savedId = prefs?.getString(_selectedLocationDisplayKeyFor(user.id)) ??
+      prefs?.getString('selected_location_display_id');
+  final savedUuid = prefs?.getString(_selectedLocationUuidKeyFor(user.id)) ??
+      prefs?.getString('selected_location_uuid');
   final metadataId = user.userMetadata?['location_id']?.toString();
   final metadataName = user.userMetadata?['location_name']?.toString() ?? 'Lot';
 
@@ -355,7 +382,7 @@ final availableLocationsProvider =
   }
 
   // Also check if we have full cached list from previous session
-  final cachedJson = prefs.getString('cached_available_locations_${user.id}');
+  final cachedJson = prefs?.getString('cached_available_locations_${user.id}');
   if (cachedJson != null) {
     try {
       final List<dynamic> decoded = jsonDecode(cachedJson);
@@ -371,13 +398,23 @@ final availableLocationsProvider =
   }
 
   if (initialList.isNotEmpty) {
-    controller.add(initialList);
+    emit(initialList);
+  } else {
+    emit(const []);
   }
 
   // Helper to fetch and add to stream
-  Future<void> fetch({int attempt = 1}) async {
+  Future<void> fetch({int attempt = 1, bool force = false}) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null || controller.isClosed) return;
+    if (fetchInFlight) return;
+    final now = DateTime.now();
+    if (!force &&
+        lastFetchAt != null &&
+        now.difference(lastFetchAt!) < const Duration(seconds: 2)) {
+      return;
+    }
+    fetchInFlight = true;
 
     try {
       final queryTimeout = Duration(seconds: attempt == 1 ? 5 : 10);
@@ -566,7 +603,7 @@ final availableLocationsProvider =
       }
 
       if (!controller.isClosed) {
-        controller.add(uniqueLocations);
+        emit(uniqueLocations);
         // Save to cache
         try {
           final prefs = await SharedPreferences.getInstance();
@@ -586,32 +623,46 @@ final availableLocationsProvider =
 
       if (attempt < 4 && isNetworkError && !controller.isClosed) {
         await Future.delayed(Duration(seconds: attempt));
-        return fetch(attempt: attempt + 1);
+        return fetch(attempt: attempt + 1, force: true);
       }
 
       // If we failed all retries, don't emit error, just return empty list or keep current
       if (!controller.isClosed) {
+        if (!hasEmitted) {
+          emit(const []);
+        }
         // Only add empty list if we don't have ANY data yet
         // If we have some data (from initial emit), we'd rather keep it
         debugPrint(
             'availableLocationsProvider: failed all attempts, suppressing error.');
       }
+    } finally {
+      fetchInFlight = false;
+      lastFetchAt = DateTime.now();
     }
   }
 
-  fetch();
+  Timer? initialFetchTimer;
+  if (initialList.isNotEmpty) {
+    initialFetchTimer = Timer(const Duration(milliseconds: 350), () {
+      fetch();
+    });
+  } else {
+    fetch();
+  }
 
   Timer? fetchDebounce;
   final subscription = Supabase.instance.client
       .from('locations')
       .stream(primaryKey: ['id']).listen((_) {
     fetchDebounce?.cancel();
-    fetchDebounce = Timer(const Duration(milliseconds: 80), () {
-      fetch();
+    fetchDebounce = Timer(const Duration(milliseconds: 350), () {
+      fetch(force: true);
     });
   }, onError: (e) => debugPrint('Loc Stream Error: $e'));
 
   ref.onDispose(() {
+    initialFetchTimer?.cancel();
     fetchDebounce?.cancel();
     subscription.cancel();
     controller.close();

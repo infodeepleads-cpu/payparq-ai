@@ -434,25 +434,30 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   } // End of _buildScaffoldWithProfile
 
   Widget _buildMobileBody(bool isOfficer) {
-    return IndexedStack(
+    return _LazyIndexedStack(
       index: _selectedIndex == 2 ? 0 : (_selectedIndex == 1 ? 1 : 2),
-      children: [
-        _DeferredPage(
-          pageKey: 'mobile-admin-dashboard',
-          load: () => admin_mod.loadLibrary(),
-          build: () => admin_mod.buildAdminDashboard(),
-        ),
-        _DeferredPage(
-          pageKey: 'mobile-hud',
-          load: () => hud_mod.loadLibrary(),
-          build: () => hud_mod.buildHudScreen(),
-        ),
-        _DeferredPage(
+      itemCount: 3,
+      itemBuilder: (index) {
+        if (index == 0) {
+          return _DeferredPage(
+            pageKey: 'mobile-admin-dashboard',
+            load: () => admin_mod.loadLibrary(),
+            build: () => admin_mod.buildAdminDashboard(),
+          );
+        }
+        if (index == 1) {
+          return _DeferredPage(
+            pageKey: 'mobile-hud',
+            load: () => hud_mod.loadLibrary(),
+            build: () => hud_mod.buildHudScreen(),
+          );
+        }
+        return _DeferredPage(
           pageKey: 'mobile-cases',
           load: () => cases_mod.loadLibrary(),
           build: () => cases_mod.buildCasesListView(),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -751,67 +756,89 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                   child: Column(
                     children: [
                       Expanded(
-                        child: IndexedStack(
+                        child: _LazyIndexedStack(
                           index: _selectedIndex,
-                          children: [
-                            _DeferredPage(
-                              pageKey: 'desktop-cases',
-                              load: () => cases_mod.loadLibrary(),
-                              build: () => cases_mod.buildCasesListView(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-upload-case',
-                              load: () => upload_case_mod.loadLibrary(),
-                              build: () =>
-                                  upload_case_mod.buildUploadCaseForm(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-admin-dashboard',
-                              load: () => admin_mod.loadLibrary(),
-                              build: () => admin_mod.buildAdminDashboard(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-passes',
-                              load: () => passes_mod.loadLibrary(),
-                              build: () => passes_mod.buildPassesListScreen(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-locations',
-                              load: () => locations_mod.loadLibrary(),
-                              build: () => locations_mod.buildLocationsScreen(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-staff',
-                              load: () => staff_mod.loadLibrary(),
-                              build: () => staff_mod.buildAddStaffScreen(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-pricing',
-                              load: () => pricing_mod.loadLibrary(),
-                              build: () => pricing_mod.buildDynamicPricing(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-analytics',
-                              load: () => analytics_mod.loadLibrary(),
-                              build: () => analytics_mod.buildAnalytics(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-settings',
-                              load: () => settings_mod.loadLibrary(),
-                              build: () => settings_mod.buildSettingsScreen(),
-                            ),
-                            _DeferredPage(
-                              pageKey: 'desktop-finance',
-                              load: () => finance_mod.loadLibrary(),
-                              build: () => finance_mod.buildFinance(),
-                            ),
-                            _DeferredPage(
+                          itemCount: 11,
+                          itemBuilder: (index) {
+                            if (index == 0) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-cases',
+                                load: () => cases_mod.loadLibrary(),
+                                build: () => cases_mod.buildCasesListView(),
+                              );
+                            }
+                            if (index == 1) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-upload-case',
+                                load: () => upload_case_mod.loadLibrary(),
+                                build: () =>
+                                    upload_case_mod.buildUploadCaseForm(),
+                              );
+                            }
+                            if (index == 2) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-admin-dashboard',
+                                load: () => admin_mod.loadLibrary(),
+                                build: () => admin_mod.buildAdminDashboard(),
+                              );
+                            }
+                            if (index == 3) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-passes',
+                                load: () => passes_mod.loadLibrary(),
+                                build: () => passes_mod.buildPassesListScreen(),
+                              );
+                            }
+                            if (index == 4) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-locations',
+                                load: () => locations_mod.loadLibrary(),
+                                build: () =>
+                                    locations_mod.buildLocationsScreen(),
+                              );
+                            }
+                            if (index == 5) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-staff',
+                                load: () => staff_mod.loadLibrary(),
+                                build: () => staff_mod.buildAddStaffScreen(),
+                              );
+                            }
+                            if (index == 6) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-pricing',
+                                load: () => pricing_mod.loadLibrary(),
+                                build: () => pricing_mod.buildDynamicPricing(),
+                              );
+                            }
+                            if (index == 7) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-analytics',
+                                load: () => analytics_mod.loadLibrary(),
+                                build: () => analytics_mod.buildAnalytics(),
+                              );
+                            }
+                            if (index == 8) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-settings',
+                                load: () => settings_mod.loadLibrary(),
+                                build: () => settings_mod.buildSettingsScreen(),
+                              );
+                            }
+                            if (index == 9) {
+                              return _DeferredPage(
+                                pageKey: 'desktop-finance',
+                                load: () => finance_mod.loadLibrary(),
+                                build: () => finance_mod.buildFinance(),
+                              );
+                            }
+                            return _DeferredPage(
                               pageKey: 'desktop-verification-inbox',
                               load: () => verification_mod.loadLibrary(),
                               build: () => verification_mod
                                   .buildVerificationInboxScreen(),
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -956,52 +983,145 @@ class _DeferredPage extends StatefulWidget {
   State<_DeferredPage> createState() => _DeferredPageState();
 }
 
+class _LazyIndexedStack extends StatefulWidget {
+  final int index;
+  final int itemCount;
+  final Widget Function(int index) itemBuilder;
+
+  const _LazyIndexedStack({
+    required this.index,
+    required this.itemCount,
+    required this.itemBuilder,
+  });
+
+  @override
+  State<_LazyIndexedStack> createState() => _LazyIndexedStackState();
+}
+
+class _LazyIndexedStackState extends State<_LazyIndexedStack> {
+  late final Set<int> _activated = <int>{widget.index};
+
+  @override
+  void didUpdateWidget(covariant _LazyIndexedStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_activated.contains(widget.index)) {
+      setState(() {
+        _activated.add(widget.index);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: List<Widget>.generate(widget.itemCount, (i) {
+        if (!_activated.contains(i)) {
+          return const SizedBox.shrink();
+        }
+        return Offstage(
+          offstage: i != widget.index,
+          child: TickerMode(
+            enabled: i == widget.index,
+            child: widget.itemBuilder(i),
+          ),
+        );
+      }),
+    );
+  }
+}
+
 class _DeferredPageState extends State<_DeferredPage> {
   static final Set<String> _loadedKeys = <String>{};
   late bool _loaded = _loadedKeys.contains(widget.pageKey);
+  bool _loadFailed = false;
+  bool _isLoading = false;
+
+  Future<void> _loadPage() async {
+    if (_loaded || _isLoading) return;
+    _isLoading = true;
+    try {
+      await widget.load().timeout(const Duration(seconds: 12));
+      _loadedKeys.add(widget.pageKey);
+      if (!mounted) return;
+      setState(() {
+        _loaded = true;
+        _loadFailed = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadFailed = true;
+      });
+    } finally {
+      _isLoading = false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (_loaded) {
       return;
     }
-    widget.load().then((_) {
-      if (mounted) {
-        setState(() {
-          _loaded = true;
-        });
-      }
-      _loadedKeys.add(widget.pageKey);
-    });
+    _loadPage();
   }
 
   @override
   Widget build(BuildContext context) {
-    return !_loaded
-        ? Padding(
-            key: const ValueKey('deferred-loading'),
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SkeletonLoader(height: 40, width: 200),
-                const SizedBox(height: 16),
-                const SkeletonLoader(height: 20, width: double.infinity),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: 5,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (_, __) => const SkeletonLoader(height: 80),
-                  ),
-                ),
-              ],
+    if (_loaded) {
+      return KeyedSubtree(
+        key: const ValueKey('deferred-loaded'),
+        child: widget.build(),
+      );
+    }
+    if (_loadFailed) {
+      return Center(
+        key: const ValueKey('deferred-load-failed'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Unable to open this screen.',
+              style: GoogleFonts.inter(
+                color: Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          )
-        : KeyedSubtree(
-            key: const ValueKey('deferred-loaded'),
-            child: widget.build(),
-          );
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _loadFailed = false;
+                });
+                _loadPage();
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      key: const ValueKey('deferred-loading'),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonLoader(height: 40, width: 200),
+          const SizedBox(height: 16),
+          const SkeletonLoader(height: 20, width: double.infinity),
+          const SizedBox(height: 32),
+          Expanded(
+            child: ListView.separated(
+              itemCount: 5,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, __) => const SkeletonLoader(height: 80),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
