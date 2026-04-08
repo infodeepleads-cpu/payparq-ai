@@ -1068,12 +1068,26 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-semibold text-black">Domaćin je Ivo</p>
-                      <p className="truncate text-[10px] text-black/60">Fleeting opportunity! Lock your price now.</p>
+                      <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">Superhost</span>
-                    <span className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">24/7 Support</span>
+                    <a
+                      href={cityManagerMessageHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
+                    >
+                      Poruka
+                    </a>
+                    <a
+                      href={cityManagerMessageHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
+                    >
+                      Recenzije
+                    </a>
                   </div>
                 </div>
               </div>
@@ -1208,12 +1222,26 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </div>
                     <div>
                       <p className="text-[13px] font-semibold text-black">Domaćin je Ivo</p>
-                      <p className="text-[10px] text-black/60">Fleeting opportunity! Lock your price now.</p>
+                      <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">Superhost</span>
-                    <span className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC]">24/7 Support</span>
+                    <a
+                      href={cityManagerMessageHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
+                    >
+                      Poruka
+                    </a>
+                    <a
+                      href={cityManagerMessageHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
+                    >
+                      Recenzije
+                    </a>
                   </div>
                 </div>
               </div>
@@ -1223,18 +1251,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F8F6FF] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#5F3DFC] font-semibold">PayParq cjenik</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/85">
-                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
+                      <div className="flex items-center justify-between"><span>Sati</span><span className="font-semibold">{formatEur(hourlyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(dailyPrice)}</span></div>
                       <div className="flex items-center justify-between"><span className="notranslate" translate="no">Park & Taxi (Dnevni parking i 2 vožnje do 5km)</span><span className="font-semibold">{formatEur(parkTaxiUnitPrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Mjesec</span><span className="font-semibold">{formatEur(monthlyPrice)}</span></div>
-                      <div className="flex items-center justify-between"><span>Kamperi</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
-                      <div className="flex items-center justify-between"><span>Autobusi</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Kamperi (Poruka)</span><span className="font-semibold">{formatEur(camperDailyPrice)}/dan</span></div>
+                      <div className="flex items-center justify-between"><span>Autobusi (Poruka)</span><span className="font-semibold">{formatEur(busDailyPrice)}/dan</span></div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-[#FAFAFA] p-3">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-black/70 font-semibold">Konkurentske cijene</p>
                     <div className="mt-2 space-y-1.5 text-xs text-black/80">
-                      <div className="flex items-center justify-between"><span>Sat</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
+                      <div className="flex items-center justify-between"><span>Sati</span><span className="font-semibold">{formatEur(competitorHourly)}</span></div>
                       <div className="flex items-center justify-between"><span>Dan</span><span className="font-semibold">{formatEur(competitorDaily)}</span></div>
                       <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (1 Smjer)</span><span className="font-semibold">{formatEur(uberOneWayRidePrice)}</span></div>
                       <div className="flex items-center justify-between"><span>Vožnja Uber Trogir/Aerodrom (2 Smjera)</span><span className="font-semibold">{formatEur(uberTwoWayRidePrice)}</span></div>
@@ -1463,7 +1491,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             { q: `Udaljenost do ${referencePoints.marina.name}`, a: distMarinaDisplay },
                             { q: "Typical transfer time", a: travelTime },
                             { q: "Parking types", a: "Open‑air and covered bays" },
-                            { q: "sati", a: "24/7 operacije" },
+                            { q: "Sati", a: "24/7 operacije" },
                             { q: "Payment", a: "Stripe secure checkout" },
                             { q: "Security", a: "AI cameras and recorded entry/exit" },
                             { q: "Access", a: "License plate recognition" },
