@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../responsive/responsive_layout.dart';
@@ -1035,22 +1036,38 @@ class _DeferredPageState extends State<_DeferredPage> {
   late bool _loaded = _loadedKeys.contains(widget.pageKey);
   bool _loadFailed = false;
   bool _isLoading = false;
+  int _loadAttempts = 0;
+  String _loadError = '';
 
   Future<void> _loadPage() async {
     if (_loaded || _isLoading) return;
     _isLoading = true;
+    _loadAttempts += 1;
+    final timeoutSeconds = _loadAttempts <= 2 ? 30 : 60;
     try {
-      await widget.load().timeout(const Duration(seconds: 12));
+      await widget.load().timeout(Duration(seconds: timeoutSeconds));
       _loadedKeys.add(widget.pageKey);
       if (!mounted) return;
       setState(() {
         _loaded = true;
         _loadFailed = false;
+        _loadError = '';
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Deferred page load failed (${widget.pageKey}) attempt $_loadAttempts: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (_loadAttempts < 3) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        _isLoading = false;
+        if (mounted) {
+          _loadPage();
+        }
+        return;
+      }
       if (!mounted) return;
       setState(() {
         _loadFailed = true;
+        _loadError = error.toString();
       });
     } finally {
       _isLoading = false;
@@ -1093,11 +1110,27 @@ class _DeferredPageState extends State<_DeferredPage> {
               onPressed: () {
                 setState(() {
                   _loadFailed = false;
+                  _loadAttempts = 0;
+                  _loadError = '';
                 });
                 _loadPage();
               },
               child: const Text('Retry'),
             ),
+            if (_loadError.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  kDebugMode ? _loadError : 'Please refresh the app and try again.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: Colors.black54,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
