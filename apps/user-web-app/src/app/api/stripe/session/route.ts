@@ -15,11 +15,13 @@ function resolveStripeSecretKey(): string | null {
 async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   const dbClient = supabaseAdmin ?? supabase;
   if (!dbClient) return null;
-  const { data: sessionRow } = await dbClient
+  const { data: sessionRows } = await dbClient
     .from('parking_sessions')
     .select('stripe_session_id,location_id,entry_time,exit_time,email,price,amount_cents,currency,type,stripe_metadata')
     .eq('stripe_session_id', sessionId)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const sessionRow = Array.isArray(sessionRows) ? sessionRows[0] ?? null : null;
   if (!sessionRow) return null;
 
   const row = sessionRow as {
@@ -197,11 +199,37 @@ export async function GET(req: NextRequest) {
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const sessionMetadata = session.metadata ?? {};
+    let stripeLineItemQuantity = 0;
+    try {
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        limit: 100,
+      });
+      stripeLineItemQuantity = lineItems.data.reduce((sum, item) => {
+        const qty = Number(item?.quantity ?? 0);
+        return Number.isFinite(qty) && qty > 0 ? sum + qty : sum;
+      }, 0);
+    } catch {}
+    if (stripeLineItemQuantity <= 1) {
+      const subtotalCents = Number(session.amount_subtotal ?? 0);
+      const unitCents = Number(sessionMetadata.amount_cents ?? 0);
+      if (
+        Number.isFinite(subtotalCents) &&
+        Number.isFinite(unitCents) &&
+        subtotalCents > 0 &&
+        unitCents > 0
+      ) {
+        const derivedQuantity = Math.round(subtotalCents / unitCents);
+        if (Number.isFinite(derivedQuantity) && derivedQuantity > 1) {
+          stripeLineItemQuantity = derivedQuantity;
+        }
+      }
+    }
     const email = (session.customer_details?.email ?? '').trim().toLowerCase();
     const metadataCheckIn = (sessionMetadata.check_in ?? '').toString().trim();
     const metadataCheckOut = (sessionMetadata.check_out ?? '').toString().trim();
     let entryTime: string | null = null;
     let exitTime: string | null = null;
+    let foundDbSessionWindow = false;
     let activityLocationId =
       (sessionMetadata.display_id ?? sessionMetadata.location_id ?? '').toString().trim() || null;
     let activityLocationName: string | null = null;
@@ -226,12 +254,15 @@ export async function GET(req: NextRequest) {
     }
     const dbClient = supabaseAdmin ?? supabase;
     if (dbClient) {
-      const { data: sessionRow } = await dbClient
+      const { data: sessionRows } = await dbClient
         .from('parking_sessions')
         .select('location_id,entry_time,exit_time,stripe_metadata')
         .eq('stripe_session_id', session.id)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const sessionRow = Array.isArray(sessionRows) ? sessionRows[0] ?? null : null;
       if (sessionRow) {
+        foundDbSessionWindow = true;
         const row = sessionRow as {
           location_id?: string | null;
           entry_time?: string | null;
@@ -256,6 +287,19 @@ export async function GET(req: NextRequest) {
       }
       if (!exitTime && metadataCheckOut) {
         exitTime = metadataCheckOut;
+      }
+      if (!foundDbSessionWindow && entryTime && stripeLineItemQuantity > 1) {
+        const typeRaw = (sessionMetadata.type ?? 'hourly').toString().trim().toLowerCase();
+        const durationMinutes =
+          typeRaw === 'monthly'
+            ? stripeLineItemQuantity * 30 * 24 * 60
+            : typeRaw === 'daily'
+              ? stripeLineItemQuantity * 24 * 60
+              : stripeLineItemQuantity * 60;
+        const startDate = new Date(entryTime);
+        if (!Number.isNaN(startDate.getTime())) {
+          exitTime = new Date(startDate.getTime() + durationMinutes * 60 * 1000).toISOString();
+        }
       }
       const locationCandidate = activityLocationId;
       if (locationCandidate) {
