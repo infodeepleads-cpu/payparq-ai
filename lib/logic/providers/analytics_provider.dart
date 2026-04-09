@@ -173,29 +173,16 @@ final analyticsProvider =
 
   Map<String, DateTime?> resolveSessionWindow(Map<String, dynamic> session) {
     final stripeMeta = parseStripeMetadata(session['stripe_metadata']);
-    final flow = (stripeMeta['flow'] ?? stripeMeta['flow_type'] ?? '')
-        .toString()
-        .trim()
-        .toLowerCase();
     final entryFromRow = parseAnyDate(session['entry_time']) ??
         parseAnyDate(session['start_time']) ??
         parseAnyDate(session['created_at']);
     final entryFromMeta = parseAnyDate(stripeMeta['check_in']);
-    final prefersMetadataWindow = flow == 'reserve' && entryFromMeta != null;
-    final checkIn =
-        prefersMetadataWindow ? entryFromMeta : (entryFromRow ?? entryFromMeta);
+    final checkIn = entryFromRow ?? entryFromMeta;
 
     final exitFromRow =
         parseAnyDate(session['exit_time']) ?? parseAnyDate(session['end_time']);
     final exitFromMeta = parseAnyDate(stripeMeta['check_out']);
-    DateTime? checkOut;
-    if (prefersMetadataWindow && exitFromMeta != null) {
-      checkOut = exitFromMeta;
-    } else if (exitFromRow != null) {
-      checkOut = exitFromRow;
-    } else {
-      checkOut = exitFromMeta;
-    }
+    final checkOut = exitFromRow ?? exitFromMeta;
     return {'check_in': checkIn, 'check_out': checkOut};
   }
 

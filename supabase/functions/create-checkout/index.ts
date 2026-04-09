@@ -1354,9 +1354,14 @@ serve(async (req: Request) => {
     if (derivedCheckOutIso) {
       resolvedSuccessUrl.searchParams.set("check_out", derivedCheckOutIso);
     }
+    const checkoutSessionToken = "{CHECKOUT_SESSION_ID}";
+    const encodedCheckoutSessionToken = encodeURIComponent(checkoutSessionToken);
+    const doubleEncodedCheckoutSessionToken = encodeURIComponent(encodedCheckoutSessionToken);
     const successUrl = resolvedSuccessUrl
       .toString()
-      .replace("session_id=%7BCHECKOUT_SESSION_ID%7D", "session_id={CHECKOUT_SESSION_ID}");
+      .replaceAll(doubleEncodedCheckoutSessionToken, checkoutSessionToken)
+      .replaceAll(encodedCheckoutSessionToken, checkoutSessionToken)
+      .replaceAll(encodedCheckoutSessionToken.toLowerCase(), checkoutSessionToken);
     const reservationName = (locData?.name ?? "").toString().trim();
     const reservationTitle = reservationName.length > 0
       ? reservationName
@@ -1414,11 +1419,30 @@ serve(async (req: Request) => {
     const submitMessage = reservationSubmitMessage
       ? `${reservationSubmitMessage}\n${submitMessageBase}`
       : submitMessageBase;
+    const descriptionSwitchLabel = type === "hourly"
+      ? checkoutText.openDailyCheckout
+      : type === "daily"
+      ? checkoutText.openHourlyCheckout
+      : "";
+    const descriptionSwitchUrl = type === "hourly"
+      ? resolvedDailySwitchUrl
+      : type === "daily"
+      ? resolvedHourlySwitchUrl
+      : "";
+    const descriptionSwitchLink = descriptionSwitchLabel && descriptionSwitchUrl
+      ? `${descriptionSwitchLabel}: ${descriptionSwitchUrl}`
+      : "";
     const nonReservationDescriptionBase =
       `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}`;
-    const nonReservationDescription = parkTaxiRequested
+    const nonReservationDescriptionCore = parkTaxiRequested
       ? `${nonReservationDescriptionBase}\n(${checkoutText.parkTaxiPackageLine})\n${checkoutText.parkTaxiQuantityHint}`
       : `${nonReservationDescriptionBase}\n(${endTimeDependsOnSelected})`;
+    const nonReservationDescription = descriptionSwitchLink
+      ? `${nonReservationDescriptionCore}\n${descriptionSwitchLink}`
+      : nonReservationDescriptionCore;
+    const reservationDescriptionWithSwitch = descriptionSwitchLink && reservationDescription
+      ? `${reservationDescription}\n${descriptionSwitchLink}`
+      : reservationDescription;
     const lineItem: any = {
       quantity: checkoutQuantity,
       price_data: {
@@ -1429,7 +1453,7 @@ serve(async (req: Request) => {
             ? reservationTitle
             : nonReservationTitle,
           description: isReservationFlow
-            ? reservationDescription
+            ? reservationDescriptionWithSwitch
             : nonReservationDescription,
         },
       },
