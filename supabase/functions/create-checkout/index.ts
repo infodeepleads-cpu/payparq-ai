@@ -1410,8 +1410,8 @@ serve(async (req: Request) => {
         }
       } catch (_) {}
     }
-    const dailyHourlyCtaMessage = `${checkoutText.needHourly} [${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
-    const hourlyDailyCtaMessage = `${checkoutText.needDaily} [${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
+    const dailyHourlyCtaMessage = `${checkoutText.needHourly} ${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`;
+    const hourlyDailyCtaMessage = `${checkoutText.needDaily} ${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`;
     const submitMessageBase = type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage;
     const reservationSubmitMessage = isReservationFlow
       ? [reservationDescription, `Qty: ${displayQuantity}`].filter((part) => part && part.length > 0).join("\n")
@@ -1438,10 +1438,10 @@ serve(async (req: Request) => {
       ? `${nonReservationDescriptionBase}\n(${checkoutText.parkTaxiPackageLine})\n${checkoutText.parkTaxiQuantityHint}`
       : `${nonReservationDescriptionBase}\n(${endTimeDependsOnSelected})`;
     const nonReservationDescription = descriptionSwitchLink
-      ? `${nonReservationDescriptionCore}\n${descriptionSwitchLink}`
+      ? `${descriptionSwitchLink}\n${nonReservationDescriptionCore}`
       : nonReservationDescriptionCore;
     const reservationDescriptionWithSwitch = descriptionSwitchLink && reservationDescription
-      ? `${reservationDescription}\n${descriptionSwitchLink}`
+      ? `${descriptionSwitchLink}\n${reservationDescription}`
       : reservationDescription;
     const lineItem: any = {
       quantity: checkoutQuantity,
