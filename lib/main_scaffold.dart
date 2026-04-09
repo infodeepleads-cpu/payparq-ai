@@ -78,10 +78,36 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Future<void> _prepareInitialScreen() async {
+    Future<void> loadWithRetry(Future<void> Function() loader) async {
+      Object? lastError;
+      for (var attempt = 0; attempt < 4; attempt++) {
+        try {
+          await loader().timeout(const Duration(seconds: 30));
+          return;
+        } catch (error) {
+          lastError = error;
+          await Future<void>.delayed(Duration(milliseconds: 350 * (attempt + 1)));
+        }
+      }
+      if (lastError != null) {
+        throw lastError;
+      }
+    }
     try {
-      await admin_mod.loadLibrary();
-      hud_mod.loadLibrary().catchError((_) {});
-      cases_mod.loadLibrary().catchError((_) {});
+      await loadWithRetry(admin_mod.loadLibrary);
+      await Future.wait([
+        loadWithRetry(hud_mod.loadLibrary),
+        loadWithRetry(cases_mod.loadLibrary),
+        loadWithRetry(upload_case_mod.loadLibrary),
+        loadWithRetry(passes_mod.loadLibrary),
+        loadWithRetry(staff_mod.loadLibrary),
+        loadWithRetry(verification_mod.loadLibrary),
+        loadWithRetry(locations_mod.loadLibrary),
+        loadWithRetry(settings_mod.loadLibrary),
+        loadWithRetry(analytics_mod.loadLibrary),
+        loadWithRetry(pricing_mod.loadLibrary),
+        loadWithRetry(finance_mod.loadLibrary),
+      ]);
     } catch (_) {}
     if (!mounted) return;
     setState(() {
@@ -1043,7 +1069,7 @@ class _DeferredPageState extends State<_DeferredPage> {
     if (_loaded || _isLoading) return;
     _isLoading = true;
     _loadAttempts += 1;
-    final timeoutSeconds = _loadAttempts <= 2 ? 30 : 60;
+    final timeoutSeconds = _loadAttempts <= 3 ? 30 : 60;
     try {
       await widget.load().timeout(Duration(seconds: timeoutSeconds));
       _loadedKeys.add(widget.pageKey);
@@ -1056,8 +1082,8 @@ class _DeferredPageState extends State<_DeferredPage> {
     } catch (error, stackTrace) {
       debugPrint('Deferred page load failed (${widget.pageKey}) attempt $_loadAttempts: $error');
       debugPrintStack(stackTrace: stackTrace);
-      if (_loadAttempts < 3) {
-        await Future<void>.delayed(const Duration(milliseconds: 350));
+      if (_loadAttempts < 6) {
+        await Future<void>.delayed(Duration(milliseconds: 350 * _loadAttempts));
         _isLoading = false;
         if (mounted) {
           _loadPage();

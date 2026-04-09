@@ -363,6 +363,9 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
           ref.read(userLocationIdProvider) ?? user.userMetadata?['location_id'];
 
       if (!locationsAsync.hasValue) {
+        if (isManager || isOfficer) {
+          return items;
+        }
         return <Map<String, dynamic>>[];
       }
 
@@ -385,7 +388,11 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
             (fallbackLocId != null && locId == fallbackLocId.toString());
       }).toList();
 
-      return filtered.map((it) {
+      final shouldFallbackToRlsScopedItems =
+          (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
+      final visibleItems = shouldFallbackToRlsScopedItems ? items : filtered;
+
+      return visibleItems.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
@@ -494,6 +501,9 @@ final sessionsStreamProvider =
           ref.read(userLocationIdProvider) ?? user.userMetadata?['location_id'];
 
       if (!locationsAsync.hasValue) {
+        if (isManager || isOfficer) {
+          return items;
+        }
         return <Map<String, dynamic>>[];
       }
 
@@ -516,7 +526,11 @@ final sessionsStreamProvider =
             (fallbackLocId != null && locId == fallbackLocId.toString());
       }).toList();
 
-      return filtered.map((it) {
+      final shouldFallbackToRlsScopedItems =
+          (isManager || isOfficer) && filtered.isEmpty && items.isNotEmpty;
+      final visibleItems = shouldFallbackToRlsScopedItems ? items : filtered;
+
+      return visibleItems.map((it) {
         final raw = (it['location_id'] ?? '').toString();
         String uiDid = raw;
         if (uuidRegExp.hasMatch(raw.toLowerCase())) {
