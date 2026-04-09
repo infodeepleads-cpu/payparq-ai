@@ -200,8 +200,8 @@ export async function GET(req: NextRequest) {
     const email = (session.customer_details?.email ?? '').trim().toLowerCase();
     const metadataCheckIn = (sessionMetadata.check_in ?? '').toString().trim();
     const metadataCheckOut = (sessionMetadata.check_out ?? '').toString().trim();
-    let entryTime = metadataCheckIn || null;
-    let exitTime = metadataCheckOut || null;
+    let entryTime: string | null = null;
+    let exitTime: string | null = null;
     let activityLocationId =
       (sessionMetadata.display_id ?? sessionMetadata.location_id ?? '').toString().trim() || null;
     let activityLocationName: string | null = null;
@@ -224,8 +224,9 @@ export async function GET(req: NextRequest) {
         emailVerified = Boolean(existing?.email_confirmed_at);
       }
     }
-    if (supabaseAdmin) {
-      const { data: sessionRow } = await supabaseAdmin
+    const dbClient = supabaseAdmin ?? supabase;
+    if (dbClient) {
+      const { data: sessionRow } = await dbClient
         .from('parking_sessions')
         .select('location_id,entry_time,exit_time,stripe_metadata')
         .eq('stripe_session_id', session.id)
@@ -240,19 +241,25 @@ export async function GET(req: NextRequest) {
         if (row.location_id && !activityLocationId) {
           activityLocationId = row.location_id;
         }
-        if (row.entry_time && !entryTime) {
+        if (row.entry_time) {
           entryTime = row.entry_time;
         }
-        if (row.exit_time && !exitTime) {
+        if (row.exit_time) {
           exitTime = row.exit_time;
         }
         walletTopupCreditCents = Number(row.stripe_metadata?.wallet_topup_credit_cents ?? walletTopupCreditCents) || 0;
         walletDebitAppliedCents = Number(row.stripe_metadata?.wallet_debit_applied_cents ?? walletDebitAppliedCents) || 0;
         loyaltyBonusCreditCents = Number(row.stripe_metadata?.loyalty_bonus_credit_cents ?? loyaltyBonusCreditCents) || 0;
       }
+      if (!entryTime && metadataCheckIn) {
+        entryTime = metadataCheckIn;
+      }
+      if (!exitTime && metadataCheckOut) {
+        exitTime = metadataCheckOut;
+      }
       const locationCandidate = activityLocationId;
       if (locationCandidate) {
-        const byId = await supabaseAdmin
+        const byId = await dbClient
           .from('locations')
           .select('id,display_id,name')
           .eq('id', locationCandidate)
@@ -261,7 +268,7 @@ export async function GET(req: NextRequest) {
           | { id?: string | null; display_id?: string | null; name?: string | null }
           | null;
         if (!locationRow) {
-          const byDisplayId = await supabaseAdmin
+          const byDisplayId = await dbClient
             .from('locations')
             .select('id,display_id,name')
             .eq('display_id', locationCandidate)
@@ -278,6 +285,9 @@ export async function GET(req: NextRequest) {
           }
         }
       }
+    } else {
+      entryTime = metadataCheckIn || null;
+      exitTime = metadataCheckOut || null;
     }
     return NextResponse.json({
       session_id: session.id,
