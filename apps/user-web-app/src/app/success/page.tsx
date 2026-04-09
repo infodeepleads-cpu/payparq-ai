@@ -84,8 +84,8 @@ function SuccessContent() {
   const checkoutLocationName = summary?.location_name ?? null;
   const checkoutLocationDisplayId = summary?.location_display_id ?? null;
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in ?? fallbackCheckIn;
-  const checkoutEnd = summary?.check_out ?? fallbackCheckOut;
+  const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
+  const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
   const checkoutFlowType = summary?.flow_type ?? searchParams.get('flow');
   const refCode = summary?.ref_id ?? (hasRealSessionId && sessionId ? sessionId.slice(-8) : null);
   const isParkTaxiFlow = checkoutFlowType === 'park_now';
