@@ -1438,10 +1438,10 @@ serve(async (req: Request) => {
       ? `${nonReservationDescriptionBase}\n(${checkoutText.parkTaxiPackageLine})\n${checkoutText.parkTaxiQuantityHint}`
       : `${nonReservationDescriptionBase}\n(${endTimeDependsOnSelected})`;
     const nonReservationDescription = descriptionSwitchLink
-      ? `${descriptionSwitchLink}\n${nonReservationDescriptionCore}`
+      ? `${nonReservationDescriptionCore}\n${descriptionSwitchLink}`
       : nonReservationDescriptionCore;
     const reservationDescriptionWithSwitch = descriptionSwitchLink && reservationDescription
-      ? `${descriptionSwitchLink}\n${reservationDescription}`
+      ? `${reservationDescription}\n${descriptionSwitchLink}`
       : reservationDescription;
     const lineItem: any = {
       quantity: checkoutQuantity,
