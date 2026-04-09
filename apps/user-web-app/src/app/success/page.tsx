@@ -30,6 +30,11 @@ type SessionSummary = {
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
+  const hasRealSessionId = Boolean(
+    sessionId &&
+      sessionId !== '{CHECKOUT_SESSION_ID}' &&
+      !sessionId.includes('CHECKOUT_SESSION_ID')
+  );
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -82,6 +87,7 @@ function SuccessContent() {
   const checkoutStart = summary?.check_in ?? fallbackCheckIn;
   const checkoutEnd = summary?.check_out ?? fallbackCheckOut;
   const checkoutFlowType = summary?.flow_type ?? searchParams.get('flow');
+  const refCode = summary?.ref_id ?? (hasRealSessionId && sessionId ? sessionId.slice(-8) : null);
   const isParkTaxiFlow = checkoutFlowType === 'park_now';
   const parkTaxiDays = useMemo(() => {
     if (!checkoutStart || !checkoutEnd) return 1;
@@ -120,6 +126,10 @@ function SuccessContent() {
   useEffect(() => {
     let active = true;
     if (!sessionId) {
+      return;
+    }
+    if (!hasRealSessionId) {
+      setLookupError('Payment confirmation is still syncing. Please refresh this page in a few seconds.');
       return;
     }
     const run = async () => {
@@ -166,7 +176,7 @@ function SuccessContent() {
     return () => {
       active = false;
     };
-  }, [sessionId, fallbackDisplayId, fallbackLocationId, fallbackCheckIn, fallbackCheckOut]);
+  }, [sessionId, hasRealSessionId, fallbackDisplayId, fallbackLocationId, fallbackCheckIn, fallbackCheckOut]);
 
   const membersHref = useMemo(() => {
     if (!summary?.email) return '/members';
@@ -270,7 +280,7 @@ function SuccessContent() {
                 </h1>
                 <p className="text-sm md:text-base text-black/70 max-w-lg">
                   Vaša sesija parkiranja je uspješno rezervirana.
-                  {sessionId && <span className="block mt-1 text-xs text-black/40 font-mono">Ref: {sessionId.slice(-8)}</span>}
+                  {refCode && <span className="block mt-1 text-xs text-black/40 font-mono">Ref: {refCode}</span>}
                 </p>
                 <div className="mt-3 rounded-xl border border-black/10 bg-white p-3 text-xs text-black/70 space-y-1">
                   <p>
