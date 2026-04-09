@@ -298,11 +298,19 @@ final guaranteedLocationSelectionProvider =
       ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
           prefs.getString('selected_location_display_id')
       : prefs.getString('selected_location_display_id');
+  final savedUuid = userId != null && userId.isNotEmpty
+      ? prefs.getString(_selectedLocationUuidKeyFor(userId)) ??
+          prefs.getString('selected_location_uuid')
+      : prefs.getString('selected_location_uuid');
   String? displayId;
   String? uuid;
   final savedValid = saved != null && RegExp(r'^\d{5}$').hasMatch(saved);
+  final savedUuidValid = savedUuid != null && savedUuid.isNotEmpty;
   if (saved != null && !savedValid) {
     await prefs.remove('selected_location_display_id');
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.remove(_selectedLocationDisplayKeyFor(userId));
+    }
   }
   if (savedValid &&
       locations.any((l) => (l['display_id'] ?? '').toString() == saved)) {
@@ -310,6 +318,9 @@ final guaranteedLocationSelectionProvider =
     final row = locations
         .firstWhere((l) => (l['display_id'] ?? '').toString() == saved);
     uuid = (row['id'] ?? '').toString();
+  } else if (savedValid && savedUuidValid && locations.isEmpty) {
+    displayId = saved;
+    uuid = savedUuid;
   } else if (locations.isNotEmpty) {
     final row = locations.first;
     displayId = (row['display_id'] ?? '').toString();
@@ -417,8 +428,6 @@ final availableLocationsProvider =
 
   if (initialList.isNotEmpty) {
     emit(initialList);
-  } else {
-    emit(const []);
   }
 
   // Helper to fetch and add to stream

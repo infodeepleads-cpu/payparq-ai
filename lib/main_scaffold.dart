@@ -961,7 +961,15 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         const SizedBox(width: 8),
         availableLocsAsync.when(
           data: (locs) {
-            if (locs.isEmpty) return const SizedBox();
+            if (locs.isEmpty) {
+              return Text(
+                Lang.sel(isHr, 'No lots', 'Nema parkirališta'),
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70),
+              );
+            }
 
             final validLocs =
                 locs.where((l) => l['display_id'] != null).toList();
@@ -985,6 +993,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               ),
               child: DropdownButton<String>(
                 value: currentValue,
+                hint: Text(
+                  Lang.sel(isHr, 'Select lot', 'Odaberite parkiralište'),
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70),
+                ),
                 underline: const SizedBox(),
                 dropdownColor: AppTheme.headerBackground,
                 iconEnabledColor: Colors.white70,
@@ -1018,7 +1033,11 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               ),
             );
           },
-          loading: () => const SizedBox(width: 16, height: 16),
+          loading: () => const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: Colors.white70)),
           error: (err, __) => const SizedBox(),
         ),
       ],
