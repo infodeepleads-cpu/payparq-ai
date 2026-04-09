@@ -141,7 +141,7 @@ void main() {
   });
 
   test(
-      'Checkout keeps reciprocal daily/hourly CTA in submit text and description',
+      'Checkout keeps reciprocal daily/hourly CTA in submit text and launcher page',
       () async {
     final file = File('supabase/functions/create-checkout/index.ts');
     final content = await file.readAsString();
@@ -156,25 +156,40 @@ void main() {
           content.contains('dailySwitchUrlParam') &&
           content.contains('resolvedDailySwitchUrl') &&
           content.contains('new URL(dailySwitchUrlParam)') &&
+          content.contains('const requestUrl = new URL(req.url);') &&
+          content.contains('requestUrl.protocol = "https:";') &&
+          content.contains(
+              'const switchLocationIdentifier = displayId || locationId;') &&
           content.contains(
               'new URL("/functions/v1/create-checkout", requestUrl.origin);') &&
           content.contains('checkoutText.needHourly') &&
           content.contains('checkoutText.openHourlyCheckout') &&
           content.contains('checkoutText.needDaily') &&
           content.contains('checkoutText.openDailyCheckout') &&
-          content.contains('const descriptionSwitchLink = type === "daily"') &&
+          content.contains('parseOptionalBooleanValue(body["launcher"])') &&
           content.contains(
-              r'? `${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`') &&
+              r'const hourlySwitchLinkMarkdown = `[${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;') &&
           content.contains(
-              r'? `${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`') &&
+              r'const dailySwitchLinkMarkdown = `[${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;') &&
           content.contains(
-              'const nonReservationDescription = descriptionSwitchLink') &&
+              'const nonReservationDescription = type === "hourly"') &&
+          content.contains('checkoutText.dailyFooterInstruction') &&
+          content.contains('checkoutText.hourlyFooterInstruction') &&
+          content.contains(
+              'const reservationDescriptionWithSwitch = reservationDescription;') &&
+          content.contains('const launcherSwitchLabel = type === "daily"') &&
+          content.contains('const launcherDescription = isReservationFlow') &&
+          content
+              .contains('if (req.method === "GET" && launcherRequested) {') &&
+          content.contains(
+              r'<a class="switch-link" href="${escapeHtml(launcherSwitchUrl)}">') &&
+          content.contains('phone_number_collection: {') &&
           content.contains('submit: {') &&
           content.contains('hourlyDailyCtaMessage') &&
           content.contains('type === "hourly"'),
       isTrue,
       reason:
-          'Daily and hourly flows must keep the reciprocal CTA in submit text and mirror only that opposite-mode link into the description.',
+          'Daily and hourly flows must keep the reciprocal CTA in submit text and expose the opposite-mode link on the launcher page instead of leaking raw URLs into the Stripe description.',
     );
   });
 
@@ -188,6 +203,12 @@ void main() {
           content.contains('checkoutTextByLocale') &&
           content.contains('supportedCheckoutLocales') &&
           content.contains('locale: checkoutLocale') &&
+          content.contains('dailyFooterInstruction') &&
+          content.contains('hourlyFooterInstruction') &&
+          content.contains(
+              'Za dnevnu kartu pritisnite na link u podnožju stranice.') &&
+          content.contains(
+              'Za satni obračun pritisnite na link u podnožju stranice.') &&
           content.contains('hr: {') &&
           content.contains('de: {') &&
           content.contains('ru: {') &&

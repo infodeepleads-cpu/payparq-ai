@@ -30,6 +30,22 @@ function json(data: Record<string, unknown>, status = 200): Response {
   });
 }
 
+function html(content: string, status = 200): Response {
+  return new Response(content, {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function normalizeType(v: string | null): "hourly" | "daily" | "monthly" {
   const t = (v ?? "").trim().toLowerCase();
   if (t === "daily" || t === "monthly") return t;
@@ -87,6 +103,9 @@ const checkoutTextByLocale: Record<string, {
   openHourlyCheckout: string;
   needDaily: string;
   openDailyCheckout: string;
+  dailyFooterInstruction: string;
+  hourlyFooterInstruction: string;
+  continueToCheckout: string;
   termsPrefix: string;
   termsLabel: string;
   andWord: string;
@@ -112,6 +131,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Open hourly checkout",
     needDaily: "Need daily for this location?",
     openDailyCheckout: "Open daily checkout",
+    dailyFooterInstruction: "For a daily ticket, tap the link in the page footer.",
+    hourlyFooterInstruction: "For hourly billing, tap the link in the page footer.",
+    continueToCheckout: "Continue to checkout",
     termsPrefix: "By paying, you agree to our",
     termsLabel: "Terms of Service",
     andWord: "and",
@@ -137,6 +159,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Otvori satni checkout",
     needDaily: "Trebate dnevni parking za ovu lokaciju?",
     openDailyCheckout: "Otvori dnevni checkout",
+    dailyFooterInstruction: "Za dnevnu kartu pritisnite na link u podnožju stranice.",
+    hourlyFooterInstruction: "Za satni obračun pritisnite na link u podnožju stranice.",
+    continueToCheckout: "Nastavi na checkout",
     termsPrefix: "Plaćanjem prihvaćate naše",
     termsLabel: "Uvjeti korištenja",
     andWord: "i",
@@ -162,6 +187,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Stündlichen Checkout öffnen",
     needDaily: "Brauchen Sie täglich für diesen Standort?",
     openDailyCheckout: "Täglichen Checkout öffnen",
+    dailyFooterInstruction: "Für eine Tageskarte tippen Sie auf den Link in der Fußzeile.",
+    hourlyFooterInstruction: "Für die Stundenabrechnung tippen Sie auf den Link in der Fußzeile.",
+    continueToCheckout: "Weiter zum Checkout",
     termsPrefix: "Mit der Zahlung stimmen Sie unseren",
     termsLabel: "Nutzungsbedingungen",
     andWord: "und",
@@ -187,6 +215,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Открыть почасовой checkout",
     needDaily: "Нужна дневная оплата для этой локации?",
     openDailyCheckout: "Открыть дневной checkout",
+    dailyFooterInstruction: "Для дневного билета нажмите ссылку внизу страницы.",
+    hourlyFooterInstruction: "Для почасового расчёта нажмите ссылку внизу страницы.",
+    continueToCheckout: "Перейти к checkout",
     termsPrefix: "Оплачивая, вы соглашаетесь с нашими",
     termsLabel: "Условиями использования",
     andWord: "и",
@@ -212,6 +243,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Otwórz checkout godzinowy",
     needDaily: "Potrzebujesz opłaty dziennej dla tej lokalizacji?",
     openDailyCheckout: "Otwórz checkout dzienny",
+    dailyFooterInstruction: "Aby kupić bilet dzienny, naciśnij link w stopce strony.",
+    hourlyFooterInstruction: "Aby wybrać rozliczenie godzinowe, naciśnij link w stopce strony.",
+    continueToCheckout: "Przejdź do checkoutu",
     termsPrefix: "Płacąc, akceptujesz nasze",
     termsLabel: "Warunki korzystania",
     andWord: "oraz",
@@ -237,6 +271,9 @@ const checkoutTextByLocale: Record<string, {
     openHourlyCheckout: "Abrir checkout por hora",
     needDaily: "¿Necesitas tarifa diaria para esta ubicación?",
     openDailyCheckout: "Abrir checkout diario",
+    dailyFooterInstruction: "Para un ticket diario, pulsa el enlace en el pie de página.",
+    hourlyFooterInstruction: "Para la facturación por horas, pulsa el enlace en el pie de página.",
+    continueToCheckout: "Continuar al checkout",
     termsPrefix: "Al pagar, aceptas nuestros",
     termsLabel: "Términos del servicio",
     andWord: "y la",
@@ -245,9 +282,8 @@ const checkoutTextByLocale: Record<string, {
   },
 };
 
-function checkoutCustomFields(params?: { plate?: string; mobile?: string; allowPlateOverride?: boolean }): any[] {
+function checkoutCustomFields(params?: { plate?: string; allowPlateOverride?: boolean }): any[] {
   const plate = String(params?.plate ?? "").trim().toUpperCase();
-  const mobile = normalizePhoneValue(params?.mobile ?? "");
   const allowPlateOverride = Boolean(params?.allowPlateOverride);
   const hasKnownPlate = plate.length > 0;
   const label = hasKnownPlate
@@ -261,16 +297,6 @@ function checkoutCustomFields(params?: { plate?: string; mobile?: string; allowP
       label: { type: "custom", custom: label },
       optional: hasKnownPlate && allowPlateOverride,
       text: hasKnownPlate ? textPrefill(plate) : undefined,
-    },
-    {
-      key: "phone_number",
-      type: "text",
-      label: {
-        type: "custom",
-        custom: mobile ? `Mobile Phone (current: ${mobile})` : "Mobile Phone",
-      },
-      optional: false,
-      text: mobile ? textPrefill(mobile) : undefined,
     },
   ];
 }
@@ -712,10 +738,6 @@ async function persistCheckoutSession(
     const plateField = session.custom_fields.find((f) => f.key === "plate_number");
     if (plateField && plateField.text) {
       plateNumber = plateField.text.value || "";
-    }
-    const phoneField = session.custom_fields.find((f) => f.key === "phone_number");
-    if (phoneField && phoneField.text) {
-      submittedPhone = normalizePhoneValue(phoneField.text.value || "");
     }
   }
   if (!plateNumber && metadata.plate) {
@@ -1161,6 +1183,10 @@ serve(async (req: Request) => {
     const localeParam = String(
       body["locale"] ?? url.searchParams.get("locale") ?? "",
     ).trim();
+    const launcherRequested =
+      parseOptionalBooleanValue(body["launcher"]) ??
+      parseOptionalBooleanValue(url.searchParams.get("launcher")) ??
+      false;
     const checkoutLocale = resolveCheckoutLocale(
       localeParam,
       req.headers.get("accept-language"),
@@ -1380,8 +1406,10 @@ serve(async (req: Request) => {
       ? formatIso(checkIn)
       : purchaseTimeDisplay;
     const requestUrl = new URL(req.url);
+    requestUrl.protocol = "https:";
+    const switchLocationIdentifier = displayId || locationId;
     const hourlySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
-    hourlySwitchUrl.searchParams.set("location_id", locationUuid || locationId);
+    hourlySwitchUrl.searchParams.set("location_id", switchLocationIdentifier);
     if (displayId) {
       hourlySwitchUrl.searchParams.set("display_id", displayId);
     }
@@ -1396,7 +1424,7 @@ serve(async (req: Request) => {
       } catch (_) {}
     }
     const dailySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
-    dailySwitchUrl.searchParams.set("location_id", locationUuid || locationId);
+    dailySwitchUrl.searchParams.set("location_id", switchLocationIdentifier);
     if (displayId) {
       dailySwitchUrl.searchParams.set("display_id", displayId);
     }
@@ -1410,8 +1438,10 @@ serve(async (req: Request) => {
         }
       } catch (_) {}
     }
-    const dailyHourlyCtaMessage = `${checkoutText.needHourly} ${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`;
-    const hourlyDailyCtaMessage = `${checkoutText.needDaily} ${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`;
+    const hourlySwitchLinkMarkdown = `[${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
+    const dailySwitchLinkMarkdown = `[${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
+    const dailyHourlyCtaMessage = `${checkoutText.needHourly} ${hourlySwitchLinkMarkdown}`;
+    const hourlyDailyCtaMessage = `${checkoutText.needDaily} ${dailySwitchLinkMarkdown}`;
     const submitMessageBase = type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage;
     const reservationSubmitMessage = isReservationFlow
       ? [reservationDescription, `Qty: ${displayQuantity}`].filter((part) => part && part.length > 0).join("\n")
@@ -1419,22 +1449,31 @@ serve(async (req: Request) => {
     const submitMessage = reservationSubmitMessage
       ? `${reservationSubmitMessage}\n${submitMessageBase}`
       : submitMessageBase;
-    const descriptionSwitchLink = type === "daily"
-      ? `${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`
-      : type === "hourly"
-      ? `${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`
-      : "";
     const nonReservationDescriptionBase =
       `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}`;
     const nonReservationDescriptionCore = parkTaxiRequested
       ? `${nonReservationDescriptionBase}\n(${checkoutText.parkTaxiPackageLine})\n${checkoutText.parkTaxiQuantityHint}`
       : `${nonReservationDescriptionBase}\n(${endTimeDependsOnSelected})`;
-    const nonReservationDescription = descriptionSwitchLink
-      ? `${nonReservationDescriptionCore}\n${descriptionSwitchLink}`
+    const nonReservationDescription = type === "hourly"
+      ? `${nonReservationDescriptionCore}\n${checkoutText.dailyFooterInstruction}`
+      : type === "daily"
+      ? `${nonReservationDescriptionCore}\n${checkoutText.hourlyFooterInstruction}`
       : nonReservationDescriptionCore;
-    const reservationDescriptionWithSwitch = descriptionSwitchLink && reservationDescription
-      ? `${reservationDescription}\n${descriptionSwitchLink}`
-      : reservationDescription;
+    const reservationDescriptionWithSwitch = reservationDescription;
+    const launcherSwitchLabel = type === "daily"
+      ? checkoutText.openHourlyCheckout
+      : type === "hourly"
+      ? checkoutText.openDailyCheckout
+      : "";
+    const launcherSwitchUrl = type === "daily"
+      ? resolvedHourlySwitchUrl
+      : type === "hourly"
+      ? resolvedDailySwitchUrl
+      : "";
+    const launcherTitle = isReservationFlow ? reservationTitle : nonReservationTitle;
+    const launcherDescription = isReservationFlow
+      ? reservationDescription
+      : nonReservationDescriptionCore;
     const lineItem: any = {
       quantity: checkoutQuantity,
       price_data: {
@@ -1471,6 +1510,9 @@ serve(async (req: Request) => {
       client_reference_id: locationUuid, // Use UUID if possible
       customer: resolvedCustomerId || undefined,
       customer_email: resolvedCustomerId ? undefined : email || undefined,
+      phone_number_collection: {
+        enabled: true,
+      },
       consent_collection: {
         terms_of_service: "required",
       },
@@ -1488,7 +1530,6 @@ serve(async (req: Request) => {
       },
       custom_fields: checkoutCustomFields({
         plate,
-        mobile,
         allowPlateOverride,
       }),
       locale: checkoutLocale,
@@ -1669,6 +1710,42 @@ serve(async (req: Request) => {
         : "skipped";
     }
 
+    if (req.method === "GET" && launcherRequested) {
+      const launcherHtml = `<!doctype html>
+<html lang="${escapeHtml(checkoutLocale)}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>${escapeHtml(launcherTitle)}</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; font-family: Inter, Arial, sans-serif; background: #f5f7fb; color: #111827; }
+      .page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+      .card { width: 100%; max-width: 440px; background: #ffffff; border-radius: 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.14); padding: 24px; }
+      .brand { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280; }
+      h1 { margin: 12px 0 0; font-size: 30px; line-height: 1.15; }
+      .summary { margin: 16px 0 0; font-size: 16px; line-height: 1.6; color: #374151; }
+      .switch-link { display: inline-flex; margin-top: 18px; font-size: 16px; font-weight: 700; color: #635bff; text-decoration: none; }
+      .primary { display: block; margin-top: 24px; border-radius: 16px; background: #635bff; color: #ffffff; text-decoration: none; text-align: center; padding: 16px 20px; font-size: 17px; font-weight: 700; }
+      .primary:hover, .switch-link:hover { opacity: 0.9; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="card">
+        <div class="brand">PayParq</div>
+        <h1>${escapeHtml(launcherTitle)}</h1>
+        <div class="summary">${escapeHtml(launcherDescription).replaceAll("\n", "<br />")}</div>
+        ${launcherSwitchLabel && launcherSwitchUrl
+          ? `<a class="switch-link" href="${escapeHtml(launcherSwitchUrl)}">${escapeHtml(launcherSwitchLabel)}</a>`
+          : ""}
+        <a class="primary" href="${escapeHtml(paymentSession.url)}">${escapeHtml(checkoutText.continueToCheckout)}</a>
+      </section>
+    </main>
+  </body>
+</html>`;
+      return html(launcherHtml);
+    }
     if (req.method === "GET") {
       return new Response(null, {
         status: 303,
