@@ -22,6 +22,7 @@
     (function () {
       var loadingEl = document.getElementById('loading');
       var isHidden = false;
+      var bootOnce = false;
       var hideLoading = function () {
         if (isHidden) return;
         isHidden = true;
@@ -53,36 +54,71 @@
         };
         loadingEl.appendChild(btn);
       };
-      var hardTimeoutId = setTimeout(function () {
-        if (!isHidden) {
-          showRetry('Startup is taking longer than expected.');
-        }
-      }, 25000);
-      window.addEventListener('flutter-first-frame', function () {
-        clearTimeout(hardTimeoutId);
-        hideLoading();
-      }, { once: true });
-      var script = document.createElement('script');
-      script.src = 'flutter_bootstrap.js';
-      script.async = true;
-      script.onerror = function () {
-        clearTimeout(hardTimeoutId);
-        showRetry('Failed to load app files.');
+      var boot = function () {
+        if (bootOnce) return;
+        bootOnce = true;
+        var hardTimeoutId = setTimeout(function () {
+          if (!isHidden) {
+            showRetry('Startup is taking longer than expected.');
+          }
+        }, 25000);
+        window.addEventListener('flutter-first-frame', function () {
+          clearTimeout(hardTimeoutId);
+          hideLoading();
+        }, { once: true });
+        var script = document.createElement('script');
+        script.src = 'flutter_bootstrap.js';
+        script.async = true;
+        script.onerror = function () {
+          clearTimeout(hardTimeoutId);
+          showRetry('Failed to load app files.');
+        };
+        document.body.appendChild(script);
+        window.addEventListener('error', function (event) {
+          clearTimeout(hardTimeoutId);
+          var message = (event && (event.message || (event.error && event.error.message))) || 'App failed during startup.';
+          showRetry(message + ' Reload.');
+        }, { once: true });
+        window.addEventListener('unhandledrejection', function (event) {
+          clearTimeout(hardTimeoutId);
+          var reason = event && event.reason;
+          var message = typeof reason === 'string'
+            ? reason
+            : (reason && reason.message) || 'App failed during startup.';
+          showRetry(message + ' Reload.');
+        }, { once: true });
       };
-      document.body.appendChild(script);
-      window.addEventListener('error', function (event) {
-        clearTimeout(hardTimeoutId);
-        var message = (event && (event.message || (event.error && event.error.message))) || 'App failed during startup.';
-        showRetry(message + ' Reload.');
-      }, { once: true });
-      window.addEventListener('unhandledrejection', function (event) {
-        clearTimeout(hardTimeoutId);
-        var reason = event && event.reason;
-        var message = typeof reason === 'string'
-          ? reason
-          : (reason && reason.message) || 'App failed during startup.';
-        showRetry(message + ' Reload.');
-      }, { once: true });
+      var swResetKey = 'pp_sw_reset_v3';
+      var shouldReloadAfterSwReset = false;
+      var swResetPromise = Promise.resolve();
+      if ('serviceWorker' in navigator) {
+        try {
+          shouldReloadAfterSwReset = !sessionStorage.getItem(swResetKey);
+          if (shouldReloadAfterSwReset) {
+            sessionStorage.setItem(swResetKey, '1');
+          }
+          swResetPromise = navigator.serviceWorker.getRegistrations()
+            .then(function (registrations) {
+              return Promise.all(registrations.map(function (reg) { return reg.unregister(); }));
+            })
+            .then(function () {
+              if (!('caches' in window) || !window.caches.keys) return;
+              return window.caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
+              });
+            })
+            .catch(function () {});
+        } catch (_) {}
+      }
+      swResetPromise.finally(function () {
+        if (shouldReloadAfterSwReset) {
+          var url = new URL(window.location.href);
+          url.searchParams.set('sw_reset', Date.now().toString());
+          window.location.replace(url.toString());
+          return;
+        }
+        boot();
+      });
     })();
   </script>
 </body>

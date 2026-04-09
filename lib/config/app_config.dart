@@ -58,7 +58,8 @@ class AppConfig {
               configuredUri.host.isNotEmpty) {
             final configuredIsLocal = _isLocalHost(configuredUri.host);
             final currentIsLocal = _isLocalHost(base.host);
-            if (configuredIsLocal == currentIsLocal) {
+            final sameHost = configuredUri.host.toLowerCase() == base.host.toLowerCase();
+            if (sameHost || (configuredIsLocal && currentIsLocal)) {
               return configured;
             }
           }
