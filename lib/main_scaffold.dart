@@ -86,28 +86,17 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           return;
         } catch (error) {
           lastError = error;
-          await Future<void>.delayed(Duration(milliseconds: 350 * (attempt + 1)));
+          await Future<void>.delayed(
+              Duration(milliseconds: 350 * (attempt + 1)));
         }
       }
       if (lastError != null) {
         throw lastError;
       }
     }
+
     try {
       await loadWithRetry(admin_mod.loadLibrary);
-      await Future.wait([
-        loadWithRetry(hud_mod.loadLibrary),
-        loadWithRetry(cases_mod.loadLibrary),
-        loadWithRetry(upload_case_mod.loadLibrary),
-        loadWithRetry(passes_mod.loadLibrary),
-        loadWithRetry(staff_mod.loadLibrary),
-        loadWithRetry(verification_mod.loadLibrary),
-        loadWithRetry(locations_mod.loadLibrary),
-        loadWithRetry(settings_mod.loadLibrary),
-        loadWithRetry(analytics_mod.loadLibrary),
-        loadWithRetry(pricing_mod.loadLibrary),
-        loadWithRetry(finance_mod.loadLibrary),
-      ]);
     } catch (_) {}
     if (!mounted) return;
     setState(() {
@@ -1080,7 +1069,8 @@ class _DeferredPageState extends State<_DeferredPage> {
         _loadError = '';
       });
     } catch (error, stackTrace) {
-      debugPrint('Deferred page load failed (${widget.pageKey}) attempt $_loadAttempts: $error');
+      debugPrint(
+          'Deferred page load failed (${widget.pageKey}) attempt $_loadAttempts: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (_loadAttempts < 6) {
         await Future<void>.delayed(Duration(milliseconds: 350 * _loadAttempts));
@@ -1148,7 +1138,9 @@ class _DeferredPageState extends State<_DeferredPage> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  kDebugMode ? _loadError : 'Please refresh the app and try again.',
+                  kDebugMode
+                      ? _loadError
+                      : 'Please refresh the app and try again.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     color: Colors.black54,
