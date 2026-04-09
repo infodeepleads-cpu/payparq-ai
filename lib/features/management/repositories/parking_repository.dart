@@ -262,7 +262,7 @@ final cacheInvalidationProvider = Provider<void>((ref) {
         .eq('officer_id', user.id)
         .listen((_) {
           debounce?.cancel();
-          debounce = Timer(const Duration(milliseconds: 500), () {
+          debounce = Timer(const Duration(milliseconds: 100), () {
             _clearCachePrefixes({'violations_'});
           });
         });
@@ -303,7 +303,7 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
     if ((effUuid == null || effUuid.isEmpty) &&
         selectedDisplayId != null &&
         selectedDisplayId.isNotEmpty) {
-      return Stream.value([]);
+      return _cachedOnlyStream('${cacheKey}_super');
     }
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effUuid)
@@ -337,7 +337,7 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
     if ((effectiveUuid == null || effectiveUuid.isEmpty) &&
         selectedDisplayId != null &&
         selectedDisplayId.isNotEmpty) {
-      return Stream.value([]);
+      return _cachedOnlyStream(cacheKey);
     }
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getPermitsStream(locationId: effectiveUuid)
@@ -441,7 +441,7 @@ final sessionsStreamProvider =
     if ((effUuid == null || effUuid.isEmpty) &&
         selectedDisplayId != null &&
         selectedDisplayId.isNotEmpty) {
-      return Stream.value([]);
+      return _cachedOnlyStream('${cacheKey}_super');
     }
     final baseStream = (effUuid != null && effUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effUuid)
@@ -475,7 +475,7 @@ final sessionsStreamProvider =
     if ((effectiveUuid == null || effectiveUuid.isEmpty) &&
         selectedDisplayId != null &&
         selectedDisplayId.isNotEmpty) {
-      return Stream.value([]);
+      return _cachedOnlyStream(cacheKey);
     }
     final baseStream = (effectiveUuid != null && effectiveUuid.isNotEmpty)
         ? repo.getSessionsStream(locationId: effectiveUuid)

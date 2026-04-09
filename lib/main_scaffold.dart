@@ -9,28 +9,45 @@ import '../logic/providers/auth_controller.dart';
 import '../utils/async_action_handler.dart';
 import '../services/error_mapper.dart';
 import '../screens/deferred/hud_loader.dart' deferred as hud_mod;
+import '../screens/deferred/hud_loader.dart' as hud_sync;
 import '../features/enforcement/deferred/cases_loader.dart'
     deferred as cases_mod;
+import '../features/enforcement/deferred/cases_loader.dart' as cases_sync;
 import '../features/enforcement/deferred/upload_case_loader.dart'
     deferred as upload_case_mod;
+import '../features/enforcement/deferred/upload_case_loader.dart'
+    as upload_case_sync;
 import '../features/management/deferred/passes_loader.dart'
     deferred as passes_mod;
+import '../features/management/deferred/passes_loader.dart' as passes_sync;
 import '../features/management/deferred/add_staff_loader.dart'
     deferred as staff_mod;
+import '../features/management/deferred/add_staff_loader.dart' as staff_sync;
 import '../features/management/deferred/verification_inbox_loader.dart'
     deferred as verification_mod;
+import '../features/management/deferred/verification_inbox_loader.dart'
+    as verification_sync;
 import '../features/management/deferred/locations_loader.dart'
     deferred as locations_mod;
+import '../features/management/deferred/locations_loader.dart'
+    as locations_sync;
 import '../screens/deferred/settings_loader.dart' deferred as settings_mod;
+import '../screens/deferred/settings_loader.dart' as settings_sync;
 import '../widgets/skeleton_loader.dart';
 import '../theme.dart';
 import '../features/intelligence/deferred/analytics_loader.dart'
     deferred as analytics_mod;
+import '../features/intelligence/deferred/analytics_loader.dart'
+    as analytics_sync;
 import '../features/intelligence/deferred/dynamic_pricing_loader.dart'
     deferred as pricing_mod;
+import '../features/intelligence/deferred/dynamic_pricing_loader.dart'
+    as pricing_sync;
 import '../features/intelligence/deferred/finance_loader.dart'
     deferred as finance_mod;
+import '../features/intelligence/deferred/finance_loader.dart' as finance_sync;
 import '../screens/admin/deferred/admin_loader.dart' deferred as admin_mod;
+import '../screens/admin/deferred/admin_loader.dart' as admin_sync;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterScaffold extends ConsumerStatefulWidget {
@@ -78,6 +95,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   }
 
   Future<void> _prepareInitialScreen() async {
+    if (kIsWeb) {
+      if (!mounted) return;
+      setState(() {
+        _initialScreenReady = true;
+      });
+      return;
+    }
     Future<void> loadWithRetry(Future<void> Function() loader) async {
       Object? lastError;
       for (var attempt = 0; attempt < 4; attempt++) {
@@ -108,6 +132,25 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  Widget _buildTabPage({
+    required String pageKey,
+    required Future<void> Function() load,
+    required Widget Function() buildDeferred,
+    required Widget Function() buildWeb,
+  }) {
+    if (kIsWeb) {
+      return KeyedSubtree(
+        key: ValueKey('web-$pageKey'),
+        child: buildWeb(),
+      );
+    }
+    return _DeferredPage(
+      pageKey: pageKey,
+      load: load,
+      build: buildDeferred,
+    );
   }
 
   String _selectedLocationDisplayKeyFor(String userId) =>
@@ -455,23 +498,26 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       itemCount: 3,
       itemBuilder: (index) {
         if (index == 0) {
-          return _DeferredPage(
+          return _buildTabPage(
             pageKey: 'mobile-admin-dashboard',
             load: () => admin_mod.loadLibrary(),
-            build: () => admin_mod.buildAdminDashboard(),
+            buildDeferred: () => admin_mod.buildAdminDashboard(),
+            buildWeb: () => admin_sync.buildAdminDashboard(),
           );
         }
         if (index == 1) {
-          return _DeferredPage(
+          return _buildTabPage(
             pageKey: 'mobile-hud',
             load: () => hud_mod.loadLibrary(),
-            build: () => hud_mod.buildHudScreen(),
+            buildDeferred: () => hud_mod.buildHudScreen(),
+            buildWeb: () => hud_sync.buildHudScreen(),
           );
         }
-        return _DeferredPage(
+        return _buildTabPage(
           pageKey: 'mobile-cases',
           load: () => cases_mod.loadLibrary(),
-          build: () => cases_mod.buildCasesListView(),
+          buildDeferred: () => cases_mod.buildCasesListView(),
+          buildWeb: () => cases_sync.buildCasesListView(),
         );
       },
     );
@@ -777,81 +823,107 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                           itemCount: 11,
                           itemBuilder: (index) {
                             if (index == 0) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-cases',
                                 load: () => cases_mod.loadLibrary(),
-                                build: () => cases_mod.buildCasesListView(),
+                                buildDeferred: () =>
+                                    cases_mod.buildCasesListView(),
+                                buildWeb: () => cases_sync.buildCasesListView(),
                               );
                             }
                             if (index == 1) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-upload-case',
                                 load: () => upload_case_mod.loadLibrary(),
-                                build: () =>
+                                buildDeferred: () =>
                                     upload_case_mod.buildUploadCaseForm(),
+                                buildWeb: () =>
+                                    upload_case_sync.buildUploadCaseForm(),
                               );
                             }
                             if (index == 2) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-admin-dashboard',
                                 load: () => admin_mod.loadLibrary(),
-                                build: () => admin_mod.buildAdminDashboard(),
+                                buildDeferred: () =>
+                                    admin_mod.buildAdminDashboard(),
+                                buildWeb: () =>
+                                    admin_sync.buildAdminDashboard(),
                               );
                             }
                             if (index == 3) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-passes',
                                 load: () => passes_mod.loadLibrary(),
-                                build: () => passes_mod.buildPassesListScreen(),
+                                buildDeferred: () =>
+                                    passes_mod.buildPassesListScreen(),
+                                buildWeb: () =>
+                                    passes_sync.buildPassesListScreen(),
                               );
                             }
                             if (index == 4) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-locations',
                                 load: () => locations_mod.loadLibrary(),
-                                build: () =>
+                                buildDeferred: () =>
                                     locations_mod.buildLocationsScreen(),
+                                buildWeb: () =>
+                                    locations_sync.buildLocationsScreen(),
                               );
                             }
                             if (index == 5) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-staff',
                                 load: () => staff_mod.loadLibrary(),
-                                build: () => staff_mod.buildAddStaffScreen(),
+                                buildDeferred: () =>
+                                    staff_mod.buildAddStaffScreen(),
+                                buildWeb: () =>
+                                    staff_sync.buildAddStaffScreen(),
                               );
                             }
                             if (index == 6) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-pricing',
                                 load: () => pricing_mod.loadLibrary(),
-                                build: () => pricing_mod.buildDynamicPricing(),
+                                buildDeferred: () =>
+                                    pricing_mod.buildDynamicPricing(),
+                                buildWeb: () =>
+                                    pricing_sync.buildDynamicPricing(),
                               );
                             }
                             if (index == 7) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-analytics',
                                 load: () => analytics_mod.loadLibrary(),
-                                build: () => analytics_mod.buildAnalytics(),
+                                buildDeferred: () =>
+                                    analytics_mod.buildAnalytics(),
+                                buildWeb: () => analytics_sync.buildAnalytics(),
                               );
                             }
                             if (index == 8) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-settings',
                                 load: () => settings_mod.loadLibrary(),
-                                build: () => settings_mod.buildSettingsScreen(),
+                                buildDeferred: () =>
+                                    settings_mod.buildSettingsScreen(),
+                                buildWeb: () =>
+                                    settings_sync.buildSettingsScreen(),
                               );
                             }
                             if (index == 9) {
-                              return _DeferredPage(
+                              return _buildTabPage(
                                 pageKey: 'desktop-finance',
                                 load: () => finance_mod.loadLibrary(),
-                                build: () => finance_mod.buildFinance(),
+                                buildDeferred: () => finance_mod.buildFinance(),
+                                buildWeb: () => finance_sync.buildFinance(),
                               );
                             }
-                            return _DeferredPage(
+                            return _buildTabPage(
                               pageKey: 'desktop-verification-inbox',
                               load: () => verification_mod.loadLibrary(),
-                              build: () => verification_mod
+                              buildDeferred: () => verification_mod
+                                  .buildVerificationInboxScreen(),
+                              buildWeb: () => verification_sync
                                   .buildVerificationInboxScreen(),
                             );
                           },

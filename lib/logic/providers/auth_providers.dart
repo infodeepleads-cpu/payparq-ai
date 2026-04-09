@@ -205,6 +205,24 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
 final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
   final displayId = ref.watch(selectedLocationIdProvider);
   if (displayId == null) return null;
+  final user = Supabase.instance.client.auth.currentUser;
+  try {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final scopedDisplayId = user?.id != null && user!.id.isNotEmpty
+        ? prefs.getString(_selectedLocationDisplayKeyFor(user.id))
+        : null;
+    final scopedUuid = user?.id != null && user!.id.isNotEmpty
+        ? prefs.getString(_selectedLocationUuidKeyFor(user.id))
+        : null;
+    final cachedDisplayId =
+        scopedDisplayId ?? prefs.getString('selected_location_display_id');
+    final cachedUuid = scopedUuid ?? prefs.getString('selected_location_uuid');
+    if (cachedDisplayId == displayId &&
+        cachedUuid != null &&
+        cachedUuid.isNotEmpty) {
+      return cachedUuid;
+    }
+  } catch (_) {}
 
   final available = ref.watch(availableLocationsProvider).value;
   if (available != null) {
@@ -411,7 +429,7 @@ final availableLocationsProvider =
     final now = DateTime.now();
     if (!force &&
         lastFetchAt != null &&
-        now.difference(lastFetchAt!) < const Duration(seconds: 2)) {
+        now.difference(lastFetchAt!) < const Duration(milliseconds: 750)) {
       return;
     }
     fetchInFlight = true;
@@ -642,27 +660,19 @@ final availableLocationsProvider =
     }
   }
 
-  Timer? initialFetchTimer;
-  if (initialList.isNotEmpty) {
-    initialFetchTimer = Timer(const Duration(milliseconds: 350), () {
-      fetch();
-    });
-  } else {
-    fetch();
-  }
+  fetch();
 
   Timer? fetchDebounce;
   final subscription = Supabase.instance.client
       .from('locations')
       .stream(primaryKey: ['id']).listen((_) {
     fetchDebounce?.cancel();
-    fetchDebounce = Timer(const Duration(milliseconds: 350), () {
+    fetchDebounce = Timer(const Duration(milliseconds: 100), () {
       fetch(force: true);
     });
   }, onError: (e) => debugPrint('Loc Stream Error: $e'));
 
   ref.onDispose(() {
-    initialFetchTimer?.cancel();
     fetchDebounce?.cancel();
     subscription.cancel();
     controller.close();
