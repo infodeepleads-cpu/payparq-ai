@@ -1419,13 +1419,11 @@ serve(async (req: Request) => {
     const submitMessage = reservationSubmitMessage
       ? `${reservationSubmitMessage}\n${submitMessageBase}`
       : submitMessageBase;
-    const descriptionSwitchLinks = type === "hourly" || type === "daily"
-      ? [
-        `${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`,
-        `${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`,
-      ]
-      : [];
-    const descriptionSwitchLink = descriptionSwitchLinks.join("\n");
+    const descriptionSwitchLink = type === "daily"
+      ? `${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`
+      : type === "hourly"
+      ? `${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`
+      : "";
     const nonReservationDescriptionBase =
       `${checkoutText.startTime}: ${nonReservationStartTime}\n${checkoutText.locationId}: ${displayId}`;
     const nonReservationDescriptionCore = parkTaxiRequested

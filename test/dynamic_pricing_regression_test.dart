@@ -140,7 +140,8 @@ void main() {
     );
   });
 
-  test('Checkout keeps reciprocal daily/hourly CTA in submit text as hyperlink',
+  test(
+      'Checkout keeps reciprocal daily/hourly CTA in submit text and description',
       () async {
     final file = File('supabase/functions/create-checkout/index.ts');
     final content = await file.readAsString();
@@ -161,16 +162,19 @@ void main() {
           content.contains('checkoutText.openHourlyCheckout') &&
           content.contains('checkoutText.needDaily') &&
           content.contains('checkoutText.openDailyCheckout') &&
-          content.contains('(\${resolvedHourlySwitchUrl})') &&
-          content.contains('(\${resolvedDailySwitchUrl})') &&
+          content.contains('const descriptionSwitchLink = type === "daily"') &&
           content.contains(
-              'const nonReservationDescription = parkTaxiRequested') &&
+              r'? `${checkoutText.openHourlyCheckout}: ${resolvedHourlySwitchUrl}`') &&
+          content.contains(
+              r'? `${checkoutText.openDailyCheckout}: ${resolvedDailySwitchUrl}`') &&
+          content.contains(
+              'const nonReservationDescription = descriptionSwitchLink') &&
           content.contains('submit: {') &&
           content.contains('hourlyDailyCtaMessage') &&
-          content.contains('type === "daily" || type === "hourly"'),
+          content.contains('type === "hourly"'),
       isTrue,
       reason:
-          'Daily and hourly flows must keep reciprocal CTA links in submit text (not item description), including both daily_switch_url and hourly_switch_url paths.',
+          'Daily and hourly flows must keep the reciprocal CTA in submit text and mirror only that opposite-mode link into the description.',
     );
   });
 
