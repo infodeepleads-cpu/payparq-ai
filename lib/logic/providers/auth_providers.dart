@@ -419,9 +419,6 @@ final availableLocationsProvider =
   // Fallback to metadata immediately if profile is not yet loaded
   final role = _normalizeRole(
       (profile?['role'] ?? user.userMetadata?['role'])?.toString());
-  final email =
-      (profile?['email'] ?? user.email)?.toString().trim().toLowerCase();
-
   final controller = StreamController<List<Map<String, dynamic>>>();
   var hasEmitted = false;
 
@@ -607,22 +604,6 @@ final availableLocationsProvider =
         }
 
         await Future.wait(fetchFutures);
-
-        if (mergedLocations.isEmpty &&
-            (role == 'admin' || _isAdminOverrideEmail(email))) {
-          try {
-            final all =
-                await SupabaseService.instance.executeQuery<List<dynamic>>(
-              queryId: 'loc_all_admin_att$attempt',
-              timeout: queryTimeout,
-              query: () => Supabase.instance.client
-                  .from('locations')
-                  .select()
-                  .order('name'),
-            );
-            mergedLocations.addAll(List<Map<String, dynamic>>.from(all));
-          } catch (_) {}
-        }
 
         mergedLocations.sort((a, b) => (a['name'] ?? '')
             .toString()

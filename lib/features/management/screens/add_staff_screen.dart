@@ -642,8 +642,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                 value: 'admin',
                                 child: Text(Lang.sel(
                                     ref.read(localeIsCroatianProvider),
-                                    'Admin (Full Access)',
-                                    'Admin (potpuni pristup)'))),
+                                    'Admin (Assigned Locations)',
+                                    'Admin (dodijeljene lokacije)'))),
                           if (!isManagerCreator)
                             DropdownMenuItem(
                                 value: 'manager',
@@ -661,7 +661,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                         onChanged: (v) =>
                             setDialogState(() => selectedRole = v!),
                       ),
-                      if (selectedRole == 'officer' ||
+                      if (selectedRole == 'admin' ||
+                          selectedRole == 'officer' ||
                           selectedRole == 'manager') ...[
                         const SizedBox(height: 20),
                         Align(
@@ -734,7 +735,8 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                     : () async {
                         if (formKey.currentState!.validate()) {
                           final requiresAssignment =
-                              selectedRole == 'manager' ||
+                              selectedRole == 'admin' ||
+                                  selectedRole == 'manager' ||
                                   selectedRole == 'officer';
                           if (requiresAssignment &&
                               selectedLocationIds.isEmpty) {

@@ -30,7 +30,8 @@ class StaffController {
     if (!allowedRoles.contains(role)) {
       throw const AppError('Invalid role');
     }
-    final requiresAssignment = role == 'manager' || role == 'officer';
+    final requiresAssignment =
+        role == 'admin' || role == 'manager' || role == 'officer';
     if (requiresAssignment && locationIds.isEmpty) {
       throw const AppError('No locations selected');
     }

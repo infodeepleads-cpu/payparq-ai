@@ -293,8 +293,11 @@ serve(async (req) => {
     if (!canCreateTargetRole) {
       return json({ error: "No permission to create this role" }, 403);
     }
-    if ((targetRole === "manager" || targetRole === "officer") && !locationId) {
-      return json({ error: "Location is required for manager/officer" }, 400);
+    if (
+      (targetRole === "admin" || targetRole === "manager" || targetRole === "officer") &&
+      !locationId
+    ) {
+      return json({ error: "Location is required for admin/manager/officer" }, 400);
     }
 
     let userId = await findUserIdByEmail(email);
@@ -348,7 +351,7 @@ serve(async (req) => {
 
     await admin.from("officer_assignments").delete().eq("officer_id", userId);
 
-    if (targetRole === "manager" || targetRole === "officer") {
+    if (targetRole === "admin" || targetRole === "manager" || targetRole === "officer") {
       const assignmentLocationIds = uniqueLocationIds.length > 0
         ? uniqueLocationIds
         : (locationId ? [locationId] : []);
