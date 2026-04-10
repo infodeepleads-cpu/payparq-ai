@@ -74,6 +74,42 @@
       ]
     },
     {
+      "source": "/favicon.ico",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/favicon.svg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/icon-192.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/icon-512.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
       "source": "/icons/(.*)",
       "headers": [
         {
@@ -125,7 +161,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json|sw-killer\\.js|.*\\.apk).*)",
+      "source": "/((?!assets|icons|canvaskit|flutter.*|main\\.dart\\.js.*|manifest\\.json|version\\.json|sw-killer\\.js|favicon\\.ico|favicon\\.svg|icon-192\\.png|icon-512\\.png|apple-touch-icon\\.png|.*\\.apk).*)",
       "destination": "/"
     }
   ]
