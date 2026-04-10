@@ -2,6 +2,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.25.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
+import {
+  buildStripeSplitMetadata,
+  buildStripeSplitPaymentIntentData,
+  buildStripeSplitPlan,
+  resolveAutomaticSplitDestination,
+  resolveCaseOwnerFixedPayoutCents,
+  resolveSplitExpenseRate,
+  resolveSplitFixedExpenseCents,
+  resolveSplitTaxRate,
+} from "../../../../shared/stripeSplit.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -307,6 +317,64 @@ function normalizeEmailValue(value: unknown): string {
 
 function normalizePhoneValue(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function toCents(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+function asPlainRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+async function resolveLocationSplitContext(locationUuid: string) {
+  const { data: locationData } = await admin
+    .from("locations")
+    .select("owner_id,verification_metadata")
+    .eq("id", locationUuid)
+    .maybeSingle();
+
+  const verificationMetadata = asPlainRecord(locationData?.["verification_metadata"]);
+  const ownerId = String(locationData?.["owner_id"] ?? "").trim();
+
+  let splitDestination = { destinationAccountId: null, splitEligible: false };
+  if (ownerId) {
+    const { data: ownerProfile } = await admin
+      .from("profiles")
+      .select("role,stripe_account_id,stripe_onboarding_complete")
+      .eq("id", ownerId)
+      .maybeSingle();
+    splitDestination = resolveAutomaticSplitDestination({
+      profileRole: ownerProfile?.role ?? "",
+      stripeAccountId: ownerProfile?.stripe_account_id ?? "",
+      stripeOnboardingComplete: ownerProfile?.stripe_onboarding_complete === true,
+    });
+  }
+
+  return {
+    ownerStripeAccountId: splitDestination.destinationAccountId,
+    ownerStripeReady: splitDestination.splitEligible,
+    splitExpenseRate: resolveSplitExpenseRate(
+      verificationMetadata,
+      Deno.env.get("PAYPARQ_SPLIT_EXPENSE_RATE") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_EXPENSE_RATE") ?? null,
+    ),
+    splitTaxRate: resolveSplitTaxRate(
+      verificationMetadata,
+      Deno.env.get("PAYPARQ_SPLIT_TAX_RATE") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_TAX_RATE") ?? null,
+    ),
+    splitFixedExpenseCents: resolveSplitFixedExpenseCents(
+      verificationMetadata,
+      Deno.env.get("PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ?? null,
+    ),
+    caseOwnerFixedPayoutCents: resolveCaseOwnerFixedPayoutCents(
+      verificationMetadata,
+      Deno.env.get("CASE_OWNER_PROCESS_FEE_CENTS") ?? Deno.env.get("NEXT_PUBLIC_CASE_OWNER_PROCESS_FEE_CENTS") ?? null,
+    ),
+  };
 }
 
 function parseStripeMetadataObject(value: unknown): Record<string, unknown> | null {
@@ -1501,6 +1569,39 @@ serve(async (req: Request) => {
 
     await cleanupStalePendingGuestSessions();
 
+    const chargedAmountCents = Math.max(50, unitAmountCents * checkoutQuantity);
+    const parkTaxiDailyTicketTotalCents = parkTaxiRequested && locationUuid
+      ? toCents((await locationPriceCents(locationUuid, "daily")) * checkoutQuantity)
+      : 0;
+    const splitContext = locationUuid
+      ? await resolveLocationSplitContext(locationUuid)
+      : {
+          ownerStripeAccountId: null,
+          ownerStripeReady: false,
+          splitExpenseRate: 0,
+          splitTaxRate: 0,
+          splitFixedExpenseCents: 0,
+          caseOwnerFixedPayoutCents: 0,
+        };
+    const splitPlan =
+      splitContext.ownerStripeReady && splitContext.ownerStripeAccountId
+        ? buildStripeSplitPlan({
+            chargedAmountCents,
+            sessionAmountCents: chargedAmountCents,
+            parkTaxiDailyTicketTotalCents,
+            pricingType: type,
+            flowType: flow || "payment",
+            destinationAccountId: splitContext.ownerStripeAccountId,
+            expenseRate: splitContext.splitExpenseRate,
+            taxRate: splitContext.splitTaxRate,
+            fixedExpenseCents: splitContext.splitFixedExpenseCents,
+            caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
+          })
+        : null;
+    const splitMetadata = buildStripeSplitMetadata({
+      splitPlan,
+      caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
+    });
     const resolvedCustomerId = await resolveCheckoutCustomer({ email, mobile });
     const sessionOptions: any = {
       mode: "payment",
@@ -1552,7 +1653,9 @@ serve(async (req: Request) => {
         allow_plate_override: allowPlateOverride ? "1" : "0",
         extend_target_session_id: extendTargetSessionId || undefined,
         extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
+        ...splitMetadata,
       },
+      payment_intent_data: buildStripeSplitPaymentIntentData(splitPlan),
     };
 
     // V6.4: Dynamic Promo Code Management (Manual Entry)
