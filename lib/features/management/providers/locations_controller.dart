@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import '../../../logic/providers/auth_providers.dart';
@@ -119,6 +118,14 @@ class LocationsController {
     try {
       if (_ref.read(selectedLocationIdProvider) == displayId) {
         _ref.read(selectedLocationIdProvider.notifier).state = null;
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        await persistSelectedLocationPreference(
+          userId: userId,
+          displayId: null,
+          uuid: null,
+        );
+        _ref.invalidate(selectedLocationUuidProvider);
+        _ref.invalidate(selectedEffectiveLocationUuidProvider);
       }
       await _ref.read(parkingRepositoryProvider).deleteLocation(id);
       _ref.invalidate(availableLocationsProvider);
@@ -259,8 +266,12 @@ class LocationsController {
       throw const AppError('Location created without display ID');
     }
     _ref.read(selectedLocationIdProvider.notifier).state = newDisplayId;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selected_location_display_id', newDisplayId);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    await persistSelectedLocationPreference(
+      userId: userId,
+      displayId: newDisplayId,
+      uuid: newLocId,
+    );
     // tiny delay to let the dialog pop before streams rebuild
     await Future.delayed(const Duration(milliseconds: 50));
     _ref.invalidate(selectedLocationUuidProvider);

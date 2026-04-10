@@ -54,6 +54,43 @@ String _selectedLocationDisplayKeyFor(String userId) =>
 String _selectedLocationUuidKeyFor(String userId) =>
     'selected_location_uuid_$userId';
 
+Future<void> persistSelectedLocationPreference({
+  required String? userId,
+  String? displayId,
+  String? uuid,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final normalizedDisplayId =
+      (displayId != null && displayId.isNotEmpty) ? displayId : null;
+  final normalizedUuid = (uuid != null && uuid.isNotEmpty) ? uuid : null;
+
+  if (normalizedDisplayId != null) {
+    await prefs.setString('selected_location_display_id', normalizedDisplayId);
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.setString(
+          _selectedLocationDisplayKeyFor(userId), normalizedDisplayId);
+    }
+  } else {
+    await prefs.remove('selected_location_display_id');
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.remove(_selectedLocationDisplayKeyFor(userId));
+    }
+  }
+
+  if (normalizedUuid != null) {
+    await prefs.setString('selected_location_uuid', normalizedUuid);
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.setString(
+          _selectedLocationUuidKeyFor(userId), normalizedUuid);
+    }
+  } else {
+    await prefs.remove('selected_location_uuid');
+    if (userId != null && userId.isNotEmpty) {
+      await prefs.remove(_selectedLocationUuidKeyFor(userId));
+    }
+  }
+}
+
 final authStateProvider = StreamProvider<AuthState>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange;
 });
@@ -204,8 +241,11 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
 // The currently selected location UUID
 final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
   final displayId = ref.watch(selectedLocationIdProvider);
-  if (displayId == null) return null;
+  if (displayId == null || displayId.isEmpty) return null;
   final user = Supabase.instance.client.auth.currentUser;
+  final userId = user?.id;
+  String? cachedDisplayId;
+  String? cachedUuid;
   try {
     final prefs = ref.read(sharedPreferencesProvider);
     final scopedDisplayId = user?.id != null && user!.id.isNotEmpty
@@ -214,14 +254,9 @@ final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
     final scopedUuid = user?.id != null && user!.id.isNotEmpty
         ? prefs.getString(_selectedLocationUuidKeyFor(user.id))
         : null;
-    final cachedDisplayId =
+    cachedDisplayId =
         scopedDisplayId ?? prefs.getString('selected_location_display_id');
-    final cachedUuid = scopedUuid ?? prefs.getString('selected_location_uuid');
-    if (cachedDisplayId == displayId &&
-        cachedUuid != null &&
-        cachedUuid.isNotEmpty) {
-      return cachedUuid;
-    }
+    cachedUuid = scopedUuid ?? prefs.getString('selected_location_uuid');
   } catch (_) {}
 
   final available = ref.watch(availableLocationsProvider).value;
@@ -229,7 +264,14 @@ final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
     for (final loc in available) {
       if ((loc['display_id'] ?? '').toString() == displayId) {
         final id = (loc['id'] ?? '').toString();
-        if (id.isNotEmpty) return id;
+        if (id.isNotEmpty) {
+          await persistSelectedLocationPreference(
+            userId: userId,
+            displayId: displayId,
+            uuid: id,
+          );
+          return id;
+        }
       }
     }
   }
@@ -240,10 +282,29 @@ final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
         .select('id')
         .eq('display_id', displayId)
         .maybeSingle();
-    return res?['id'] as String?;
-  } catch (e) {
-    return null;
+    final resolvedId = res?['id']?.toString();
+    if (resolvedId != null && resolvedId.isNotEmpty) {
+      await persistSelectedLocationPreference(
+        userId: userId,
+        displayId: displayId,
+        uuid: resolvedId,
+      );
+      return resolvedId;
+    }
+  } catch (_) {}
+
+  if (cachedDisplayId == displayId &&
+      cachedUuid != null &&
+      cachedUuid.isNotEmpty) {
+    return cachedUuid;
   }
+
+  await persistSelectedLocationPreference(
+    userId: userId,
+    displayId: displayId,
+    uuid: null,
+  );
+  return null;
 });
 
 final selectedEffectiveLocationUuidProvider =

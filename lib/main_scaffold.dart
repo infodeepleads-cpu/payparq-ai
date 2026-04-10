@@ -48,7 +48,6 @@ import '../features/intelligence/deferred/finance_loader.dart'
 import '../features/intelligence/deferred/finance_loader.dart' as finance_sync;
 import '../screens/admin/deferred/admin_loader.dart' deferred as admin_mod;
 import '../screens/admin/deferred/admin_loader.dart' as admin_sync;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterScaffold extends ConsumerStatefulWidget {
   const MasterScaffold({super.key});
@@ -85,6 +84,20 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     try {
       await ref.read(guaranteedLocationSelectionProvider.future);
     } catch (_) {}
+  }
+
+  Future<void> _persistSelectedLocation(
+    String? displayId, {
+    String? uuid,
+  }) async {
+    final userId = ref.read(authControllerProvider).currentUserId();
+    await persistSelectedLocationPreference(
+      userId: userId,
+      displayId: displayId,
+      uuid: uuid,
+    );
+    ref.invalidate(selectedLocationUuidProvider);
+    ref.invalidate(selectedEffectiveLocationUuidProvider);
   }
 
   @override
@@ -153,12 +166,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     );
   }
 
-  String _selectedLocationDisplayKeyFor(String userId) =>
-      'selected_location_display_id_$userId';
-
-  String _selectedLocationUuidKeyFor(String userId) =>
-      'selected_location_uuid_$userId';
-
   Future<void> _handleLogout() async {
     final isHr = ref.read(localeIsCroatianProvider);
     final confirm = await showDialog<bool>(
@@ -185,9 +192,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     ref.read(selectedLocationIdProvider.notifier).state = null;
     _selectedIndex = 2;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('selected_location_display_id');
-    await prefs.remove('selected_location_uuid');
+    await _persistSelectedLocation(null);
 
     ref.invalidate(userProfileProvider);
     ref.invalidate(availableLocationsProvider);
@@ -346,25 +351,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                               .notifier)
                                           .state = fallbackId;
                                       () async {
-                                        final prefs = await SharedPreferences
-                                            .getInstance();
                                         final isDid = RegExp(r'^\d{5}$')
                                             .hasMatch(fallbackId);
-                                        final userId = ref
-                                            .read(authControllerProvider)
-                                            .currentUserId();
-                                        if (isDid) {
-                                          await prefs.setString(
-                                              'selected_location_display_id',
-                                              fallbackId);
-                                          if (userId != null &&
-                                              userId.isNotEmpty) {
-                                            await prefs.setString(
-                                                _selectedLocationDisplayKeyFor(
-                                                    userId),
-                                                fallbackId);
-                                          }
-                                        }
+                                        await _persistSelectedLocation(
+                                          isDid ? fallbackId : null,
+                                          uuid: isDid ? null : fallbackId,
+                                        );
                                       }();
                                       Navigator.pop(context);
                                     },
@@ -382,34 +374,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                                 .notifier)
                                             .state = did;
                                         () async {
-                                          final prefs = await SharedPreferences
-                                              .getInstance();
-                                          final userId = ref
-                                              .read(authControllerProvider)
-                                              .currentUserId();
-                                          if (did.isNotEmpty) {
-                                            await prefs.setString(
-                                                'selected_location_display_id',
-                                                did);
-                                            if (userId != null &&
-                                                userId.isNotEmpty) {
-                                              await prefs.setString(
-                                                  _selectedLocationDisplayKeyFor(
-                                                      userId),
-                                                  did);
-                                            }
-                                          }
-                                          if (uuid.isNotEmpty) {
-                                            await prefs.setString(
-                                                'selected_location_uuid', uuid);
-                                            if (userId != null &&
-                                                userId.isNotEmpty) {
-                                              await prefs.setString(
-                                                  _selectedLocationUuidKeyFor(
-                                                      userId),
-                                                  uuid);
-                                            }
-                                          }
+                                          await _persistSelectedLocation(
+                                            did,
+                                            uuid: uuid,
+                                          );
                                         }();
                                         Navigator.pop(context);
                                       },
@@ -1007,14 +975,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                   if (id != null) {
                     ref.read(selectedLocationIdProvider.notifier).state = id;
                     () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final userId =
-                          ref.read(authControllerProvider).currentUserId();
-                      await prefs.setString('selected_location_display_id', id);
-                      if (userId != null && userId.isNotEmpty) {
-                        await prefs.setString(
-                            _selectedLocationDisplayKeyFor(userId), id);
-                      }
+                      final selectedLocation = uniqueLocs.firstWhere(
+                        (l) => (l['display_id'] ?? '').toString() == id,
+                        orElse: () => <String, dynamic>{},
+                      );
+                      final uuid = (selectedLocation['id'] ?? '').toString();
+                      await _persistSelectedLocation(id, uuid: uuid);
                     }();
                   }
                 },

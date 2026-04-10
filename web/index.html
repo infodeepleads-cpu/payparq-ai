@@ -91,6 +91,26 @@
       var swResetKey = 'pp_sw_reset_v3';
       var shouldReloadAfterSwReset = false;
       var swResetPromise = Promise.resolve();
+      var clearStoredLocationSelection = function () {
+        try {
+          var keysToRemove = [];
+          for (var i = 0; i < window.localStorage.length; i++) {
+            var key = window.localStorage.key(i);
+            if (!key) continue;
+            if (
+              key.indexOf('selected_location_display_id') !== -1 ||
+              key.indexOf('selected_location_uuid') !== -1 ||
+              key.indexOf('flutter.selected_location_display_id') !== -1 ||
+              key.indexOf('flutter.selected_location_uuid') !== -1
+            ) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(function (key) {
+            window.localStorage.removeItem(key);
+          });
+        } catch (_) {}
+      };
       if ('serviceWorker' in navigator) {
         try {
           shouldReloadAfterSwReset = !sessionStorage.getItem(swResetKey);
@@ -106,6 +126,9 @@
               return window.caches.keys().then(function (keys) {
                 return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
               });
+            })
+            .then(function () {
+              clearStoredLocationSelection();
             })
             .catch(function () {});
         } catch (_) {}

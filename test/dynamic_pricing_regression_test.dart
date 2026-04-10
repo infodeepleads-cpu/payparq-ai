@@ -425,6 +425,68 @@ void main() {
     );
   });
 
+  test('Location selection persists display id and uuid together', () async {
+    final authFile = File('lib/logic/providers/auth_providers.dart');
+    final scaffoldFile = File('lib/main_scaffold.dart');
+    final controllerFile =
+        File('lib/features/management/providers/locations_controller.dart');
+    final authContent = await authFile.readAsString();
+    final scaffoldContent = await scaffoldFile.readAsString();
+    final controllerContent = await controllerFile.readAsString();
+
+    expect(
+      authContent
+              .contains('Future<void> persistSelectedLocationPreference({') &&
+          authContent.contains(
+              "await prefs.setString('selected_location_display_id'") &&
+          authContent
+              .contains("await prefs.setString('selected_location_uuid'") &&
+          scaffoldContent
+              .contains('await _persistSelectedLocation(id, uuid: uuid);') &&
+          controllerContent
+              .contains('await persistSelectedLocationPreference('),
+      isTrue,
+      reason:
+          'Location selection must persist both display_id and uuid everywhere so stale preference pairs cannot hide data after reload.',
+    );
+  });
+
+  test('Sessions and cases resolve display ids to uuids before filtering',
+      () async {
+    final file =
+        File('lib/features/management/repositories/parking_repository.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final sessionsStreamProvider =') &&
+          content.contains(
+              'repo.getSessionsStream(locationId: resolvedScopedUuid)') &&
+          content.contains(
+              'repo.getViolationsStream(locationId: resolvedActiveUuid)') &&
+          content.contains('_uuidForDisplayId(locs, scopedDisplayId)') &&
+          content.contains('_uuidForDisplayId(locs, activeDisplayId)'),
+      isTrue,
+      reason:
+          'Sessions and cases must resolve selected display ids to live location uuids instead of dropping into stale cached-only results.',
+    );
+  });
+
+  test('Web reset clears stored location selection state', () async {
+    final file = File('web/index.html');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('var clearStoredLocationSelection = function () {') &&
+          content
+              .contains("key.indexOf('selected_location_display_id') !== -1") &&
+          content.contains("key.indexOf('selected_location_uuid') !== -1") &&
+          content.contains('clearStoredLocationSelection();'),
+      isTrue,
+      reason:
+          'sw_reset must clear persisted location selection on web so stale browser state cannot survive a hard refresh.',
+    );
+  });
+
   test('Officer sidebar keeps permits and pricing hidden', () async {
     final file = File('lib/main_scaffold.dart');
     final content = await file.readAsString();
