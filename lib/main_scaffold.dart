@@ -75,6 +75,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       'role': role,
       'email': user?.email ?? 'admin@payparq.ai',
       'location_id': user?.userMetadata?['location_id'],
+      'location_display_id': user?.userMetadata?['location_display_id'],
+      'location_name': user?.userMetadata?['location_name'],
     };
   }
 
@@ -245,7 +247,13 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       AsyncValue<List<Map<String, dynamic>>> availableLocsAsync,
       String? selectedLocId,
       bool isOfficer) {
-    final displayLocId = selectedLocId;
+    final availableLocs = availableLocsAsync.value ?? const [];
+    final firstAvailableDisplayId = availableLocs.isNotEmpty
+        ? availableLocs.first['display_id']?.toString()
+        : null;
+    final displayLocId = selectedLocId ??
+        profile['location_display_id']?.toString() ??
+        firstAvailableDisplayId;
     final isHr = ref.watch(localeIsCroatianProvider);
 
     return Scaffold(
@@ -911,6 +919,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   Widget _buildHeaderLocationSelector() {
     final availableLocsAsync = ref.watch(availableLocationsProvider);
     final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final profile =
+        ref.watch(userProfileProvider).value ?? _fallbackProfileFromAuth();
     final isHr = ref.watch(localeIsCroatianProvider);
 
     return Row(
@@ -929,9 +939,16 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
         const SizedBox(width: 8),
         availableLocsAsync.when(
           data: (locs) {
+            final user = ref.read(authControllerProvider).currentUser();
+            final fallbackDisplayId = selectedLocId ??
+                profile['location_display_id']?.toString() ??
+                user?.userMetadata?['location_display_id']?.toString() ??
+                (locs.isNotEmpty ? locs.first['display_id']?.toString() : null);
             if (locs.isEmpty) {
               return Text(
-                Lang.sel(isHr, 'No lots', 'Nema parkirališta'),
+                fallbackDisplayId != null && fallbackDisplayId.isNotEmpty
+                    ? fallbackDisplayId
+                    : Lang.sel(isHr, 'No lots', 'Nema parkirališta'),
                 style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -950,10 +967,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
             }
             final uniqueLocs = byDid.values.toList();
             final displayIds = byDid.keys.toSet();
-            final currentValue =
-                (selectedLocId != null && displayIds.contains(selectedLocId))
-                    ? selectedLocId
-                    : null;
+            final currentValue = (fallbackDisplayId != null &&
+                    displayIds.contains(fallbackDisplayId))
+                ? fallbackDisplayId
+                : null;
 
             return Theme(
               data: Theme.of(context).copyWith(

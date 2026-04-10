@@ -73,14 +73,27 @@ final analyticsProvider =
   final violations = violationsAsync.value ?? [];
   final locations = locationsAsync.value ?? [];
   final selectedUuid = selectedUuidAsync.value;
+  final activeDisplayId = (selectedDisplayId != null && selectedDisplayId.isNotEmpty)
+      ? selectedDisplayId
+      : (() {
+          if (selectedUuid == null || selectedUuid.isEmpty) return null;
+          for (final location in locations) {
+            if ((location['id'] ?? '').toString() == selectedUuid) {
+              final displayId = (location['display_id'] ?? '').toString();
+              if (displayId.isNotEmpty) return displayId;
+            }
+          }
+          return null;
+        })();
 
   final hasSelectedLocation = selectedUuid != null && selectedUuid.isNotEmpty;
   bool belongsToSelectedLot(Map<String, dynamic> item) {
     if (!hasSelectedLocation) return false;
     final lotId = (item['location_id'] ?? '').toString();
     if (lotId == selectedUuid) return true;
-    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
-      return lotId == selectedDisplayId;
+    final lotDisplayId = (item['location_display_id'] ?? '').toString();
+    if (activeDisplayId != null && activeDisplayId.isNotEmpty) {
+      return lotId == activeDisplayId || lotDisplayId == activeDisplayId;
     }
     return false;
   }
@@ -90,8 +103,8 @@ final analyticsProvider =
     final locationId = (item['id'] ?? '').toString();
     final displayId = (item['display_id'] ?? '').toString();
     if (locationId == selectedUuid) return true;
-    if (selectedDisplayId != null && selectedDisplayId.isNotEmpty) {
-      return displayId == selectedDisplayId;
+    if (activeDisplayId != null && activeDisplayId.isNotEmpty) {
+      return displayId == activeDisplayId;
     }
     return false;
   }

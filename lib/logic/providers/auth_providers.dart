@@ -109,6 +109,8 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
       'email': user.email,
       'role': _normalizeRole(metadata['role']?.toString()),
       'location_id': metadata['location_id'],
+      'location_display_id': metadata['location_display_id'],
+      'location_name': metadata['location_name'],
       'full_name': metadata['name'] ?? 'User',
       '_jwt_warm_start': true,
     });
@@ -152,6 +154,13 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   fetchProfile().then((data) {
     stopwatch.stop();
     if (data != null) {
+      final mergedData = {
+        ...data,
+        'location_id': data['location_id'] ?? metadata?['location_id'],
+        'location_display_id':
+            data['location_display_id'] ?? metadata?['location_display_id'],
+        'location_name': data['location_name'] ?? metadata?['location_name'],
+      };
       PerformanceMonitor.instance.recordMetric(
         operation: 'profile_fetch',
         duration: stopwatch.elapsed,
@@ -159,7 +168,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         metadata: {'userId': user.id, 'source': 'database'},
       );
       if (!controller.isClosed) {
-        controller.add(data);
+        controller.add(mergedData);
       }
     } else {
       if (metadata != null && !controller.isClosed) {
@@ -168,6 +177,8 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
           'email': user.email,
           'role': _normalizeRole(metadata['role']?.toString()),
           'location_id': metadata['location_id'],
+          'location_display_id': metadata['location_display_id'],
+          'location_name': metadata['location_name'],
           'full_name': metadata['name'] ?? 'User',
           '_jwt_fallback_after_fail': true,
         };
@@ -228,6 +239,12 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
     user = Supabase.instance.client.auth.currentUser;
   } catch (_) {
     return null;
+  }
+  final metadataDisplayId =
+      user?.userMetadata?['location_display_id']?.toString();
+  if (metadataDisplayId != null &&
+      RegExp(r'^\d{5}$').hasMatch(metadataDisplayId)) {
+    return metadataDisplayId;
   }
   final metadataId = user?.userMetadata?['location_id']?.toString();
 
@@ -440,8 +457,16 @@ final availableLocationsProvider =
       prefs?.getString('selected_location_display_id');
   final savedUuid = prefs?.getString(_selectedLocationUuidKeyFor(user.id)) ??
       prefs?.getString('selected_location_uuid');
+  final metadataDisplayId =
+      user.userMetadata?['location_display_id']?.toString();
   final metadataId = user.userMetadata?['location_id']?.toString();
   final metadataName = user.userMetadata?['location_name']?.toString() ?? 'Lot';
+  final warmDisplayId = (metadataDisplayId != null &&
+          RegExp(r'^\d{5}$').hasMatch(metadataDisplayId))
+      ? metadataDisplayId
+      : (metadataId != null && RegExp(r'^\d{5}$').hasMatch(metadataId))
+          ? metadataId
+          : null;
 
   final initialList = <Map<String, dynamic>>[];
   if (savedId != null && RegExp(r'^\d{5}$').hasMatch(savedId)) {
@@ -455,16 +480,25 @@ final availableLocationsProvider =
     if (ref.read(selectedLocationIdProvider) == null) {
       ref.read(selectedLocationIdProvider.notifier).state = savedId;
     }
-  } else if (metadataId != null && metadataId.isNotEmpty) {
-    final isDid = RegExp(r'^\d{5}$').hasMatch(metadataId);
+  } else if (warmDisplayId != null && warmDisplayId.isNotEmpty) {
     initialList.add({
-      'display_id': isDid ? metadataId : '...',
+      'display_id': warmDisplayId,
       'name': metadataName,
-      'id': isDid ? '' : metadataId,
+      'id': metadataId ?? savedUuid ?? '',
       '_is_warm_initial': true,
     });
-    if (isDid && ref.read(selectedLocationIdProvider) == null) {
-      ref.read(selectedLocationIdProvider.notifier).state = metadataId;
+    if (ref.read(selectedLocationIdProvider) == null) {
+      ref.read(selectedLocationIdProvider.notifier).state = warmDisplayId;
+    }
+  } else if (metadataId != null && metadataId.isNotEmpty) {
+    initialList.add({
+      'display_id': '...',
+      'name': metadataName,
+      'id': metadataId,
+      '_is_warm_initial': true,
+    });
+    if (savedUuid == metadataId && savedId != null) {
+      ref.read(selectedLocationIdProvider.notifier).state = savedId;
     }
   }
 

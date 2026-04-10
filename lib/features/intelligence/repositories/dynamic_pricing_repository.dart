@@ -71,7 +71,28 @@ class DynamicPricingRepository {
     var query = _client.from('locations').select();
     if (role == 'super_admin') {
     } else if (role == 'admin') {
-      query = query.eq('owner_id', userId);
+      final ownedRows =
+          await _client.from('locations').select('id').eq('owner_id', userId);
+      final assignmentRows = await _client
+          .from('officer_assignments')
+          .select('location_id')
+          .eq('officer_id', userId);
+      final allowedIds = <String>{
+        ...ownedRows
+            .map((row) => (row['id'] ?? '').toString())
+            .where((id) => id.isNotEmpty),
+        ...assignmentRows
+            .map((row) => (row['location_id'] ?? '').toString())
+            .where((id) => id.isNotEmpty),
+      }.toList();
+      if (allowedIds.isEmpty) {
+        return [];
+      }
+      if (allowedIds.length == 1) {
+        query = query.eq('id', allowedIds.first);
+      } else {
+        query = query.or(allowedIds.map((id) => 'id.eq.$id').join(','));
+      }
     } else if (role == 'manager') {
       if (locationId != null && locationId.isNotEmpty) {
         query = query.or('id.eq.$locationId,display_id.eq.$locationId');

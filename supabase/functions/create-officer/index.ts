@@ -300,6 +300,27 @@ serve(async (req) => {
       return json({ error: "Location is required for admin/manager/officer" }, 400);
     }
 
+    let primaryLocation: { id: string; display_id: string | null; name: string | null } | null =
+      null;
+    if (locationId) {
+      const { data: locationData, error: locationError } = await admin
+        .from("locations")
+        .select("id, display_id, name")
+        .eq("id", locationId)
+        .maybeSingle();
+      if (locationError) {
+        return json({ error: locationError.message }, 500);
+      }
+      if (!locationData) {
+        return json({ error: "Selected location not found" }, 400);
+      }
+      primaryLocation = {
+        id: String(locationData.id),
+        display_id: locationData.display_id ? String(locationData.display_id) : null,
+        name: locationData.name ? String(locationData.name) : null,
+      };
+    }
+
     let userId = await findUserIdByEmail(email);
     const generatedPassword = randomPassword();
 
@@ -312,6 +333,8 @@ serve(async (req) => {
           role: targetRole,
           name,
           location_id: locationId,
+          location_display_id: primaryLocation?.display_id ?? null,
+          location_name: primaryLocation?.name ?? null,
         },
       });
       if (createError || !created.user?.id) {
@@ -325,6 +348,8 @@ serve(async (req) => {
           role: targetRole,
           name,
           location_id: locationId,
+          location_display_id: primaryLocation?.display_id ?? null,
+          location_name: primaryLocation?.name ?? null,
         },
       });
       if (updateUserError) {

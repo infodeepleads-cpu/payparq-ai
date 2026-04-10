@@ -105,6 +105,14 @@ String _displayIdForLocationId(
   return idToDisplay[rawLocationId] ?? (fallbackDisplayId ?? rawLocationId);
 }
 
+String? _displayIdForUuid(
+  Map<String, String> idToDisplay,
+  String? uuid,
+) {
+  if (uuid == null || uuid.isEmpty) return null;
+  return idToDisplay[uuid];
+}
+
 String _normalizeRoleValue(String? rawRole) {
   final role = (rawRole ?? '')
       .toString()
@@ -415,6 +423,10 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
     return _cachedStream(cacheKey, baseStream).map((items) {
       final ownedIds = <String>{};
       final idToDisplay = _locationIdToDisplayMap(locs);
+      final resolvedScopedDisplayId =
+          (scopedDisplayId != null && scopedDisplayId.isNotEmpty)
+              ? scopedDisplayId
+              : _displayIdForUuid(idToDisplay, resolvedScopedUuid);
 
       for (final entry in idToDisplay.entries) {
         ownedIds.add(entry.key);
@@ -440,18 +452,20 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
 
       final hasExplicitSelection =
           (resolvedScopedUuid != null && resolvedScopedUuid.isNotEmpty) ||
-              (scopedDisplayId != null && scopedDisplayId.isNotEmpty);
+              (resolvedScopedDisplayId != null &&
+                  resolvedScopedDisplayId.isNotEmpty);
       final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
         final uiDid = _displayIdForLocationId(
           locId,
           uuidRegExp,
           idToDisplay,
-          fallbackDisplayId: scopedDisplayId,
+          fallbackDisplayId: resolvedScopedDisplayId,
         );
         if (hasExplicitSelection) {
           return (resolvedScopedUuid != null && locId == resolvedScopedUuid) ||
-              (scopedDisplayId != null && uiDid == scopedDisplayId);
+              (resolvedScopedDisplayId != null &&
+                  uiDid == resolvedScopedDisplayId);
         }
         return ownedIds.contains(locId) ||
             ownedIds.contains(uiDid) ||
@@ -470,7 +484,7 @@ final permitsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
           raw,
           uuidRegExp,
           idToDisplay,
-          fallbackDisplayId: scopedDisplayId,
+          fallbackDisplayId: resolvedScopedDisplayId,
         );
         return {...it, 'location_display_id': uiDid};
       }).toList();
@@ -623,6 +637,10 @@ final sessionsStreamProvider =
     return _cachedStream(cacheKey, baseStream).map((items) {
       final ownedIds = <String>{};
       final idToDisplay = _locationIdToDisplayMap(locs);
+      final resolvedScopedDisplayId =
+          (scopedDisplayId != null && scopedDisplayId.isNotEmpty)
+              ? scopedDisplayId
+              : _displayIdForUuid(idToDisplay, resolvedScopedUuid);
 
       for (final entry in idToDisplay.entries) {
         ownedIds.add(entry.key);
@@ -648,18 +666,20 @@ final sessionsStreamProvider =
 
       final hasExplicitSelection =
           (resolvedScopedUuid != null && resolvedScopedUuid.isNotEmpty) ||
-              (scopedDisplayId != null && scopedDisplayId.isNotEmpty);
+              (resolvedScopedDisplayId != null &&
+                  resolvedScopedDisplayId.isNotEmpty);
       final filtered = items.where((it) {
         final locId = (it['location_id'] ?? '').toString();
         final uiDid = _displayIdForLocationId(
           locId,
           uuidRegExp,
           idToDisplay,
-          fallbackDisplayId: scopedDisplayId,
+          fallbackDisplayId: resolvedScopedDisplayId,
         );
         if (hasExplicitSelection) {
           return (resolvedScopedUuid != null && locId == resolvedScopedUuid) ||
-              (scopedDisplayId != null && uiDid == scopedDisplayId);
+              (resolvedScopedDisplayId != null &&
+                  uiDid == resolvedScopedDisplayId);
         }
         return ownedIds.contains(locId) ||
             ownedIds.contains(uiDid) ||
@@ -678,7 +698,7 @@ final sessionsStreamProvider =
           raw,
           uuidRegExp,
           idToDisplay,
-          fallbackDisplayId: scopedDisplayId,
+          fallbackDisplayId: resolvedScopedDisplayId,
         );
         return {...it, 'location_display_id': uiDid};
       }).toList();
@@ -1169,13 +1189,18 @@ final violationsStreamProvider =
         final resolvedActiveUuid = (activeUuid != null && activeUuid.isNotEmpty)
             ? activeUuid
             : _uuidForDisplayId(locs, activeDisplayId);
+        final resolvedActiveDisplayId =
+            (activeDisplayId != null && activeDisplayId.isNotEmpty)
+                ? activeDisplayId
+                : _displayIdForUuid(idToDisplay, resolvedActiveUuid);
         final baseStream =
             (resolvedActiveUuid != null && resolvedActiveUuid.isNotEmpty)
                 ? repo.getViolationsStream(locationId: resolvedActiveUuid)
                 : repo.getViolationsStream();
         return _cachedStream(cacheKey, baseStream).map((items) {
           if ((resolvedActiveUuid == null || resolvedActiveUuid.isEmpty) &&
-              (activeDisplayId == null || activeDisplayId.isEmpty)) {
+              (resolvedActiveDisplayId == null ||
+                  resolvedActiveDisplayId.isEmpty)) {
             return items;
           }
           return items.where((it) {
@@ -1187,12 +1212,14 @@ final violationsStreamProvider =
                 caseSensitive: false,
               ),
               idToDisplay,
-              fallbackDisplayId: activeDisplayId,
+              fallbackDisplayId: resolvedActiveDisplayId,
             );
             if (resolvedActiveUuid != null && resolvedActiveUuid.isNotEmpty) {
-              return raw == resolvedActiveUuid;
+              return raw == resolvedActiveUuid ||
+                  (resolvedActiveDisplayId != null &&
+                      did == resolvedActiveDisplayId);
             }
-            return did == activeDisplayId;
+            return did == resolvedActiveDisplayId;
           }).toList();
         });
       },
