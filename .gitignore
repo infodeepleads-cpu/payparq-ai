@@ -53,5 +53,17 @@ apps/*
 !apps/shared/
 !apps/shared/stripeSplit.ts
 !apps/shared/stripeSplit.test.ts
+!apps/user-web-app/
+!apps/user-web-app/public/
+!apps/user-web-app/public/favicon.ico
+!apps/user-web-app/public/favicon.svg
+!apps/user-web-app/public/icon-192.png
+!apps/user-web-app/public/icon-512.png
+!apps/city-manager/
+!apps/city-manager/public/
+!apps/city-manager/public/favicon.ico
+!apps/city-manager/public/favicon.svg
+!apps/city-manager/public/icon-192.png
+!apps/city-manager/public/icon-512.png
 apps 2/
 .env*.local
