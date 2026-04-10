@@ -49,6 +49,9 @@ app.*.map.json
 .gradle-home/
 .gradle-local/
 CANONICAL_BACKUP_20260130/
-apps/
+apps/*
+!apps/shared/
+!apps/shared/stripeSplit.ts
+!apps/shared/stripeSplit.test.ts
 apps 2/
 .env*.local
