@@ -16,11 +16,12 @@ export const metadata: Metadata = {
     "The world’s first mobile software-only platform for frictionless urban mobility.",
   icons: {
     icon: [
-      { url: "/favicon.ico?v=pp_static_v3", type: "image/x-icon", sizes: "any" },
-      { url: "/favicon.svg?v=pp_static_v3", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=pp_static_v4", type: "image/x-icon", sizes: "any" },
+      { url: "/icon-192.png?v=pp_static_v4", type: "image/png", sizes: "192x192" },
+      { url: "/favicon.svg?v=pp_static_v4", type: "image/svg+xml" },
     ],
-    shortcut: ["/favicon.ico?v=pp_static_v3"],
-    apple: [{ url: "/icon-192.png?v=pp_static_v3", sizes: "192x192", type: "image/png" }],
+    shortcut: ["/favicon.ico?v=pp_static_v4"],
+    apple: [{ url: "/icon-192.png?v=pp_static_v4", sizes: "192x192", type: "image/png" }],
   },
 };
 
