@@ -16,7 +16,71 @@ class LocationSelection {
   final String? uuid;
   final String? displayId;
   final String source;
-  LocationSelection({this.uuid, this.displayId, required this.source});
+  final bool isValidated;
+  LocationSelection({
+    this.uuid,
+    this.displayId,
+    required this.source,
+    this.isValidated = false,
+  });
+}
+
+final RegExp _displayIdRegex = RegExp(r'^\d{5}$');
+final RegExp _uuidRegex = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false);
+
+bool _isValidDisplayId(String? value) =>
+    value != null && _displayIdRegex.hasMatch(value);
+
+bool _isValidUuid(String? value) => value != null && value.isNotEmpty;
+
+Map<String, dynamic>? _findLocationByDisplayId(
+  List<Map<String, dynamic>> locations,
+  String? displayId,
+) {
+  if (!_isValidDisplayId(displayId)) return null;
+  for (final location in locations) {
+    if ((location['display_id'] ?? '').toString() == displayId) {
+      return location;
+    }
+  }
+  return null;
+}
+
+Map<String, dynamic>? _findLocationByUuid(
+  List<Map<String, dynamic>> locations,
+  String? uuid,
+) {
+  if (!_isValidUuid(uuid)) return null;
+  for (final location in locations) {
+    if ((location['id'] ?? '').toString() == uuid) {
+      return location;
+    }
+  }
+  return null;
+}
+
+LocationSelection _selectionFromRow(
+  Map<String, dynamic>? row, {
+  required String source,
+}) {
+  final uuid = (row?['id'] ?? '').toString();
+  final displayId = (row?['display_id'] ?? '').toString();
+  return LocationSelection(
+    uuid: uuid.isNotEmpty ? uuid : null,
+    displayId: _isValidDisplayId(displayId) ? displayId : null,
+    source: source,
+    isValidated: row != null,
+  );
+}
+
+Future<void> _clearPersistedLocationSelection(String? userId) async {
+  await persistSelectedLocationPreference(
+    userId: userId,
+    displayId: null,
+    uuid: null,
+  );
 }
 
 String _normalizeRole(String? rawRole) {
@@ -256,242 +320,111 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
     final cachedDisplayId = userId != null && userId.isNotEmpty
         ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
         : prefs.getString('selected_location_display_id');
-    if (cachedDisplayId != null &&
-        RegExp(r'^\d{5}$').hasMatch(cachedDisplayId)) {
+    if (_isValidDisplayId(cachedDisplayId)) {
       return cachedDisplayId;
     }
   } catch (_) {}
   final metadataDisplayId =
       user?.userMetadata?['location_display_id']?.toString();
-  if (metadataDisplayId != null &&
-      RegExp(r'^\d{5}$').hasMatch(metadataDisplayId)) {
+  if (_isValidDisplayId(metadataDisplayId)) {
     return metadataDisplayId;
   }
   final metadataId = user?.userMetadata?['location_id']?.toString();
 
-  // If we have a metadata ID and it looks like a display ID (5 digits), use it immediately
-  if (metadataId != null && RegExp(r'^\d{5}$').hasMatch(metadataId)) {
+  if (_isValidDisplayId(metadataId)) {
     return metadataId;
   }
   return null;
 });
 
-// The currently selected location UUID
-final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
-  final displayId = ref.watch(selectedLocationIdProvider);
-  if (displayId == null || displayId.isEmpty) return null;
-  final user = Supabase.instance.client.auth.currentUser;
-  final userId = user?.id;
-  String? cachedDisplayId;
-  String? cachedUuid;
-  try {
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (user?.id != null && user!.id.isNotEmpty) {
-      cachedDisplayId =
-          prefs.getString(_selectedLocationDisplayKeyFor(user.id));
-      cachedUuid = prefs.getString(_selectedLocationUuidKeyFor(user.id));
-    } else {
-      cachedDisplayId = prefs.getString('selected_location_display_id');
-      cachedUuid = prefs.getString('selected_location_uuid');
-    }
-  } catch (_) {}
-
-  final available = ref.watch(availableLocationsProvider).value;
-  if (available != null) {
-    for (final loc in available) {
-      if ((loc['display_id'] ?? '').toString() == displayId) {
-        final id = (loc['id'] ?? '').toString();
-        if (id.isNotEmpty) {
-          await persistSelectedLocationPreference(
-            userId: userId,
-            displayId: displayId,
-            uuid: id,
-          );
-          return id;
-        }
-      }
-    }
-  }
-
-  try {
-    final res = await Supabase.instance.client
-        .from('locations')
-        .select('id')
-        .eq('display_id', displayId)
-        .maybeSingle();
-    final resolvedId = res?['id']?.toString();
-    if (resolvedId != null && resolvedId.isNotEmpty) {
-      await persistSelectedLocationPreference(
-        userId: userId,
-        displayId: displayId,
-        uuid: resolvedId,
-      );
-      return resolvedId;
-    }
-  } catch (_) {}
-
-  if (cachedDisplayId == displayId &&
-      cachedUuid != null &&
-      cachedUuid.isNotEmpty) {
-    return cachedUuid;
-  }
-
-  await persistSelectedLocationPreference(
-    userId: userId,
-    displayId: displayId,
-    uuid: null,
-  );
-  return null;
-});
-
-final selectedEffectiveLocationUuidProvider =
-    FutureProvider<String?>((ref) async {
-  final selectedUuid = await ref.watch(selectedLocationUuidProvider.future);
-  if (selectedUuid != null && selectedUuid.isNotEmpty) return selectedUuid;
-
-  final role = ref.watch(userRoleProvider);
-  if (role == 'officer') {
-    return null;
-  }
-
-  final available = ref.watch(availableLocationsProvider);
-  if (available.hasValue) {
-    final locs = available.value ?? [];
-    if (locs.isNotEmpty) {
-      final id = (locs.first['id'] ?? '').toString();
-      if (id.isNotEmpty) return id;
-    }
-  }
-
-  final user = Supabase.instance.client.auth.currentUser;
-  final fallbackId =
-      ref.watch(userLocationIdProvider) ?? user?.userMetadata?['location_id'];
-  if (fallbackId == null) return null;
-  final fb = fallbackId.toString();
-  final isUuid = RegExp(
-          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-          caseSensitive: false)
-      .hasMatch(fb.toLowerCase());
-  if (isUuid) return fb;
-
-  try {
-    final res = await Supabase.instance.client
-        .from('locations')
-        .select('id')
-        .eq('display_id', fb)
-        .maybeSingle();
-    final id = res?['id']?.toString();
-    if (id != null && id.isNotEmpty) return id;
-  } catch (_) {}
-  return null;
-});
-
-final guaranteedLocationSelectionProvider =
+final activeLocationSelectionProvider =
     FutureProvider<LocationSelection>((ref) async {
   final locations = await ref.watch(availableLocationsProvider.future);
   final user = Supabase.instance.client.auth.currentUser;
   final userId = user?.id;
-  final metadataDisplayId =
-      user?.userMetadata?['location_display_id']?.toString();
-  final metadataLocationId = user?.userMetadata?['location_id']?.toString();
+  final profile = ref.read(userProfileProvider).value;
   final prefs = await SharedPreferences.getInstance();
-  final saved = userId != null && userId.isNotEmpty
+  final currentSelectedDisplayId = ref.read(selectedLocationIdProvider);
+  final savedDisplayId = userId != null && userId.isNotEmpty
       ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
       : prefs.getString('selected_location_display_id');
   final savedUuid = userId != null && userId.isNotEmpty
       ? prefs.getString(_selectedLocationUuidKeyFor(userId))
       : prefs.getString('selected_location_uuid');
-  String? displayId;
-  String? uuid;
-  final savedValid = saved != null && RegExp(r'^\d{5}$').hasMatch(saved);
-  final savedUuidValid = savedUuid != null && savedUuid.isNotEmpty;
-  final metadataDisplayValid = metadataDisplayId != null &&
-      RegExp(r'^\d{5}$').hasMatch(metadataDisplayId);
-  if (saved != null && !savedValid) {
-    await prefs.remove('selected_location_display_id');
-    if (userId != null && userId.isNotEmpty) {
-      await prefs.remove(_selectedLocationDisplayKeyFor(userId));
-    }
+  final metadataDisplayId = (profile?['location_display_id'] ??
+          user?.userMetadata?['location_display_id'])
+      ?.toString();
+  final metadataLocationId =
+      (profile?['location_id'] ?? user?.userMetadata?['location_id'])
+          ?.toString();
+
+  Map<String, dynamic>? matchedRow =
+      _findLocationByDisplayId(locations, currentSelectedDisplayId);
+  String source = 'selected_display';
+
+  matchedRow ??= _findLocationByDisplayId(locations, savedDisplayId);
+  if (matchedRow != null) {
+    source = 'saved_display';
   }
-  if (savedValid &&
-      locations.any((l) => (l['display_id'] ?? '').toString() == saved)) {
-    displayId = saved;
-    final row = locations
-        .firstWhere((l) => (l['display_id'] ?? '').toString() == saved);
-    uuid = (row['id'] ?? '').toString();
-  } else if (savedValid && savedUuidValid && locations.isEmpty) {
-    displayId = saved;
-    uuid = savedUuid;
-  } else if (locations.isNotEmpty) {
-    Map<String, dynamic>? preferredRow;
-    if (metadataDisplayValid) {
-      for (final location in locations) {
-        if ((location['display_id'] ?? '').toString() == metadataDisplayId) {
-          preferredRow = location;
-          break;
-        }
-      }
-    }
-    if (preferredRow == null &&
-        metadataLocationId != null &&
-        metadataLocationId.isNotEmpty) {
-      for (final location in locations) {
-        if ((location['id'] ?? '').toString() == metadataLocationId) {
-          preferredRow = location;
-          break;
-        }
-      }
-    }
-    final row = preferredRow ?? locations.first;
-    displayId = (row['display_id'] ?? '').toString();
-    uuid = (row['id'] ?? '').toString();
-    if (displayId.isNotEmpty) {
+
+  matchedRow ??= _findLocationByUuid(locations, savedUuid);
+  if (matchedRow != null && source == 'selected_display') {
+    source = 'saved_uuid';
+  }
+
+  matchedRow ??= _findLocationByDisplayId(locations, metadataDisplayId);
+  if (matchedRow != null && source == 'selected_display') {
+    source = 'metadata_display';
+  }
+
+  matchedRow ??= _findLocationByUuid(locations, metadataLocationId);
+  if (matchedRow != null && source == 'selected_display') {
+    source = 'metadata_uuid';
+  }
+
+  if (matchedRow == null && locations.isNotEmpty) {
+    matchedRow = locations.first;
+    source = 'first_accessible';
+  }
+
+  if (matchedRow != null) {
+    final selection = _selectionFromRow(matchedRow, source: source);
+    if (selection.displayId != null) {
       await persistSelectedLocationPreference(
         userId: userId,
-        displayId: displayId,
-        uuid: uuid,
+        displayId: selection.displayId,
+        uuid: selection.uuid,
       );
-    }
-  } else if (metadataDisplayValid) {
-    displayId = metadataDisplayId;
-    uuid = (metadataLocationId != null && metadataLocationId.isNotEmpty)
-        ? metadataLocationId
-        : savedUuid;
-  } else {
-    final fb = ref.read(userLocationIdProvider);
-    final fallback = (fb ?? metadataLocationId ?? '').toString();
-    if (fallback.isNotEmpty) {
-      final isUuid = RegExp(
-              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-              caseSensitive: false)
-          .hasMatch(fallback.toLowerCase());
-      if (isUuid) {
-        uuid = fallback;
-        try {
-          final row = await Supabase.instance.client
-              .from('locations')
-              .select('id,display_id')
-              .eq('id', fallback)
-              .maybeSingle();
-          final resolvedDisplayId = row?['display_id']?.toString();
-          if (resolvedDisplayId != null &&
-              RegExp(r'^\d{5}$').hasMatch(resolvedDisplayId)) {
-            displayId = resolvedDisplayId;
-          }
-        } catch (_) {}
-      } else {
-        displayId = fallback;
+      final current = ref.read(selectedLocationIdProvider);
+      if (current != selection.displayId) {
+        ref.read(selectedLocationIdProvider.notifier).state =
+            selection.displayId;
       }
     }
+    return selection;
   }
-  if (displayId != null && displayId.isNotEmpty) {
-    final current = ref.read(selectedLocationIdProvider);
-    if (current != displayId) {
-      ref.read(selectedLocationIdProvider.notifier).state = displayId;
-    }
+
+  if (ref.read(selectedLocationIdProvider) != null) {
+    ref.read(selectedLocationIdProvider.notifier).state = null;
   }
-  return LocationSelection(
-      uuid: uuid, displayId: displayId, source: 'guaranteed');
+  await _clearPersistedLocationSelection(userId);
+  return LocationSelection(source: 'none');
+});
+
+final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
+  final selection = await ref.watch(activeLocationSelectionProvider.future);
+  return selection.isValidated ? selection.uuid : null;
+});
+
+final selectedEffectiveLocationUuidProvider =
+    FutureProvider<String?>((ref) async {
+  final selection = await ref.watch(activeLocationSelectionProvider.future);
+  return selection.isValidated ? selection.uuid : null;
+});
+
+final guaranteedLocationSelectionProvider =
+    FutureProvider<LocationSelection>((ref) async {
+  return ref.watch(activeLocationSelectionProvider.future);
 });
 // Stream of locations available to the user
 final availableLocationsProvider =
@@ -529,15 +462,15 @@ final availableLocationsProvider =
       user.userMetadata?['location_display_id']?.toString();
   final metadataId = user.userMetadata?['location_id']?.toString();
   final metadataName = user.userMetadata?['location_name']?.toString() ?? 'Lot';
-  final warmDisplayId = (metadataDisplayId != null &&
-          RegExp(r'^\d{5}$').hasMatch(metadataDisplayId))
-      ? metadataDisplayId
-      : (metadataId != null && RegExp(r'^\d{5}$').hasMatch(metadataId))
-          ? metadataId
-          : null;
+  final warmDisplayId =
+      (metadataDisplayId != null && _displayIdRegex.hasMatch(metadataDisplayId))
+          ? metadataDisplayId
+          : (metadataId != null && _displayIdRegex.hasMatch(metadataId))
+              ? metadataId
+              : null;
 
   final initialList = <Map<String, dynamic>>[];
-  if (savedId != null && RegExp(r'^\d{5}$').hasMatch(savedId)) {
+  if (savedId != null && _displayIdRegex.hasMatch(savedId)) {
     initialList.add({
       'display_id': savedId,
       'name': metadataId == savedId ? metadataName : 'Lot $savedId',
@@ -659,34 +592,32 @@ final availableLocationsProvider =
           }));
         }
 
-        final selectedDisplayId = ref.read(selectedLocationIdProvider);
         final fallbackLocId = ref.read(userLocationIdProvider) ??
             user.userMetadata?['location_id'];
+        final profileDisplayId = profile?['location_display_id']?.toString() ??
+            user.userMetadata?['location_display_id']?.toString();
 
-        if (selectedDisplayId != null) {
+        if (profileDisplayId != null && profileDisplayId.isNotEmpty) {
           fetchFutures.add(SupabaseService.instance
               .executeQuery<Map<String, dynamic>?>(
-            queryId: 'loc_selected_${selectedDisplayId}_att$attempt',
+            queryId: 'loc_profile_display_${profileDisplayId}_att$attempt',
             timeout: queryTimeout,
             query: () => Supabase.instance.client
                 .from('locations')
                 .select()
-                .eq('display_id', selectedDisplayId)
+                .eq('display_id', profileDisplayId)
                 .maybeSingle(),
           )
-              .then((sel) {
-            if (sel != null &&
-                !mergedLocations.any((l) => l['id'] == sel['id'])) {
-              mergedLocations.add(sel);
+              .then((profileLoc) {
+            if (profileLoc != null &&
+                !mergedLocations.any((l) => l['id'] == profileLoc['id'])) {
+              mergedLocations.add(profileLoc);
             }
           }).catchError((_) {}));
         }
 
         if (fallbackLocId != null) {
-          final isUuid = RegExp(
-                  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-                  caseSensitive: false)
-              .hasMatch(fallbackLocId.toLowerCase());
+          final isUuid = _uuidRegex.hasMatch(fallbackLocId.toLowerCase());
           fetchFutures.add(SupabaseService.instance
               .executeQuery<Map<String, dynamic>?>(
             queryId: 'loc_fallback_${fallbackLocId}_att$attempt',
@@ -736,8 +667,7 @@ final availableLocationsProvider =
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString(_selectedLocationDisplayKeyFor(user.id));
-      final bool savedValid =
-          (savedId != null) && RegExp(r'^\d{5}$').hasMatch(savedId);
+      final bool savedValid = _isValidDisplayId(savedId);
 
       if (savedValid &&
           uniqueLocations.any((l) => l['display_id']?.toString() == savedId)) {

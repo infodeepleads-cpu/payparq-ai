@@ -89,16 +89,15 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
       final profile = ref.read(userProfileProvider).value;
       final issuerRole =
           profile?['role'] == 'super_admin' ? 'payparq' : 'admin';
-      final resolution = await LocationResolver.resolve(ref);
-      final selectedLocId = resolution.effectiveDisplayId;
+      final selection = await ref.read(activeLocationSelectionProvider.future);
+      final selectedLocId = selection.displayId;
 
-      if (selectedLocId == null) {
+      if (!selection.isValidated || selectedLocId == null) {
         throw Exception(
             'No location selected. Please select a lot in the top bar.');
       }
 
-      final locationUuid =
-          await ref.read(selectedEffectiveLocationUuidProvider.future);
+      final locationUuid = selection.uuid;
       if (locationUuid == null) {
         throw Exception('Invalid Location ID. Please reselect the lot.');
       }
@@ -140,8 +139,9 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   @override
   Widget build(BuildContext context) {
     final isHr = ref.watch(localeIsCroatianProvider);
-    ref.listen<String?>(selectedLocationIdProvider, (previous, next) {
-      _locationController.text = next ?? '';
+    ref.listen<AsyncValue<LocationSelection>>(activeLocationSelectionProvider,
+        (previous, next) {
+      _locationController.text = next.value?.displayId ?? '';
     });
 
     return Scaffold(

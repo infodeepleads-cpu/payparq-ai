@@ -61,6 +61,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   int _selectedIndex = 2;
   bool _initialScreenReady = true;
   Map<String, dynamic>? _lastResolvedProfile;
+  ProviderSubscription<dynamic>? _authStateSubscription;
+  String? _activeAuthUserId;
 
   Map<String, dynamic> _fallbackProfileFromAuth() {
     final user = ref.read(authControllerProvider).currentUser();
@@ -102,11 +104,41 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     ref.invalidate(selectedEffectiveLocationUuidProvider);
   }
 
+  void _handleAuthUserChanged(String? nextUserId) {
+    if (_activeAuthUserId == nextUserId) {
+      return;
+    }
+    _activeAuthUserId = nextUserId;
+    _lastResolvedProfile = null;
+    ref.read(selectedLocationIdProvider.notifier).state = null;
+    ref.invalidate(userProfileProvider);
+    ref.invalidate(availableLocationsProvider);
+    ref.invalidate(selectedLocationUuidProvider);
+    ref.invalidate(selectedEffectiveLocationUuidProvider);
+    ref.invalidate(guaranteedLocationSelectionProvider);
+    if (mounted) {
+      setState(() {});
+    }
+    if (nextUserId != null && nextUserId.isNotEmpty) {
+      Future.microtask(_hydrateLocationSelection);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _activeAuthUserId = ref.read(authControllerProvider).currentUserId();
+    _authStateSubscription = ref.listenManual(authStateProvider, (_, __) {
+      _handleAuthUserChanged(ref.read(authControllerProvider).currentUserId());
+    });
     Future.microtask(_hydrateLocationSelection);
     Future.microtask(_prepareInitialScreen);
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.close();
+    super.dispose();
   }
 
   Future<void> _prepareInitialScreen() async {
@@ -191,6 +223,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (!mounted) return;
     if (confirm != true) return;
 
+    _lastResolvedProfile = null;
     ref.read(selectedLocationIdProvider.notifier).state = null;
     _selectedIndex = 2;
 
@@ -225,7 +258,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Widget _buildMobileScaffold() {
     final availableLocsAsync = ref.watch(availableLocationsProvider);
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final activeSelection = ref.watch(activeLocationSelectionProvider).value;
+    final selectedLocId = activeSelection?.displayId;
 
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
@@ -306,8 +340,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
           IconButton(
             icon: const Icon(Icons.location_on_outlined, color: Colors.white),
             onPressed: () {
-              final fallbackId = ref.read(userLocationIdProvider) ??
-                  (profile['location_id']?.toString());
               availableLocsAsync.when(
                 data: (locs) {
                   showModalBottomSheet(
@@ -334,40 +366,20 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18)),
                                 const SizedBox(height: 16),
-                                if (locs.isEmpty && (fallbackId == null))
+                                if (locs.isEmpty)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 24),
                                     child: Text(
-                                      Lang.sel(isHr, 'No lots available yet.',
-                                          'Još nema dostupnih parkirališta.'),
+                                      Lang.sel(
+                                          isHr,
+                                          'No validated lots available yet.',
+                                          'Još nema potvrđenih parkirališta.'),
                                       style: GoogleFonts.inter(
                                           fontSize: 14,
                                           color: Colors.white
                                               .withValues(alpha: 0.7)),
                                     ),
-                                  ),
-                                if (locs.isEmpty && (fallbackId != null))
-                                  ListTile(
-                                    leading: const Icon(Icons.location_on),
-                                    title: Text(Lang.sel(
-                                        isHr, 'Fallback Lot', 'Rezervno')),
-                                    subtitle: Text(fallbackId),
-                                    onTap: () {
-                                      ref
-                                          .read(selectedLocationIdProvider
-                                              .notifier)
-                                          .state = fallbackId;
-                                      () async {
-                                        final isDid = RegExp(r'^\d{5}$')
-                                            .hasMatch(fallbackId);
-                                        await _persistSelectedLocation(
-                                          isDid ? fallbackId : null,
-                                          uuid: isDid ? null : fallbackId,
-                                        );
-                                      }();
-                                      Navigator.pop(context);
-                                    },
                                   ),
                                 ...locs.map((l) => ListTile(
                                       leading: const Icon(Icons.location_on),
@@ -544,7 +556,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       );
     }
     final availableLocsAsync = ref.watch(availableLocationsProvider);
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final activeSelection = ref.watch(activeLocationSelectionProvider).value;
+    final selectedLocId = activeSelection?.displayId;
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
     if (profile != null) {
@@ -918,7 +931,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Widget _buildHeaderLocationSelector() {
     final availableLocsAsync = ref.watch(availableLocationsProvider);
-    final selectedLocId = ref.watch(selectedLocationIdProvider);
+    final activeSelection = ref.watch(activeLocationSelectionProvider).value;
+    final selectedLocId = activeSelection?.displayId;
     final profile =
         ref.watch(userProfileProvider).value ?? _fallbackProfileFromAuth();
     final isHr = ref.watch(localeIsCroatianProvider);
@@ -977,6 +991,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                 canvasColor: AppTheme.headerBackground,
               ),
               child: DropdownButton<String>(
+                key: ValueKey(
+                    'header-location-${_activeAuthUserId ?? 'anon'}-$currentValue-${uniqueLocs.length}'),
                 value: currentValue,
                 hint: Text(
                   Lang.sel(isHr, 'Select lot', 'Odaberite parkiralište'),

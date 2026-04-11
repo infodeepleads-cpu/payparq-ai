@@ -75,37 +75,43 @@ void main() {
     expect(ErrorMapper.message(error), 'Request timed out');
   });
 
-  test('LocationResolver prefers selected display ID', () async {
+  test('LocationResolver returns validated active selection', () async {
     final resolverProvider = FutureProvider<LocationResolution>(
         (ref) => LocationResolver.resolveFromRef(ref));
     final container = ProviderContainer(overrides: [
-      selectedLocationUuidProvider.overrideWith((ref) async => 'uuid-1'),
-      userLocationIdProvider.overrideWithValue('fallback'),
-      userProfileProvider.overrideWith((ref) => Stream.value({
-            'location_id': 'fallback',
-          })),
+      activeLocationSelectionProvider.overrideWith(
+        (ref) async => LocationSelection(
+          uuid: 'uuid-1',
+          displayId: 'LOC1',
+          source: 'test',
+          isValidated: true,
+        ),
+      ),
     ]);
-    container.read(selectedLocationIdProvider.notifier).state = 'LOC1';
     final result = await container.read(resolverProvider.future);
     expect(result.displayId, 'LOC1');
     expect(result.uuid, 'uuid-1');
-    expect(result.fallbackId, 'fallback');
+    expect(result.fallbackId, null);
     container.dispose();
   });
 
-  test('LocationResolver falls back to user location', () async {
+  test('LocationResolver drops unresolved active selection data', () async {
     final resolverProvider = FutureProvider<LocationResolution>(
         (ref) => LocationResolver.resolveFromRef(ref));
     final container = ProviderContainer(overrides: [
-      selectedLocationUuidProvider.overrideWith((ref) async => null),
-      userLocationIdProvider.overrideWithValue('fallback'),
-      userProfileProvider.overrideWith((ref) => Stream.value(null)),
+      activeLocationSelectionProvider.overrideWith(
+        (ref) async => LocationSelection(
+          uuid: 'uuid-1',
+          displayId: 'LOC1',
+          source: 'test',
+          isValidated: false,
+        ),
+      ),
     ]);
-    container.read(selectedLocationIdProvider.notifier).state = null;
     final result = await container.read(resolverProvider.future);
-    expect(result.displayId, null);
+    expect(result.displayId, 'LOC1');
     expect(result.uuid, null);
-    expect(result.fallbackId, 'fallback');
+    expect(result.fallbackId, null);
     container.dispose();
   });
 }

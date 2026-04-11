@@ -95,17 +95,21 @@ void main() {
     );
   });
 
-  test('Dynamic pricing save invalidates download location cache', () async {
+  test('Dynamic pricing save updates selected location state locally',
+      () async {
     final file = File(
       'lib/features/intelligence/screens/dynamic_pricing_screen.dart',
     );
     final content = await file.readAsString();
 
     expect(
-      content.contains('ref.invalidate(selectedDownloadLocationProvider);'),
+      content.contains('data.addAll(pricePayload);') &&
+          content.contains('data.addAll(flagsPayload);') &&
+          content.contains('_locations[index] = data;') &&
+          content.contains('_selectedLocation = data;'),
       isTrue,
       reason:
-          'Saving pricing mode must invalidate Download Assets location cache so QR mode reflects the latest setting immediately.',
+          'Saving pricing must immediately update the selected location and in-memory list so the screen reflects the latest values without waiting for a refetch.',
     );
   });
 
@@ -221,21 +225,25 @@ void main() {
     );
   });
 
-  test('Download sign QR passes clamped price in checkout URL', () async {
-    final file = File('lib/screens/instructions_screen.dart');
+  test('Generated checkout URLs use clamped dynamic pricing values', () async {
+    final file =
+        File('lib/features/intelligence/screens/dynamic_pricing_screen.dart');
     final content = await file.readAsString();
 
     expect(
-      content.contains(
-              'final signPrice = _resolveSignPrice(selected, signType);') &&
-          content.contains('price: signPrice,') &&
-          content.contains('rate_per_hour_floor') &&
-          content.contains('base_price_daily_floor') &&
-          content.contains('rate_per_hour_ceiling') &&
-          content.contains('base_price_daily_ceiling'),
+      content.contains("price: _priceForType('hourly'),") &&
+          content.contains("price: _priceForType('daily'),") &&
+          content.contains('final totalPrice = unitPrice * quantity;') &&
+          content.contains('price: totalPrice,') &&
+          content.contains("final floorKey = switch (type) {") &&
+          content.contains("final ceilingKey = switch (type) {") &&
+          content.contains("'rate_per_hour_floor'") &&
+          content.contains("'base_price_daily_floor'") &&
+          content.contains("'rate_per_hour_ceiling'") &&
+          content.contains("'base_price_daily_ceiling'"),
       isTrue,
       reason:
-          'Download sign QR must include floor/ceiling clamped amount so scanned checkout matches Stripe link pricing.',
+          'Generated checkout URLs must use the price helper that applies floor and ceiling clamps so linked payment flows match the configured pricing rules.',
     );
   });
 
@@ -269,13 +277,16 @@ void main() {
 
     expect(
       content.contains(
-              'final resolution = await LocationResolver.resolve(ref);') &&
+              'final selection = await ref.read(activeLocationSelectionProvider.future);') &&
           content.contains(
-              "_locationController.text = resolution.effectiveDisplayId ?? '';") &&
-          content.contains("_locationController.text = next ?? '';"),
+              'if (!selection.isValidated || selectedLocId == null) {') &&
+          content.contains(
+              "_locationController.text = next.value?.displayId ?? '';") &&
+          content.contains(
+              "_locationController.text = resolution.effectiveDisplayId ?? '';"),
       isTrue,
       reason:
-          'Upload must re-resolve the active location and clear the field when selection changes so stale lot IDs do not remain visible.',
+          'Upload must show the validated active location and reject stale unresolved selections so old lot IDs do not survive into a submission.',
     );
   });
 
@@ -557,6 +568,24 @@ void main() {
     );
   });
 
+  test('Scaffold resets location selector when auth user changes', () async {
+    final file = File('lib/main_scaffold.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'ProviderSubscription<dynamic>? _authStateSubscription;') &&
+          content.contains('ref.listenManual(authStateProvider, (_, __) {') &&
+          content.contains('_handleAuthUserChanged(') &&
+          content.contains('_lastResolvedProfile = null;') &&
+          content.contains(
+              "'header-location-\${_activeAuthUserId ?? 'anon'}-\$currentValue-\${uniqueLocs.length}'"),
+      isTrue,
+      reason:
+          'After logout/login, the scaffold must reset cached profile/location state and recreate the header selector for the new session so the lot switcher stays interactive.',
+    );
+  });
+
   test('Create-officer allows lot-owner admin fallback for manager creation',
       () async {
     final file = File('supabase/functions/create-officer/index.ts');
@@ -589,6 +618,63 @@ void main() {
       isTrue,
       reason:
           'On web refresh and first login, selected location must restore from persisted preferences even if JWT metadata is not yet available.',
+    );
+  });
+
+  test('Active location selection is validated from live accessible rows',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final activeLocationSelectionProvider =') &&
+          content.contains(
+              'final locations = await ref.watch(availableLocationsProvider.future);') &&
+          content.contains(
+              '_findLocationByDisplayId(locations, currentSelectedDisplayId)') &&
+          content
+              .contains('_findLocationByUuid(locations, metadataLocationId)') &&
+          content.contains('await _clearPersistedLocationSelection(userId);'),
+      isTrue,
+      reason:
+          'Location selection must validate persisted and metadata candidates against the live accessible location list before the app treats them as upload-safe.',
+    );
+  });
+
+  test('Restricted location stream does not inject stale selected lot rows',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              "queryId: 'loc_profile_display_\${profileDisplayId}_att\$attempt'") &&
+          !content.contains(
+              "queryId: 'loc_selected_\${selectedDisplayId}_att\$attempt'"),
+      isTrue,
+      reason:
+          'Restricted roles must hydrate accessible locations from owned, assigned, and profile-backed locations only, not from arbitrary stale selected display ids.',
+    );
+  });
+
+  test('Upload and mobile selector require validated active locations',
+      () async {
+    final uploadFile =
+        File('lib/features/enforcement/screens/upload_case_form.dart');
+    final scaffoldFile = File('lib/main_scaffold.dart');
+    final uploadContent = await uploadFile.readAsString();
+    final scaffoldContent = await scaffoldFile.readAsString();
+
+    expect(
+      uploadContent.contains(
+              'final selection = await ref.read(activeLocationSelectionProvider.future);') &&
+          uploadContent.contains(
+              'if (!selection.isValidated || selectedLocId == null) {') &&
+          scaffoldContent.contains('No validated lots available yet.') &&
+          !scaffoldContent.contains('.state = fallbackId;'),
+      isTrue,
+      reason:
+          'Manual upload and selector UX must only proceed with validated live locations and must not promote fallback ids into active upload selection.',
     );
   });
 
