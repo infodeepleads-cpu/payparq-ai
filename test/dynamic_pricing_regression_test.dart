@@ -741,6 +741,43 @@ void main() {
     );
   });
 
+  test('Location fetch resolves role before choosing access scope', () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('String? _resolvedRole(String? rawRole) {') &&
+          content.contains(
+              "queryId: 'profile_role_location_\${user.id}_att\$attempt'") &&
+          content
+              .contains(".select('role, location_id, location_display_id')") &&
+          content.contains(
+              "final role = _resolvedRole(profileRow?['role']?.toString()) ??") &&
+          content.contains('if (role == null) {'),
+      isTrue,
+      reason:
+          'Location fetching must resolve the user role from profile or metadata before branching into super-admin or restricted access paths, otherwise same-user re-login can transiently collapse into an empty lot selector.',
+    );
+  });
+
+  test('User profile warm start does not coerce missing role to officer',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              "final metadataRole = _resolvedRole(metadata?['role']?.toString());") &&
+          content.contains("'role': metadataRole,") &&
+          content.contains('final mergedRole =') &&
+          !content.contains(
+              "'role': _normalizeRole(metadata['role']?.toString()),"),
+      isTrue,
+      reason:
+          'Warm-start profile hydration must preserve an unresolved role as unresolved instead of coercing it to officer, so role-scoped location loading stays correct for super admin, admin, manager, and officer logins.',
+    );
+  });
+
   test('Upload and mobile selector require validated active locations',
       () async {
     final uploadFile =

@@ -35,6 +35,31 @@ bool _isValidDisplayId(String? value) =>
 
 bool _isValidUuid(String? value) => value != null && value.isNotEmpty;
 
+String? _resolvedRole(String? rawRole) {
+  final role = (rawRole ?? '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replaceAll('-', '_')
+      .replaceAll(' ', '_');
+  if (role.isEmpty) {
+    return null;
+  }
+  if (role == 'superadmin' || role.startsWith('super_admin')) {
+    return 'super_admin';
+  }
+  if (role.startsWith('admin')) {
+    return 'admin';
+  }
+  if (role.startsWith('manager')) {
+    return 'manager';
+  }
+  if (role.startsWith('officer')) {
+    return 'officer';
+  }
+  return null;
+}
+
 Map<String, dynamic>? _findLocationByDisplayId(
   List<Map<String, dynamic>> locations,
   String? displayId,
@@ -84,25 +109,7 @@ Future<void> _clearPersistedLocationSelection(String? userId) async {
 }
 
 String _normalizeRole(String? rawRole) {
-  final role = (rawRole ?? '')
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replaceAll('-', '_')
-      .replaceAll(' ', '_');
-  if (role == 'superadmin' || role.startsWith('super_admin')) {
-    return 'super_admin';
-  }
-  if (role.startsWith('admin')) {
-    return 'admin';
-  }
-  if (role.startsWith('manager')) {
-    return 'manager';
-  }
-  if (role.startsWith('officer')) {
-    return 'officer';
-  }
-  return 'officer';
+  return _resolvedRole(rawRole) ?? 'officer';
 }
 
 bool _isAdminOverrideEmail(String? email) {
@@ -177,11 +184,12 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
 
   final controller = StreamController<Map<String, dynamic>?>(sync: true);
   final metadata = user.userMetadata;
+  final metadataRole = _resolvedRole(metadata?['role']?.toString());
   if (metadata != null && !controller.isClosed) {
     controller.add({
       'id': user.id,
       'email': user.email,
-      'role': _normalizeRole(metadata['role']?.toString()),
+      'role': metadataRole,
       'location_id': metadata['location_id'],
       'location_display_id': metadata['location_display_id'],
       'location_name': metadata['location_name'],
@@ -228,8 +236,11 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
   fetchProfile().then((data) {
     stopwatch.stop();
     if (data != null) {
+      final mergedRole =
+          _resolvedRole((data['role'] ?? metadata?['role'])?.toString());
       final mergedData = {
         ...data,
+        'role': mergedRole,
         'location_id': data['location_id'] ?? metadata?['location_id'],
         'location_display_id':
             data['location_display_id'] ?? metadata?['location_display_id'],
@@ -249,7 +260,7 @@ final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
         final fallback = {
           'id': user.id,
           'email': user.email,
-          'role': _normalizeRole(metadata['role']?.toString()),
+          'role': metadataRole,
           'location_id': metadata['location_id'],
           'location_display_id': metadata['location_display_id'],
           'location_name': metadata['location_name'],
@@ -419,7 +430,7 @@ final availableLocationsProvider =
   var fetchInFlight = false;
   DateTime? lastFetchAt;
 
-  final initialRole = _normalizeRole(user.userMetadata?['role']?.toString());
+  final initialRole = _resolvedRole(user.userMetadata?['role']?.toString());
   if (initialRole == 'super_admin') {
     try {
       final prefs = ref.read(sharedPreferencesProvider);
@@ -454,8 +465,33 @@ final availableLocationsProvider =
       List<Map<String, dynamic>> data = [];
 
       final liveProfile = ref.read(userProfileProvider).value;
-      final role = _normalizeRole(
-          (liveProfile?['role'] ?? user.userMetadata?['role'])?.toString());
+      Map<String, dynamic>? profileRow;
+      try {
+        profileRow =
+            await SupabaseService.instance.executeQuery<Map<String, dynamic>?>(
+          queryId: 'profile_role_location_${user.id}_att$attempt',
+          timeout: queryTimeout,
+          query: () => Supabase.instance.client
+              .from('profiles')
+              .select('role, location_id, location_display_id')
+              .eq('id', user.id)
+              .maybeSingle(),
+        );
+      } catch (_) {}
+      final role = _resolvedRole(profileRow?['role']?.toString()) ??
+          _resolvedRole(liveProfile?['role']?.toString()) ??
+          _resolvedRole(user.userMetadata?['role']?.toString());
+
+      if (role == null) {
+        if (attempt < 4 && !controller.isClosed) {
+          await Future.delayed(Duration(milliseconds: 250 * attempt));
+          return fetch(attempt: attempt + 1, force: true);
+        }
+        if (!controller.isClosed && !hasEmitted) {
+          emit(const []);
+        }
+        return;
+      }
 
       if (role == 'super_admin') {
         final all = await SupabaseService.instance.executeQuery<List<dynamic>>(
@@ -484,20 +520,8 @@ final availableLocationsProvider =
               .select('location_id')
               .eq('officer_id', user.id),
         );
-        final profileFuture =
-            SupabaseService.instance.executeQuery<Map<String, dynamic>?>(
-          queryId: 'profile_location_${user.id}_att$attempt',
-          timeout: queryTimeout,
-          query: () => Supabase.instance.client
-              .from('profiles')
-              .select('location_id, location_display_id')
-              .eq('id', user.id)
-              .maybeSingle(),
-        );
-
         final ownedRows = await ownedFuture;
         final assignedRows = await assignedFuture;
-        final profileRow = await profileFuture;
         final ids = <String>{};
         final owned = List<Map<String, dynamic>>.from(ownedRows);
         final assigned = List<Map<String, dynamic>>.from(assignedRows);
