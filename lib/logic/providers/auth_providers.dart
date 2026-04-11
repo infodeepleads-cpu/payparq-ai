@@ -240,6 +240,18 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
   } catch (_) {
     return null;
   }
+  final userId = user?.id;
+  try {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final cachedDisplayId = userId != null && userId.isNotEmpty
+        ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
+            prefs.getString('selected_location_display_id')
+        : prefs.getString('selected_location_display_id');
+    if (cachedDisplayId != null &&
+        RegExp(r'^\d{5}$').hasMatch(cachedDisplayId)) {
+      return cachedDisplayId;
+    }
+  } catch (_) {}
   final metadataDisplayId =
       user?.userMetadata?['location_display_id']?.toString();
   if (metadataDisplayId != null &&
@@ -371,6 +383,9 @@ final guaranteedLocationSelectionProvider =
   final locations = await ref.watch(availableLocationsProvider.future);
   final user = Supabase.instance.client.auth.currentUser;
   final userId = user?.id;
+  final metadataDisplayId =
+      user?.userMetadata?['location_display_id']?.toString();
+  final metadataLocationId = user?.userMetadata?['location_id']?.toString();
   final prefs = await SharedPreferences.getInstance();
   final saved = userId != null && userId.isNotEmpty
       ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
@@ -384,6 +399,8 @@ final guaranteedLocationSelectionProvider =
   String? uuid;
   final savedValid = saved != null && RegExp(r'^\d{5}$').hasMatch(saved);
   final savedUuidValid = savedUuid != null && savedUuid.isNotEmpty;
+  final metadataDisplayValid = metadataDisplayId != null &&
+      RegExp(r'^\d{5}$').hasMatch(metadataDisplayId);
   if (saved != null && !savedValid) {
     await prefs.remove('selected_location_display_id');
     if (userId != null && userId.isNotEmpty) {
@@ -400,7 +417,26 @@ final guaranteedLocationSelectionProvider =
     displayId = saved;
     uuid = savedUuid;
   } else if (locations.isNotEmpty) {
-    final row = locations.first;
+    Map<String, dynamic>? preferredRow;
+    if (metadataDisplayValid) {
+      for (final location in locations) {
+        if ((location['display_id'] ?? '').toString() == metadataDisplayId) {
+          preferredRow = location;
+          break;
+        }
+      }
+    }
+    if (preferredRow == null &&
+        metadataLocationId != null &&
+        metadataLocationId.isNotEmpty) {
+      for (final location in locations) {
+        if ((location['id'] ?? '').toString() == metadataLocationId) {
+          preferredRow = location;
+          break;
+        }
+      }
+    }
+    final row = preferredRow ?? locations.first;
     displayId = (row['display_id'] ?? '').toString();
     uuid = (row['id'] ?? '').toString();
     if (displayId.isNotEmpty) {
@@ -410,9 +446,37 @@ final guaranteedLocationSelectionProvider =
             _selectedLocationDisplayKeyFor(userId), displayId);
       }
     }
+  } else if (metadataDisplayValid) {
+    displayId = metadataDisplayId;
+    uuid = (metadataLocationId != null && metadataLocationId.isNotEmpty)
+        ? metadataLocationId
+        : savedUuid;
   } else {
     final fb = ref.read(userLocationIdProvider);
-    uuid = (fb ?? '').toString();
+    final fallback = (fb ?? metadataLocationId ?? '').toString();
+    if (fallback.isNotEmpty) {
+      final isUuid = RegExp(
+              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+              caseSensitive: false)
+          .hasMatch(fallback.toLowerCase());
+      if (isUuid) {
+        uuid = fallback;
+        try {
+          final row = await Supabase.instance.client
+              .from('locations')
+              .select('id,display_id')
+              .eq('id', fallback)
+              .maybeSingle();
+          final resolvedDisplayId = row?['display_id']?.toString();
+          if (resolvedDisplayId != null &&
+              RegExp(r'^\d{5}$').hasMatch(resolvedDisplayId)) {
+            displayId = resolvedDisplayId;
+          }
+        } catch (_) {}
+      } else {
+        displayId = fallback;
+      }
+    }
   }
   if (displayId != null && displayId.isNotEmpty) {
     final current = ref.read(selectedLocationIdProvider);

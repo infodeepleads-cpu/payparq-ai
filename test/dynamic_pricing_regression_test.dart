@@ -518,6 +518,39 @@ void main() {
     );
   });
 
+  test('Selected location restores from SharedPreferences before metadata',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final selectedLocationIdProvider') &&
+          content.contains('ref.read(sharedPreferencesProvider)') &&
+          content.contains('_selectedLocationDisplayKeyFor(') &&
+          content.contains("prefs.getString('selected_location_display_id')"),
+      isTrue,
+      reason:
+          'On web refresh and first login, selected location must restore from persisted preferences even if JWT metadata is not yet available.',
+    );
+  });
+
+  test('Admin role can access assigned locations in can_access_location RLS',
+      () async {
+    final file = File(
+        'supabase/migrations/20260411_fix_admin_assigned_location_rls.sql');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('CREATE OR REPLACE FUNCTION public.can_access_location') &&
+          content.contains("role_norm IN ('admin', 'manager', 'officer')") &&
+          content.contains('FROM public.officer_assignments oa') &&
+          content.contains('FROM public.profiles p'),
+      isTrue,
+      reason:
+          'Assigned admins must be able to read sessions/permits scoped to their locations, not only owner_id locations.',
+    );
+  });
+
   test('Stripe connect account creation allows requested country override',
       () async {
     final file = File('supabase/functions/create-connect-account/index.ts');
