@@ -641,6 +641,25 @@ void main() {
   });
 
   test(
+      'Create-officer persists profile location display metadata for admin login',
+      () async {
+    final file = File('supabase/functions/create-officer/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'if (locationId) profilePayload.location_id = locationId;') &&
+          content.contains(
+              'profilePayload.location_display_id = primaryLocation.display_id;') &&
+          content
+              .contains('profilePayload.location_name = primaryLocation.name;'),
+      isTrue,
+      reason:
+          'Admin and manager login hydration must keep profile location_id, display_id, and name aligned with auth metadata so the lot selector does not go empty or widen unexpectedly after refresh.',
+    );
+  });
+
+  test(
       'Active selection restores from user-scoped SharedPreferences after live fetch',
       () async {
     final file = File('lib/logic/providers/auth_providers.dart');
@@ -685,12 +704,33 @@ void main() {
 
     expect(
       content.contains(
-              "queryId: 'loc_profile_display_\${profileDisplayId}_att\$attempt'") &&
+              "queryId: 'loc_profile_display_\${fallbackDisplayId}_att\$attempt'") &&
           !content.contains(
               "queryId: 'loc_selected_\${selectedDisplayId}_att\$attempt'"),
       isTrue,
       reason:
           'Restricted roles must hydrate accessible locations from owned, assigned, and profile-backed locations only, not from arbitrary stale selected display ids.',
+    );
+  });
+
+  test(
+      'Restricted role location fetch prefers location id over display fallback',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains("if (role == 'super_admin') {") &&
+          content.contains(
+              'final fallbackLocId = ref.read(userLocationIdProvider) ??') &&
+          content.contains('final fallbackDisplayId =') &&
+          content
+              .contains('(fallbackLocId == null || fallbackLocId.isEmpty)') &&
+          content.contains(
+              "queryId: 'loc_profile_display_\${fallbackDisplayId}_att\$attempt'"),
+      isTrue,
+      reason:
+          'Restricted roles should only fall back to display_id when no location_id is available, preventing admins from picking up an extra stale lot after refresh while preserving super admin full visibility.',
     );
   });
 

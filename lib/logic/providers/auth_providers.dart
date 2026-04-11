@@ -404,9 +404,8 @@ final availableLocationsProvider =
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
-  // Break dependency on full profile load to speed up initial location fetch
-  final profileAsync = ref.watch(userProfileProvider);
-  final profile = profileAsync.value;
+  // Keep reactive dependency so this provider refreshes when profile updates
+  ref.watch(userProfileProvider);
 
   final controller = StreamController<List<Map<String, dynamic>>>();
   var hasEmitted = false;
@@ -420,18 +419,22 @@ final availableLocationsProvider =
   var fetchInFlight = false;
   DateTime? lastFetchAt;
 
-  try {
-    final prefs = ref.read(sharedPreferencesProvider);
-    final cachedJson = prefs.getString('cached_available_locations_${user.id}');
-    if (cachedJson != null) {
-      final List<dynamic> decoded = jsonDecode(cachedJson);
-      final List<Map<String, dynamic>> cachedList =
-          List<Map<String, dynamic>>.from(decoded);
-      if (cachedList.isNotEmpty) {
-        emit(cachedList);
+  final initialRole = _normalizeRole(user.userMetadata?['role']?.toString());
+  if (initialRole == 'super_admin') {
+    try {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final cachedJson =
+          prefs.getString('cached_available_locations_${user.id}');
+      if (cachedJson != null) {
+        final List<dynamic> decoded = jsonDecode(cachedJson);
+        final List<Map<String, dynamic>> cachedList =
+            List<Map<String, dynamic>>.from(decoded);
+        if (cachedList.isNotEmpty) {
+          emit(cachedList);
+        }
       }
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 
   // Helper to fetch and add to stream
   Future<void> fetch({int attempt = 1, bool force = false}) async {
@@ -450,61 +453,137 @@ final availableLocationsProvider =
       final queryTimeout = Duration(seconds: attempt == 1 ? 5 : 10);
       List<Map<String, dynamic>> data = [];
 
-      final all = await SupabaseService.instance.executeQuery<List<dynamic>>(
-        queryId: 'loc_all_accessible_${user.id}_att$attempt',
-        timeout: queryTimeout,
-        query: () =>
-            Supabase.instance.client.from('locations').select().order('name'),
-      );
-      final mergedLocations = List<Map<String, dynamic>>.from(all);
-      final fallbackLocId =
-          ref.read(userLocationIdProvider) ?? user.userMetadata?['location_id'];
-      final profileDisplayId = profile?['location_display_id']?.toString() ??
-          user.userMetadata?['location_display_id']?.toString();
-      final List<Future<void>> fetchFutures = [];
+      final liveProfile = ref.read(userProfileProvider).value;
+      final role = _normalizeRole(
+          (liveProfile?['role'] ?? user.userMetadata?['role'])?.toString());
 
-      if (profileDisplayId != null && profileDisplayId.isNotEmpty) {
-        fetchFutures.add(SupabaseService.instance
-            .executeQuery<Map<String, dynamic>?>(
-          queryId: 'loc_profile_display_${profileDisplayId}_att$attempt',
+      if (role == 'super_admin') {
+        final all = await SupabaseService.instance.executeQuery<List<dynamic>>(
+          queryId: 'loc_all_accessible_${user.id}_att$attempt',
+          timeout: queryTimeout,
+          query: () =>
+              Supabase.instance.client.from('locations').select().order('name'),
+        );
+        data = List<Map<String, dynamic>>.from(all);
+      } else {
+        final ownedFuture =
+            SupabaseService.instance.executeQuery<List<dynamic>>(
+          queryId: 'loc_owned_${user.id}_att$attempt',
           timeout: queryTimeout,
           query: () => Supabase.instance.client
               .from('locations')
-              .select()
-              .eq('display_id', profileDisplayId)
-              .maybeSingle(),
-        )
-            .then((profileLoc) {
-          if (profileLoc != null &&
-              !mergedLocations.any((l) => l['id'] == profileLoc['id'])) {
-            mergedLocations.add(profileLoc);
-          }
-        }).catchError((_) {}));
-      }
-
-      if (fallbackLocId != null) {
-        final isUuid = _uuidRegex.hasMatch(fallbackLocId.toLowerCase());
-        fetchFutures.add(SupabaseService.instance
-            .executeQuery<Map<String, dynamic>?>(
-          queryId: 'loc_fallback_${fallbackLocId}_att$attempt',
+              .select('id')
+              .eq('owner_id', user.id),
+        );
+        final assignedFuture =
+            SupabaseService.instance.executeQuery<List<dynamic>>(
+          queryId: 'loc_assigned_${user.id}_att$attempt',
           timeout: queryTimeout,
           query: () => Supabase.instance.client
-              .from('locations')
-              .select()
-              .eq(isUuid ? 'id' : 'display_id', fallbackLocId)
+              .from('officer_assignments')
+              .select('location_id')
+              .eq('officer_id', user.id),
+        );
+        final profileFuture =
+            SupabaseService.instance.executeQuery<Map<String, dynamic>?>(
+          queryId: 'profile_location_${user.id}_att$attempt',
+          timeout: queryTimeout,
+          query: () => Supabase.instance.client
+              .from('profiles')
+              .select('location_id, location_display_id')
+              .eq('id', user.id)
               .maybeSingle(),
-        )
-            .then((fb) {
-          if (fb != null && !mergedLocations.any((l) => l['id'] == fb['id'])) {
-            mergedLocations.add(fb);
-          }
-        }).catchError((_) {}));
-      }
+        );
 
-      await Future.wait(fetchFutures);
-      mergedLocations.sort((a, b) =>
-          (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
-      data = mergedLocations;
+        final ownedRows = await ownedFuture;
+        final assignedRows = await assignedFuture;
+        final profileRow = await profileFuture;
+        final ids = <String>{};
+        final owned = List<Map<String, dynamic>>.from(ownedRows);
+        final assigned = List<Map<String, dynamic>>.from(assignedRows);
+
+        for (final loc in owned) {
+          final v = (loc['id'] ?? '').toString();
+          if (v.isNotEmpty) ids.add(v);
+        }
+        for (final a in assigned) {
+          final v = (a['location_id'] ?? '').toString();
+          if (v.isNotEmpty) ids.add(v);
+        }
+
+        final mergedLocations = <Map<String, dynamic>>[];
+        final fetchFutures = <Future<void>>[];
+        final fallbackLocId = ref.read(userLocationIdProvider) ??
+            liveProfile?['location_id']?.toString() ??
+            profileRow?['location_id']?.toString() ??
+            user.userMetadata?['location_id']?.toString();
+        final fallbackDisplayId =
+            (fallbackLocId == null || fallbackLocId.isEmpty)
+                ? ((liveProfile?['location_display_id']?.toString()) ??
+                    (profileRow?['location_display_id']?.toString()) ??
+                    (user.userMetadata?['location_display_id']?.toString()))
+                : null;
+
+        if (ids.isNotEmpty) {
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<List<dynamic>>(
+            queryId: 'loc_details_${user.id}_att$attempt',
+            timeout: queryTimeout,
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .or(ids.map((id) => 'id.eq.$id').join(',')),
+          )
+              .then((rows) {
+            mergedLocations.addAll(List<Map<String, dynamic>>.from(rows));
+          }));
+        }
+
+        if (fallbackDisplayId != null && fallbackDisplayId.isNotEmpty) {
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<Map<String, dynamic>?>(
+            queryId: 'loc_profile_display_${fallbackDisplayId}_att$attempt',
+            timeout: queryTimeout,
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq('display_id', fallbackDisplayId)
+                .maybeSingle(),
+          )
+              .then((profileLoc) {
+            if (profileLoc != null &&
+                !mergedLocations.any((l) => l['id'] == profileLoc['id'])) {
+              mergedLocations.add(profileLoc);
+            }
+          }).catchError((_) {}));
+        }
+
+        if (fallbackLocId != null && fallbackLocId.isNotEmpty) {
+          final isUuid = _uuidRegex.hasMatch(fallbackLocId.toLowerCase());
+          fetchFutures.add(SupabaseService.instance
+              .executeQuery<Map<String, dynamic>?>(
+            queryId: 'loc_fallback_${fallbackLocId}_att$attempt',
+            timeout: queryTimeout,
+            query: () => Supabase.instance.client
+                .from('locations')
+                .select()
+                .eq(isUuid ? 'id' : 'display_id', fallbackLocId)
+                .maybeSingle(),
+          )
+              .then((fb) {
+            if (fb != null &&
+                !mergedLocations.any((l) => l['id'] == fb['id'])) {
+              mergedLocations.add(fb);
+            }
+          }).catchError((_) {}));
+        }
+
+        await Future.wait(fetchFutures);
+        mergedLocations.sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .compareTo((b['name'] ?? '').toString()));
+        data = mergedLocations;
+      }
 
       final List<Map<String, dynamic>> locations =
           List<Map<String, dynamic>>.from(data);

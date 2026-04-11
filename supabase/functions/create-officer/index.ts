@@ -366,6 +366,12 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
     if (locationId) profilePayload.location_id = locationId;
+    if (primaryLocation?.display_id) {
+      profilePayload.location_display_id = primaryLocation.display_id;
+    }
+    if (primaryLocation?.name) {
+      profilePayload.location_name = primaryLocation.name;
+    }
 
     const { data: profileData, error: profileError } = await admin
       .from("profiles")
