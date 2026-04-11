@@ -5,6 +5,33 @@ class DynamicPricingRepository {
 
   DynamicPricingRepository(this._client);
 
+  String _normalizeRole(String? rawRole) {
+    final role = (rawRole ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll('-', '_')
+        .replaceAll(' ', '_');
+    if (role == 'superadmin' || role.startsWith('super_admin')) {
+      return 'super_admin';
+    }
+    if (role.startsWith('admin')) return 'admin';
+    if (role.startsWith('manager')) return 'manager';
+    if (role.startsWith('officer')) return 'officer';
+    return 'officer';
+  }
+
+  String _buildLocationOrFilter(Iterable<String> identifiers) {
+    final clauses = <String>{};
+    for (final raw in identifiers) {
+      final value = raw.trim();
+      if (value.isEmpty) continue;
+      clauses.add('id.eq.$value');
+      clauses.add('display_id.eq.$value');
+    }
+    return clauses.join(',');
+  }
+
   String? _extractMissingColumnName(Object error) {
     final text = error.toString();
     final quoted = RegExp(r'column "([^"]+)"').firstMatch(text);
@@ -68,9 +95,10 @@ class DynamicPricingRepository {
     required String? locationId,
     required String userId,
   }) async {
+    final normalizedRole = _normalizeRole(role);
     var query = _client.from('locations').select();
-    if (role == 'super_admin') {
-    } else if (role == 'admin') {
+    if (normalizedRole == 'super_admin') {
+    } else if (normalizedRole == 'admin') {
       final ownedRows =
           await _client.from('locations').select('id').eq('owner_id', userId);
       final assignmentRows = await _client
@@ -78,6 +106,7 @@ class DynamicPricingRepository {
           .select('location_id')
           .eq('officer_id', userId);
       final allowedIds = <String>{
+        if (locationId != null && locationId.isNotEmpty) locationId,
         ...ownedRows
             .map((row) => (row['id'] ?? '').toString())
             .where((id) => id.isNotEmpty),
@@ -88,20 +117,16 @@ class DynamicPricingRepository {
       if (allowedIds.isEmpty) {
         return [];
       }
-      if (allowedIds.length == 1) {
-        query = query.eq('id', allowedIds.first);
-      } else {
-        query = query.or(allowedIds.map((id) => 'id.eq.$id').join(','));
-      }
-    } else if (role == 'manager') {
+      query = query.or(_buildLocationOrFilter(allowedIds));
+    } else if (normalizedRole == 'manager') {
       if (locationId != null && locationId.isNotEmpty) {
-        query = query.or('id.eq.$locationId,display_id.eq.$locationId');
+        query = query.or(_buildLocationOrFilter([locationId]));
       } else {
         return [];
       }
     } else {
       if (locationId != null) {
-        query = query.eq('display_id', locationId);
+        query = query.or(_buildLocationOrFilter([locationId]));
       } else {
         return [];
       }

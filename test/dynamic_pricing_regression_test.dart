@@ -487,6 +487,26 @@ void main() {
     );
   });
 
+  test(
+      'Pricing fetch includes admin profile location fallback and id/display matching',
+      () async {
+    final file = File(
+      'lib/features/intelligence/repositories/dynamic_pricing_repository.dart',
+    );
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('final normalizedRole = _normalizeRole(role);') &&
+          content.contains(
+              'if (locationId != null && locationId.isNotEmpty) locationId,') &&
+          content.contains("clauses.add('id.eq.\$value');") &&
+          content.contains("clauses.add('display_id.eq.\$value');"),
+      isTrue,
+      reason:
+          'Pricing page must include profile.location_id fallback for admins and query both uuid/display_id so assigned admins can still load pricing data.',
+    );
+  });
+
   test('Officer sidebar keeps permits and pricing hidden', () async {
     final file = File('lib/main_scaffold.dart');
     final content = await file.readAsString();
@@ -541,7 +561,8 @@ void main() {
     final content = await file.readAsString();
 
     expect(
-      content.contains('CREATE OR REPLACE FUNCTION public.can_access_location') &&
+      content.contains(
+              'CREATE OR REPLACE FUNCTION public.can_access_location') &&
           content.contains("role_norm IN ('admin', 'manager', 'officer')") &&
           content.contains('FROM public.officer_assignments oa') &&
           content.contains('FROM public.profiles p'),
