@@ -33,15 +33,17 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   String _violationType = 'Illegal Parking';
   bool _isUploading = false;
 
+  Future<void> _syncLocationField() async {
+    final resolution = await LocationResolver.resolve(ref);
+    if (!mounted) return;
+    _locationController.text = resolution.effectiveDisplayId ?? '';
+  }
+
   @override
   void initState() {
     super.initState();
-    // Pre-fill location from global selection
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final selectedLocId = ref.read(selectedLocationIdProvider);
-      if (selectedLocId != null) {
-        _locationController.text = selectedLocId;
-      }
+      unawaited(_syncLocationField());
     });
   }
 
@@ -128,12 +130,7 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   void _resetForm() {
     _plateController.clear();
     _notesController.clear();
-    final selectedLocId = ref.read(selectedLocationIdProvider);
-    if (selectedLocId != null) {
-      _locationController.text = selectedLocId;
-    } else {
-      _locationController.clear();
-    }
+    unawaited(_syncLocationField());
     setState(() {
       _image = null;
       _violationType = 'Illegal Parking';
@@ -143,11 +140,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   @override
   Widget build(BuildContext context) {
     final isHr = ref.watch(localeIsCroatianProvider);
-    // Listen to location changes and update controller
     ref.listen<String?>(selectedLocationIdProvider, (previous, next) {
-      if (next != null) {
-        _locationController.text = next;
-      }
+      _locationController.text = next ?? '';
     });
 
     return Scaffold(

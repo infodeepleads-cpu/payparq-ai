@@ -64,29 +64,39 @@ Future<void> persistSelectedLocationPreference({
       (displayId != null && displayId.isNotEmpty) ? displayId : null;
   final normalizedUuid = (uuid != null && uuid.isNotEmpty) ? uuid : null;
 
+  final isScoped = userId != null && userId.isNotEmpty;
   if (normalizedDisplayId != null) {
-    await prefs.setString('selected_location_display_id', normalizedDisplayId);
-    if (userId != null && userId.isNotEmpty) {
+    if (isScoped) {
       await prefs.setString(
           _selectedLocationDisplayKeyFor(userId), normalizedDisplayId);
+      await prefs.remove('selected_location_display_id');
+    } else {
+      await prefs.setString(
+          'selected_location_display_id', normalizedDisplayId);
     }
   } else {
-    await prefs.remove('selected_location_display_id');
-    if (userId != null && userId.isNotEmpty) {
+    if (isScoped) {
       await prefs.remove(_selectedLocationDisplayKeyFor(userId));
+      await prefs.remove('selected_location_display_id');
+    } else {
+      await prefs.remove('selected_location_display_id');
     }
   }
 
   if (normalizedUuid != null) {
-    await prefs.setString('selected_location_uuid', normalizedUuid);
-    if (userId != null && userId.isNotEmpty) {
+    if (isScoped) {
       await prefs.setString(
           _selectedLocationUuidKeyFor(userId), normalizedUuid);
+      await prefs.remove('selected_location_uuid');
+    } else {
+      await prefs.setString('selected_location_uuid', normalizedUuid);
     }
   } else {
-    await prefs.remove('selected_location_uuid');
-    if (userId != null && userId.isNotEmpty) {
+    if (isScoped) {
       await prefs.remove(_selectedLocationUuidKeyFor(userId));
+      await prefs.remove('selected_location_uuid');
+    } else {
+      await prefs.remove('selected_location_uuid');
     }
   }
 }
@@ -244,8 +254,7 @@ final selectedLocationIdProvider = StateProvider<String?>((ref) {
   try {
     final prefs = ref.read(sharedPreferencesProvider);
     final cachedDisplayId = userId != null && userId.isNotEmpty
-        ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
-            prefs.getString('selected_location_display_id')
+        ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
         : prefs.getString('selected_location_display_id');
     if (cachedDisplayId != null &&
         RegExp(r'^\d{5}$').hasMatch(cachedDisplayId)) {
@@ -277,15 +286,14 @@ final selectedLocationUuidProvider = FutureProvider<String?>((ref) async {
   String? cachedUuid;
   try {
     final prefs = ref.read(sharedPreferencesProvider);
-    final scopedDisplayId = user?.id != null && user!.id.isNotEmpty
-        ? prefs.getString(_selectedLocationDisplayKeyFor(user.id))
-        : null;
-    final scopedUuid = user?.id != null && user!.id.isNotEmpty
-        ? prefs.getString(_selectedLocationUuidKeyFor(user.id))
-        : null;
-    cachedDisplayId =
-        scopedDisplayId ?? prefs.getString('selected_location_display_id');
-    cachedUuid = scopedUuid ?? prefs.getString('selected_location_uuid');
+    if (user?.id != null && user!.id.isNotEmpty) {
+      cachedDisplayId =
+          prefs.getString(_selectedLocationDisplayKeyFor(user.id));
+      cachedUuid = prefs.getString(_selectedLocationUuidKeyFor(user.id));
+    } else {
+      cachedDisplayId = prefs.getString('selected_location_display_id');
+      cachedUuid = prefs.getString('selected_location_uuid');
+    }
   } catch (_) {}
 
   final available = ref.watch(availableLocationsProvider).value;
@@ -388,12 +396,10 @@ final guaranteedLocationSelectionProvider =
   final metadataLocationId = user?.userMetadata?['location_id']?.toString();
   final prefs = await SharedPreferences.getInstance();
   final saved = userId != null && userId.isNotEmpty
-      ? prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??
-          prefs.getString('selected_location_display_id')
+      ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
       : prefs.getString('selected_location_display_id');
   final savedUuid = userId != null && userId.isNotEmpty
-      ? prefs.getString(_selectedLocationUuidKeyFor(userId)) ??
-          prefs.getString('selected_location_uuid')
+      ? prefs.getString(_selectedLocationUuidKeyFor(userId))
       : prefs.getString('selected_location_uuid');
   String? displayId;
   String? uuid;
@@ -440,11 +446,11 @@ final guaranteedLocationSelectionProvider =
     displayId = (row['display_id'] ?? '').toString();
     uuid = (row['id'] ?? '').toString();
     if (displayId.isNotEmpty) {
-      await prefs.setString('selected_location_display_id', displayId);
-      if (userId != null && userId.isNotEmpty) {
-        await prefs.setString(
-            _selectedLocationDisplayKeyFor(userId), displayId);
-      }
+      await persistSelectedLocationPreference(
+        userId: userId,
+        displayId: displayId,
+        uuid: uuid,
+      );
     }
   } else if (metadataDisplayValid) {
     displayId = metadataDisplayId;
@@ -517,10 +523,8 @@ final availableLocationsProvider =
   try {
     prefs = ref.read(sharedPreferencesProvider);
   } catch (_) {}
-  final savedId = prefs?.getString(_selectedLocationDisplayKeyFor(user.id)) ??
-      prefs?.getString('selected_location_display_id');
-  final savedUuid = prefs?.getString(_selectedLocationUuidKeyFor(user.id)) ??
-      prefs?.getString('selected_location_uuid');
+  final savedId = prefs?.getString(_selectedLocationDisplayKeyFor(user.id));
+  final savedUuid = prefs?.getString(_selectedLocationUuidKeyFor(user.id));
   final metadataDisplayId =
       user.userMetadata?['location_display_id']?.toString();
   final metadataId = user.userMetadata?['location_id']?.toString();
@@ -731,9 +735,7 @@ final availableLocationsProvider =
       // Restore persisted selection
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final prefs = await SharedPreferences.getInstance();
-      final savedId =
-          prefs.getString(_selectedLocationDisplayKeyFor(user.id)) ??
-              prefs.getString('selected_location_display_id');
+      final savedId = prefs.getString(_selectedLocationDisplayKeyFor(user.id));
       final bool savedValid =
           (savedId != null) && RegExp(r'^\d{5}$').hasMatch(savedId);
 
@@ -747,8 +749,11 @@ final availableLocationsProvider =
             .firstWhere((l) => l['display_id']?.toString() == savedId);
         final uuid = (row['id'] ?? '').toString();
         if (uuid.isNotEmpty) {
-          await prefs.setString('selected_location_uuid', uuid);
-          await prefs.setString(_selectedLocationUuidKeyFor(user.id), uuid);
+          await persistSelectedLocationPreference(
+            userId: user.id,
+            displayId: savedId,
+            uuid: uuid,
+          );
         }
       } else if (uniqueLocations.isNotEmpty &&
           (currentSelectedId == null ||
@@ -758,14 +763,12 @@ final availableLocationsProvider =
         final firstUuid = uniqueLocations.first['id']?.toString();
         if (firstId != null && firstId.isNotEmpty) {
           ref.read(selectedLocationIdProvider.notifier).state = firstId;
-          await prefs.setString('selected_location_display_id', firstId);
-          await prefs.setString(
-              _selectedLocationDisplayKeyFor(user.id), firstId);
-          if (firstUuid != null && firstUuid.isNotEmpty) {
-            await prefs.setString('selected_location_uuid', firstUuid);
-            await prefs.setString(
-                _selectedLocationUuidKeyFor(user.id), firstUuid);
-          }
+          await persistSelectedLocationPreference(
+            userId: user.id,
+            displayId: firstId,
+            uuid:
+                (firstUuid != null && firstUuid.isNotEmpty) ? firstUuid : null,
+          );
         }
       }
 

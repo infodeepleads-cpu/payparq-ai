@@ -239,6 +239,46 @@ void main() {
     );
   });
 
+  test('Scoped location selection avoids falling back to global stale keys',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+            "prefs.getString(_selectedLocationDisplayKeyFor(userId)) ??",
+          ) ||
+          content.contains(
+            "prefs.getString(_selectedLocationUuidKeyFor(userId)) ??",
+          ) ||
+          content.contains(
+            "prefs?.getString(_selectedLocationDisplayKeyFor(user.id)) ??",
+          ) ||
+          content.contains(
+            "prefs?.getString(_selectedLocationUuidKeyFor(user.id)) ??",
+          ),
+      isFalse,
+      reason:
+          'Logged-in users must resolve lot selection from user-scoped keys only so stale global SharedPreferences values cannot leak across accounts or roles.',
+    );
+  });
+
+  test('Upload form re-resolves and clears stale location display', () async {
+    final file = File('lib/features/enforcement/screens/upload_case_form.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'final resolution = await LocationResolver.resolve(ref);') &&
+          content.contains(
+              "_locationController.text = resolution.effectiveDisplayId ?? '';") &&
+          content.contains("_locationController.text = next ?? '';"),
+      isTrue,
+      reason:
+          'Upload must re-resolve the active location and clear the field when selection changes so stale lot IDs do not remain visible.',
+    );
+  });
+
   test('Daily enforcement mode uses 24x hourly fine before daily value',
       () async {
     final file = File(
@@ -437,10 +477,8 @@ void main() {
     expect(
       authContent
               .contains('Future<void> persistSelectedLocationPreference({') &&
-          authContent.contains(
-              "await prefs.setString('selected_location_display_id'") &&
-          authContent
-              .contains("await prefs.setString('selected_location_uuid'") &&
+          authContent.contains('_selectedLocationDisplayKeyFor(userId)') &&
+          authContent.contains('_selectedLocationUuidKeyFor(userId)') &&
           scaffoldContent
               .contains('await _persistSelectedLocation(id, uuid: uuid);') &&
           controllerContent
