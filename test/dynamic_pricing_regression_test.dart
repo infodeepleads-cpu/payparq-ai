@@ -271,6 +271,41 @@ void main() {
     );
   });
 
+  test('Selected location starts empty until live rows validate it', () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+            'final selectedLocationIdProvider = StateProvider<String?>((ref) => null);',
+          ) &&
+          !content.contains('_is_warm_initial') &&
+          !content.contains('emit(initialList);'),
+      isTrue,
+      reason:
+          'Lot selection must not prefill from stale warm cache before live accessible rows are loaded.',
+    );
+  });
+
+  test('Live current lot selection wins over stale saved selection', () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+            'final currentSelectedDisplayId = ref.watch(selectedLocationIdProvider);',
+          ) &&
+          content.contains('final bool currentSelectedValid =') &&
+          content.contains('if (currentSelectedValid) {') &&
+          content.contains(
+            'if (savedId != currentSelectedId || savedUuid != currentUuid) {',
+          ),
+      isTrue,
+      reason:
+          'Manual lot switches must keep the currently selected live lot instead of reverting to an older saved preference.',
+    );
+  });
+
   test('Upload form re-resolves and clears stale location display', () async {
     final file = File('lib/features/enforcement/screens/upload_case_form.dart');
     final content = await file.readAsString();
@@ -281,9 +316,9 @@ void main() {
           content.contains(
               'if (!selection.isValidated || selectedLocId == null) {') &&
           content.contains(
-              "_locationController.text = next.value?.displayId ?? '';") &&
+              "selection.isValidated ? selection.displayId ?? '' : '';") &&
           content.contains(
-              "_locationController.text = resolution.effectiveDisplayId ?? '';"),
+              "next.value?.isValidated == true ? next.value?.displayId ?? '' : '';"),
       isTrue,
       reason:
           'Upload must show the validated active location and reject stale unresolved selections so old lot IDs do not survive into a submission.',
@@ -605,19 +640,21 @@ void main() {
     );
   });
 
-  test('Selected location restores from SharedPreferences before metadata',
+  test(
+      'Active selection restores from user-scoped SharedPreferences after live fetch',
       () async {
     final file = File('lib/logic/providers/auth_providers.dart');
     final content = await file.readAsString();
 
     expect(
       content.contains('final selectedLocationIdProvider') &&
-          content.contains('ref.read(sharedPreferencesProvider)') &&
+          content.contains(
+              'final currentSelectedDisplayId = ref.watch(selectedLocationIdProvider);') &&
           content.contains('_selectedLocationDisplayKeyFor(') &&
-          content.contains("prefs.getString('selected_location_display_id')"),
+          !content.contains("prefs.getString('selected_location_display_id')"),
       isTrue,
       reason:
-          'On web refresh and first login, selected location must restore from persisted preferences even if JWT metadata is not yet available.',
+          'After live accessible rows load, active selection must restore from user-scoped preferences without relying on stale global cache or metadata prefill.',
     );
   });
 

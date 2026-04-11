@@ -11,7 +11,6 @@ import '../../../theme.dart';
 import '../providers/enforcement_controller.dart';
 import '../../../logic/providers/auth_providers.dart';
 import '../../../logic/providers/locale_provider.dart';
-import '../../../logic/utils/location_resolver.dart';
 import '../../../services/error_mapper.dart';
 import '../../../utils/async_action_handler.dart';
 
@@ -34,9 +33,10 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
   bool _isUploading = false;
 
   Future<void> _syncLocationField() async {
-    final resolution = await LocationResolver.resolve(ref);
+    final selection = await ref.read(activeLocationSelectionProvider.future);
     if (!mounted) return;
-    _locationController.text = resolution.effectiveDisplayId ?? '';
+    _locationController.text =
+        selection.isValidated ? selection.displayId ?? '' : '';
   }
 
   @override
@@ -141,7 +141,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
     final isHr = ref.watch(localeIsCroatianProvider);
     ref.listen<AsyncValue<LocationSelection>>(activeLocationSelectionProvider,
         (previous, next) {
-      _locationController.text = next.value?.displayId ?? '';
+      _locationController.text =
+          next.value?.isValidated == true ? next.value?.displayId ?? '' : '';
     });
 
     return Scaffold(

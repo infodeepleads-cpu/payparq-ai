@@ -84,9 +84,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Future<void> _hydrateLocationSelection() async {
     if (!mounted) return;
+    ref.invalidate(activeLocationSelectionProvider);
     ref.invalidate(guaranteedLocationSelectionProvider);
     try {
-      await ref.read(guaranteedLocationSelectionProvider.future);
+      await ref.read(activeLocationSelectionProvider.future);
     } catch (_) {}
   }
 
@@ -100,6 +101,8 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       displayId: displayId,
       uuid: uuid,
     );
+    ref.invalidate(activeLocationSelectionProvider);
+    ref.invalidate(guaranteedLocationSelectionProvider);
     ref.invalidate(selectedLocationUuidProvider);
     ref.invalidate(selectedEffectiveLocationUuidProvider);
   }
@@ -113,6 +116,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     ref.read(selectedLocationIdProvider.notifier).state = null;
     ref.invalidate(userProfileProvider);
     ref.invalidate(availableLocationsProvider);
+    ref.invalidate(activeLocationSelectionProvider);
     ref.invalidate(selectedLocationUuidProvider);
     ref.invalidate(selectedEffectiveLocationUuidProvider);
     ref.invalidate(guaranteedLocationSelectionProvider);
@@ -231,6 +235,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
     ref.invalidate(userProfileProvider);
     ref.invalidate(availableLocationsProvider);
+    ref.invalidate(activeLocationSelectionProvider);
     ref.invalidate(authStateProvider);
 
     if (!mounted) return;

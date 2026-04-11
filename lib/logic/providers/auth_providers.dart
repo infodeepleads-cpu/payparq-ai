@@ -307,35 +307,7 @@ final userLocationIdProvider = Provider<String?>((ref) {
 });
 
 // The currently selected location display_id (5-digit)
-final selectedLocationIdProvider = StateProvider<String?>((ref) {
-  User? user;
-  try {
-    user = Supabase.instance.client.auth.currentUser;
-  } catch (_) {
-    return null;
-  }
-  final userId = user?.id;
-  try {
-    final prefs = ref.read(sharedPreferencesProvider);
-    final cachedDisplayId = userId != null && userId.isNotEmpty
-        ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
-        : prefs.getString('selected_location_display_id');
-    if (_isValidDisplayId(cachedDisplayId)) {
-      return cachedDisplayId;
-    }
-  } catch (_) {}
-  final metadataDisplayId =
-      user?.userMetadata?['location_display_id']?.toString();
-  if (_isValidDisplayId(metadataDisplayId)) {
-    return metadataDisplayId;
-  }
-  final metadataId = user?.userMetadata?['location_id']?.toString();
-
-  if (_isValidDisplayId(metadataId)) {
-    return metadataId;
-  }
-  return null;
-});
+final selectedLocationIdProvider = StateProvider<String?>((ref) => null);
 
 final activeLocationSelectionProvider =
     FutureProvider<LocationSelection>((ref) async {
@@ -344,13 +316,13 @@ final activeLocationSelectionProvider =
   final userId = user?.id;
   final profile = ref.read(userProfileProvider).value;
   final prefs = await SharedPreferences.getInstance();
-  final currentSelectedDisplayId = ref.read(selectedLocationIdProvider);
+  final currentSelectedDisplayId = ref.watch(selectedLocationIdProvider);
   final savedDisplayId = userId != null && userId.isNotEmpty
       ? prefs.getString(_selectedLocationDisplayKeyFor(userId))
-      : prefs.getString('selected_location_display_id');
+      : null;
   final savedUuid = userId != null && userId.isNotEmpty
       ? prefs.getString(_selectedLocationUuidKeyFor(userId))
-      : prefs.getString('selected_location_uuid');
+      : null;
   final metadataDisplayId = (profile?['location_display_id'] ??
           user?.userMetadata?['location_display_id'])
       ?.toString();
@@ -450,78 +422,6 @@ final availableLocationsProvider =
 
   var fetchInFlight = false;
   DateTime? lastFetchAt;
-
-  // IMMEDIATE SYNC EMIT: Provide basic data from metadata/SharedPreferences as fast as possible
-  SharedPreferences? prefs;
-  try {
-    prefs = ref.read(sharedPreferencesProvider);
-  } catch (_) {}
-  final savedId = prefs?.getString(_selectedLocationDisplayKeyFor(user.id));
-  final savedUuid = prefs?.getString(_selectedLocationUuidKeyFor(user.id));
-  final metadataDisplayId =
-      user.userMetadata?['location_display_id']?.toString();
-  final metadataId = user.userMetadata?['location_id']?.toString();
-  final metadataName = user.userMetadata?['location_name']?.toString() ?? 'Lot';
-  final warmDisplayId =
-      (metadataDisplayId != null && _displayIdRegex.hasMatch(metadataDisplayId))
-          ? metadataDisplayId
-          : (metadataId != null && _displayIdRegex.hasMatch(metadataId))
-              ? metadataId
-              : null;
-
-  final initialList = <Map<String, dynamic>>[];
-  if (savedId != null && _displayIdRegex.hasMatch(savedId)) {
-    initialList.add({
-      'display_id': savedId,
-      'name': metadataId == savedId ? metadataName : 'Lot $savedId',
-      'id': savedUuid ?? '', // Use cached UUID if available
-      '_is_warm_initial': true,
-    });
-    // Also update selection immediately if it was null
-    if (ref.read(selectedLocationIdProvider) == null) {
-      ref.read(selectedLocationIdProvider.notifier).state = savedId;
-    }
-  } else if (warmDisplayId != null && warmDisplayId.isNotEmpty) {
-    initialList.add({
-      'display_id': warmDisplayId,
-      'name': metadataName,
-      'id': metadataId ?? savedUuid ?? '',
-      '_is_warm_initial': true,
-    });
-    if (ref.read(selectedLocationIdProvider) == null) {
-      ref.read(selectedLocationIdProvider.notifier).state = warmDisplayId;
-    }
-  } else if (metadataId != null && metadataId.isNotEmpty) {
-    initialList.add({
-      'display_id': '...',
-      'name': metadataName,
-      'id': metadataId,
-      '_is_warm_initial': true,
-    });
-    if (savedUuid == metadataId && savedId != null) {
-      ref.read(selectedLocationIdProvider.notifier).state = savedId;
-    }
-  }
-
-  // Also check if we have full cached list from previous session
-  final cachedJson = prefs?.getString('cached_available_locations_${user.id}');
-  if (cachedJson != null) {
-    try {
-      final List<dynamic> decoded = jsonDecode(cachedJson);
-      final List<Map<String, dynamic>> cachedList =
-          List<Map<String, dynamic>>.from(decoded);
-      // Merge with initial if not already there
-      for (final item in cachedList) {
-        if (!initialList.any((l) => l['display_id'] == item['display_id'])) {
-          initialList.add(item);
-        }
-      }
-    } catch (_) {}
-  }
-
-  if (initialList.isNotEmpty) {
-    emit(initialList);
-  }
 
   // Helper to fetch and add to stream
   Future<void> fetch({int attempt = 1, bool force = false}) async {
@@ -667,9 +567,26 @@ final availableLocationsProvider =
       final currentSelectedId = ref.read(selectedLocationIdProvider);
       final prefs = await SharedPreferences.getInstance();
       final savedId = prefs.getString(_selectedLocationDisplayKeyFor(user.id));
+      final savedUuid = prefs.getString(_selectedLocationUuidKeyFor(user.id));
+      final bool currentSelectedValid = _isValidDisplayId(currentSelectedId) &&
+          uniqueLocations.any(
+            (l) => l['display_id']?.toString() == currentSelectedId,
+          );
       final bool savedValid = _isValidDisplayId(savedId);
 
-      if (savedValid &&
+      if (currentSelectedValid) {
+        final row = uniqueLocations.firstWhere(
+          (l) => l['display_id']?.toString() == currentSelectedId,
+        );
+        final currentUuid = (row['id'] ?? '').toString();
+        if (savedId != currentSelectedId || savedUuid != currentUuid) {
+          await persistSelectedLocationPreference(
+            userId: user.id,
+            displayId: currentSelectedId,
+            uuid: currentUuid.isNotEmpty ? currentUuid : null,
+          );
+        }
+      } else if (savedValid &&
           uniqueLocations.any((l) => l['display_id']?.toString() == savedId)) {
         if (currentSelectedId != savedId) {
           ref.read(selectedLocationIdProvider.notifier).state = savedId;
