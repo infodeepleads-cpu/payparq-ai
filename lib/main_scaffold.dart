@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../responsive/responsive_layout.dart';
 import '../logic/providers/auth_providers.dart';
 import '../logic/providers/locale_provider.dart';
@@ -63,6 +64,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
   Map<String, dynamic>? _lastResolvedProfile;
   ProviderSubscription<dynamic>? _authStateSubscription;
   String? _activeAuthUserId;
+  String? _activeAuthSessionKey;
 
   Map<String, dynamic> _fallbackProfileFromAuth() {
     final user = ref.read(authControllerProvider).currentUser();
@@ -107,11 +109,24 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     ref.invalidate(selectedEffectiveLocationUuidProvider);
   }
 
-  void _handleAuthUserChanged(String? nextUserId) {
-    if (_activeAuthUserId == nextUserId) {
-      return;
+  String _sessionKeyForSession(Session? session) {
+    if (session == null) {
+      return 'signed_out';
     }
+    final refreshToken = session.refreshToken;
+    final tokenKey = (refreshToken != null && refreshToken.isNotEmpty)
+        ? refreshToken
+        : session.accessToken;
+    return '${session.user.id}:$tokenKey';
+  }
+
+  void _resetAuthScopedState({
+    required String? nextUserId,
+    required String nextSessionKey,
+    required bool shouldHydrateSelection,
+  }) {
     _activeAuthUserId = nextUserId;
+    _activeAuthSessionKey = nextSessionKey;
     _lastResolvedProfile = null;
     ref.read(selectedLocationIdProvider.notifier).state = null;
     ref.invalidate(userProfileProvider);
@@ -123,17 +138,40 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (mounted) {
       setState(() {});
     }
-    if (nextUserId != null && nextUserId.isNotEmpty) {
+    if (shouldHydrateSelection) {
       Future.microtask(_hydrateLocationSelection);
     }
+  }
+
+  void _handleAuthSessionChanged(AuthState? authState, {bool force = false}) {
+    final nextSession =
+        authState?.session ?? Supabase.instance.client.auth.currentSession;
+    final nextUserId = nextSession?.user.id ??
+        ref.read(authControllerProvider).currentUserId();
+    final nextSessionKey = _sessionKeyForSession(nextSession);
+    if (!force &&
+        _activeAuthUserId == nextUserId &&
+        _activeAuthSessionKey == nextSessionKey) {
+      return;
+    }
+    _resetAuthScopedState(
+      nextUserId: nextUserId,
+      nextSessionKey: nextSessionKey,
+      shouldHydrateSelection: nextUserId != null && nextUserId.isNotEmpty,
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    _activeAuthUserId = ref.read(authControllerProvider).currentUserId();
-    _authStateSubscription = ref.listenManual(authStateProvider, (_, __) {
-      _handleAuthUserChanged(ref.read(authControllerProvider).currentUserId());
+    final currentSession = Supabase.instance.client.auth.currentSession;
+    _activeAuthUserId = currentSession?.user.id;
+    _activeAuthSessionKey = _sessionKeyForSession(currentSession);
+    _authStateSubscription = ref.listenManual(authStateProvider, (_, next) {
+      if (!next.hasValue) {
+        return;
+      }
+      _handleAuthSessionChanged(next.value, force: true);
     });
     Future.microtask(_hydrateLocationSelection);
     Future.microtask(_prepareInitialScreen);
@@ -228,15 +266,14 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     if (confirm != true) return;
 
     _lastResolvedProfile = null;
-    ref.read(selectedLocationIdProvider.notifier).state = null;
     _selectedIndex = 2;
 
     await _persistSelectedLocation(null);
-
-    ref.invalidate(userProfileProvider);
-    ref.invalidate(availableLocationsProvider);
-    ref.invalidate(activeLocationSelectionProvider);
-    ref.invalidate(authStateProvider);
+    _resetAuthScopedState(
+      nextUserId: null,
+      nextSessionKey: 'signed_out_local',
+      shouldHydrateSelection: false,
+    );
 
     if (!mounted) return;
     await AsyncActionHandler.run<void>(
@@ -245,8 +282,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
       successMessage: Lang.sel(isHr, 'Signed out', 'Odjavljeni ste'),
       errorBuilder: ErrorMapper.message,
     );
-    if (!mounted) return;
-    Future.microtask(_hydrateLocationSelection);
   }
 
   @override
@@ -997,7 +1032,7 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
               ),
               child: DropdownButton<String>(
                 key: ValueKey(
-                    'header-location-${_activeAuthUserId ?? 'anon'}-$currentValue-${uniqueLocs.length}'),
+                    'header-location-${_activeAuthUserId ?? 'anon'}-${_activeAuthSessionKey ?? 'sessionless'}-$currentValue-${uniqueLocs.length}'),
                 value: currentValue,
                 hint: Text(
                   Lang.sel(isHr, 'Select lot', 'Odaberite parkiralište'),

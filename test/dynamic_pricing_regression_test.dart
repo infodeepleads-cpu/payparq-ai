@@ -603,21 +603,28 @@ void main() {
     );
   });
 
-  test('Scaffold resets location selector when auth user changes', () async {
+  test('Scaffold resets location selector when auth session changes', () async {
     final file = File('lib/main_scaffold.dart');
     final content = await file.readAsString();
 
     expect(
       content.contains(
               'ProviderSubscription<dynamic>? _authStateSubscription;') &&
-          content.contains('ref.listenManual(authStateProvider, (_, __) {') &&
-          content.contains('_handleAuthUserChanged(') &&
-          content.contains('_lastResolvedProfile = null;') &&
+          content.contains('String? _activeAuthSessionKey;') &&
+          content
+              .contains('String _sessionKeyForSession(Session? session) {') &&
+          content.contains('ref.listenManual(authStateProvider, (_, next) {') &&
           content.contains(
-              "'header-location-\${_activeAuthUserId ?? 'anon'}-\$currentValue-\${uniqueLocs.length}'"),
+              '_handleAuthSessionChanged(next.value, force: true);') &&
+          content.contains('_activeAuthSessionKey == nextSessionKey') &&
+          content.contains('_resetAuthScopedState(') &&
+          content.contains("nextSessionKey: 'signed_out_local'") &&
+          content.contains(
+              "'header-location-\${_activeAuthUserId ?? 'anon'}-\${_activeAuthSessionKey ?? 'sessionless'}-\$currentValue-\${uniqueLocs.length}'") &&
+          !content.contains('ref.invalidate(authStateProvider);'),
       isTrue,
       reason:
-          'After logout/login, the scaffold must reset cached profile/location state and recreate the header selector for the new session so the lot switcher stays interactive.',
+          'After logout/login, the scaffold must reset by session identity, not only user id, and must not manually invalidate the auth stream before sign-out so same-user re-login rebuilds the lot selector reliably.',
     );
   });
 
