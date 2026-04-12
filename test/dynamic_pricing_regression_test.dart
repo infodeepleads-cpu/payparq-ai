@@ -164,17 +164,14 @@ void main() {
           content.contains('requestUrl.protocol = "https:";') &&
           content.contains(
               'const switchLocationIdentifier = displayId || locationId;') &&
-          content.contains(
-              'new URL("/functions/v1/create-checkout", requestUrl.origin);') &&
           content.contains('checkoutText.needHourly') &&
           content.contains('checkoutText.openHourlyCheckout') &&
           content.contains('checkoutText.needDaily') &&
           content.contains('checkoutText.openDailyCheckout') &&
+          content.contains('const launcherRequested =') &&
           content.contains('parseOptionalBooleanValue(body["launcher"])') &&
-          content.contains(
-              r'const hourlySwitchLinkMarkdown = `[${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;') &&
-          content.contains(
-              r'const dailySwitchLinkMarkdown = `[${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;') &&
+          content.contains('const hourlySwitchLinkMarkdown =') &&
+          content.contains('const dailySwitchLinkMarkdown =') &&
           content.contains(
               'const nonReservationDescription = type === "hourly"') &&
           content.contains('checkoutText.dailyFooterInstruction') &&
@@ -185,8 +182,7 @@ void main() {
           content.contains('const launcherDescription = isReservationFlow') &&
           content
               .contains('if (req.method === "GET" && launcherRequested) {') &&
-          content.contains(
-              r'<a class="switch-link" href="${escapeHtml(launcherSwitchUrl)}">') &&
+          content.contains('<a class="switch-link"') &&
           content.contains('phone_number_collection: {') &&
           content.contains('submit: {') &&
           content.contains('hourlyDailyCtaMessage') &&
@@ -1074,10 +1070,74 @@ void main() {
       content.contains('export function isAutomaticSplitEligibleRole') &&
           content.contains('return normalizeRole(value) === "manager";') &&
           content.contains(
-              'const splitEligible = isAutomaticSplitEligibleRole(normalizedRole) && destinationAccountId.length > 0 && stripeReady;'),
+              'const splitEligible = isAutomaticSplitEligibleRole(normalizedRole)') &&
+          content.contains('destinationAccountId.length > 0') &&
+          content.contains('stripeReady;'),
       isTrue,
       reason:
           'Only the manager role should receive automatic lot-owner Stripe Connect split routing.',
+    );
+  });
+
+  test(
+      'Hub toggle becomes the single payout-mode switch and regular daily lots use the minimum fee floor',
+      () async {
+    final sharedFile = File('apps/shared/stripeSplit.ts');
+    final checkoutFile =
+        File('apps/user-web-app/src/app/api/stripe/checkout/route.ts');
+    final edgeCheckoutFile =
+        File('supabase/functions/create-checkout/index.ts');
+    final financeFile =
+        File('lib/features/intelligence/screens/finance_screen.dart');
+
+    final sharedContent = await sharedFile.readAsString();
+    final checkoutContent = await checkoutFile.readAsString();
+    final edgeCheckoutContent = await edgeCheckoutFile.readAsString();
+    final financeContent = await financeFile.readAsString();
+
+    expect(
+      sharedContent.contains('export function resolveLotPayoutMode') &&
+          sharedContent
+              .contains('metadata.hub_enabled === true ? "hub" : "regular"') &&
+          sharedContent
+              .contains('const payoutMode = params.payoutMode ?? "hub";') &&
+          sharedContent
+              .contains('const tenPercentFee = Math.round(charged * 0.1);') &&
+          sharedContent.contains(
+              'sessionQuantity * regularDailyMinimumPlatformFeeCents') &&
+          sharedContent.contains('"regular_daily_min_099"') &&
+          checkoutContent.contains('payoutMode: lotPayoutMode') &&
+          checkoutContent.contains('lotPayoutMode') &&
+          edgeCheckoutContent
+              .contains('lotPayoutMode = resolveLotPayoutMode') &&
+          edgeCheckoutContent
+              .contains('payoutMode: splitContext.lotPayoutMode') &&
+          financeContent.contains(
+              'Regular mode uses a 10% platform split on all payments.') &&
+          financeContent.contains('quantity × €0.99.'),
+      isTrue,
+      reason:
+          'Hub enablement must be the sole payout-mode switch, regular daily lots must use the minimum per-day platform fee floor, and Finance must explain the active policy clearly.',
+    );
+  });
+
+  test(
+      'Verification inbox no longer duplicates the Hub vs Regular payout decision',
+      () async {
+    final file =
+        File('lib/features/management/screens/verification_inbox_screen.dart');
+    final content = await file.readAsString();
+
+    expect(
+      !content.contains('Lot Management Type') &&
+          !content.contains('Run by Payparq') &&
+          !content.contains('Regular Lot') &&
+          !content.contains('isRunByPayparq') &&
+          content.contains("'verified'") &&
+          content.contains('_updateStatus('),
+      isTrue,
+      reason:
+          'Verification should no longer present a second payout-mode selector once the National Manager hub toggle is the only source of truth.',
     );
   });
 

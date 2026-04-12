@@ -8,6 +8,7 @@ import {
   buildStripeSplitPaymentIntentData,
   buildStripeSplitPlan,
   resolveAutomaticSplitDestination,
+  resolveLotPayoutMode,
   resolveSplitExpenseRate,
   resolveSplitFixedExpenseCents,
   resolveSplitTaxRate,
@@ -32,7 +33,8 @@ function normalizePlate(value: unknown) {
 
 function toBoolean(value: unknown) {
   const normalized = (value ?? "").toString().trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+  return normalized === "1" || normalized === "true" || normalized === "yes" ||
+    normalized === "on";
 }
 
 function resolvePricingType(value: unknown): PricingType {
@@ -42,7 +44,12 @@ function resolvePricingType(value: unknown): PricingType {
   return "hourly";
 }
 
-function clampInteger(value: unknown, fallback: number, min: number, max: number) {
+function clampInteger(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   const rounded = Math.round(parsed);
@@ -98,12 +105,19 @@ async function findAuthUserByEmail(email: string) {
     perPage: 1000,
   });
   if (error) return null;
-  return data.users.find((candidate) => normalizeEmail(candidate.email) === email) ?? null;
+  return data.users.find((candidate) =>
+    normalizeEmail(candidate.email) === email
+  ) ?? null;
 }
 
-async function resolveMember(req: NextRequest, payload: Record<string, unknown>): Promise<AuthMember> {
+async function resolveMember(
+  req: NextRequest,
+  payload: Record<string, unknown>,
+): Promise<AuthMember> {
   const authHeader = req.headers.get("authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
   if (token) {
     const authClient = supabaseAdmin ?? supabase;
     if (authClient) {
@@ -114,7 +128,10 @@ async function resolveMember(req: NextRequest, payload: Record<string, unknown>)
           return {
             email,
             userId: data.user.id,
-            userMetadata: (data.user.user_metadata ?? {}) as Record<string, unknown>,
+            userMetadata: (data.user.user_metadata ?? {}) as Record<
+              string,
+              unknown
+            >,
             internalRequest: false,
           };
         }
@@ -124,17 +141,26 @@ async function resolveMember(req: NextRequest, payload: Record<string, unknown>)
 
   const lprSecretExpected = (process.env.LPR_AUTOPAY_SECRET ?? "").trim();
   const lprSecretReceived = (req.headers.get("x-lpr-secret") ?? "").trim();
-  const isInternalRequest = Boolean(lprSecretExpected) && lprSecretExpected === lprSecretReceived;
+  const isInternalRequest = Boolean(lprSecretExpected) &&
+    lprSecretExpected === lprSecretReceived;
   if (isInternalRequest) {
-    const email = normalizeEmail((payload.memberEmail ?? payload.email ?? "").toString());
+    const email = normalizeEmail(
+      (payload.memberEmail ?? payload.email ?? "").toString(),
+    );
     if (!email) {
-      return { email: "", userId: null, userMetadata: {}, internalRequest: true };
+      return {
+        email: "",
+        userId: null,
+        userMetadata: {},
+        internalRequest: true,
+      };
     }
     const authUser = await findAuthUserByEmail(email);
     return {
       email,
       userId: authUser?.id ?? null,
-      userMetadata: ((authUser?.user_metadata ?? {}) as Record<string, unknown>) ?? {},
+      userMetadata:
+        ((authUser?.user_metadata ?? {}) as Record<string, unknown>) ?? {},
       internalRequest: true,
     };
   }
@@ -165,14 +191,18 @@ function extractMissingColumnName(message: string) {
   return "";
 }
 
-async function insertSessionWithSchemaFallback(payload: Record<string, unknown>) {
+async function insertSessionWithSchemaFallback(
+  payload: Record<string, unknown>,
+) {
   const client = supabaseAdmin ?? supabase;
   if (!client) {
     return { ok: false, message: "supabase_not_configured" };
   }
   let currentPayload = { ...payload };
   for (let index = 0; index < 20; index += 1) {
-    const { error } = await client.from("parking_sessions").insert(currentPayload);
+    const { error } = await client.from("parking_sessions").insert(
+      currentPayload,
+    );
     if (!error) {
       return { ok: true };
     }
@@ -188,8 +218,12 @@ async function insertSessionWithSchemaFallback(payload: Record<string, unknown>)
 }
 
 function parseRegisteredPlates(metadata: Record<string, unknown>) {
-  const list = Array.isArray(metadata.member_plates) ? metadata.member_plates : [];
-  const normalizedList = list.map((value) => normalizePlate(value)).filter((value) => value.length > 0);
+  const list = Array.isArray(metadata.member_plates)
+    ? metadata.member_plates
+    : [];
+  const normalizedList = list.map((value) => normalizePlate(value)).filter((
+    value,
+  ) => value.length > 0);
   const defaultPlate = normalizePlate(metadata.default_plate);
   const all = [...normalizedList, ...(defaultPlate ? [defaultPlate] : [])];
   return Array.from(new Set(all));
@@ -203,7 +237,10 @@ function hasAutoChargeConsent(metadata: Record<string, unknown>) {
   );
 }
 
-async function resolveLocationWithPricing(locationInput: string, pricingType: PricingType) {
+async function resolveLocationWithPricing(
+  locationInput: string,
+  pricingType: PricingType,
+) {
   const client = supabaseAdmin ?? supabase;
   if (!client) {
     return { error: "supabase_not_configured", status: 500 } as const;
@@ -233,6 +270,7 @@ async function resolveLocationWithPricing(locationInput: string, pricingType: Pr
     return { error: "location_not_found", status: 404 } as const;
   }
   const verificationMetadata = asMetadataRecord(data.verification_metadata);
+  const lotPayoutMode = resolveLotPayoutMode(verificationMetadata);
   const ownerId = String((data.owner_id ?? "") as string).trim();
   let ownerStripeAccountId: string | null = null;
   let ownerStripeReady = false;
@@ -243,10 +281,14 @@ async function resolveLocationWithPricing(locationInput: string, pricingType: Pr
       .eq("id", ownerId)
       .maybeSingle();
     const splitDestination = resolveAutomaticSplitDestination({
-      profileRole: (ownerProfile as { role?: string | null } | null)?.role ?? "",
-      stripeAccountId: (ownerProfile as { stripe_account_id?: string | null } | null)?.stripe_account_id ?? "",
+      profileRole: (ownerProfile as { role?: string | null } | null)?.role ??
+        "",
+      stripeAccountId:
+        (ownerProfile as { stripe_account_id?: string | null } | null)
+          ?.stripe_account_id ?? "",
       stripeOnboardingComplete:
-        (ownerProfile as { stripe_onboarding_complete?: boolean | null } | null)?.stripe_onboarding_complete === true,
+        (ownerProfile as { stripe_onboarding_complete?: boolean | null } | null)
+          ?.stripe_onboarding_complete === true,
     });
     ownerStripeAccountId = splitDestination.destinationAccountId;
     ownerStripeReady = splitDestination.splitEligible;
@@ -263,37 +305,56 @@ async function resolveLocationWithPricing(locationInput: string, pricingType: Pr
       displayId: (data.display_id ?? "").toString().trim(),
       name: (data.name ?? "").toString().trim(),
       unitAmountCents,
-      dailyTicketUnitAmountCents: Math.max(0, Math.round(resolveScannerTruthPriceEuro(data, "daily") * 100)),
+      dailyTicketUnitAmountCents: Math.max(
+        0,
+        Math.round(resolveScannerTruthPriceEuro(data, "daily") * 100),
+      ),
+      lotPayoutMode,
       ownerStripeAccountId,
       ownerStripeReady,
       splitExpenseRate: resolveSplitExpenseRate(verificationMetadata),
       splitTaxRate: resolveSplitTaxRate(verificationMetadata),
-      splitFixedExpenseCents: resolveSplitFixedExpenseCents(verificationMetadata),
+      splitFixedExpenseCents: resolveSplitFixedExpenseCents(
+        verificationMetadata,
+      ),
     },
   };
 }
 
 export async function POST(req: NextRequest) {
-  const payload = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const payload = (await req.json().catch(() => null)) as
+    | Record<string, unknown>
+    | null;
   if (!payload || typeof payload !== "object") {
-    return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "invalid_payload" }, {
+      status: 400,
+    });
   }
 
   const member = await resolveMember(req, payload);
   if (!member.email) {
-    return NextResponse.json({ ok: false, error: "unauthorized_member" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "unauthorized_member" }, {
+      status: 401,
+    });
   }
 
   const stripeSecret = resolveStripeSecretKey();
   if (!stripeSecret) {
-    return NextResponse.json({ ok: false, error: "stripe_not_configured" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "stripe_not_configured" }, {
+      status: 500,
+    });
   }
-  const stripe = new Stripe(stripeSecret, { apiVersion: "2025-03-31.basil" as unknown as Stripe.LatestApiVersion });
+  const stripe = new Stripe(stripeSecret, {
+    apiVersion: "2025-03-31.basil" as unknown as Stripe.LatestApiVersion,
+  });
 
   let userMetadata = member.userMetadata;
   if (member.userId && supabaseAdmin) {
     const { data } = await supabaseAdmin.auth.admin.getUserById(member.userId);
-    userMetadata = ((data?.user?.user_metadata ?? userMetadata) as Record<string, unknown>) ?? {};
+    userMetadata = ((data?.user?.user_metadata ?? userMetadata) as Record<
+      string,
+      unknown
+    >) ?? {};
   } else if (!member.userId) {
     const authUser = await findAuthUserByEmail(member.email);
     if (authUser?.id) {
@@ -303,8 +364,13 @@ export async function POST(req: NextRequest) {
 
   if (!hasAutoChargeConsent(userMetadata)) {
     return NextResponse.json(
-      { ok: false, error: "missing_auto_charge_consent", message: "Collect and store auto-charge consent before off-session charging." },
-      { status: 403 }
+      {
+        ok: false,
+        error: "missing_auto_charge_consent",
+        message:
+          "Collect and store auto-charge consent before off-session charging.",
+      },
+      { status: 403 },
     );
   }
 
@@ -312,63 +378,96 @@ export async function POST(req: NextRequest) {
   const registeredPlates = parseRegisteredPlates(userMetadata);
   const effectivePlate = plateInput || registeredPlates[0] || "";
   if (!effectivePlate) {
-    return NextResponse.json({ ok: false, error: "missing_plate" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "missing_plate" }, {
+      status: 400,
+    });
   }
-  if (registeredPlates.length > 0 && !registeredPlates.includes(effectivePlate)) {
-    return NextResponse.json({ ok: false, error: "plate_not_registered_for_member" }, { status: 403 });
+  if (
+    registeredPlates.length > 0 && !registeredPlates.includes(effectivePlate)
+  ) {
+    return NextResponse.json({
+      ok: false,
+      error: "plate_not_registered_for_member",
+    }, { status: 403 });
   }
 
-  const locationInput = ((payload.locationId ?? payload.location_id ?? payload.displayId ?? payload.display_id ?? "") as string)
-    .toString()
-    .trim();
+  const locationInput =
+    ((payload.locationId ?? payload.location_id ?? payload.displayId ??
+      payload.display_id ?? "") as string)
+      .toString()
+      .trim();
   if (!locationInput) {
-    return NextResponse.json({ ok: false, error: "missing_location_id" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "missing_location_id" }, {
+      status: 400,
+    });
   }
-  const pricingType = resolvePricingType(payload.pricingType ?? payload.pricing_type);
+  const pricingType = resolvePricingType(
+    payload.pricingType ?? payload.pricing_type,
+  );
   const quantity = clampInteger(payload.quantity, 1, 1, 31);
-  const locationResolution = await resolveLocationWithPricing(locationInput, pricingType);
+  const locationResolution = await resolveLocationWithPricing(
+    locationInput,
+    pricingType,
+  );
   if ("error" in locationResolution) {
-    return NextResponse.json({ ok: false, error: locationResolution.error }, { status: locationResolution.status });
+    return NextResponse.json({ ok: false, error: locationResolution.error }, {
+      status: locationResolution.status,
+    });
   }
   const location = locationResolution.data;
   const amountCents = location.unitAmountCents * quantity;
-  const flowType = (payload.flowType ?? payload.flow_type ?? "").toString().trim() || "lpr_auto_charge";
-  const splitPlan =
-    location.ownerStripeReady && location.ownerStripeAccountId
-      ? buildStripeSplitPlan({
-          chargedAmountCents: amountCents,
-          sessionAmountCents: amountCents,
-          parkTaxiDailyTicketTotalCents: toCents(location.dailyTicketUnitAmountCents * quantity),
-          pricingType,
-          flowType,
-          destinationAccountId: location.ownerStripeAccountId,
-          expenseRate: location.splitExpenseRate,
-          taxRate: location.splitTaxRate,
-          fixedExpenseCents: location.splitFixedExpenseCents,
-        })
-      : null;
+  const flowType =
+    (payload.flowType ?? payload.flow_type ?? "").toString().trim() ||
+    "lpr_auto_charge";
+  const splitPlan = location.ownerStripeReady && location.ownerStripeAccountId
+    ? buildStripeSplitPlan({
+      chargedAmountCents: amountCents,
+      sessionAmountCents: amountCents,
+      parkTaxiDailyTicketTotalCents: toCents(
+        location.dailyTicketUnitAmountCents * quantity,
+      ),
+      sessionQuantity: quantity,
+      pricingType,
+      flowType,
+      destinationAccountId: location.ownerStripeAccountId,
+      expenseRate: location.splitExpenseRate,
+      taxRate: location.splitTaxRate,
+      fixedExpenseCents: location.splitFixedExpenseCents,
+      payoutMode: location.lotPayoutMode,
+    })
+    : null;
   const splitMetadata = buildStripeSplitMetadata({ splitPlan });
 
-  let stripeCustomerId = (userMetadata.stripe_customer_id ?? "").toString().trim();
-  let defaultPaymentMethodId = (userMetadata.default_payment_method ?? "").toString().trim();
+  let stripeCustomerId = (userMetadata.stripe_customer_id ?? "").toString()
+    .trim();
+  let defaultPaymentMethodId = (userMetadata.default_payment_method ?? "")
+    .toString().trim();
   if (!stripeCustomerId) {
     const customerList = await stripe.customers.list({
       email: member.email,
       limit: 10,
     });
-    const exact = customerList.data.find((candidate) => normalizeEmail(candidate.email) === member.email);
+    const exact = customerList.data.find((candidate) =>
+      normalizeEmail(candidate.email) === member.email
+    );
     const customer = exact ?? customerList.data[0];
     stripeCustomerId = customer?.id ?? "";
     if (!defaultPaymentMethodId) {
       const invoiceDefault = customer?.invoice_settings?.default_payment_method;
-      defaultPaymentMethodId = typeof invoiceDefault === "string" ? invoiceDefault : invoiceDefault?.id ?? "";
+      defaultPaymentMethodId = typeof invoiceDefault === "string"
+        ? invoiceDefault
+        : invoiceDefault?.id ?? "";
     }
   }
   if (!stripeCustomerId || !defaultPaymentMethodId) {
-    return NextResponse.json({ ok: false, error: "missing_saved_payment_method" }, { status: 409 });
+    return NextResponse.json({
+      ok: false,
+      error: "missing_saved_payment_method",
+    }, { status: 409 });
   }
 
-  const source = (payload.source ?? "lpr_auto_charge").toString().trim() || "lpr_auto_charge";
+  const source = (payload.source ?? "lpr_auto_charge").toString().trim() ||
+    "lpr_auto_charge";
   let paymentIntent: Stripe.PaymentIntent;
   try {
     paymentIntent = await stripe.paymentIntents.create({
@@ -378,7 +477,9 @@ export async function POST(req: NextRequest) {
       payment_method: defaultPaymentMethodId,
       confirm: true,
       off_session: true,
-      description: `Payparq ${source} ${effectivePlate} @ ${location.displayId || location.id}`,
+      description: `Payparq ${source} ${effectivePlate} @ ${
+        location.displayId || location.id
+      }`,
       ...buildStripeSplitPaymentIntentData(splitPlan),
       metadata: {
         flow_type: "lpr_auto_charge",
@@ -393,7 +494,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const stripeError = error as Stripe.StripeRawError & { decline_code?: string };
+    const stripeError = error as Stripe.StripeRawError & {
+      decline_code?: string;
+    };
     const status = stripeError.code === "authentication_required" ? 402 : 400;
     return NextResponse.json(
       {
@@ -402,7 +505,7 @@ export async function POST(req: NextRequest) {
         message: stripeError.message ?? "Failed to process off-session charge.",
         decline_code: stripeError.decline_code ?? null,
       },
-      { status }
+      { status },
     );
   }
 
@@ -416,7 +519,9 @@ export async function POST(req: NextRequest) {
     contact_email: member.email,
     type: pricingType,
     status: paymentIntent.status === "succeeded" ? "active" : "pending",
-    payment_status: paymentIntent.status === "succeeded" ? "paid" : paymentIntent.status,
+    payment_status: paymentIntent.status === "succeeded"
+      ? "paid"
+      : paymentIntent.status,
     price: amountCents / 100,
     amount_cents: amountCents,
     currency: "eur",
@@ -442,7 +547,7 @@ export async function POST(req: NextRequest) {
       customer: stripeCustomerId,
       payment_method: defaultPaymentMethodId,
       internal_request: member.internalRequest ? "1" : "0",
-        ...splitMetadata,
+      ...splitMetadata,
     }),
   };
   const inserted = await insertSessionWithSchemaFallback(insertPayload);

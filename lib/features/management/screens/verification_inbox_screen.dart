@@ -44,8 +44,7 @@ class _VerificationInboxScreenState
   }
 
   Future<void> _updateStatus(
-      BuildContext context, String locationId, String status,
-      {bool? isRunByPayparq}) async {
+      BuildContext context, String locationId, String status) async {
     setState(() {
       _optimisticResolvedIds.add(locationId);
     });
@@ -54,7 +53,6 @@ class _VerificationInboxScreenState
       action: () => ref.read(verificationControllerProvider).updateStatus(
             locationId,
             status,
-            isRunByPayparq: isRunByPayparq,
           ),
       successMessage: 'Status updated',
       successColor: Colors.green,
@@ -75,8 +73,6 @@ class _VerificationInboxScreenState
     final submittedAt = loc['verification_submitted_at'] != null
         ? DateTime.parse(loc['verification_submitted_at'])
         : null;
-    bool isRunByPayparq = loc['is_run_by_payparq'] == true;
-
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -103,66 +99,6 @@ class _VerificationInboxScreenState
                         style: const TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 24),
-                      Text(
-                        'Lot Management Type',
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: RadioGroup<bool>(
-                          groupValue: isRunByPayparq,
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setDialogState(() {
-                              isRunByPayparq = value;
-                            });
-                          },
-                          child: Column(
-                            children: [
-                              RadioListTile<bool>(
-                                title: Text('Regular Lot',
-                                    style: TextStyle(color: Colors.white)),
-                                subtitle: Text(
-                                    'Safe Parking: manager gets 90% of shared revenue. Platform gets 10%.',
-                                    style: TextStyle(color: Colors.grey)),
-                                value: false,
-                                activeColor: Colors.white,
-                              ),
-                              RadioListTile<bool>(
-                                title: Text('Run by Payparq',
-                                    style: TextStyle(color: Colors.white)),
-                                subtitle: Text(
-                                    'Payparq managed. 50% flat commission on all shared revenue.',
-                                    style: TextStyle(color: Colors.grey)),
-                                value: true,
-                                activeColor: Colors.white,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Enforcement policy is identical for both lot types: 25% platform, 25% admin, 25% manager, and final 25% to the account that uploaded the winning evidence (or paid daily-ticket QR issuer when applicable).',
-                                style: GoogleFonts.inter(
-                                  color: Colors.grey[300],
-                                  fontSize: 13,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                       Text(
                         'Verification Photos (${photos.length})',
                         style: GoogleFonts.inter(
@@ -243,8 +179,7 @@ class _VerificationInboxScreenState
                           _buildActionButton(context, 'Approve', Colors.green,
                               () async {
                             await _updateStatus(
-                                rootContext, loc['id'], 'verified',
-                                isRunByPayparq: isRunByPayparq);
+                                rootContext, loc['id'], 'verified');
                             if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }
@@ -253,8 +188,7 @@ class _VerificationInboxScreenState
                               context, 'Contact Required', Colors.blue,
                               () async {
                             await _updateStatus(
-                                rootContext, loc['id'], 'video_required',
-                                isRunByPayparq: isRunByPayparq);
+                                rootContext, loc['id'], 'video_required');
                             if (dialogContext.mounted) {
                               Navigator.pop(dialogContext);
                             }

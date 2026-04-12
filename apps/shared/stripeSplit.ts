@@ -4,7 +4,11 @@ export type StripeSplitRule =
   | "monthly_90_10"
   | "standard_50_50"
   | "park_taxi_50pct_base"
-  | "case_fixed_owner_fee";
+  | "case_fixed_owner_fee"
+  | "regular_10pct"
+  | "regular_daily_min_099";
+
+export type LotPayoutMode = "hub" | "regular";
 
 export type StripeSplitPlan = {
   destinationAccountId: string;
@@ -41,7 +45,9 @@ export function normalizeRole(value: string | null | undefined): string {
     .replaceAll(" ", "_");
 }
 
-export function isAutomaticSplitEligibleRole(value: string | null | undefined): boolean {
+export function isAutomaticSplitEligibleRole(
+  value: string | null | undefined,
+): boolean {
   return normalizeRole(value) === "manager";
 }
 
@@ -51,12 +57,16 @@ export function resolveAutomaticSplitDestination(params: {
   stripeOnboardingComplete: unknown;
 }) {
   const normalizedRole = normalizeRole(
-    typeof params.profileRole === "string" ? params.profileRole : String(params.profileRole ?? "")
+    typeof params.profileRole === "string"
+      ? params.profileRole
+      : String(params.profileRole ?? ""),
   );
-  const destinationAccountId =
-    typeof params.stripeAccountId === "string" ? params.stripeAccountId.trim() : String(params.stripeAccountId ?? "").trim();
+  const destinationAccountId = typeof params.stripeAccountId === "string"
+    ? params.stripeAccountId.trim()
+    : String(params.stripeAccountId ?? "").trim();
   const stripeReady = params.stripeOnboardingComplete === true;
-  const splitEligible = isAutomaticSplitEligibleRole(normalizedRole) && destinationAccountId.length > 0 && stripeReady;
+  const splitEligible = isAutomaticSplitEligibleRole(normalizedRole) &&
+    destinationAccountId.length > 0 && stripeReady;
   return {
     normalizedRole,
     destinationAccountId: splitEligible ? destinationAccountId : null,
@@ -66,10 +76,9 @@ export function resolveAutomaticSplitDestination(params: {
 
 export function resolveSplitExpenseRate(
   metadata: Record<string, unknown>,
-  envValue?: unknown
+  envValue?: unknown,
 ): number {
-  const metadataRate =
-    metadata.split_expense_rate ??
+  const metadataRate = metadata.split_expense_rate ??
     metadata.expense_rate ??
     metadata.shared_expense_rate ??
     metadata.processing_expense_rate;
@@ -78,10 +87,9 @@ export function resolveSplitExpenseRate(
 
 export function resolveSplitTaxRate(
   metadata: Record<string, unknown>,
-  envValue?: unknown
+  envValue?: unknown,
 ): number {
-  const metadataRate =
-    metadata.split_tax_rate ??
+  const metadataRate = metadata.split_tax_rate ??
     metadata.tax_rate ??
     metadata.vat_rate ??
     metadata.pdv_rate;
@@ -90,10 +98,9 @@ export function resolveSplitTaxRate(
 
 export function resolveSplitFixedExpenseCents(
   metadata: Record<string, unknown>,
-  envValue?: unknown
+  envValue?: unknown,
 ): number {
-  const metadataValue =
-    metadata.split_fixed_expense_cents ??
+  const metadataValue = metadata.split_fixed_expense_cents ??
     metadata.fixed_expense_cents ??
     metadata.processing_fixed_fee_cents;
   const numeric = Number(metadataValue ?? envValue ?? null);
@@ -103,10 +110,9 @@ export function resolveSplitFixedExpenseCents(
 
 export function resolveCaseOwnerFixedPayoutCents(
   metadata: Record<string, unknown>,
-  envValue?: unknown
+  envValue?: unknown,
 ): number {
-  const metadataValue =
-    metadata.owner_case_process_fee_cents ??
+  const metadataValue = metadata.owner_case_process_fee_cents ??
     metadata.case_owner_process_fee_cents ??
     metadata.case_owner_fixed_payout_cents;
   const numeric = Number(metadataValue ?? envValue ?? null);
@@ -114,10 +120,17 @@ export function resolveCaseOwnerFixedPayoutCents(
   return Math.max(0, Math.round(numeric));
 }
 
+export function resolveLotPayoutMode(
+  metadata: Record<string, unknown>,
+): LotPayoutMode {
+  return metadata.hub_enabled === true ? "hub" : "regular";
+}
+
 export function buildStripeSplitPlan(params: {
   chargedAmountCents: number;
   sessionAmountCents?: number;
   parkTaxiDailyTicketTotalCents?: number;
+  sessionQuantity?: number;
   pricingType: PricingType;
   flowType: string;
   destinationAccountId: string;
@@ -125,16 +138,66 @@ export function buildStripeSplitPlan(params: {
   taxRate: number;
   fixedExpenseCents: number;
   caseOwnerFixedPayoutCents?: number;
+  payoutMode?: LotPayoutMode;
+  regularDailyMinimumPlatformFeeCents?: number;
 }): StripeSplitPlan {
   const charged = toCents(params.chargedAmountCents);
-  const sessionAmount = toCents(params.sessionAmountCents ?? params.chargedAmountCents);
-  const parkTaxiDailyTicketTotalCents = toCents(params.parkTaxiDailyTicketTotalCents ?? 0);
-  const caseOwnerFixedPayoutCents = toCents(params.caseOwnerFixedPayoutCents ?? 0);
+  const sessionAmount = toCents(
+    params.sessionAmountCents ?? params.chargedAmountCents,
+  );
+  const parkTaxiDailyTicketTotalCents = toCents(
+    params.parkTaxiDailyTicketTotalCents ?? 0,
+  );
+  const caseOwnerFixedPayoutCents = toCents(
+    params.caseOwnerFixedPayoutCents ?? 0,
+  );
+  const sessionQuantity = Math.max(1, toCents(params.sessionQuantity ?? 1));
+  const payoutMode = params.payoutMode ?? "hub";
+  const regularDailyMinimumPlatformFeeCents = Math.max(
+    0,
+    toCents(params.regularDailyMinimumPlatformFeeCents ?? 99),
+  );
   const isParkTaxi = params.flowType === "park_now";
-  const isCaseFlow = params.flowType === "cases" || params.flowType === "case_payment";
+  const isCaseFlow = params.flowType === "cases" ||
+    params.flowType === "case_payment";
+  if (payoutMode === "regular") {
+    const tenPercentFee = Math.round(charged * 0.1);
+    const dailyMinimumFee = params.pricingType === "daily"
+      ? sessionQuantity * regularDailyMinimumPlatformFeeCents
+      : 0;
+    const applicationFeeAmount = Math.max(
+      0,
+      Math.min(charged, Math.max(tenPercentFee, dailyMinimumFee)),
+    );
+    const ownerPayoutCents = Math.max(0, charged - applicationFeeAmount);
+    const ownerShareRate = charged > 0 ? ownerPayoutCents / charged : 0;
+    const platformShareRate = charged > 0 ? applicationFeeAmount / charged : 0;
+    return {
+      destinationAccountId: params.destinationAccountId,
+      applicationFeeAmount,
+      ownerPayoutCents,
+      splitBaseCents: charged,
+      expenseCents: 0,
+      taxCents: 0,
+      distributableCents: charged,
+      ownerShareRate,
+      platformShareRate,
+      splitRule:
+        dailyMinimumFee > 0 && applicationFeeAmount === dailyMinimumFee &&
+          dailyMinimumFee > tenPercentFee
+          ? "regular_daily_min_099"
+          : "regular_10pct",
+    };
+  }
   if (isCaseFlow) {
-    const ownerPayoutCents = Math.max(0, Math.min(charged, caseOwnerFixedPayoutCents));
-    const applicationFeeAmount = Math.max(0, Math.min(charged, charged - ownerPayoutCents));
+    const ownerPayoutCents = Math.max(
+      0,
+      Math.min(charged, caseOwnerFixedPayoutCents),
+    );
+    const applicationFeeAmount = Math.max(
+      0,
+      Math.min(charged, charged - ownerPayoutCents),
+    );
     const ownerShareRate = charged > 0 ? ownerPayoutCents / charged : 0;
     const platformShareRate = 1 - ownerShareRate;
     return {
@@ -151,25 +214,56 @@ export function buildStripeSplitPlan(params: {
     };
   }
 
-  const ownerShareRate = isParkTaxi ? 1 : params.pricingType === "monthly" ? 0.9 : 0.5;
+  const ownerShareRate = isParkTaxi
+    ? 1
+    : params.pricingType === "monthly"
+    ? 0.9
+    : 0.5;
   const platformShareRate = 1 - ownerShareRate;
-  const baseFromPolicy = isParkTaxi ? Math.round(parkTaxiDailyTicketTotalCents * 0.5) : sessionAmount;
+  const baseFromPolicy = isParkTaxi
+    ? Math.round(parkTaxiDailyTicketTotalCents * 0.5)
+    : sessionAmount;
   const splitBaseCents = Math.max(0, Math.min(charged, baseFromPolicy));
-  const expenseByRate = Math.round(splitBaseCents * Math.max(0, params.expenseRate));
-  const expenseCents = Math.max(0, Math.min(splitBaseCents, expenseByRate + Math.max(0, params.fixedExpenseCents)));
+  const expenseByRate = Math.round(
+    splitBaseCents * Math.max(0, params.expenseRate),
+  );
+  const expenseCents = Math.max(
+    0,
+    Math.min(
+      splitBaseCents,
+      expenseByRate + Math.max(0, params.fixedExpenseCents),
+    ),
+  );
   const taxableBase = Math.max(0, splitBaseCents - expenseCents);
-  const taxCents = Math.max(0, Math.min(taxableBase, Math.round(taxableBase * Math.max(0, params.taxRate))));
-  const distributableCents = Math.max(0, splitBaseCents - expenseCents - taxCents);
+  const taxCents = Math.max(
+    0,
+    Math.min(
+      taxableBase,
+      Math.round(taxableBase * Math.max(0, params.taxRate)),
+    ),
+  );
+  const distributableCents = Math.max(
+    0,
+    splitBaseCents - expenseCents - taxCents,
+  );
   const ownerPayoutCents = Math.max(
     0,
-    Math.min(charged, isParkTaxi ? distributableCents : Math.round(distributableCents * ownerShareRate))
+    Math.min(
+      charged,
+      isParkTaxi
+        ? distributableCents
+        : Math.round(distributableCents * ownerShareRate),
+    ),
   );
-  const applicationFeeAmount = Math.max(0, Math.min(charged, charged - ownerPayoutCents));
+  const applicationFeeAmount = Math.max(
+    0,
+    Math.min(charged, charged - ownerPayoutCents),
+  );
   const splitRule: StripeSplitRule = isParkTaxi
     ? "park_taxi_50pct_base"
     : params.pricingType === "monthly"
-      ? "monthly_90_10"
-      : "standard_50_50";
+    ? "monthly_90_10"
+    : "standard_50_50";
 
   return {
     destinationAccountId: params.destinationAccountId,
@@ -193,6 +287,12 @@ export function buildStripeSplitMetadata(params: {
   return {
     split_enabled: splitPlan ? "1" : "0",
     split_destination_account_id: splitPlan?.destinationAccountId ?? "",
+    split_payout_mode: splitPlan?.splitRule === "regular_10pct" ||
+        splitPlan?.splitRule === "regular_daily_min_099"
+      ? "regular"
+      : splitPlan
+      ? "hub"
+      : "",
     split_application_fee_cents: String(splitPlan?.applicationFeeAmount ?? 0),
     split_owner_payout_cents: String(splitPlan?.ownerPayoutCents ?? 0),
     split_base_cents: String(splitPlan?.splitBaseCents ?? 0),
@@ -200,13 +300,19 @@ export function buildStripeSplitMetadata(params: {
     split_tax_cents: String(splitPlan?.taxCents ?? 0),
     split_distributable_cents: String(splitPlan?.distributableCents ?? 0),
     split_owner_rate: splitPlan ? splitPlan.ownerShareRate.toFixed(4) : "",
-    split_platform_rate: splitPlan ? splitPlan.platformShareRate.toFixed(4) : "",
+    split_platform_rate: splitPlan
+      ? splitPlan.platformShareRate.toFixed(4)
+      : "",
     split_rule: splitPlan?.splitRule ?? "",
-    split_case_owner_fixed_payout_cents: String(toCents(params.caseOwnerFixedPayoutCents ?? 0)),
+    split_case_owner_fixed_payout_cents: String(
+      toCents(params.caseOwnerFixedPayoutCents ?? 0),
+    ),
   };
 }
 
-export function buildStripeSplitPaymentIntentData(splitPlan: StripeSplitPlan | null) {
+export function buildStripeSplitPaymentIntentData(
+  splitPlan: StripeSplitPlan | null,
+) {
   if (!splitPlan) return {};
   return {
     transfer_data: {

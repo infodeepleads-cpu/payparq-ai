@@ -274,6 +274,9 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userProfileProvider);
+    final availableLocationsAsync = ref.watch(availableLocationsProvider);
+    final selectedLocationUuidAsync =
+        ref.watch(selectedEffectiveLocationUuidProvider);
     final isHr = ref.watch(localeIsCroatianProvider);
     final userRole = ref.watch(userRoleProvider);
     final profile = profileAsync.value;
@@ -299,6 +302,19 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                 final bool needsOnboarding =
                     hasStripeAccount && !onboardingComplete;
                 final bool canSendRolePayouts = userRole == 'super_admin';
+                final availableLocations =
+                    availableLocationsAsync.value ?? const [];
+                final selectedLocationUuid = selectedLocationUuidAsync.value;
+                final activeLocation = availableLocations
+                    .cast<Map<String, dynamic>>()
+                    .firstWhere(
+                      (location) =>
+                          (location['id'] ?? '').toString() ==
+                          selectedLocationUuid,
+                      orElse: () => availableLocations.isNotEmpty
+                          ? Map<String, dynamic>.from(availableLocations.first)
+                          : <String, dynamic>{},
+                    );
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(48),
@@ -340,6 +356,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                       const SizedBox(height: 20),
                       _buildSplitPolicyCard(
                         onboardingComplete: onboardingComplete,
+                        activeLocation:
+                            activeLocation.isEmpty ? null : activeLocation,
                       ),
                     ],
                   ),
@@ -557,9 +575,27 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
 
   Widget _buildSplitPolicyCard({
     required bool onboardingComplete,
+    required Map<String, dynamic>? activeLocation,
   }) {
     final isHr = ref.watch(localeIsCroatianProvider);
-    final rows = <MapEntry<String, String>>[
+    final metadata = Map<String, dynamic>.from(
+        activeLocation?['verification_metadata'] ?? {});
+    final isHubLot = metadata['hub_enabled'] == true;
+    final activeModeLabel = isHubLot
+        ? Lang.sel(isHr, 'Hub lot', 'Hub lot')
+        : Lang.sel(isHr, 'Regular lot', 'Regularni lot');
+    final activeModeDescription = isHubLot
+        ? Lang.sel(
+            isHr,
+            'Hub mode uses the current PayParq detailed split matrix.',
+            'Hub način koristi trenutnu detaljnu PayParq matricu podjele.',
+          )
+        : Lang.sel(
+            isHr,
+            'Regular mode uses a 10% platform split on all payments. Daily checkout uses a minimum fee floor of €0.99 per booked day when 10% would be lower.',
+            'Regularni način koristi 10% platformsku podjelu na svim uplatama. Dnevni checkout koristi minimalnu naknadu od €0.99 po rezerviranom danu kada bi 10% bilo niže.',
+          );
+    final hubRows = <MapEntry<String, String>>[
       MapEntry(
         Lang.sel(isHr, 'Hourly / Daily / Reservation',
             'Satno / Dnevno / Rezervacija'),
@@ -596,6 +632,30 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
         ),
       ),
     ];
+    final regularRows = <MapEntry<String, String>>[
+      MapEntry(
+        Lang.sel(isHr, 'All payments', 'Sve uplate'),
+        Lang.sel(isHr, '90% lot partner · 10% platform',
+            '90% partner parkirališta · 10% platforma'),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Daily checkout floor', 'Minimalna dnevna naknada'),
+        Lang.sel(
+          isHr,
+          'If 10% of total is below €0.99 per booked day, the platform fee becomes quantity × €0.99.',
+          'Ako je 10% ukupnog iznosa manje od €0.99 po rezerviranom danu, platformska naknada postaje količina × €0.99.',
+        ),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Buyer price', 'Cijena za kupca'),
+        Lang.sel(
+          isHr,
+          'Buyer total stays unchanged. The minimum applies only against the lot owner payout.',
+          'Ukupan iznos za kupca ostaje isti. Minimum se primjenjuje samo na isplatu vlasniku lota.',
+        ),
+      ),
+    ];
+    final rows = isHubLot ? hubRows : regularRows;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -616,6 +676,45 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
             ),
           ),
           const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Lang.sel(isHr, 'Active payout mode', 'Aktivni način isplate'),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  activeModeLabel,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  activeModeDescription,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.black.withValues(alpha: 0.72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             onboardingComplete
                 ? Lang.sel(

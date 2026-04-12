@@ -121,7 +121,6 @@ class VerificationController {
   Future<void> updateStatus(
     String locationId,
     String status, {
-    bool? isRunByPayparq,
     String? reviewerId,
   }) async {
     try {
@@ -132,9 +131,6 @@ class VerificationController {
         'verification_reviewed_at': DateTime.now().toIso8601String(),
         'verification_reviewed_by': currentReviewer,
       };
-      if (isRunByPayparq != null) {
-        updates['is_run_by_payparq'] = isRunByPayparq;
-      }
       await _repo.updateVerificationStatus(locationId, updates);
     } catch (e) {
       throw AppError('Update failed: $e', cause: e);

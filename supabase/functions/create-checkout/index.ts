@@ -8,6 +8,7 @@ import {
   buildStripeSplitPlan,
   resolveAutomaticSplitDestination,
   resolveCaseOwnerFixedPayoutCents,
+  resolveLotPayoutMode,
   resolveSplitExpenseRate,
   resolveSplitFixedExpenseCents,
   resolveSplitTaxRate,
@@ -64,7 +65,9 @@ function normalizeType(v: string | null): "hourly" | "daily" | "monthly" {
 
 const supportedCheckoutLocales = new Set(["en", "hr", "de", "ru", "pl", "es"]);
 
-function normalizeCheckoutLocale(input: string | null | undefined): string | null {
+function normalizeCheckoutLocale(
+  input: string | null | undefined,
+): string | null {
   const raw = String(input ?? "").trim().toLowerCase();
   if (!raw) return null;
   const base = raw.split(",")[0]?.split(";")[0]?.trim() ?? "";
@@ -136,13 +139,16 @@ const checkoutTextByLocale: Record<string, {
     endTimeDependsOnSelectedMonths: "End time depends on selected months",
     endTimeDependsOnSelectedHours: "End time depends on selected hours",
     parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
-    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
+    parkTaxiQuantityHint:
+      "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Need hourly for this location?",
     openHourlyCheckout: "Open hourly checkout",
     needDaily: "Need daily for this location?",
     openDailyCheckout: "Open daily checkout",
-    dailyFooterInstruction: "For a daily ticket, tap the link in the page footer.",
-    hourlyFooterInstruction: "For hourly billing, tap the link in the page footer.",
+    dailyFooterInstruction:
+      "For a daily ticket, tap the link in the page footer.",
+    hourlyFooterInstruction:
+      "For hourly billing, tap the link in the page footer.",
     continueToCheckout: "Continue to checkout",
     termsPrefix: "By paying, you agree to our",
     termsLabel: "Terms of Service",
@@ -160,17 +166,23 @@ const checkoutTextByLocale: Record<string, {
     total: "Ukupno",
     locationId: "ID lokacije",
     startTime: "Vrijeme početka",
-    endTimeDependsOnSelectedDays: "Vrijeme završetka ovisi o odabranom broju dana",
-    endTimeDependsOnSelectedMonths: "Vrijeme završetka ovisi o odabranom broju mjeseci",
-    endTimeDependsOnSelectedHours: "Vrijeme završetka ovisi o odabranom broju sati",
+    endTimeDependsOnSelectedDays:
+      "Vrijeme završetka ovisi o odabranom broju dana",
+    endTimeDependsOnSelectedMonths:
+      "Vrijeme završetka ovisi o odabranom broju mjeseci",
+    endTimeDependsOnSelectedHours:
+      "Vrijeme završetka ovisi o odabranom broju sati",
     parkTaxiPackageLine: "Dnevna Parking Karta + 2 Vožnje do 5km uključene",
-    parkTaxiQuantityHint: "Količina = broj dana. Svaki odabrani dan uključuje 1 dnevnu kartu + 2 vožnje do 5km.",
+    parkTaxiQuantityHint:
+      "Količina = broj dana. Svaki odabrani dan uključuje 1 dnevnu kartu + 2 vožnje do 5km.",
     needHourly: "Trebate satni parking za ovu lokaciju?",
     openHourlyCheckout: "Otvori satni checkout",
     needDaily: "Trebate dnevni parking za ovu lokaciju?",
     openDailyCheckout: "Otvori dnevni checkout",
-    dailyFooterInstruction: "Za dnevnu kartu pritisnite na link u podnožju stranice.",
-    hourlyFooterInstruction: "Za satni obračun pritisnite na link u podnožju stranice.",
+    dailyFooterInstruction:
+      "Za dnevnu kartu pritisnite na link u podnožju stranice.",
+    hourlyFooterInstruction:
+      "Za satni obračun pritisnite na link u podnožju stranice.",
     continueToCheckout: "Nastavi na checkout",
     termsPrefix: "Plaćanjem prihvaćate naše",
     termsLabel: "Uvjeti korištenja",
@@ -189,16 +201,21 @@ const checkoutTextByLocale: Record<string, {
     locationId: "Standort-ID",
     startTime: "Startzeit",
     endTimeDependsOnSelectedDays: "Endzeit hängt von den ausgewählten Tagen ab",
-    endTimeDependsOnSelectedMonths: "Endzeit hängt von den ausgewählten Monaten ab",
-    endTimeDependsOnSelectedHours: "Endzeit hängt von den ausgewählten Stunden ab",
+    endTimeDependsOnSelectedMonths:
+      "Endzeit hängt von den ausgewählten Monaten ab",
+    endTimeDependsOnSelectedHours:
+      "Endzeit hängt von den ausgewählten Stunden ab",
     parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
-    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
+    parkTaxiQuantityHint:
+      "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Brauchen Sie stündlich für diesen Standort?",
     openHourlyCheckout: "Stündlichen Checkout öffnen",
     needDaily: "Brauchen Sie täglich für diesen Standort?",
     openDailyCheckout: "Täglichen Checkout öffnen",
-    dailyFooterInstruction: "Für eine Tageskarte tippen Sie auf den Link in der Fußzeile.",
-    hourlyFooterInstruction: "Für die Stundenabrechnung tippen Sie auf den Link in der Fußzeile.",
+    dailyFooterInstruction:
+      "Für eine Tageskarte tippen Sie auf den Link in der Fußzeile.",
+    hourlyFooterInstruction:
+      "Für die Stundenabrechnung tippen Sie auf den Link in der Fußzeile.",
     continueToCheckout: "Weiter zum Checkout",
     termsPrefix: "Mit der Zahlung stimmen Sie unseren",
     termsLabel: "Nutzungsbedingungen",
@@ -217,16 +234,20 @@ const checkoutTextByLocale: Record<string, {
     locationId: "ID локации",
     startTime: "Время начала",
     endTimeDependsOnSelectedDays: "Время окончания зависит от выбранных дней",
-    endTimeDependsOnSelectedMonths: "Время окончания зависит от выбранных месяцев",
+    endTimeDependsOnSelectedMonths:
+      "Время окончания зависит от выбранных месяцев",
     endTimeDependsOnSelectedHours: "Время окончания зависит от выбранных часов",
     parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
-    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
+    parkTaxiQuantityHint:
+      "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Нужна почасовая оплата для этой локации?",
     openHourlyCheckout: "Открыть почасовой checkout",
     needDaily: "Нужна дневная оплата для этой локации?",
     openDailyCheckout: "Открыть дневной checkout",
-    dailyFooterInstruction: "Для дневного билета нажмите ссылку внизу страницы.",
-    hourlyFooterInstruction: "Для почасового расчёта нажмите ссылку внизу страницы.",
+    dailyFooterInstruction:
+      "Для дневного билета нажмите ссылку внизу страницы.",
+    hourlyFooterInstruction:
+      "Для почасового расчёта нажмите ссылку внизу страницы.",
     continueToCheckout: "Перейти к checkout",
     termsPrefix: "Оплачивая, вы соглашаетесь с нашими",
     termsLabel: "Условиями использования",
@@ -245,16 +266,21 @@ const checkoutTextByLocale: Record<string, {
     locationId: "ID lokalizacji",
     startTime: "Czas rozpoczęcia",
     endTimeDependsOnSelectedDays: "Czas zakończenia zależy od wybranych dni",
-    endTimeDependsOnSelectedMonths: "Czas zakończenia zależy od wybranych miesięcy",
-    endTimeDependsOnSelectedHours: "Czas zakończenia zależy od wybranych godzin",
+    endTimeDependsOnSelectedMonths:
+      "Czas zakończenia zależy od wybranych miesięcy",
+    endTimeDependsOnSelectedHours:
+      "Czas zakończenia zależy od wybranych godzin",
     parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
-    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
+    parkTaxiQuantityHint:
+      "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "Potrzebujesz opłaty godzinowej dla tej lokalizacji?",
     openHourlyCheckout: "Otwórz checkout godzinowy",
     needDaily: "Potrzebujesz opłaty dziennej dla tej lokalizacji?",
     openDailyCheckout: "Otwórz checkout dzienny",
-    dailyFooterInstruction: "Aby kupić bilet dzienny, naciśnij link w stopce strony.",
-    hourlyFooterInstruction: "Aby wybrać rozliczenie godzinowe, naciśnij link w stopce strony.",
+    dailyFooterInstruction:
+      "Aby kupić bilet dzienny, naciśnij link w stopce strony.",
+    hourlyFooterInstruction:
+      "Aby wybrać rozliczenie godzinowe, naciśnij link w stopce strony.",
     continueToCheckout: "Przejdź do checkoutu",
     termsPrefix: "Płacąc, akceptujesz nasze",
     termsLabel: "Warunki korzystania",
@@ -272,17 +298,23 @@ const checkoutTextByLocale: Record<string, {
     total: "Total",
     locationId: "ID de ubicación",
     startTime: "Hora de inicio",
-    endTimeDependsOnSelectedDays: "La hora de finalización depende de los días seleccionados",
-    endTimeDependsOnSelectedMonths: "La hora de finalización depende de los meses seleccionados",
-    endTimeDependsOnSelectedHours: "La hora de finalización depende de las horas seleccionadas",
+    endTimeDependsOnSelectedDays:
+      "La hora de finalización depende de los días seleccionados",
+    endTimeDependsOnSelectedMonths:
+      "La hora de finalización depende de los meses seleccionados",
+    endTimeDependsOnSelectedHours:
+      "La hora de finalización depende de las horas seleccionadas",
     parkTaxiPackageLine: "Daily Parking Pass + 2 rides up to 5km included",
-    parkTaxiQuantityHint: "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
+    parkTaxiQuantityHint:
+      "Quantity = number of days. Each selected day includes 1 daily pass + 2 rides up to 5km.",
     needHourly: "¿Necesitas tarifa por hora para esta ubicación?",
     openHourlyCheckout: "Abrir checkout por hora",
     needDaily: "¿Necesitas tarifa diaria para esta ubicación?",
     openDailyCheckout: "Abrir checkout diario",
-    dailyFooterInstruction: "Para un ticket diario, pulsa el enlace en el pie de página.",
-    hourlyFooterInstruction: "Para la facturación por horas, pulsa el enlace en el pie de página.",
+    dailyFooterInstruction:
+      "Para un ticket diario, pulsa el enlace en el pie de página.",
+    hourlyFooterInstruction:
+      "Para la facturación por horas, pulsa el enlace en el pie de página.",
     continueToCheckout: "Continuar al checkout",
     termsPrefix: "Al pagar, aceptas nuestros",
     termsLabel: "Términos del servicio",
@@ -292,7 +324,9 @@ const checkoutTextByLocale: Record<string, {
   },
 };
 
-function checkoutCustomFields(params?: { plate?: string; allowPlateOverride?: boolean }): any[] {
+function checkoutCustomFields(
+  params?: { plate?: string; allowPlateOverride?: boolean },
+): any[] {
   const plate = String(params?.plate ?? "").trim().toUpperCase();
   const allowPlateOverride = Boolean(params?.allowPlateOverride);
   const hasKnownPlate = plate.length > 0;
@@ -338,7 +372,10 @@ async function resolveLocationSplitContext(locationUuid: string) {
     .eq("id", locationUuid)
     .maybeSingle();
 
-  const verificationMetadata = asPlainRecord(locationData?.["verification_metadata"]);
+  const verificationMetadata = asPlainRecord(
+    locationData?.["verification_metadata"],
+  );
+  const lotPayoutMode = resolveLotPayoutMode(verificationMetadata);
   const ownerId = String(locationData?.["owner_id"] ?? "").trim();
 
   let splitDestination = { destinationAccountId: null, splitEligible: false };
@@ -351,54 +388,68 @@ async function resolveLocationSplitContext(locationUuid: string) {
     splitDestination = resolveAutomaticSplitDestination({
       profileRole: ownerProfile?.role ?? "",
       stripeAccountId: ownerProfile?.stripe_account_id ?? "",
-      stripeOnboardingComplete: ownerProfile?.stripe_onboarding_complete === true,
+      stripeOnboardingComplete:
+        ownerProfile?.stripe_onboarding_complete === true,
     });
   }
 
   return {
+    lotPayoutMode,
     ownerStripeAccountId: splitDestination.destinationAccountId,
     ownerStripeReady: splitDestination.splitEligible,
     splitExpenseRate: resolveSplitExpenseRate(
       verificationMetadata,
-      Deno.env.get("PAYPARQ_SPLIT_EXPENSE_RATE") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_EXPENSE_RATE") ?? null,
+      Deno.env.get("PAYPARQ_SPLIT_EXPENSE_RATE") ??
+        Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_EXPENSE_RATE") ?? null,
     ),
     splitTaxRate: resolveSplitTaxRate(
       verificationMetadata,
-      Deno.env.get("PAYPARQ_SPLIT_TAX_RATE") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_TAX_RATE") ?? null,
+      Deno.env.get("PAYPARQ_SPLIT_TAX_RATE") ??
+        Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_TAX_RATE") ?? null,
     ),
     splitFixedExpenseCents: resolveSplitFixedExpenseCents(
       verificationMetadata,
-      Deno.env.get("PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ?? Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ?? null,
+      Deno.env.get("PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ??
+        Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_FIXED_EXPENSE_CENTS") ?? null,
     ),
     caseOwnerFixedPayoutCents: resolveCaseOwnerFixedPayoutCents(
       verificationMetadata,
-      Deno.env.get("CASE_OWNER_PROCESS_FEE_CENTS") ?? Deno.env.get("NEXT_PUBLIC_CASE_OWNER_PROCESS_FEE_CENTS") ?? null,
+      Deno.env.get("CASE_OWNER_PROCESS_FEE_CENTS") ??
+        Deno.env.get("NEXT_PUBLIC_CASE_OWNER_PROCESS_FEE_CENTS") ?? null,
     ),
   };
 }
 
-function parseStripeMetadataObject(value: unknown): Record<string, unknown> | null {
+function parseStripeMetadataObject(
+  value: unknown,
+): Record<string, unknown> | null {
   if (!value) return null;
   if (typeof value === "object") return value as Record<string, unknown>;
   if (typeof value !== "string") return null;
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+    return parsed && typeof parsed === "object"
+      ? parsed as Record<string, unknown>
+      : null;
   } catch {
     return null;
   }
 }
 
-async function resolveCheckoutDefaults(email: string): Promise<{ plate: string; mobile: string }> {
+async function resolveCheckoutDefaults(
+  email: string,
+): Promise<{ plate: string; mobile: string }> {
   const normalizedEmail = normalizeEmailValue(email);
   if (!normalizedEmail) {
     return { plate: "", mobile: "" };
   }
-  const fillFromRows = (rows: Array<{
-    plate?: string | null;
-    mobile?: string | null;
-    stripe_metadata?: Record<string, unknown> | string | null;
-  }>) => {
+  const fillFromRows = (
+    rows: Array<{
+      plate?: string | null;
+      mobile?: string | null;
+      stripe_metadata?: Record<string, unknown> | string | null;
+    }>,
+  ) => {
     let plate = "";
     let mobile = "";
     for (const row of rows) {
@@ -464,7 +515,9 @@ async function resolveCheckoutDefaults(email: string): Promise<{ plate: string; 
   };
 }
 
-async function resolveCheckoutCustomer(params: { email: string; mobile: string }): Promise<string | null> {
+async function resolveCheckoutCustomer(
+  params: { email: string; mobile: string },
+): Promise<string | null> {
   const email = normalizeEmailValue(params.email);
   const mobile = normalizePhoneValue(params.mobile);
   if (!email) {
@@ -513,12 +566,21 @@ function parseOptionalBooleanValue(v: unknown): boolean | undefined {
   if (typeof v === "boolean") return v;
   if (typeof v !== "string") return undefined;
   const normalized = v.trim().toLowerCase();
-  if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
-  if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") return false;
+  if (
+    normalized === "1" || normalized === "true" || normalized === "yes" ||
+    normalized === "on"
+  ) return true;
+  if (
+    normalized === "0" || normalized === "false" || normalized === "no" ||
+    normalized === "off"
+  ) return false;
   return undefined;
 }
 
-function resolveAllowPromotionCodesDefaultOn(bodyValue: unknown, queryValue: string | null): boolean {
+function resolveAllowPromotionCodesDefaultOn(
+  bodyValue: unknown,
+  queryValue: string | null,
+): boolean {
   const bodyResolved = parseOptionalBooleanValue(bodyValue);
   if (bodyResolved !== undefined) return bodyResolved;
   const queryResolved = parseOptionalBooleanValue(queryValue);
@@ -526,7 +588,9 @@ function resolveAllowPromotionCodesDefaultOn(bodyValue: unknown, queryValue: str
   return true;
 }
 
-async function resolveLocation(input: string): Promise<{ id: string; display_id?: string } | null> {
+async function resolveLocation(
+  input: string,
+): Promise<{ id: string; display_id?: string } | null> {
   const candidate = String(input ?? "").trim();
   if (!candidate) return null;
   if (isUuid(candidate)) {
@@ -564,12 +628,16 @@ async function resolveLocation(input: string): Promise<{ id: string; display_id?
     .select("id, display_id")
     .ilike("name", candidate)
     .maybeSingle();
-  if (byNameInsensitive?.id) return byNameInsensitive as { id: string; display_id?: string };
+  if (byNameInsensitive?.id) {
+    return byNameInsensitive as { id: string; display_id?: string };
+  }
 
   const { data: byAny } = await admin
     .from("locations")
     .select("id, display_id")
-    .or(`display_id.eq.${candidate},canonical_slug.eq.${candidate},name.ilike.%${candidate}%`)
+    .or(
+      `display_id.eq.${candidate},canonical_slug.eq.${candidate},name.ilike.%${candidate}%`,
+    )
     .limit(1)
     .maybeSingle();
   if (byAny?.id) return byAny as { id: string; display_id?: string };
@@ -600,17 +668,28 @@ function extractNotNullColumnName(message: string): string | null {
 }
 
 function defaultValueForSessionColumn(column: string): unknown {
-  if (column === "entry_time" || column === "created_at" || column === "updated_at") return new Date().toISOString();
+  if (
+    column === "entry_time" || column === "created_at" ||
+    column === "updated_at"
+  ) return new Date().toISOString();
   if (column === "plate") return "PENDING";
-  if (column === "email" || column === "mobile" || column === "contact_name" || column === "name") return "";
+  if (
+    column === "email" || column === "mobile" || column === "contact_name" ||
+    column === "name"
+  ) return "";
   if (column === "type") return "hourly";
   if (column === "currency") return "eur";
   if (column === "payment_source") return "regular";
   if (column === "ui_type") return "guest";
   if (column === "is_lpr_scan" || column === "is_whatsapp_linked") return false;
   if (column === "status" || column === "payment_status") return "pending";
-  if (column === "price" || column === "amount_cents" || column === "duration_minutes" || column === "quantity") return 0;
-  if (column.endsWith("_at") || column.endsWith("_time")) return new Date().toISOString();
+  if (
+    column === "price" || column === "amount_cents" ||
+    column === "duration_minutes" || column === "quantity"
+  ) return 0;
+  if (column.endsWith("_at") || column.endsWith("_time")) {
+    return new Date().toISOString();
+  }
   if (column.startsWith("is_")) return false;
   return undefined;
 }
@@ -619,16 +698,24 @@ async function insertSessionWithSchemaFallback(
   insertData: Record<string, unknown>,
 ): Promise<{ ok: boolean; message?: string }> {
   let payload: Record<string, unknown> = { ...insertData };
-  console.log(`[V18.1] Initial insert attempt with payload: ${JSON.stringify(payload)}`);
+  console.log(
+    `[V18.1] Initial insert attempt with payload: ${JSON.stringify(payload)}`,
+  );
   for (let i = 0; i < 20; i++) {
     const { error } = await admin
       .from("parking_sessions")
       .insert(payload);
     if (!error || error.code === "23505") {
-      if (error?.code === "23505") console.log(`[V18.1] Duplicate session (23505), treating as success`);
+      if (error?.code === "23505") {
+        console.log(`[V18.1] Duplicate session (23505), treating as success`);
+      }
       return { ok: true };
     }
-    console.warn(`[V18.1] Insert error (attempt ${i+1}): code=${error.code}, message=${error.message}`);
+    console.warn(
+      `[V18.1] Insert error (attempt ${
+        i + 1
+      }): code=${error.code}, message=${error.message}`,
+    );
     const notNullColumn = extractNotNullColumnName(error.message ?? "");
     if (notNullColumn) {
       const fallbackValue = defaultValueForSessionColumn(notNullColumn);
@@ -651,7 +738,10 @@ async function insertSessionWithSchemaFallback(
     const { [missingColumn]: _removed, ...rest } = payload;
     payload = rest;
   }
-  return { ok: false, message: "Failed to insert parking session after schema fallbacks" };
+  return {
+    ok: false,
+    message: "Failed to insert parking session after schema fallbacks",
+  };
 }
 
 async function updateSessionWithSchemaFallback(
@@ -674,7 +764,10 @@ async function updateSessionWithSchemaFallback(
     const { [missingColumn]: _removed, ...rest } = payload;
     payload = rest;
   }
-  return { ok: false, message: "Failed to update parking session after schema fallbacks" };
+  return {
+    ok: false,
+    message: "Failed to update parking session after schema fallbacks",
+  };
 }
 
 async function persistCheckoutSession(
@@ -705,21 +798,31 @@ async function persistCheckoutSession(
     .maybeSingle();
 
   if (existingError) {
-    console.error(`[V17] Error checking for existing session ${session.id}: ${existingError.message}`);
+    console.error(
+      `[V17] Error checking for existing session ${session.id}: ${existingError.message}`,
+    );
   }
 
-  const email = normalizeEmailValue(session.customer_details?.email || metadata.email || "");
+  const email = normalizeEmailValue(
+    session.customer_details?.email || metadata.email || "",
+  );
   let submittedPhone = "";
   const phoneFromMetadata = normalizePhoneValue(
-    session.customer_details?.phone || metadata.mobile || metadata.phone || metadata.customer_phone || "",
+    session.customer_details?.phone || metadata.mobile || metadata.phone ||
+      metadata.customer_phone || "",
   );
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
-  const flow = String(metadata.flow ?? metadata.flow_type ?? "").trim().toLowerCase();
+  const flow = String(metadata.flow ?? metadata.flow_type ?? "").trim()
+    .toLowerCase();
   const metadataCheckIn = String(metadata.check_in ?? "").trim();
   const metadataCheckOut = String(metadata.check_out ?? "").trim();
-  const metadataCheckInDate = metadataCheckIn ? new Date(metadataCheckIn) : null;
-  const metadataCheckOutDate = metadataCheckOut ? new Date(metadataCheckOut) : null;
+  const metadataCheckInDate = metadataCheckIn
+    ? new Date(metadataCheckIn)
+    : null;
+  const metadataCheckOutDate = metadataCheckOut
+    ? new Date(metadataCheckOut)
+    : null;
   const hasValidMetadataCheckIn = Boolean(
     metadataCheckInDate && !Number.isNaN(metadataCheckInDate.getTime()),
   );
@@ -729,14 +832,22 @@ async function persistCheckoutSession(
   const extendTargetSessionId = String(
     metadata.extend_target_session_id ?? metadata.extension_of_session_id ?? "",
   ).trim();
-  const extendMinutesParsed = Number.parseInt(String(metadata.extend_minutes ?? "0"), 10);
-  const extendMinutes = Number.isFinite(extendMinutesParsed) && extendMinutesParsed > 0 ? extendMinutesParsed : 0;
-  const isTargetedExtensionFlow =
-    flow === "reserve" &&
+  const extendMinutesParsed = Number.parseInt(
+    String(metadata.extend_minutes ?? "0"),
+    10,
+  );
+  const extendMinutes =
+    Number.isFinite(extendMinutesParsed) && extendMinutesParsed > 0
+      ? extendMinutesParsed
+      : 0;
+  const isTargetedExtensionFlow = flow === "reserve" &&
     extendTargetSessionId.length > 0 &&
     extendMinutes > 0 &&
     email.length > 0;
-  let checkoutQuantity = Number.parseInt((metadata.quantity ?? "1").toString(), 10);
+  let checkoutQuantity = Number.parseInt(
+    (metadata.quantity ?? "1").toString(),
+    10,
+  );
   if (!Number.isFinite(checkoutQuantity) || checkoutQuantity < 1) {
     checkoutQuantity = 1;
   }
@@ -752,7 +863,10 @@ async function persistCheckoutSession(
       checkoutQuantity = lineItemQuantity;
     }
   } catch (lineItemError) {
-    console.warn(`[V19] Could not read line-item quantity for ${session.id}:`, lineItemError);
+    console.warn(
+      `[V19] Could not read line-item quantity for ${session.id}:`,
+      lineItemError,
+    );
   }
   if (checkoutQuantity <= 1) {
     const subtotalCents = Number(session.amount_subtotal ?? 0);
@@ -769,18 +883,22 @@ async function persistCheckoutSession(
       }
     }
   }
-  const durationUnit =
-    type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
-  let entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
+  const durationUnit = type === "monthly"
+    ? "month"
+    : type === "daily"
+    ? "day"
+    : "hour";
+  let entryTime = new Date(
+    (session.created ?? Math.floor(Date.now() / 1000)) * 1000,
+  );
   if (hasValidMetadataCheckIn && metadataCheckInDate) {
     entryTime = metadataCheckInDate;
   }
-  const durationMinutes =
-    durationUnit === "month"
-      ? checkoutQuantity * 30 * 24 * 60
-      : durationUnit === "day"
-      ? checkoutQuantity * 24 * 60
-      : checkoutQuantity * 60;
+  const durationMinutes = durationUnit === "month"
+    ? checkoutQuantity * 30 * 24 * 60
+    : durationUnit === "day"
+    ? checkoutQuantity * 24 * 60
+    : checkoutQuantity * 60;
   let exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
   if (hasValidMetadataCheckOut && metadataCheckOutDate) {
     exitTime = metadataCheckOutDate;
@@ -793,17 +911,19 @@ async function persistCheckoutSession(
       const d = discount.discount as any;
       if (d.coupon) {
         couponCode = d.coupon.name || d.coupon.id;
-        discountAmount = (discount.amount / 100);
+        discountAmount = discount.amount / 100;
       } else if (d.promotion_code) {
         couponCode = d.promotion_code.code;
-        discountAmount = (discount.amount / 100);
+        discountAmount = discount.amount / 100;
       }
     }
   }
 
   let plateNumber = "";
   if (session.custom_fields) {
-    const plateField = session.custom_fields.find((f) => f.key === "plate_number");
+    const plateField = session.custom_fields.find((f) =>
+      f.key === "plate_number"
+    );
     if (plateField && plateField.text) {
       plateNumber = plateField.text.value || "";
     }
@@ -846,9 +966,15 @@ async function persistCheckoutSession(
 
   if (isTargetedExtensionFlow) {
     if (!hasValidMetadataCheckIn || !hasValidMetadataCheckOut) {
-      return { ok: false, status: 400, message: "extend_flow_requires_check_in_and_check_out" };
+      return {
+        ok: false,
+        status: 400,
+        message: "extend_flow_requires_check_in_and_check_out",
+      };
     }
-    insertData.status = entryTime.getTime() > Date.now() ? "scheduled" : "active";
+    insertData.status = entryTime.getTime() > Date.now()
+      ? "scheduled"
+      : "active";
     insertData.stripe_metadata = JSON.stringify({
       ...metadata,
       quantity: String(checkoutQuantity),
@@ -863,8 +989,13 @@ async function persistCheckoutSession(
   }
 
   if (existing?.id) {
-    console.log(`[V17] Updating existing session ${existing.id} for stripe_id ${session.id}`);
-    const updated = await updateSessionWithSchemaFallback(session.id, insertData);
+    console.log(
+      `[V17] Updating existing session ${existing.id} for stripe_id ${session.id}`,
+    );
+    const updated = await updateSessionWithSchemaFallback(
+      session.id,
+      insertData,
+    );
     if (updated.ok) return { ok: true };
     return { ok: false, status: 500, message: updated.message };
   }
@@ -900,7 +1031,10 @@ async function locationPriceCents(
   let floor = 0;
   let ceiling = 0;
   if (type === "hourly") {
-    euro = toPositiveNumber(data["rate_per_hour"] ?? data["base_price_hourly"], 5);
+    euro = toPositiveNumber(
+      data["rate_per_hour"] ?? data["base_price_hourly"],
+      5,
+    );
     floor = toPositiveNumber(data["rate_per_hour_floor"]);
     ceiling = toPositiveNumber(data["rate_per_hour_ceiling"]);
   } else if (type === "daily") {
@@ -924,7 +1058,9 @@ async function hubParkTaxiPriceCents(
   const idColumn = isUuid(locationId) ? "id" : "display_id";
   const { data, error } = await admin
     .from("locations")
-    .select("verification_metadata,base_price_daily,base_price_daily_floor,base_price_daily_ceiling")
+    .select(
+      "verification_metadata,base_price_daily,base_price_daily_floor,base_price_daily_ceiling",
+    )
     .eq(idColumn, locationId)
     .maybeSingle();
   if (error || !data) {
@@ -978,15 +1114,21 @@ async function cleanupStalePendingGuestSessions(): Promise<void> {
     .is("permit_id", null)
     .lt("created_at", cutoff);
   if (error) {
-    console.error(`[V23] Failed to cleanup stale pending guest sessions: ${error.message}`);
+    console.error(
+      `[V23] Failed to cleanup stale pending guest sessions: ${error.message}`,
+    );
   } else {
-    console.log(`[V23] Cleaned stale pending guest sessions older than ${cutoff}`);
+    console.log(
+      `[V23] Cleaned stale pending guest sessions older than ${cutoff}`,
+    );
   }
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const signature = req.headers.get("stripe-signature");
 
   if (signature) {
@@ -1008,7 +1150,8 @@ serve(async (req: Request) => {
         event.type === "checkout.session.async_payment_succeeded"
       ) {
         const session = event.data.object as Stripe.Checkout.Session;
-        const normalizedPaymentStatus = String(session.payment_status ?? "").trim().toLowerCase();
+        const normalizedPaymentStatus = String(session.payment_status ?? "")
+          .trim().toLowerCase();
         const shouldPersist =
           event.type === "checkout.session.async_payment_succeeded" ||
           normalizedPaymentStatus === "paid";
@@ -1017,7 +1160,9 @@ serve(async (req: Request) => {
         }
         const persisted = await persistCheckoutSession(session);
         if (!persisted.ok) {
-          return json({ error: persisted.message ?? "Failed to persist parking session" }, persisted.status ?? 500);
+          return json({
+            error: persisted.message ?? "Failed to persist parking session",
+          }, persisted.status ?? 500);
         }
       } else if (event.type === "checkout.session.expired") {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -1027,7 +1172,10 @@ serve(async (req: Request) => {
       return json({ received: true });
     } catch (err: any) {
       console.error(`[V7] Webhook Error: ${err?.message ?? String(err)}`);
-      return json({ error: `Webhook Error: ${err?.message ?? String(err)}` }, 400);
+      return json(
+        { error: `Webhook Error: ${err?.message ?? String(err)}` },
+        400,
+      );
     }
   }
 
@@ -1060,7 +1208,7 @@ serve(async (req: Request) => {
 
     // V10: Super robust location resolution
     let locData = null;
-    
+
     // 1. Try Display ID from explicit parameter first
     if (/^\d{5}$/.test(urlDisplayId)) {
       const { data } = await admin
@@ -1090,7 +1238,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       locData = data;
     }
-    
+
     // 4. Try Canonical Slug
     if (!locData) {
       const { data } = await admin
@@ -1100,7 +1248,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       locData = data;
     }
-    
+
     // 5. Try exact Name
     if (!locData) {
       const { data } = await admin
@@ -1110,7 +1258,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       locData = data;
     }
-    
+
     // 6. Try case-insensitive Name
     if (!locData) {
       const { data } = await admin
@@ -1120,7 +1268,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       locData = data;
     }
-    
+
     // 7. Try partial Name match
     if (!locData) {
       const { data } = await admin
@@ -1131,7 +1279,10 @@ serve(async (req: Request) => {
       locData = data;
     }
 
-    const displayId = locData?.display_id || (urlDisplayId && /^\d{5}$/.test(urlDisplayId) ? urlDisplayId : locationId);
+    const displayId = locData?.display_id ||
+      (urlDisplayId && /^\d{5}$/.test(urlDisplayId)
+        ? urlDisplayId
+        : locationId);
     let locationUuid = locData?.id;
 
     // V15: If we couldn't resolve locData, but locationId is a UUID, use it as fallback
@@ -1140,23 +1291,27 @@ serve(async (req: Request) => {
     }
 
     // V13: Robust display ID logging for debugging
-    console.log(`[V13] Resolution: input=${locationId}, urlDisplayId=${urlDisplayId}, resolvedUuid=${locationUuid}, resolvedDisplayId=${displayId}`);
+    console.log(
+      `[V13] Resolution: input=${locationId}, urlDisplayId=${urlDisplayId}, resolvedUuid=${locationUuid}, resolvedDisplayId=${displayId}`,
+    );
 
     if (!locationUuid) {
-      console.error(`[V15] CRITICAL: Could not resolve a valid UUID for locationId: ${locationId}`);
+      console.error(
+        `[V15] CRITICAL: Could not resolve a valid UUID for locationId: ${locationId}`,
+      );
       // If we can't find a UUID, we can't insert into parking_sessions.
       // We'll proceed with the Stripe checkout but skip the seeding.
     }
 
-    const parkTaxiRequested =
-      parseOptionalBooleanValue(body["park_taxi"]) ??
+    const parkTaxiRequested = parseOptionalBooleanValue(body["park_taxi"]) ??
       parseOptionalBooleanValue(url.searchParams.get("park_taxi")) ??
       false;
     const requestedType = normalizeType(
       String(body["type"] ?? url.searchParams.get("type") ?? "hourly"),
     );
-    const type: "hourly" | "daily" | "monthly" =
-      parkTaxiRequested ? "daily" : requestedType;
+    const type: "hourly" | "daily" | "monthly" = parkTaxiRequested
+      ? "daily"
+      : requestedType;
     const email = String(
       body["email"] ?? url.searchParams.get("email") ?? "",
     ).trim();
@@ -1175,7 +1330,8 @@ serve(async (req: Request) => {
     );
 
     const promotionCodeLabel = String(
-      body["promotion_code_label"] ?? url.searchParams.get("promotion_code_label") ?? "",
+      body["promotion_code_label"] ??
+        url.searchParams.get("promotion_code_label") ?? "",
     ).trim();
 
     const requestedPlate = String(
@@ -1190,26 +1346,37 @@ serve(async (req: Request) => {
         "",
     ).trim();
     const checkoutDefaults = await resolveCheckoutDefaults(email);
-    const plate = (requestedPlate || checkoutDefaults.plate).trim().toUpperCase();
-    const mobile = normalizePhoneValue(requestedMobile || checkoutDefaults.mobile);
+    const plate = (requestedPlate || checkoutDefaults.plate).trim()
+      .toUpperCase();
+    const mobile = normalizePhoneValue(
+      requestedMobile || checkoutDefaults.mobile,
+    );
     const allowPlateOverride =
       parseOptionalBooleanValue(body["allow_plate_override"]) ??
-      parseOptionalBooleanValue(url.searchParams.get("allow_plate_override")) ??
-      false;
+        parseOptionalBooleanValue(
+          url.searchParams.get("allow_plate_override"),
+        ) ??
+        false;
     const seedInactivePending =
       parseOptionalBooleanValue(body["seed_inactive_pending"]) ??
-      parseOptionalBooleanValue(url.searchParams.get("seed_inactive_pending")) ??
-      false;
+        parseOptionalBooleanValue(
+          url.searchParams.get("seed_inactive_pending"),
+        ) ??
+        false;
     const extendTargetSessionId = String(
-      body["extend_target_session_id"] ?? url.searchParams.get("extend_target_session_id") ?? "",
+      body["extend_target_session_id"] ??
+        url.searchParams.get("extend_target_session_id") ?? "",
     ).trim();
     const extendMinutesRaw = Number.parseInt(
-      String(body["extend_minutes"] ?? url.searchParams.get("extend_minutes") ?? ""),
+      String(
+        body["extend_minutes"] ?? url.searchParams.get("extend_minutes") ?? "",
+      ),
       10,
     );
-    const extendMinutes = Number.isFinite(extendMinutesRaw) && extendMinutesRaw > 0
-      ? extendMinutesRaw
-      : 0;
+    const extendMinutes =
+      Number.isFinite(extendMinutesRaw) && extendMinutesRaw > 0
+        ? extendMinutesRaw
+        : 0;
 
     const permitId = String(
       body["permit_id"] ?? url.searchParams.get("permit_id") ?? "",
@@ -1239,29 +1406,34 @@ serve(async (req: Request) => {
         ? quantityOverrideParsed
         : null;
     const parsedActivationAt = checkIn ? new Date(checkIn) : null;
-    const activationAt = parsedActivationAt && !Number.isNaN(parsedActivationAt.getTime())
-      ? parsedActivationAt.toISOString()
-      : "";
+    const activationAt =
+      parsedActivationAt && !Number.isNaN(parsedActivationAt.getTime())
+        ? parsedActivationAt.toISOString()
+        : "";
     const hourlySwitchUrlParam = String(
-      body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ?? "",
+      body["hourly_switch_url"] ?? url.searchParams.get("hourly_switch_url") ??
+        "",
     ).trim();
     const dailySwitchUrlParam = String(
-      body["daily_switch_url"] ?? url.searchParams.get("daily_switch_url") ?? "",
+      body["daily_switch_url"] ?? url.searchParams.get("daily_switch_url") ??
+        "",
     ).trim();
     const localeParam = String(
       body["locale"] ?? url.searchParams.get("locale") ?? "",
     ).trim();
-    const launcherRequested =
-      parseOptionalBooleanValue(body["launcher"]) ??
+    const launcherRequested = parseOptionalBooleanValue(body["launcher"]) ??
       parseOptionalBooleanValue(url.searchParams.get("launcher")) ??
       false;
     const checkoutLocale = resolveCheckoutLocale(
       localeParam,
       req.headers.get("accept-language"),
     );
-    const checkoutText = checkoutTextByLocale[checkoutLocale] ?? checkoutTextByLocale.en;
+    const checkoutText = checkoutTextByLocale[checkoutLocale] ??
+      checkoutTextByLocale.en;
 
-    console.log(`[V17] Params: locationId=${locationId}, type=${type}, parkTaxi=${parkTaxiRequested}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`);
+    console.log(
+      `[V17] Params: locationId=${locationId}, type=${type}, parkTaxi=${parkTaxiRequested}, plate=${plate}, mobile=${mobile}, email=${email}, permitId=${permitId}`,
+    );
 
     const now = new Date();
     const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
@@ -1278,15 +1450,20 @@ serve(async (req: Request) => {
           second: "2-digit",
           hour12: false,
         }).formatToParts(value);
-        const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+        const get = (type: string) =>
+          parts.find((p) => p.type === type)?.value ?? "";
         const tz = resolveBerlinTzAbbreviation(value);
-        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} ${tz}`;
+        return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${
+          get("minute")
+        }:${get("second")} ${tz}`;
       } catch {
         const tz = resolveBerlinTzAbbreviation(value);
         return `${value.toISOString().replace("T", " ").split(".")[0]} ${tz}`;
       }
     };
-    const parseDateInput = (rawValue: string): { epochMs: number | null; display: string } => {
+    const parseDateInput = (
+      rawValue: string,
+    ): { epochMs: number | null; display: string } => {
       const raw = rawValue.trim();
       if (!raw) {
         return { epochMs: null, display: "" };
@@ -1295,7 +1472,10 @@ serve(async (req: Request) => {
       if (hasExplicitTimezone) {
         const parsed = new Date(raw);
         if (!Number.isNaN(parsed.getTime())) {
-          return { epochMs: parsed.getTime(), display: formatBerlinDateTime(parsed) };
+          return {
+            epochMs: parsed.getTime(),
+            display: formatBerlinDateTime(parsed),
+          };
         }
         return { epochMs: null, display: raw };
       }
@@ -1310,20 +1490,38 @@ serve(async (req: Request) => {
         const minute = Number(naiveMatch[5]);
         const second = Number(naiveMatch[6] ?? "00");
         const millisecond = Number((naiveMatch[7] ?? "0").padEnd(3, "0"));
-        const wallClockUtcMs = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+        const wallClockUtcMs = Date.UTC(
+          year,
+          month - 1,
+          day,
+          hour,
+          minute,
+          second,
+          millisecond,
+        );
         if (Number.isFinite(wallClockUtcMs)) {
-          const firstOffsetMinutes = resolveBerlinOffsetMinutes(new Date(wallClockUtcMs));
+          const firstOffsetMinutes = resolveBerlinOffsetMinutes(
+            new Date(wallClockUtcMs),
+          );
           let berlinUtcMs = wallClockUtcMs - (firstOffsetMinutes * 60 * 1000);
-          const secondOffsetMinutes = resolveBerlinOffsetMinutes(new Date(berlinUtcMs));
+          const secondOffsetMinutes = resolveBerlinOffsetMinutes(
+            new Date(berlinUtcMs),
+          );
           if (secondOffsetMinutes !== firstOffsetMinutes) {
             berlinUtcMs = wallClockUtcMs - (secondOffsetMinutes * 60 * 1000);
           }
-          return { epochMs: berlinUtcMs, display: formatBerlinDateTime(new Date(berlinUtcMs)) };
+          return {
+            epochMs: berlinUtcMs,
+            display: formatBerlinDateTime(new Date(berlinUtcMs)),
+          };
         }
       }
       const parsed = new Date(raw);
       if (!Number.isNaN(parsed.getTime())) {
-        return { epochMs: parsed.getTime(), display: formatBerlinDateTime(parsed) };
+        return {
+          epochMs: parsed.getTime(),
+          display: formatBerlinDateTime(parsed),
+        };
       }
       return { epochMs: null, display: raw };
     };
@@ -1337,7 +1535,9 @@ serve(async (req: Request) => {
     if (hasReservationWindow) {
       const startMs = parsedCheckIn.epochMs;
       const endMs = parsedCheckOut.epochMs;
-      const diff = startMs != null && endMs != null ? endMs - startMs : Number.NaN;
+      const diff = startMs != null && endMs != null
+        ? endMs - startMs
+        : Number.NaN;
       if (Number.isFinite(diff) && diff > 0) {
         if (type === "daily") {
           quantity = Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -1389,27 +1589,41 @@ serve(async (req: Request) => {
     }
     if (amountCents < 50) amountCents = 50;
     let unitAmountCents = amountCents;
-    if (!isReservationFlow && hasReservationWindow && explicitCents != null && quantity > 1) {
+    if (
+      !isReservationFlow && hasReservationWindow && explicitCents != null &&
+      quantity > 1
+    ) {
       unitAmountCents = Math.round(amountCents / quantity);
       if (unitAmountCents < 50) unitAmountCents = 50;
     }
     if (isReservationFlow && hasReservationWindow) {
       if (parkTaxiRequested) {
-        const parkTaxiLocationTitle = (locData?.name ?? "").toString().trim() || "Safe Parking by PayParq Split Airport/Trogir";
+        const parkTaxiLocationTitle = (locData?.name ?? "").toString().trim() ||
+          "Safe Parking by PayParq Split Airport/Trogir";
         const formattedCheckIn = formatIsoNoSeconds(checkIn);
         const formattedCheckOut = formatIsoNoSeconds(checkOut);
         const startMs = parsedCheckIn.epochMs;
         const endMs = parsedCheckOut.epochMs;
-        const dayDiff = startMs != null && endMs != null ? endMs - startMs : Number.NaN;
+        const dayDiff = startMs != null && endMs != null
+          ? endMs - startMs
+          : Number.NaN;
         const parkTaxiDays = Number.isFinite(dayDiff) && dayDiff > 0
           ? Math.max(1, Math.ceil(dayDiff / (1000 * 60 * 60 * 24)))
           : 1;
         const firstRideTime = formatTimeShort(checkIn) || "--:--";
-        reservationDescription = `${parkTaxiLocationTitle} • ID ${displayId} • Od ${formattedCheckIn} • Do ${formattedCheckOut} • Ukupno €${(unitAmountCents / 100).toFixed(2)} • Prva vožnja ${firstRideTime} • Uključeno ${parkTaxiDays} ${parkTaxiDays === 1 ? "dan" : "dana"} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+        reservationDescription =
+          `${parkTaxiLocationTitle} • ID ${displayId} • Od ${formattedCheckIn} • Do ${formattedCheckOut} • Ukupno €${
+            (unitAmountCents / 100).toFixed(2)
+          } • Prva vožnja ${firstRideTime} • Uključeno ${parkTaxiDays} ${
+            parkTaxiDays === 1 ? "dan" : "dana"
+          } parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
       } else {
         const formattedCheckIn = formatIso(checkIn);
         const formattedCheckOut = formatIso(checkOut);
-        reservationDescription = `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${(unitAmountCents / 100).toFixed(2)}`;
+        reservationDescription =
+          `${checkoutText.parkingAccessAtId}${displayId}\n${checkoutText.from}: ${formattedCheckIn}\n${checkoutText.to}: ${formattedCheckOut}\n${checkoutText.total}: €${
+            (unitAmountCents / 100).toFixed(2)
+          }`;
       }
     }
     if (reservationDescriptionOverride.length > 0) {
@@ -1431,7 +1645,9 @@ serve(async (req: Request) => {
           : type === "daily"
           ? checkoutQuantity * 24 * 60
           : checkoutQuantity * 60;
-        derivedCheckOutIso = new Date(baseStart.getTime() + durationMinutes * 60 * 1000).toISOString();
+        derivedCheckOutIso = new Date(
+          baseStart.getTime() + durationMinutes * 60 * 1000,
+        ).toISOString();
       }
     }
     const resolvedSuccessUrl = new URL("https://www.payparq.com/success");
@@ -1449,13 +1665,20 @@ serve(async (req: Request) => {
       resolvedSuccessUrl.searchParams.set("check_out", derivedCheckOutIso);
     }
     const checkoutSessionToken = "{CHECKOUT_SESSION_ID}";
-    const encodedCheckoutSessionToken = encodeURIComponent(checkoutSessionToken);
-    const doubleEncodedCheckoutSessionToken = encodeURIComponent(encodedCheckoutSessionToken);
+    const encodedCheckoutSessionToken = encodeURIComponent(
+      checkoutSessionToken,
+    );
+    const doubleEncodedCheckoutSessionToken = encodeURIComponent(
+      encodedCheckoutSessionToken,
+    );
     const successUrl = resolvedSuccessUrl
       .toString()
       .replaceAll(doubleEncodedCheckoutSessionToken, checkoutSessionToken)
       .replaceAll(encodedCheckoutSessionToken, checkoutSessionToken)
-      .replaceAll(encodedCheckoutSessionToken.toLowerCase(), checkoutSessionToken);
+      .replaceAll(
+        encodedCheckoutSessionToken.toLowerCase(),
+        checkoutSessionToken,
+      );
     const reservationName = (locData?.name ?? "").toString().trim();
     const reservationTitle = reservationName.length > 0
       ? reservationName
@@ -1476,7 +1699,10 @@ serve(async (req: Request) => {
     const requestUrl = new URL(req.url);
     requestUrl.protocol = "https:";
     const switchLocationIdentifier = displayId || locationId;
-    const hourlySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
+    const hourlySwitchUrl = new URL(
+      "/functions/v1/create-checkout",
+      requestUrl.origin,
+    );
     hourlySwitchUrl.searchParams.set("location_id", switchLocationIdentifier);
     if (displayId) {
       hourlySwitchUrl.searchParams.set("display_id", displayId);
@@ -1486,12 +1712,18 @@ serve(async (req: Request) => {
     if (hourlySwitchUrlParam) {
       try {
         const parsedHourlySwitchUrl = new URL(hourlySwitchUrlParam);
-        if (parsedHourlySwitchUrl.protocol === "https:" || parsedHourlySwitchUrl.protocol === "http:") {
+        if (
+          parsedHourlySwitchUrl.protocol === "https:" ||
+          parsedHourlySwitchUrl.protocol === "http:"
+        ) {
           resolvedHourlySwitchUrl = parsedHourlySwitchUrl.toString();
         }
       } catch (_) {}
     }
-    const dailySwitchUrl = new URL("/functions/v1/create-checkout", requestUrl.origin);
+    const dailySwitchUrl = new URL(
+      "/functions/v1/create-checkout",
+      requestUrl.origin,
+    );
     dailySwitchUrl.searchParams.set("location_id", switchLocationIdentifier);
     if (displayId) {
       dailySwitchUrl.searchParams.set("display_id", displayId);
@@ -1501,18 +1733,29 @@ serve(async (req: Request) => {
     if (dailySwitchUrlParam) {
       try {
         const parsedDailySwitchUrl = new URL(dailySwitchUrlParam);
-        if (parsedDailySwitchUrl.protocol === "https:" || parsedDailySwitchUrl.protocol === "http:") {
+        if (
+          parsedDailySwitchUrl.protocol === "https:" ||
+          parsedDailySwitchUrl.protocol === "http:"
+        ) {
           resolvedDailySwitchUrl = parsedDailySwitchUrl.toString();
         }
       } catch (_) {}
     }
-    const hourlySwitchLinkMarkdown = `[${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
-    const dailySwitchLinkMarkdown = `[${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
-    const dailyHourlyCtaMessage = `${checkoutText.needHourly} ${hourlySwitchLinkMarkdown}`;
-    const hourlyDailyCtaMessage = `${checkoutText.needDaily} ${dailySwitchLinkMarkdown}`;
-    const submitMessageBase = type === "daily" ? dailyHourlyCtaMessage : hourlyDailyCtaMessage;
+    const hourlySwitchLinkMarkdown =
+      `[${checkoutText.openHourlyCheckout}](${resolvedHourlySwitchUrl})`;
+    const dailySwitchLinkMarkdown =
+      `[${checkoutText.openDailyCheckout}](${resolvedDailySwitchUrl})`;
+    const dailyHourlyCtaMessage =
+      `${checkoutText.needHourly} ${hourlySwitchLinkMarkdown}`;
+    const hourlyDailyCtaMessage =
+      `${checkoutText.needDaily} ${dailySwitchLinkMarkdown}`;
+    const submitMessageBase = type === "daily"
+      ? dailyHourlyCtaMessage
+      : hourlyDailyCtaMessage;
     const reservationSubmitMessage = isReservationFlow
-      ? [reservationDescription, `Qty: ${displayQuantity}`].filter((part) => part && part.length > 0).join("\n")
+      ? [reservationDescription, `Qty: ${displayQuantity}`].filter((part) =>
+        part && part.length > 0
+      ).join("\n")
       : "";
     const submitMessage = reservationSubmitMessage
       ? `${reservationSubmitMessage}\n${submitMessageBase}`
@@ -1538,7 +1781,9 @@ serve(async (req: Request) => {
       : type === "hourly"
       ? resolvedDailySwitchUrl
       : "";
-    const launcherTitle = isReservationFlow ? reservationTitle : nonReservationTitle;
+    const launcherTitle = isReservationFlow
+      ? reservationTitle
+      : nonReservationTitle;
     const launcherDescription = isReservationFlow
       ? reservationDescription
       : nonReservationDescriptionCore;
@@ -1548,9 +1793,7 @@ serve(async (req: Request) => {
         currency: "eur",
         unit_amount: unitAmountCents,
         product_data: {
-          name: isReservationFlow
-            ? reservationTitle
-            : nonReservationTitle,
+          name: isReservationFlow ? reservationTitle : nonReservationTitle,
           description: isReservationFlow
             ? reservationDescriptionWithSwitch
             : nonReservationDescription,
@@ -1565,38 +1808,47 @@ serve(async (req: Request) => {
       };
     }
 
-    console.log(`[V13] Finalizing Checkout: ID=${displayId}, Name=${locData?.name || "Unknown"}, Time=${purchaseTimeDisplay}`);
+    console.log(
+      `[V13] Finalizing Checkout: ID=${displayId}, Name=${
+        locData?.name || "Unknown"
+      }, Time=${purchaseTimeDisplay}`,
+    );
 
     await cleanupStalePendingGuestSessions();
 
     const chargedAmountCents = Math.max(50, unitAmountCents * checkoutQuantity);
     const parkTaxiDailyTicketTotalCents = parkTaxiRequested && locationUuid
-      ? toCents((await locationPriceCents(locationUuid, "daily")) * checkoutQuantity)
+      ? toCents(
+        (await locationPriceCents(locationUuid, "daily")) * checkoutQuantity,
+      )
       : 0;
     const splitContext = locationUuid
       ? await resolveLocationSplitContext(locationUuid)
       : {
-          ownerStripeAccountId: null,
-          ownerStripeReady: false,
-          splitExpenseRate: 0,
-          splitTaxRate: 0,
-          splitFixedExpenseCents: 0,
-          caseOwnerFixedPayoutCents: 0,
-        };
+        lotPayoutMode: "regular",
+        ownerStripeAccountId: null,
+        ownerStripeReady: false,
+        splitExpenseRate: 0,
+        splitTaxRate: 0,
+        splitFixedExpenseCents: 0,
+        caseOwnerFixedPayoutCents: 0,
+      };
     const splitPlan =
       splitContext.ownerStripeReady && splitContext.ownerStripeAccountId
         ? buildStripeSplitPlan({
-            chargedAmountCents,
-            sessionAmountCents: chargedAmountCents,
-            parkTaxiDailyTicketTotalCents,
-            pricingType: type,
-            flowType: flow || "payment",
-            destinationAccountId: splitContext.ownerStripeAccountId,
-            expenseRate: splitContext.splitExpenseRate,
-            taxRate: splitContext.splitTaxRate,
-            fixedExpenseCents: splitContext.splitFixedExpenseCents,
-            caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
-          })
+          chargedAmountCents,
+          sessionAmountCents: chargedAmountCents,
+          parkTaxiDailyTicketTotalCents,
+          sessionQuantity: checkoutQuantity,
+          pricingType: type,
+          flowType: flow || "payment",
+          destinationAccountId: splitContext.ownerStripeAccountId,
+          expenseRate: splitContext.splitExpenseRate,
+          taxRate: splitContext.splitTaxRate,
+          fixedExpenseCents: splitContext.splitFixedExpenseCents,
+          caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
+          payoutMode: splitContext.lotPayoutMode,
+        })
         : null;
     const splitMetadata = buildStripeSplitMetadata({
       splitPlan,
@@ -1619,7 +1871,8 @@ serve(async (req: Request) => {
       },
       custom_text: {
         terms_of_service_acceptance: {
-          message: `${checkoutText.termsPrefix} [${checkoutText.termsLabel}](https://payparq.ai/terms) ${checkoutText.andWord} [${checkoutText.privacyLabel}](https://payparq.ai/privacy)${checkoutText.termsSuffix}`,
+          message:
+            `${checkoutText.termsPrefix} [${checkoutText.termsLabel}](https://payparq.ai/terms) ${checkoutText.andWord} [${checkoutText.privacyLabel}](https://payparq.ai/privacy)${checkoutText.termsSuffix}`,
         },
         ...((type === "daily" || type === "hourly")
           ? {
@@ -1665,20 +1918,20 @@ serve(async (req: Request) => {
       try {
         const upperLabel = promotionCodeLabel.toUpperCase().trim();
         console.log(`[V6.4] Ensuring manual promo code exists: ${upperLabel}`);
-        
+
         // 1. Check if this specific code already exists as a Promotion Code
         const existingPromoCodes = await stripe.promotionCodes.list({
           active: true,
           limit: 100,
         });
-        
+
         let matchedPromo = existingPromoCodes.data.find(
-          (pc: any) => pc.code.toUpperCase().trim() === upperLabel
+          (pc: any) => pc.code.toUpperCase().trim() === upperLabel,
         );
 
         if (!matchedPromo) {
           console.log(`[V6.4] Code ${upperLabel} not found. Creating...`);
-          
+
           // 2. Ensure a 100% coupon exists
           let couponId = "FREE100_COUPON";
           try {
@@ -1698,7 +1951,9 @@ serve(async (req: Request) => {
             coupon: couponId,
             code: upperLabel,
           });
-          console.log(`[V6.4] Created promotion code ${upperLabel}. User can now type it.`);
+          console.log(
+            `[V6.4] Created promotion code ${upperLabel}. User can now type it.`,
+          );
 
           // 4. Deactivate the "former" codes if they are different from the new one
           // This ensures only the current app-defined code works.
@@ -1708,7 +1963,10 @@ serve(async (req: Request) => {
                 await stripe.promotionCodes.update(pc.id, { active: false });
                 console.log(`[V6.4] Deactivated former code: ${pc.code}`);
               } catch (e) {
-                console.warn(`[V6.4] Failed to deactivate former code ${pc.code}:`, e);
+                console.warn(
+                  `[V6.4] Failed to deactivate former code ${pc.code}:`,
+                  e,
+                );
               }
             }
           }
@@ -1724,13 +1982,22 @@ serve(async (req: Request) => {
 
     const expiresAtBufferSeconds = 10 * 60; // Increased to 10 mins for safer buffer
     const minimumCheckoutLifetimeSeconds = (30 * 60) + expiresAtBufferSeconds;
-    const checkoutLifetimeSeconds = permitId ? 60 * 60 : minimumCheckoutLifetimeSeconds;
-    const expiryTimestamp = Math.floor(Date.now() / 1000) + checkoutLifetimeSeconds;
+    const checkoutLifetimeSeconds = permitId
+      ? 60 * 60
+      : minimumCheckoutLifetimeSeconds;
+    const expiryTimestamp = Math.floor(Date.now() / 1000) +
+      checkoutLifetimeSeconds;
     sessionOptions.expires_at = expiryTimestamp;
 
-    console.log(`[V13] Stripe Session Expiry: ${new Date(expiryTimestamp * 1000).toISOString()} (${checkoutLifetimeSeconds}s from now)`);
+    console.log(
+      `[V13] Stripe Session Expiry: ${
+        new Date(expiryTimestamp * 1000).toISOString()
+      } (${checkoutLifetimeSeconds}s from now)`,
+    );
 
-    const paymentSession = await stripe.checkout.sessions.create(sessionOptions);
+    const paymentSession = await stripe.checkout.sessions.create(
+      sessionOptions,
+    );
     if (!paymentSession.url) {
       return json({ error: "Failed to create checkout session" }, 500);
     }
@@ -1739,15 +2006,23 @@ serve(async (req: Request) => {
     let pendingSeedError = "";
     const hasFutureActivation = (() => {
       const parsed = new Date(derivedCheckInIso);
-      return !Number.isNaN(parsed.getTime()) && parsed.getTime() > now.getTime();
+      return !Number.isNaN(parsed.getTime()) &&
+        parsed.getTime() > now.getTime();
     })();
-    const isFutureCheckoutFlow = isReservationFlow || extendTargetSessionId.length > 0 || hasFutureActivation;
+    const isFutureCheckoutFlow = isReservationFlow ||
+      extendTargetSessionId.length > 0 || hasFutureActivation;
     const shouldSeedPendingSession = Boolean(locationUuid);
     if (shouldSeedPendingSession && locationUuid) {
       const shouldSeedInactivePending = isFutureCheckoutFlow;
-      const inactiveEntryTime = shouldSeedInactivePending ? derivedCheckInIso : now.toISOString();
-      const inactiveExitTime = shouldSeedInactivePending ? derivedCheckOutIso : "";
-      const inactiveExitDate = inactiveExitTime ? new Date(inactiveExitTime) : null;
+      const inactiveEntryTime = shouldSeedInactivePending
+        ? derivedCheckInIso
+        : now.toISOString();
+      const inactiveExitTime = shouldSeedInactivePending
+        ? derivedCheckOutIso
+        : "";
+      const inactiveExitDate = inactiveExitTime
+        ? new Date(inactiveExitTime)
+        : null;
       const inactiveDurationMinutes = (() => {
         if (
           shouldSeedInactivePending &&
@@ -1755,11 +2030,24 @@ serve(async (req: Request) => {
           !Number.isNaN(inactiveExitDate.getTime())
         ) {
           const entryDate = new Date(inactiveEntryTime);
-          if (!Number.isNaN(entryDate.getTime()) && inactiveExitDate.getTime() > entryDate.getTime()) {
-            return Math.max(1, Math.round((inactiveExitDate.getTime() - entryDate.getTime()) / (60 * 1000)));
+          if (
+            !Number.isNaN(entryDate.getTime()) &&
+            inactiveExitDate.getTime() > entryDate.getTime()
+          ) {
+            return Math.max(
+              1,
+              Math.round(
+                (inactiveExitDate.getTime() - entryDate.getTime()) /
+                  (60 * 1000),
+              ),
+            );
           }
         }
-        return type === "monthly" ? (quantity * 43200) : type === "daily" ? (quantity * 1440) : (quantity * 60);
+        return type === "monthly"
+          ? (quantity * 43200)
+          : type === "daily"
+          ? (quantity * 1440)
+          : (quantity * 60);
       })();
       const pendingInsertData: any = {
         location_id: locationUuid,
@@ -1779,7 +2067,9 @@ serve(async (req: Request) => {
         is_lpr_scan: false,
         is_whatsapp_linked: false,
         stripe_session_id: paymentSession.id,
-        activation_at: shouldSeedInactivePending ? derivedCheckInIso : (activationAt || undefined),
+        activation_at: shouldSeedInactivePending
+          ? derivedCheckInIso
+          : (activationAt || undefined),
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         entry_time: inactiveEntryTime,
@@ -1790,18 +2080,27 @@ serve(async (req: Request) => {
           stripe_id: paymentSession.id,
         }),
       };
-      
-      const exitTime = shouldSeedInactivePending && inactiveExitDate && !Number.isNaN(inactiveExitDate.getTime())
+
+      const exitTime = shouldSeedInactivePending && inactiveExitDate &&
+          !Number.isNaN(inactiveExitDate.getTime())
         ? inactiveExitDate
-        : new Date(now.getTime() + pendingInsertData.duration_minutes * 60 * 1000);
+        : new Date(
+          now.getTime() + pendingInsertData.duration_minutes * 60 * 1000,
+        );
       pendingInsertData.exit_time = exitTime.toISOString();
       pendingInsertData.end_time = exitTime.toISOString();
 
-      console.log(`[V20] Seeding pending session for stripe_id ${paymentSession.id}`);
-      const pendingInserted = await insertSessionWithSchemaFallback(pendingInsertData);
+      console.log(
+        `[V20] Seeding pending session for stripe_id ${paymentSession.id}`,
+      );
+      const pendingInserted = await insertSessionWithSchemaFallback(
+        pendingInsertData,
+      );
       if (!pendingInserted.ok) {
         pendingSeedError = pendingInserted.message ?? "unknown";
-        console.error(`[V20] Failed to seed pending session: ${pendingInserted.message}`);
+        console.error(
+          `[V20] Failed to seed pending session: ${pendingInserted.message}`,
+        );
       } else {
         pendingSeeded = true;
       }
@@ -1838,11 +2137,19 @@ serve(async (req: Request) => {
       <section class="card">
         <div class="brand">PayParq</div>
         <h1>${escapeHtml(launcherTitle)}</h1>
-        <div class="summary">${escapeHtml(launcherDescription).replaceAll("\n", "<br />")}</div>
-        ${launcherSwitchLabel && launcherSwitchUrl
-          ? `<a class="switch-link" href="${escapeHtml(launcherSwitchUrl)}">${escapeHtml(launcherSwitchLabel)}</a>`
-          : ""}
-        <a class="primary" href="${escapeHtml(paymentSession.url)}">${escapeHtml(checkoutText.continueToCheckout)}</a>
+        <div class="summary">${
+        escapeHtml(launcherDescription).replaceAll("\n", "<br />")
+      }</div>
+        ${
+        launcherSwitchLabel && launcherSwitchUrl
+          ? `<a class="switch-link" href="${escapeHtml(launcherSwitchUrl)}">${
+            escapeHtml(launcherSwitchLabel)
+          }</a>`
+          : ""
+      }
+        <a class="primary" href="${escapeHtml(paymentSession.url)}">${
+        escapeHtml(checkoutText.continueToCheckout)
+      }</a>
       </section>
     </main>
   </body>
@@ -1865,6 +2172,8 @@ serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("[ERROR] Uncaught exception:", error);
-    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+    return json({
+      error: error instanceof Error ? error.message : String(error),
+    }, 500);
   }
 });
