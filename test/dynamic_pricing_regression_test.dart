@@ -613,6 +613,9 @@ void main() {
           content.contains('String? _activeAuthSessionKey;') &&
           content
               .contains('String _sessionKeyForSession(Session? session) {') &&
+          content.contains('ref.invalidate(availableLocationsProvider);') &&
+          content
+              .contains('await ref.read(availableLocationsProvider.future);') &&
           content.contains('ref.listenManual(authStateProvider, (_, next) {') &&
           content.contains(
               '_handleAuthSessionChanged(next.value, force: true);') &&
@@ -624,7 +627,7 @@ void main() {
           !content.contains('ref.invalidate(authStateProvider);'),
       isTrue,
       reason:
-          'After logout/login, the scaffold must reset by session identity, not only user id, and must not manually invalidate the auth stream before sign-out so same-user re-login rebuilds the lot selector reliably.',
+          'After logout/login, the scaffold must reset by session identity, refresh live locations before rehydrating selection, and must not manually invalidate the auth stream before sign-out so same-user re-login rebuilds the lot selector reliably.',
     );
   });
 
@@ -757,6 +760,62 @@ void main() {
       isTrue,
       reason:
           'Location fetching must resolve the user role from profile or metadata before branching into super-admin or restricted access paths, otherwise same-user re-login can transiently collapse into an empty lot selector.',
+    );
+  });
+
+  test('Auth-driven providers rebuild when auth state changes', () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {') &&
+          content.contains('ref.watch(authStateProvider);') &&
+          content.contains('final availableLocationsProvider =') &&
+          content
+              .contains('StreamProvider<List<Map<String, dynamic>>>((ref) {'),
+      isTrue,
+      reason:
+          'User profile and available locations must rebuild on auth transitions so a signed-out empty stream cannot get stuck across subsequent logins.',
+    );
+  });
+
+  test(
+      'Available locations bootstrap from user-scoped cache before live refetch',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              "final cachedJson = prefs.getString('cached_available_locations_\${user.id}');") &&
+          content.contains('if (cachedList.isNotEmpty) {') &&
+          content.contains('emit(cachedList);') &&
+          !content.contains("if (initialRole == 'super_admin') {"),
+      isTrue,
+      reason:
+          'User-scoped cached locations should bootstrap every returning account, not only super admins, so logout/login and account switching do not briefly collapse the selector to an empty state.',
+    );
+  });
+
+  test(
+      'Available locations suppress transient empty refetches after auth transitions',
+      () async {
+    final file = File('lib/logic/providers/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('var hasEmittedNonEmpty = false;') &&
+          content.contains('if (value.isNotEmpty) {') &&
+          content.contains('hasEmittedNonEmpty = true;') &&
+          content.contains('if (uniqueLocations.isEmpty) {') &&
+          content
+              .contains('attempt < 4 && (!hasEmitted || hasEmittedNonEmpty)') &&
+          content.contains(
+              'suppressing transient empty result and keeping cached locations.'),
+      isTrue,
+      reason:
+          'Auth transitions must retry suspicious empty location fetches and preserve previously known user-scoped lots instead of replacing them with a false No Lots state.',
     );
   });
 

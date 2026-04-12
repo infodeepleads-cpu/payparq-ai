@@ -177,6 +177,7 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 final userProfileProvider = StreamProvider<Map<String, dynamic>?>((ref) {
+  ref.watch(authStateProvider);
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) {
     return Stream.value(null);
@@ -412,6 +413,7 @@ final guaranteedLocationSelectionProvider =
 // Stream of locations available to the user
 final availableLocationsProvider =
     StreamProvider<List<Map<String, dynamic>>>((ref) {
+  ref.watch(authStateProvider);
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
@@ -420,32 +422,32 @@ final availableLocationsProvider =
 
   final controller = StreamController<List<Map<String, dynamic>>>();
   var hasEmitted = false;
+  var hasEmittedNonEmpty = false;
 
   void emit(List<Map<String, dynamic>> value) {
     if (controller.isClosed) return;
     hasEmitted = true;
+    if (value.isNotEmpty) {
+      hasEmittedNonEmpty = true;
+    }
     controller.add(value);
   }
 
   var fetchInFlight = false;
   DateTime? lastFetchAt;
 
-  final initialRole = _resolvedRole(user.userMetadata?['role']?.toString());
-  if (initialRole == 'super_admin') {
-    try {
-      final prefs = ref.read(sharedPreferencesProvider);
-      final cachedJson =
-          prefs.getString('cached_available_locations_${user.id}');
-      if (cachedJson != null) {
-        final List<dynamic> decoded = jsonDecode(cachedJson);
-        final List<Map<String, dynamic>> cachedList =
-            List<Map<String, dynamic>>.from(decoded);
-        if (cachedList.isNotEmpty) {
-          emit(cachedList);
-        }
+  try {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final cachedJson = prefs.getString('cached_available_locations_${user.id}');
+    if (cachedJson != null) {
+      final List<dynamic> decoded = jsonDecode(cachedJson);
+      final List<Map<String, dynamic>> cachedList =
+          List<Map<String, dynamic>>.from(decoded);
+      if (cachedList.isNotEmpty) {
+        emit(cachedList);
       }
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
   // Helper to fetch and add to stream
   Future<void> fetch({int attempt = 1, bool force = false}) async {
@@ -619,6 +621,20 @@ final availableLocationsProvider =
         if (key != 'id:') byKey[key] = l;
       }
       final uniqueLocations = byKey.values.toList();
+
+      if (uniqueLocations.isEmpty) {
+        final shouldRetryEmptyResults =
+            attempt < 4 && (!hasEmitted || hasEmittedNonEmpty);
+        if (shouldRetryEmptyResults && !controller.isClosed) {
+          await Future.delayed(Duration(milliseconds: 400 * attempt));
+          return fetch(attempt: attempt + 1, force: true);
+        }
+        if (hasEmittedNonEmpty) {
+          debugPrint(
+              'availableLocationsProvider: suppressing transient empty result and keeping cached locations.');
+          return;
+        }
+      }
 
       // Restore persisted selection
       final currentSelectedId = ref.read(selectedLocationIdProvider);

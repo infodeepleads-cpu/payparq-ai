@@ -86,9 +86,12 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
 
   Future<void> _hydrateLocationSelection() async {
     if (!mounted) return;
+    ref.invalidate(availableLocationsProvider);
     ref.invalidate(activeLocationSelectionProvider);
     ref.invalidate(guaranteedLocationSelectionProvider);
     try {
+      await ref.read(availableLocationsProvider.future);
+      if (!mounted) return;
       await ref.read(activeLocationSelectionProvider.future);
     } catch (_) {}
   }
