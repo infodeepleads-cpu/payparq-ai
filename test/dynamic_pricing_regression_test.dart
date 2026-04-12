@@ -994,6 +994,11 @@ void main() {
           content.contains('hasStripeAccount || onboardingComplete') &&
           content.contains('hasStripeAccount && !onboardingComplete') &&
           content.contains('COMPLETE ONBOARDING') &&
+          content.contains('onboardingComplete') &&
+          content.contains('_handleOpenDashboard') &&
+          content.contains('_handleStripeConnect') &&
+          !content.contains(
+              ': (isConnected\n                        ? _handleOpenDashboard') &&
           content.contains('AppLifecycleState.resumed') &&
           content.contains('ref.invalidate(userProfileProvider);') &&
           content.contains(
@@ -1001,7 +1006,7 @@ void main() {
           content.contains('_refreshProfileOnResume = true;'),
       isTrue,
       reason:
-          'Finance UI should stop showing plain connect state after account creation and refresh profile when returning from Stripe.',
+          'Finance UI should treat an existing Stripe account as connected, but still route incomplete accounts back into onboarding instead of opening a dashboard login link that can fail with a function 500.',
     );
   });
 

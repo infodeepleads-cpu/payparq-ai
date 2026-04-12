@@ -492,7 +492,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
               ElevatedButton(
                 onPressed: (_isConnecting || _isLoadingDashboard)
                     ? null
-                    : (isConnected
+                    : (onboardingComplete
                         ? _handleOpenDashboard
                         : _handleStripeConnect),
                 style: ElevatedButton.styleFrom(
