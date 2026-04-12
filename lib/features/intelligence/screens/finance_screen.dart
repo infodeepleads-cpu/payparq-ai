@@ -587,13 +587,13 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     final activeModeDescription = isHubLot
         ? Lang.sel(
             isHr,
-            'Hub mode uses the current PayParq detailed split matrix.',
-            'Hub način koristi trenutnu detaljnu PayParq matricu podjele.',
+            'Hub mode deducts expenses and tax first, then applies the current PayParq detailed split matrix to the remainder.',
+            'Hub način prvo oduzima troškove i porez, a zatim na preostali iznos primjenjuje trenutnu detaljnu PayParq matricu podjele.',
           )
         : Lang.sel(
             isHr,
-            'Regular mode uses a 10% platform split on all payments. Daily checkout uses a minimum fee floor of €0.99 per booked day when 10% would be lower.',
-            'Regularni način koristi 10% platformsku podjelu na svim uplatama. Dnevni checkout koristi minimalnu naknadu od €0.99 po rezerviranom danu kada bi 10% bilo niže.',
+            'Regular mode deducts expenses and tax first, then applies a 10% platform split to the remainder. Daily checkout uses a minimum fee floor of €0.99 per booked day when 10% of the remainder would be lower.',
+            'Regularni način prvo oduzima troškove i porez, a zatim na preostali iznos primjenjuje 10% platformsku podjelu. Dnevni checkout koristi minimalnu naknadu od €0.99 po rezerviranom danu kada bi 10% preostalog iznosa bilo niže.',
           );
     final hubRows = <MapEntry<String, String>>[
       MapEntry(
@@ -642,8 +642,16 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
         Lang.sel(isHr, 'Daily checkout floor', 'Minimalna dnevna naknada'),
         Lang.sel(
           isHr,
-          'If 10% of total is below €0.99 per booked day, the platform fee becomes quantity × €0.99.',
-          'Ako je 10% ukupnog iznosa manje od €0.99 po rezerviranom danu, platformska naknada postaje količina × €0.99.',
+          'If 10% of the distributable remainder is below €0.99 per booked day, the platform fee becomes quantity × €0.99.',
+          'Ako je 10% preostalog raspodjeljivog iznosa manje od €0.99 po rezerviranom danu, platformska naknada postaje količina × €0.99.',
+        ),
+      ),
+      MapEntry(
+        Lang.sel(isHr, 'Calculation order', 'Redoslijed izračuna'),
+        Lang.sel(
+          isHr,
+          'Expenses + tax are deducted first, then the regular split is applied to the remainder.',
+          'Prvo se oduzimaju troškovi i porez, a zatim se regularna podjela primjenjuje na preostali iznos.',
         ),
       ),
       MapEntry(

@@ -417,9 +417,6 @@ final availableLocationsProvider =
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) return Stream.value([]);
 
-  // Keep reactive dependency so this provider refreshes when profile updates
-  ref.watch(userProfileProvider);
-
   final controller = StreamController<List<Map<String, dynamic>>>();
   var hasEmitted = false;
   var hasEmittedNonEmpty = false;

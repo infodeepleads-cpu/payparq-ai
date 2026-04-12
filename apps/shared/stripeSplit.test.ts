@@ -71,7 +71,7 @@ test("buildStripeSplitPlan handles table-driven payout rules", () => {
       },
     },
     {
-      name: "park taxi subtracts fees from manager payout base",
+      name: "park taxi deducts fees from total before applying payout cap",
       params: {
         chargedAmountCents: 2000,
         sessionAmountCents: 2000,
@@ -85,8 +85,8 @@ test("buildStripeSplitPlan handles table-driven payout rules", () => {
         caseOwnerFixedPayoutCents: 0,
       },
       expected: {
-        ownerPayoutCents: 292,
-        applicationFeeAmount: 1708,
+        ownerPayoutCents: 350,
+        applicationFeeAmount: 1650,
         splitRule: "park_taxi_50pct_base",
       },
     },
@@ -111,7 +111,7 @@ test("buildStripeSplitPlan handles table-driven payout rules", () => {
       },
     },
     {
-      name: "regular lots use 10 percent split on standard payments",
+      name: "regular lots deduct fees first and then use 10 percent split",
       params: {
         chargedAmountCents: 2000,
         sessionAmountCents: 2000,
@@ -127,14 +127,14 @@ test("buildStripeSplitPlan handles table-driven payout rules", () => {
         payoutMode: "regular" as const,
       },
       expected: {
-        ownerPayoutCents: 1800,
-        applicationFeeAmount: 200,
+        ownerPayoutCents: 1631,
+        applicationFeeAmount: 369,
         splitRule: "regular_10pct",
       },
     },
     {
       name:
-        "regular daily lots apply minimum 99 cents per booked day when 10 percent is lower",
+        "regular daily lots apply minimum 99 cents per booked day against distributable funds",
       params: {
         chargedAmountCents: 3500,
         sessionAmountCents: 3500,
@@ -143,15 +143,15 @@ test("buildStripeSplitPlan handles table-driven payout rules", () => {
         pricingType: "daily" as const,
         flowType: "payment",
         destinationAccountId: "acct_manager",
-        expenseRate: 0,
-        taxRate: 0,
-        fixedExpenseCents: 0,
+        expenseRate: 0.079,
+        taxRate: 0.25,
+        fixedExpenseCents: 30,
         caseOwnerFixedPayoutCents: 0,
         payoutMode: "regular" as const,
       },
       expected: {
-        ownerPayoutCents: 3005,
-        applicationFeeAmount: 495,
+        ownerPayoutCents: 1900,
+        applicationFeeAmount: 1600,
         splitRule: "regular_daily_min_099",
       },
     },
@@ -235,7 +235,7 @@ test("stripe payload helpers produce transfer data and metadata assertions", () 
   assert.equal(payload.metadata.split_rule, "park_taxi_50pct_base");
 });
 
-test("regular lot metadata exposes payout mode and minimum daily fee rule", () => {
+test("regular lot metadata exposes payout mode and deduct-first math", () => {
   const splitPlan = buildStripeSplitPlan({
     chargedAmountCents: 3500,
     sessionAmountCents: 3500,
@@ -244,9 +244,9 @@ test("regular lot metadata exposes payout mode and minimum daily fee rule", () =
     pricingType: "daily",
     flowType: "payment",
     destinationAccountId: "acct_manager",
-    expenseRate: 0,
-    taxRate: 0,
-    fixedExpenseCents: 0,
+    expenseRate: 0.079,
+    taxRate: 0.25,
+    fixedExpenseCents: 30,
     payoutMode: "regular",
   });
 
@@ -255,6 +255,10 @@ test("regular lot metadata exposes payout mode and minimum daily fee rule", () =
     caseOwnerFixedPayoutCents: 0,
   });
   assert.equal(metadata.split_payout_mode, "regular");
-  assert.equal(metadata.split_application_fee_cents, "495");
+  assert.equal(metadata.split_application_fee_cents, "1600");
+  assert.equal(metadata.split_expense_cents, "307");
+  assert.equal(metadata.split_tax_cents, "798");
+  assert.equal(metadata.split_distributable_cents, "2395");
+  assert.equal(metadata.split_owner_payout_cents, "1900");
   assert.equal(metadata.split_rule, "regular_daily_min_099");
 });

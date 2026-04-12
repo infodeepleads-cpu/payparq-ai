@@ -126,6 +126,43 @@ export function resolveLotPayoutMode(
   return metadata.hub_enabled === true ? "hub" : "regular";
 }
 
+function resolveDistributionAmounts(params: {
+  chargedCents: number;
+  expenseRate: number;
+  taxRate: number;
+  fixedExpenseCents: number;
+}) {
+  const chargedCents = toCents(params.chargedCents);
+  const expenseByRate = Math.round(
+    chargedCents * Math.max(0, params.expenseRate),
+  );
+  const expenseCents = Math.max(
+    0,
+    Math.min(
+      chargedCents,
+      expenseByRate + Math.max(0, params.fixedExpenseCents),
+    ),
+  );
+  const taxableBase = Math.max(0, chargedCents - expenseCents);
+  const taxCents = Math.max(
+    0,
+    Math.min(
+      taxableBase,
+      Math.round(taxableBase * Math.max(0, params.taxRate)),
+    ),
+  );
+  const distributableCents = Math.max(
+    0,
+    chargedCents - expenseCents - taxCents,
+  );
+  return {
+    splitBaseCents: chargedCents,
+    expenseCents,
+    taxCents,
+    distributableCents,
+  };
+}
+
 export function buildStripeSplitPlan(params: {
   chargedAmountCents: number;
   sessionAmountCents?: number;
@@ -160,30 +197,49 @@ export function buildStripeSplitPlan(params: {
   const isParkTaxi = params.flowType === "park_now";
   const isCaseFlow = params.flowType === "cases" ||
     params.flowType === "case_payment";
+  const distributionAmounts = resolveDistributionAmounts({
+    chargedCents: charged,
+    expenseRate: params.expenseRate,
+    taxRate: params.taxRate,
+    fixedExpenseCents: params.fixedExpenseCents,
+  });
   if (payoutMode === "regular") {
-    const tenPercentFee = Math.round(charged * 0.1);
+    const tenPercentFee = Math.round(
+      distributionAmounts.distributableCents * 0.1,
+    );
     const dailyMinimumFee = params.pricingType === "daily"
       ? sessionQuantity * regularDailyMinimumPlatformFeeCents
       : 0;
-    const applicationFeeAmount = Math.max(
+    const platformSplitCents = Math.max(
       0,
-      Math.min(charged, Math.max(tenPercentFee, dailyMinimumFee)),
+      Math.min(
+        distributionAmounts.distributableCents,
+        Math.max(tenPercentFee, dailyMinimumFee),
+      ),
     );
-    const ownerPayoutCents = Math.max(0, charged - applicationFeeAmount);
-    const ownerShareRate = charged > 0 ? ownerPayoutCents / charged : 0;
-    const platformShareRate = charged > 0 ? applicationFeeAmount / charged : 0;
+    const ownerPayoutCents = Math.max(
+      0,
+      distributionAmounts.distributableCents - platformSplitCents,
+    );
+    const applicationFeeAmount = Math.max(0, charged - ownerPayoutCents);
+    const ownerShareRate = distributionAmounts.distributableCents > 0
+      ? ownerPayoutCents / distributionAmounts.distributableCents
+      : 0;
+    const platformShareRate = distributionAmounts.distributableCents > 0
+      ? platformSplitCents / distributionAmounts.distributableCents
+      : 0;
     return {
       destinationAccountId: params.destinationAccountId,
       applicationFeeAmount,
       ownerPayoutCents,
-      splitBaseCents: charged,
-      expenseCents: 0,
-      taxCents: 0,
-      distributableCents: charged,
+      splitBaseCents: distributionAmounts.splitBaseCents,
+      expenseCents: distributionAmounts.expenseCents,
+      taxCents: distributionAmounts.taxCents,
+      distributableCents: distributionAmounts.distributableCents,
       ownerShareRate,
       platformShareRate,
       splitRule:
-        dailyMinimumFee > 0 && applicationFeeAmount === dailyMinimumFee &&
+        dailyMinimumFee > 0 && platformSplitCents === dailyMinimumFee &&
           dailyMinimumFee > tenPercentFee
           ? "regular_daily_min_099"
           : "regular_10pct",
@@ -223,36 +279,18 @@ export function buildStripeSplitPlan(params: {
   const baseFromPolicy = isParkTaxi
     ? Math.round(parkTaxiDailyTicketTotalCents * 0.5)
     : sessionAmount;
-  const splitBaseCents = Math.max(0, Math.min(charged, baseFromPolicy));
-  const expenseByRate = Math.round(
-    splitBaseCents * Math.max(0, params.expenseRate),
-  );
-  const expenseCents = Math.max(
+  const splitBaseCents = Math.max(
     0,
-    Math.min(
-      splitBaseCents,
-      expenseByRate + Math.max(0, params.fixedExpenseCents),
-    ),
+    Math.min(distributionAmounts.distributableCents, baseFromPolicy),
   );
-  const taxableBase = Math.max(0, splitBaseCents - expenseCents);
-  const taxCents = Math.max(
-    0,
-    Math.min(
-      taxableBase,
-      Math.round(taxableBase * Math.max(0, params.taxRate)),
-    ),
-  );
-  const distributableCents = Math.max(
-    0,
-    splitBaseCents - expenseCents - taxCents,
-  );
+  const expenseCents = distributionAmounts.expenseCents;
+  const taxCents = distributionAmounts.taxCents;
+  const distributableCents = distributionAmounts.distributableCents;
   const ownerPayoutCents = Math.max(
     0,
     Math.min(
       charged,
-      isParkTaxi
-        ? distributableCents
-        : Math.round(distributableCents * ownerShareRate),
+      isParkTaxi ? splitBaseCents : Math.round(splitBaseCents * ownerShareRate),
     ),
   );
   const applicationFeeAmount = Math.max(

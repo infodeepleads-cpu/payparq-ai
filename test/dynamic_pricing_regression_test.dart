@@ -1099,12 +1099,16 @@ void main() {
       sharedContent.contains('export function resolveLotPayoutMode') &&
           sharedContent
               .contains('metadata.hub_enabled === true ? "hub" : "regular"') &&
+          sharedContent.contains('function resolveDistributionAmounts(') &&
           sharedContent
               .contains('const payoutMode = params.payoutMode ?? "hub";') &&
+          sharedContent.contains('chargedCents: charged') &&
           sharedContent
-              .contains('const tenPercentFee = Math.round(charged * 0.1);') &&
+              .contains('distributionAmounts.distributableCents * 0.1') &&
           sharedContent.contains(
               'sessionQuantity * regularDailyMinimumPlatformFeeCents') &&
+          sharedContent.contains('distributionAmounts.expenseCents') &&
+          sharedContent.contains('distributionAmounts.taxCents') &&
           sharedContent.contains('"regular_daily_min_099"') &&
           checkoutContent.contains('payoutMode: lotPayoutMode') &&
           checkoutContent.contains('lotPayoutMode') &&
@@ -1112,12 +1116,13 @@ void main() {
               .contains('lotPayoutMode = resolveLotPayoutMode') &&
           edgeCheckoutContent
               .contains('payoutMode: splitContext.lotPayoutMode') &&
-          financeContent.contains(
-              'Regular mode uses a 10% platform split on all payments.') &&
+          financeContent
+              .contains('Regular mode deducts expenses and tax first') &&
+          financeContent.contains('Hub mode deducts expenses and tax first') &&
           financeContent.contains('quantity × €0.99.'),
       isTrue,
       reason:
-          'Hub enablement must be the sole payout-mode switch, regular daily lots must use the minimum per-day platform fee floor, and Finance must explain the active policy clearly.',
+          'Hub enablement must remain the sole payout-mode switch, split math must deduct expenses and tax before both hub and regular payout rules, and Finance must explain the active policy clearly.',
     );
   });
 
