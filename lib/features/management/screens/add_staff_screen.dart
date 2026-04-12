@@ -11,6 +11,7 @@ import '../../../logic/providers/locale_provider.dart';
 import '../../../widgets/skeleton_loader.dart';
 import '../../../utils/list_search_filter.dart';
 import '../../../utils/async_action_handler.dart';
+import '../../../utils/role_labels.dart';
 import '../../../widgets/confirm_delete_dialog.dart';
 import '../providers/staff_controller.dart';
 import '../../../services/error_mapper.dart';
@@ -133,12 +134,12 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                           isSuperAdmin
                               ? Lang.sel(
                                   isCroatian,
-                                  'Super Admin Mode: Full access to all team members.',
-                                  'Super Admin način: Potpun pristup svim članovima tima.')
+                                  'National Manager mode: Full access to all team members.',
+                                  'Način nacionalnog menadžera: Potpun pristup svim članovima tima.')
                               : Lang.sel(
                                   isCroatian,
-                                  'Manage your team, managers, and officers.',
-                                  'Upravljajte timom, menadžerima i službenicima.'),
+                                  'Manage your team, lot partners, and agents.',
+                                  'Upravljajte timom, partnerima parkirališta i agentima.'),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppTheme.textSecondary,
@@ -314,7 +315,10 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildStatusBadge(
-                                  normalizedUserRole.toUpperCase(),
+                                  productRoleLabel(
+                                    normalizedUserRole,
+                                    isCroatian: isCroatian,
+                                  ),
                                 ),
                                 const SizedBox(width: 24),
                                 ElevatedButton(
@@ -642,21 +646,21 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                                 value: 'admin',
                                 child: Text(Lang.sel(
                                     ref.read(localeIsCroatianProvider),
-                                    'Admin (Assigned Locations)',
-                                    'Admin (dodijeljene lokacije)'))),
+                                    'City Manager (Assigned Locations)',
+                                    'Gradski menadžer (dodijeljene lokacije)'))),
                           if (!isManagerCreator)
                             DropdownMenuItem(
                                 value: 'manager',
                                 child: Text(Lang.sel(
                                     ref.read(localeIsCroatianProvider),
-                                    'Manager (Full Access)',
-                                    'Menadžer (potpuni pristup)'))),
+                                    'Lot Partner (Full Access)',
+                                    'Partner parkirališta (potpuni pristup)'))),
                           DropdownMenuItem(
                               value: 'officer',
                               child: Text(Lang.sel(
                                   ref.read(localeIsCroatianProvider),
-                                  'Officer (Enforcement Only)',
-                                  'Službenik (samo nadzor)'))),
+                                  'Agent (Enforcement Only)',
+                                  'Agent (samo nadzor)'))),
                         ],
                         onChanged: (v) =>
                             setDialogState(() => selectedRole = v!),
@@ -687,14 +691,17 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                             itemBuilder: (context, index) {
                               final loc = locations[index];
                               final locId = (loc['id'] ?? '').toString();
-                              final displayId = (loc['display_id'] ?? '').toString();
+                              final displayId =
+                                  (loc['display_id'] ?? '').toString();
                               final isSelected =
                                   selectedLocationIds.contains(locId);
 
                               return CheckboxListTile(
                                 title: Text(loc['name'] ??
-                                    Lang.sel(ref.read(localeIsCroatianProvider),
-                                        'Lot $displayId', 'Parkiralište $displayId')),
+                                    Lang.sel(
+                                        ref.read(localeIsCroatianProvider),
+                                        'Lot $displayId',
+                                        'Parkiralište $displayId')),
                                 subtitle: Text(Lang.sel(
                                     ref.read(localeIsCroatianProvider),
                                     'ID: $displayId',
@@ -734,10 +741,9 @@ class _AddStaffScreenState extends ConsumerState<AddStaffScreen> {
                     ? null
                     : () async {
                         if (formKey.currentState!.validate()) {
-                          final requiresAssignment =
-                              selectedRole == 'admin' ||
-                                  selectedRole == 'manager' ||
-                                  selectedRole == 'officer';
+                          final requiresAssignment = selectedRole == 'admin' ||
+                              selectedRole == 'manager' ||
+                              selectedRole == 'officer';
                           if (requiresAssignment &&
                               selectedLocationIds.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(

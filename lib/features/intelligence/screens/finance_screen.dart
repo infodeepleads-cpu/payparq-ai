@@ -8,6 +8,7 @@ import '../../../../logic/providers/locale_provider.dart';
 import '../providers/finance_controller.dart';
 import '../../../../services/error_mapper.dart';
 import '../../../../utils/async_action_handler.dart';
+import '../../../../utils/role_labels.dart';
 
 class FinanceScreen extends ConsumerStatefulWidget {
   const FinanceScreen({super.key});
@@ -684,7 +685,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            Lang.sel(isHr, 'Super Admin Payouts', 'Isplate super admina'),
+            Lang.sel(isHr, 'National Manager Payouts',
+                'Isplate nacionalnog menadžera'),
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -695,8 +697,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           Text(
             Lang.sel(
               isHr,
-              'Send manual payouts to officer and admin connected accounts.',
-              'Pošaljite ručne isplate na Stripe račune officera i admina.',
+              'Send manual payouts to agent and city manager connected accounts.',
+              'Pošaljite ručne isplate na Stripe račune agenta i gradskog menadžera.',
             ),
             style: GoogleFonts.inter(
               fontSize: 13,
@@ -726,11 +728,12 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                   items: [
                     DropdownMenuItem(
                       value: 'officer',
-                      child: Text(Lang.sel(isHr, 'Officer', 'Officer')),
+                      child:
+                          Text(productRoleLabel('officer', isCroatian: isHr)),
                     ),
                     DropdownMenuItem(
                       value: 'admin',
-                      child: Text(Lang.sel(isHr, 'Admin', 'Admin')),
+                      child: Text(productRoleLabel('admin', isCroatian: isHr)),
                     ),
                   ],
                   onChanged: _isSubmittingManualPayout
@@ -806,8 +809,8 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                 child: Text(
                   Lang.sel(
                     isHr,
-                    'Manager finances are paid immediately through Stripe Connect destination splits on each payment.',
-                    'Manager financije se isplaćuju odmah kroz Stripe Connect podjelu na svakoj uplati.',
+                    'Lot Partner finances are paid immediately through Stripe Connect destination splits on each payment.',
+                    'Financije partnera parkirališta isplaćuju se odmah kroz Stripe Connect podjelu na svakoj uplati.',
                   ),
                   style: GoogleFonts.inter(
                     fontSize: 12,

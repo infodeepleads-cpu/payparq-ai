@@ -8,6 +8,7 @@ import '../logic/providers/auth_providers.dart';
 import '../logic/providers/locale_provider.dart';
 import '../logic/providers/auth_controller.dart';
 import '../utils/async_action_handler.dart';
+import '../utils/role_labels.dart';
 import '../services/error_mapper.dart';
 import '../screens/deferred/hud_loader.dart' deferred as hud_mod;
 import '../screens/deferred/hud_loader.dart' as hud_sync;
@@ -815,13 +816,10 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
                                 (() {
                                   final roleKey =
                                       (profile['role'] ?? 'user').toString();
-                                  final roleLabel = {
-                                        'super_admin': 'Super Admin',
-                                        'admin': 'Admin',
-                                        'manager': 'Manager',
-                                        'officer': 'Officer',
-                                      }[roleKey] ??
-                                      'User';
+                                  final roleLabel = productRoleLabel(
+                                    roleKey,
+                                    isCroatian: isHr,
+                                  );
                                   return roleLabel;
                                 })(),
                                 style: GoogleFonts.inter(

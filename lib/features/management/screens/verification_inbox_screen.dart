@@ -335,7 +335,7 @@ class _VerificationInboxScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              'Super Admin: Review pending lot verifications',
+              'National Manager: Review pending lot verifications',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.textSecondary,

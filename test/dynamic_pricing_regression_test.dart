@@ -642,11 +642,35 @@ void main() {
           content.contains('targetRole === "manager"') &&
           content.contains(
               'canCreateTargetRole = await ownsAllRequestedLocations(') &&
+          content.contains('const callerRole = normalizeRole(') &&
           content.contains(
-              'normalizeRole(callerProfile?.role ?? roleFromMetadata(callerUserData.user))'),
+              'callerProfile?.role ?? roleFromMetadata(callerUserData.user)'),
       isTrue,
       reason:
           'Manager creation must work for admins with owned existing lots even when profile role is stale, while preserving backend permission checks.',
+    );
+  });
+
+  test('Create-officer enforces a single city manager and lot partner per lot',
+      () async {
+    final file = File('supabase/functions/create-officer/index.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains(
+              'function productRoleName(role: "admin" | "manager"): string {') &&
+          content.contains(
+              '(targetRole === "admin" || targetRole === "manager")') &&
+          content.contains(".from(\"officer_assignments\")") &&
+          content.contains('.in("location_id", permissionLocationIds)') &&
+          content.contains(".from(\"profiles\")") &&
+          content.contains('.eq("role", targetRole)') &&
+          content.contains('Selected location already has a') &&
+          content.contains('productRoleName(targetRole)') &&
+          content.contains('assigned`'),
+      isTrue,
+      reason:
+          'Staff creation must prevent assigning more than one City Manager or Lot Partner to the same lot while preserving the existing internal role values.',
     );
   });
 
@@ -1007,6 +1031,53 @@ void main() {
       isTrue,
       reason:
           'Finance UI should treat an existing Stripe account as connected, but still route incomplete accounts back into onboarding instead of opening a dashboard login link that can fail with a function 500.',
+    );
+  });
+
+  test(
+      'Product role labels map to National Manager, City Manager, Lot Partner, and Agent',
+      () async {
+    final roleLabelsFile = File('lib/utils/role_labels.dart');
+    final addStaffFile =
+        File('lib/features/management/screens/add_staff_screen.dart');
+    final mainScaffoldFile = File('lib/main_scaffold.dart');
+    final financeFile =
+        File('lib/features/intelligence/screens/finance_screen.dart');
+
+    final roleLabelsContent = await roleLabelsFile.readAsString();
+    final addStaffContent = await addStaffFile.readAsString();
+    final mainScaffoldContent = await mainScaffoldFile.readAsString();
+    final financeContent = await financeFile.readAsString();
+
+    expect(
+      roleLabelsContent.contains("'National Manager'") &&
+          roleLabelsContent.contains("'City Manager'") &&
+          roleLabelsContent.contains("'Lot Partner'") &&
+          roleLabelsContent.contains("'Agent'") &&
+          addStaffContent.contains('City Manager (Assigned Locations)') &&
+          addStaffContent.contains('Lot Partner (Full Access)') &&
+          addStaffContent.contains('Agent (Enforcement Only)') &&
+          mainScaffoldContent.contains('productRoleLabel(') &&
+          financeContent.contains('National Manager Payouts'),
+      isTrue,
+      reason:
+          'Visible product language should change without renaming the underlying internal role enums.',
+    );
+  });
+
+  test('Automatic Stripe Connect splits remain exclusive to manager role',
+      () async {
+    final file = File('apps/shared/stripeSplit.ts');
+    final content = await file.readAsString();
+
+    expect(
+      content.contains('export function isAutomaticSplitEligibleRole') &&
+          content.contains('return normalizeRole(value) === "manager";') &&
+          content.contains(
+              'const splitEligible = isAutomaticSplitEligibleRole(normalizedRole) && destinationAccountId.length > 0 && stripeReady;'),
+      isTrue,
+      reason:
+          'Only the manager role should receive automatic lot-owner Stripe Connect split routing.',
     );
   });
 

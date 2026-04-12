@@ -210,8 +210,8 @@ class _UploadCaseFormState extends ConsumerState<UploadCaseForm> {
                         ),
                         const SizedBox(height: 24),
                         _buildTextField(
-                          label: Lang.sel(
-                              isHr, 'Officer Notes', 'Bilješke službenika'),
+                          label:
+                              Lang.sel(isHr, 'Agent Notes', 'Bilješke agenta'),
                           controller: _notesController,
                           hint: Lang.sel(isHr, 'Additional context...',
                               'Dodatni kontekst...'),

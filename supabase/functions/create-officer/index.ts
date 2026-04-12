@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.0";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const bootstrapSecret = (Deno.env.get("BREAK_GLASS_BOOTSTRAP_SECRET") ?? "").trim();
+const bootstrapSecret = (Deno.env.get("BREAK_GLASS_BOOTSTRAP_SECRET") ?? "")
+  .trim();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,20 +24,25 @@ function json(data: Record<string, unknown>, status = 200): Response {
   });
 }
 
-function normalizeRole(raw: unknown): "super_admin" | "admin" | "manager" | "officer" {
+function normalizeRole(
+  raw: unknown,
+): "super_admin" | "admin" | "manager" | "officer" {
   const role = String(raw ?? "")
     .trim()
     .toLowerCase()
     .replaceAll("-", "_")
     .replaceAll(" ", "_");
-  if (role === "superadmin" || role.startsWith("super_admin")) return "super_admin";
+  if (role === "superadmin" || role.startsWith("super_admin")) {
+    return "super_admin";
+  }
   if (role.startsWith("admin")) return "admin";
   if (role.startsWith("manager")) return "manager";
   return "officer";
 }
 
 function randomPassword(length = 14): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#%";
+  const alphabet =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#%";
   const arr = crypto.getRandomValues(new Uint32Array(length));
   let out = "";
   for (let i = 0; i < length; i++) {
@@ -51,7 +57,9 @@ function isEmail(value: string): boolean {
 
 function canCreate(callerRole: string, targetRole: string): boolean {
   if (callerRole === "super_admin") return true;
-  if (callerRole === "admin") return targetRole === "manager" || targetRole === "officer";
+  if (callerRole === "admin") {
+    return targetRole === "manager" || targetRole === "officer";
+  }
   if (callerRole === "manager") return targetRole === "officer";
   return false;
 }
@@ -63,6 +71,10 @@ function roleFromMetadata(user: any): string {
       user?.user_metadata?.user_role ??
       user?.app_metadata?.user_role,
   );
+}
+
+function productRoleName(role: "admin" | "manager"): string {
+  return role === "admin" ? "City Manager" : "Lot Partner";
 }
 
 async function ownsAllRequestedLocations(
@@ -82,7 +94,9 @@ async function ownsAllRequestedLocations(
     if (error || !data) return null;
     return data;
   }));
-  return locRows.every((row) => row && String(row.owner_id ?? "") === callerUserId);
+  return locRows.every((row) =>
+    row && String(row.owner_id ?? "") === callerUserId
+  );
 }
 
 async function hasPrivilegedProfile(): Promise<boolean> {
@@ -104,7 +118,9 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
     });
     if (error) throw new Error(error.message);
     const users = data?.users ?? [];
-    const match = users.find((u: any) => (u.email ?? "").toLowerCase() === needle);
+    const match = users.find((u: any) =>
+      (u.email ?? "").toLowerCase() === needle
+    );
     if (match?.id) return match.id;
     if (users.length < 200) break;
     page++;
@@ -136,7 +152,9 @@ serve(async (req) => {
       }
       const privilegedExists = await hasPrivilegedProfile();
       if (privilegedExists) {
-        return json({ error: "Bootstrap is allowed only when no privileged profiles exist" }, 409);
+        return json({
+          error: "Bootstrap is allowed only when no privileged profiles exist",
+        }, 409);
       }
       const email = String(body?.email ?? "").trim().toLowerCase();
       const name = String(body?.name ?? "").trim();
@@ -147,28 +165,34 @@ serve(async (req) => {
       }
       let userId = await findUserIdByEmail(email);
       if (!userId) {
-        const { data: created, error: createError } = await admin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: {
-            role: "super_admin",
-            name,
-          },
-        });
+        const { data: created, error: createError } = await admin.auth.admin
+          .createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: {
+              role: "super_admin",
+              name,
+            },
+          });
         if (createError || !created.user?.id) {
-          return json({ error: createError?.message ?? "Failed to create bootstrap user" }, 500);
+          return json({
+            error: createError?.message ?? "Failed to create bootstrap user",
+          }, 500);
         }
         userId = created.user.id;
       } else {
-        const { error: updateUserError } = await admin.auth.admin.updateUserById(userId, {
-          password,
-          user_metadata: {
-            role: "super_admin",
-            name,
-          },
-        });
-        if (updateUserError) return json({ error: updateUserError.message }, 500);
+        const { error: updateUserError } = await admin.auth.admin
+          .updateUserById(userId, {
+            password,
+            user_metadata: {
+              role: "super_admin",
+              name,
+            },
+          });
+        if (updateUserError) {
+          return json({ error: updateUserError.message }, 500);
+        }
       }
 
       const { data: profileData, error: profileError } = await admin
@@ -197,7 +221,8 @@ serve(async (req) => {
     const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!jwt) return json({ error: "Unauthorized" }, 401);
 
-    const { data: callerUserData, error: callerUserError } = await admin.auth.getUser(jwt);
+    const { data: callerUserData, error: callerUserError } = await admin.auth
+      .getUser(jwt);
     if (callerUserError || !callerUserData.user) {
       return json({ error: "Unauthorized" }, 401);
     }
@@ -208,11 +233,17 @@ serve(async (req) => {
       .select("id,role")
       .eq("id", callerUserId)
       .maybeSingle();
-    if (callerProfileError) return json({ error: callerProfileError.message }, 403);
-    const callerRole = normalizeRole(callerProfile?.role ?? roleFromMetadata(callerUserData.user));
+    if (callerProfileError) {
+      return json({ error: callerProfileError.message }, 403);
+    }
+    const callerRole = normalizeRole(
+      callerProfile?.role ?? roleFromMetadata(callerUserData.user),
+    );
 
     if (action === "delete_staff" || action === "delete") {
-      const targetUserId = String(body?.userId ?? body?.user_id ?? body?.id ?? "").trim();
+      const targetUserId = String(
+        body?.userId ?? body?.user_id ?? body?.id ?? "",
+      ).trim();
       if (!targetUserId) return json({ error: "Missing userId" }, 400);
       if (targetUserId === callerUserId) {
         return json({ error: "You cannot delete your own account" }, 400);
@@ -223,7 +254,9 @@ serve(async (req) => {
         .select("id,role")
         .eq("id", targetUserId)
         .maybeSingle();
-      if (targetProfileError) return json({ error: targetProfileError.message }, 500);
+      if (targetProfileError) {
+        return json({ error: targetProfileError.message }, 500);
+      }
       const targetRole = normalizeRole(targetProfile?.role);
       if (!canCreate(callerRole, targetRole)) {
         return json({ error: "No permission to delete this role" }, 403);
@@ -233,28 +266,41 @@ serve(async (req) => {
         .from("officer_assignments")
         .delete()
         .eq("officer_id", targetUserId);
-      if (assignmentDeleteError) return json({ error: assignmentDeleteError.message }, 500);
+      if (assignmentDeleteError) {
+        return json({ error: assignmentDeleteError.message }, 500);
+      }
 
       const { error: assignerDeleteError } = await admin
         .from("officer_assignments")
         .delete()
         .eq("assigned_by", targetUserId);
-      if (assignerDeleteError) return json({ error: assignerDeleteError.message }, 500);
+      if (assignerDeleteError) {
+        return json({ error: assignerDeleteError.message }, 500);
+      }
 
       const { error: locationsUpdateError } = await admin
         .from("locations")
         .update({ owner_id: callerUserId })
         .eq("owner_id", targetUserId);
-      if (locationsUpdateError) return json({ error: locationsUpdateError.message }, 500);
+      if (locationsUpdateError) {
+        return json({ error: locationsUpdateError.message }, 500);
+      }
 
       const { error: profileDeleteError } = await admin
         .from("profiles")
         .delete()
         .eq("id", targetUserId);
-      if (profileDeleteError) return json({ error: profileDeleteError.message }, 500);
+      if (profileDeleteError) {
+        return json({ error: profileDeleteError.message }, 500);
+      }
 
-      const { error: authDeleteError } = await admin.auth.admin.deleteUser(targetUserId);
-      if (authDeleteError && !authDeleteError.message.toLowerCase().includes("not found")) {
+      const { error: authDeleteError } = await admin.auth.admin.deleteUser(
+        targetUserId,
+      );
+      if (
+        authDeleteError &&
+        !authDeleteError.message.toLowerCase().includes("not found")
+      ) {
         return json({ error: authDeleteError.message }, 500);
       }
 
@@ -280,8 +326,7 @@ serve(async (req) => {
 
     if (!isEmail(email)) return json({ error: "Invalid email" }, 400);
     let canCreateTargetRole = canCreate(callerRole, targetRole);
-    const canUseOwnerFallback =
-      !canCreateTargetRole &&
+    const canUseOwnerFallback = !canCreateTargetRole &&
       targetRole === "manager" &&
       permissionLocationIds.length > 0;
     if (canUseOwnerFallback) {
@@ -294,14 +339,21 @@ serve(async (req) => {
       return json({ error: "No permission to create this role" }, 403);
     }
     if (
-      (targetRole === "admin" || targetRole === "manager" || targetRole === "officer") &&
+      (targetRole === "admin" || targetRole === "manager" ||
+        targetRole === "officer") &&
       !locationId
     ) {
-      return json({ error: "Location is required for admin/manager/officer" }, 400);
+      return json(
+        { error: "Location is required for admin/manager/officer" },
+        400,
+      );
     }
 
-    let primaryLocation: { id: string; display_id: string | null; name: string | null } | null =
-      null;
+    let primaryLocation: {
+      id: string;
+      display_id: string | null;
+      name: string | null;
+    } | null = null;
     if (locationId) {
       const { data: locationData, error: locationError } = await admin
         .from("locations")
@@ -316,42 +368,126 @@ serve(async (req) => {
       }
       primaryLocation = {
         id: String(locationData.id),
-        display_id: locationData.display_id ? String(locationData.display_id) : null,
+        display_id: locationData.display_id
+          ? String(locationData.display_id)
+          : null,
         name: locationData.name ? String(locationData.name) : null,
       };
     }
 
     let userId = await findUserIdByEmail(email);
+
+    if (
+      (targetRole === "admin" || targetRole === "manager") &&
+      permissionLocationIds.length > 0
+    ) {
+      const { data: assignedRows, error: assignedRowsError } = await admin
+        .from("officer_assignments")
+        .select("officer_id, location_id")
+        .in("location_id", permissionLocationIds);
+      if (assignedRowsError) {
+        return json({ error: assignedRowsError.message }, 500);
+      }
+
+      const assignedOfficerIds = [
+        ...new Set(
+          (assignedRows ?? [])
+            .map((row: { officer_id: unknown }) =>
+              String(row.officer_id ?? "").trim()
+            )
+            .filter((id: string) => id.length > 0 && id !== userId),
+        ),
+      ];
+
+      const { data: directProfiles, error: directProfilesError } = await admin
+        .from("profiles")
+        .select("id, role, location_id")
+        .eq("role", targetRole)
+        .in("location_id", permissionLocationIds);
+      if (directProfilesError) {
+        return json({ error: directProfilesError.message }, 500);
+      }
+
+      let assignedProfiles: Array<{ id: string; role: string | null }> = [];
+      if (assignedOfficerIds.length > 0) {
+        const { data: assignedProfileRows, error: assignedProfilesError } =
+          await admin
+            .from("profiles")
+            .select("id, role")
+            .in("id", assignedOfficerIds);
+        if (assignedProfilesError) {
+          return json({ error: assignedProfilesError.message }, 500);
+        }
+        assignedProfiles = (assignedProfileRows ?? []).map((
+          row: { id: unknown; role: unknown },
+        ) => ({
+          id: String(row.id),
+          role: row.role ? String(row.role) : null,
+        }));
+      }
+
+      const conflictingAssignedProfileIds = new Set(
+        assignedProfiles
+          .filter((profile) => normalizeRole(profile.role) === targetRole)
+          .map((profile) => profile.id),
+      );
+
+      const conflictExists = (directProfiles ?? []).some(
+        (profile: { id: unknown; role: unknown }) => {
+          const profileId = String(profile.id ?? "").trim();
+          if (!profileId || profileId === userId) return false;
+          return normalizeRole(profile.role) === targetRole;
+        },
+      ) || conflictingAssignedProfileIds.size > 0;
+
+      if (conflictExists) {
+        return json(
+          {
+            error: `Selected location already has a ${
+              productRoleName(targetRole)
+            } assigned`,
+          },
+          409,
+        );
+      }
+    }
+
     const generatedPassword = randomPassword();
 
     if (!userId) {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email,
-        password: generatedPassword,
-        email_confirm: true,
-        user_metadata: {
-          role: targetRole,
-          name,
-          location_id: locationId,
-          location_display_id: primaryLocation?.display_id ?? null,
-          location_name: primaryLocation?.name ?? null,
-        },
-      });
+      const { data: created, error: createError } = await admin.auth.admin
+        .createUser({
+          email,
+          password: generatedPassword,
+          email_confirm: true,
+          user_metadata: {
+            role: targetRole,
+            name,
+            location_id: locationId,
+            location_display_id: primaryLocation?.display_id ?? null,
+            location_name: primaryLocation?.name ?? null,
+          },
+        });
       if (createError || !created.user?.id) {
-        return json({ error: createError?.message ?? "Failed to create auth user" }, 500);
+        return json({
+          error: createError?.message ?? "Failed to create auth user",
+        }, 500);
       }
       userId = created.user.id;
     } else {
-      const { error: updateUserError } = await admin.auth.admin.updateUserById(userId, {
-        password: generatedPassword,
-        user_metadata: {
-          role: targetRole,
-          name,
-          location_id: locationId,
-          location_display_id: primaryLocation?.display_id ?? null,
-          location_name: primaryLocation?.name ?? null,
+      const { error: updateUserError } = await admin.auth.admin.updateUserById(
+        userId,
+        {
+          password: generatedPassword,
+          user_metadata: {
+            role: targetRole,
+            name,
+            location_id: locationId,
+            location_display_id: primaryLocation?.display_id ?? null,
+            location_name: primaryLocation?.name ?? null,
+          },
         },
-      });
+      );
       if (updateUserError) {
         return json({ error: updateUserError.message }, 500);
       }
@@ -382,7 +518,10 @@ serve(async (req) => {
 
     await admin.from("officer_assignments").delete().eq("officer_id", userId);
 
-    if (targetRole === "admin" || targetRole === "manager" || targetRole === "officer") {
+    if (
+      targetRole === "admin" || targetRole === "manager" ||
+      targetRole === "officer"
+    ) {
       const assignmentLocationIds = uniqueLocationIds.length > 0
         ? uniqueLocationIds
         : (locationId ? [locationId] : []);

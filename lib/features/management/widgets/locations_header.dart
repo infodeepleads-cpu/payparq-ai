@@ -66,8 +66,8 @@ class LocationsHeader extends ConsumerWidget {
                           isSuperAdmin
                               ? Lang.sel(
                                   isCroatian,
-                                  'Super Admin Mode: Viewing all locations',
-                                  'Super Admin način: Prikaz svih lokacija')
+                                  'National Manager Mode: Viewing all locations',
+                                  'Način nacionalnog menadžera: Prikaz svih lokacija')
                               : Lang.sel(
                                   isCroatian,
                                   'Managing access for Location ID: $locationId',
