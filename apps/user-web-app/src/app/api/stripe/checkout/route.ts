@@ -1854,7 +1854,7 @@ export async function GET(req: NextRequest) {
         status: 500,
       });
     }
-    return NextResponse.json({ url: fallbackUrl });
+    return NextResponse.redirect(fallbackUrl, 303);
   }
   try {
     const splitPlan = ownerStripeReady && ownerStripeAccountId
