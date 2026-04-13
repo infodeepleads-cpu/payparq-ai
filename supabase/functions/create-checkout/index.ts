@@ -365,6 +365,41 @@ function asPlainRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
+function requiresLiveSplit(params: {
+  ownerStripeReady: boolean;
+  ownerStripeAccountId: string | null;
+}) {
+  return params.ownerStripeReady &&
+    typeof params.ownerStripeAccountId === "string" &&
+    params.ownerStripeAccountId.trim().length > 0;
+}
+
+function hasLiveSplitEvidence(params: {
+  splitPlan: ReturnType<typeof buildStripeSplitPlan> | null;
+  splitMetadata: Record<string, string>;
+  paymentIntentData: Record<string, unknown>;
+}) {
+  const transferData = params.paymentIntentData["transfer_data"];
+  const transferDestination = transferData &&
+      typeof transferData === "object" &&
+      !Array.isArray(transferData)
+    ? String(
+      (transferData as Record<string, unknown>)["destination"] ?? "",
+    ).trim()
+    : "";
+  const applicationFeeAmount = Number(
+    params.paymentIntentData["application_fee_amount"] ?? Number.NaN,
+  );
+  return params.splitPlan !== null &&
+    params.splitMetadata["split_enabled"] === "1" &&
+    String(params.splitMetadata["split_destination_account_id"] ?? "").trim()
+      .length > 0 &&
+    String(params.splitMetadata["split_rule"] ?? "").trim().length > 0 &&
+    transferDestination.length > 0 &&
+    Number.isFinite(applicationFeeAmount) &&
+    applicationFeeAmount >= 0;
+}
+
 async function resolveLocationSplitContext(locationUuid: string) {
   const { data: locationData } = await admin
     .from("locations")
@@ -1854,6 +1889,54 @@ serve(async (req: Request) => {
       splitPlan,
       caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
     });
+    const checkoutMetadata = {
+      location_id: locationUuid,
+      display_id: displayId,
+      type,
+      flow: flow || "payment",
+      quantity: String(quantity),
+      amount_cents: String(unitAmountCents),
+      purchase_time_berlin: purchaseTimeDisplay,
+      plate: plate,
+      mobile: mobile,
+      email: email,
+      permit_id: permitId || undefined,
+      check_in: derivedCheckInIso || undefined,
+      check_out: derivedCheckOutIso || undefined,
+      activation_at: activationAt || undefined,
+      allow_plate_override: allowPlateOverride ? "1" : "0",
+      extend_target_session_id: extendTargetSessionId || undefined,
+      extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
+      ...splitMetadata,
+    };
+    const paymentIntentData = buildStripeSplitPaymentIntentData(splitPlan);
+    if (
+      requiresLiveSplit({
+        ownerStripeReady: splitContext.ownerStripeReady,
+        ownerStripeAccountId: splitContext.ownerStripeAccountId,
+      }) &&
+      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
+    ) {
+      console.error("[SPLIT] Missing live split evidence", {
+        locationUuid,
+        displayId,
+        payoutMode: splitContext.lotPayoutMode,
+        ownerStripeReady: splitContext.ownerStripeReady,
+        ownerStripeAccountId: splitContext.ownerStripeAccountId,
+        splitMetadata,
+      });
+      return json({ error: "split_configuration_missing" }, 409);
+    }
+    console.log("[SPLIT] Checkout split snapshot", {
+      locationUuid,
+      displayId,
+      payoutMode: splitContext.lotPayoutMode,
+      splitEnabled: checkoutMetadata.split_enabled,
+      splitRule: checkoutMetadata.split_rule,
+      splitDestination: checkoutMetadata.split_destination_account_id,
+      splitApplicationFeeCents: checkoutMetadata.split_application_fee_cents,
+      splitOwnerPayoutCents: checkoutMetadata.split_owner_payout_cents,
+    });
     const resolvedCustomerId = await resolveCheckoutCustomer({ email, mobile });
     const sessionOptions: any = {
       mode: "payment",
@@ -1888,27 +1971,8 @@ serve(async (req: Request) => {
       }),
       locale: checkoutLocale,
       line_items: [lineItem],
-      metadata: {
-        location_id: locationUuid, // Use UUID
-        display_id: displayId,
-        type,
-        flow: flow || "payment",
-        quantity: String(quantity),
-        amount_cents: String(unitAmountCents),
-        purchase_time_berlin: purchaseTimeDisplay,
-        plate: plate,
-        mobile: mobile,
-        email: email,
-        permit_id: permitId || undefined,
-        check_in: derivedCheckInIso || undefined,
-        check_out: derivedCheckOutIso || undefined,
-        activation_at: activationAt || undefined,
-        allow_plate_override: allowPlateOverride ? "1" : "0",
-        extend_target_session_id: extendTargetSessionId || undefined,
-        extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
-        ...splitMetadata,
-      },
-      payment_intent_data: buildStripeSplitPaymentIntentData(splitPlan),
+      metadata: checkoutMetadata,
+      payment_intent_data: paymentIntentData,
     };
 
     // V6.4: Dynamic Promo Code Management (Manual Entry)
@@ -2075,7 +2139,7 @@ serve(async (req: Request) => {
         entry_time: inactiveEntryTime,
         duration_minutes: inactiveDurationMinutes,
         stripe_metadata: JSON.stringify({
-          ...sessionOptions.metadata,
+          ...checkoutMetadata,
           inactive_pending_seed: shouldSeedInactivePending ? "1" : "0",
           stripe_id: paymentSession.id,
         }),

@@ -232,6 +232,41 @@ function asMetadataRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
+function requiresLiveSplit(params: {
+  ownerStripeReady: boolean;
+  ownerStripeAccountId: string | null;
+}) {
+  return params.ownerStripeReady &&
+    typeof params.ownerStripeAccountId === "string" &&
+    params.ownerStripeAccountId.trim().length > 0;
+}
+
+function hasLiveSplitEvidence(params: {
+  splitPlan: ReturnType<typeof buildStripeSplitPlan> | null;
+  splitMetadata: Record<string, string>;
+  paymentIntentData: Record<string, unknown>;
+}) {
+  const transferData = params.paymentIntentData["transfer_data"];
+  const transferDestination = transferData &&
+      typeof transferData === "object" &&
+      !Array.isArray(transferData)
+    ? String(
+      (transferData as Record<string, unknown>)["destination"] ?? "",
+    ).trim()
+    : "";
+  const applicationFeeAmount = Number(
+    params.paymentIntentData["application_fee_amount"] ?? Number.NaN,
+  );
+  return params.splitPlan !== null &&
+    params.splitMetadata["split_enabled"] === "1" &&
+    String(params.splitMetadata["split_destination_account_id"] ?? "").trim()
+      .length > 0 &&
+    String(params.splitMetadata["split_rule"] ?? "").trim().length > 0 &&
+    transferDestination.length > 0 &&
+    Number.isFinite(applicationFeeAmount) &&
+    applicationFeeAmount >= 0;
+}
+
 function resolveCommissionRateFromMetadata(metadata: unknown): number {
   if (!metadata || typeof metadata !== "object") return 0.15;
   const candidateKeys = [
@@ -833,7 +868,8 @@ async function resolveLocationPricing(
   pricingType: PricingType,
   flowType: string,
 ): Promise<LocationPricingResolution> {
-  if (!supabase) {
+  const locationClient = supabaseAdmin ?? supabase;
+  if (!locationClient) {
     throw { status: 500, message: "supabase_not_configured" };
   }
 
@@ -843,7 +879,7 @@ async function resolveLocationPricing(
   const fallbackDisplayId = displayId || locationId;
   let data: Record<string, unknown> | null = null;
   if (fallbackDisplayId) {
-    const byDisplayId = await supabase
+    const byDisplayId = await locationClient
       .from("locations")
       .select(selectedColumns)
       .eq("display_id", fallbackDisplayId)
@@ -855,7 +891,7 @@ async function resolveLocationPricing(
   }
 
   if (!data && locationId) {
-    const byId = await supabase
+    const byId = await locationClient
       .from("locations")
       .select(selectedColumns)
       .eq("id", locationId)
@@ -889,14 +925,17 @@ async function resolveLocationPricing(
       .verification_metadata ?? null,
   );
   const lotPayoutMode = resolveLotPayoutMode(verificationMetadata);
+  const isLocationsSectionRequest = displayId.trim().length > 0;
+  if (isLocationsSectionRequest && lotPayoutMode !== "hub") {
+    throw { status: 404, message: "location_not_found" };
+  }
   const ownerId = String((data as { owner_id?: string | null }).owner_id ?? "")
     .trim();
   let ownerStripeAccountId: string | null = null;
   let ownerStripeReady = false;
   if (ownerId) {
-    const client = supabaseAdmin ?? supabase;
-    if (client) {
-      const { data: ownerProfile } = await client
+    if (locationClient) {
+      const { data: ownerProfile } = await locationClient
         .from("profiles")
         .select("role,stripe_account_id,stripe_onboarding_complete")
         .eq("id", ownerId)
@@ -1373,6 +1412,40 @@ export async function POST(req: NextRequest) {
       splitPlan,
       caseOwnerFixedPayoutCents,
     });
+    const checkoutMetadata = {
+      location_id: resolvedLocationId,
+      display_id: resolvedDisplayId,
+      plate_number,
+      customer_phone: normalizedCustomerPhone ?? "",
+      customer_email: normalizedCustomerEmail ?? "",
+      flow_type,
+      pricing_type,
+      check_in: effectiveCheckIn,
+      check_out: params.checkOut,
+      extend_target_session_id: extendTargetSessionId,
+      extend_minutes: String(extendMinutes),
+      session_amount_cents: String(params.sessionAmountCents),
+      charged_amount_cents: String(params.chargedAmountCents),
+      wallet_debit_planned_cents: String(params.walletDebitPlannedCents),
+      lot_commission_rate: params.lotCommissionRate.toFixed(4),
+      session_quantity: String(params.sessionQuantity),
+      session_unit_amount_cents: String(unitAmount),
+      minimum_charge_topup_cents: String(
+        Math.max(0, params.chargedAmountCents - stripeShortfallCents),
+      ),
+      ...splitMetadata,
+    };
+    const paymentIntentData = {
+      setup_future_usage: "off_session" as const,
+      ...buildStripeSplitPaymentIntentData(splitPlan),
+      metadata: checkoutMetadata,
+    };
+    if (
+      requiresLiveSplit({ ownerStripeReady, ownerStripeAccountId }) &&
+      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
+    ) {
+      throw new Error("split_configuration_missing");
+    }
     return await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: params.checkoutSuccessUrl,
@@ -1417,56 +1490,8 @@ export async function POST(req: NextRequest) {
         enabled: true,
       },
       ...checkoutCustomerParams,
-      metadata: {
-        location_id: resolvedLocationId,
-        display_id: resolvedDisplayId,
-        plate_number,
-        customer_phone: normalizedCustomerPhone ?? "",
-        customer_email: normalizedCustomerEmail ?? "",
-        flow_type,
-        pricing_type,
-        check_in: effectiveCheckIn,
-        check_out: params.checkOut,
-        extend_target_session_id: extendTargetSessionId,
-        extend_minutes: String(extendMinutes),
-        session_amount_cents: String(params.sessionAmountCents),
-        charged_amount_cents: String(params.chargedAmountCents),
-        wallet_debit_planned_cents: String(params.walletDebitPlannedCents),
-        lot_commission_rate: params.lotCommissionRate.toFixed(4),
-        session_quantity: String(params.sessionQuantity),
-        session_unit_amount_cents: String(unitAmount),
-        minimum_charge_topup_cents: String(
-          Math.max(0, params.chargedAmountCents - stripeShortfallCents),
-        ),
-        ...splitMetadata,
-      },
-      payment_intent_data: {
-        setup_future_usage: "off_session",
-        ...buildStripeSplitPaymentIntentData(splitPlan),
-        metadata: {
-          location_id: resolvedLocationId,
-          display_id: resolvedDisplayId,
-          plate_number,
-          customer_phone: normalizedCustomerPhone ?? "",
-          customer_email: normalizedCustomerEmail ?? "",
-          flow_type,
-          pricing_type,
-          check_in: effectiveCheckIn,
-          check_out: params.checkOut,
-          extend_target_session_id: extendTargetSessionId,
-          extend_minutes: String(extendMinutes),
-          session_amount_cents: String(params.sessionAmountCents),
-          charged_amount_cents: String(params.chargedAmountCents),
-          wallet_debit_planned_cents: String(params.walletDebitPlannedCents),
-          lot_commission_rate: params.lotCommissionRate.toFixed(4),
-          session_quantity: String(params.sessionQuantity),
-          session_unit_amount_cents: String(unitAmount),
-          minimum_charge_topup_cents: String(
-            Math.max(0, params.chargedAmountCents - stripeShortfallCents),
-          ),
-          ...splitMetadata,
-        },
-      },
+      metadata: checkoutMetadata,
+      payment_intent_data: paymentIntentData,
     });
   }
 }
@@ -1806,6 +1831,31 @@ export async function GET(req: NextRequest) {
     minimumChargeApplied,
   }));
   const submitMessage = submitMessageBase;
+  const shouldUseSupabaseCheckout = lotPayoutMode !== "hub";
+  if (shouldUseSupabaseCheckout) {
+    const fallbackUrl = buildSupabaseFunctionCheckoutUrl({
+      locationId: resolvedLocationId,
+      displayId: resolvedDisplayId || undefined,
+      flowType: flow_type,
+      pricingType: pricing_type,
+      checkIn: effectiveCheckIn || undefined,
+      checkOut: finalCheckOut || undefined,
+      quantity,
+      reservationDescription,
+      allowPromotionCodes,
+      customerEmail: normalizedCustomerEmail ?? undefined,
+      customerPhone: normalizedCustomerPhone ?? undefined,
+      plateNumber: plate_number || undefined,
+      extendTargetSessionId,
+      extendMinutes,
+    });
+    if (!fallbackUrl) {
+      return NextResponse.json({ error: "supabase_checkout_unavailable" }, {
+        status: 500,
+      });
+    }
+    return NextResponse.json({ url: fallbackUrl });
+  }
   try {
     const splitPlan = ownerStripeReady && ownerStripeAccountId
       ? buildStripeSplitPlan({
@@ -1829,6 +1879,42 @@ export async function GET(req: NextRequest) {
       splitPlan,
       caseOwnerFixedPayoutCents,
     });
+    const checkoutMetadata = {
+      location_id: resolvedLocationId,
+      display_id: resolvedDisplayId,
+      plate_number,
+      customer_phone: normalizedCustomerPhone ?? "",
+      customer_email: normalizedCustomerEmail ?? "",
+      flow_type,
+      pricing_type,
+      check_in: effectiveCheckIn,
+      check_out: finalCheckOut,
+      extend_target_session_id: extendTargetSessionId,
+      extend_minutes: String(extendMinutes),
+      session_amount_cents: String(sessionAmountCents),
+      charged_amount_cents: String(chargedAmountCents),
+      wallet_debit_planned_cents: String(walletDebitPlannedCents),
+      lot_commission_rate: lotCommissionRate.toFixed(4),
+      session_quantity: String(quantity),
+      session_unit_amount_cents: String(unitAmount),
+      minimum_charge_topup_cents: String(
+        Math.max(0, chargedAmountCents - stripeShortfallCents),
+      ),
+      ...splitMetadata,
+    };
+    const paymentIntentData = {
+      setup_future_usage: "off_session" as const,
+      ...buildStripeSplitPaymentIntentData(splitPlan),
+      metadata: checkoutMetadata,
+    };
+    if (
+      requiresLiveSplit({ ownerStripeReady, ownerStripeAccountId }) &&
+      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
+    ) {
+      return NextResponse.json({ error: "split_configuration_missing" }, {
+        status: 409,
+      });
+    }
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: checkoutSuccessUrl,
@@ -1873,56 +1959,8 @@ export async function GET(req: NextRequest) {
         enabled: true,
       },
       ...checkoutCustomerParams,
-      metadata: {
-        location_id: resolvedLocationId,
-        display_id: resolvedDisplayId,
-        plate_number,
-        customer_phone: normalizedCustomerPhone ?? "",
-        customer_email: normalizedCustomerEmail ?? "",
-        flow_type,
-        pricing_type,
-        check_in: effectiveCheckIn,
-        check_out: finalCheckOut,
-        extend_target_session_id: extendTargetSessionId,
-        extend_minutes: String(extendMinutes),
-        session_amount_cents: String(sessionAmountCents),
-        charged_amount_cents: String(chargedAmountCents),
-        wallet_debit_planned_cents: String(walletDebitPlannedCents),
-        lot_commission_rate: lotCommissionRate.toFixed(4),
-        session_quantity: String(quantity),
-        session_unit_amount_cents: String(unitAmount),
-        minimum_charge_topup_cents: String(
-          Math.max(0, chargedAmountCents - stripeShortfallCents),
-        ),
-        ...splitMetadata,
-      },
-      payment_intent_data: {
-        setup_future_usage: "off_session",
-        ...buildStripeSplitPaymentIntentData(splitPlan),
-        metadata: {
-          location_id: resolvedLocationId,
-          display_id: resolvedDisplayId,
-          plate_number,
-          customer_phone: normalizedCustomerPhone ?? "",
-          customer_email: normalizedCustomerEmail ?? "",
-          flow_type,
-          pricing_type,
-          check_in: effectiveCheckIn,
-          check_out: finalCheckOut,
-          extend_target_session_id: extendTargetSessionId,
-          extend_minutes: String(extendMinutes),
-          session_amount_cents: String(sessionAmountCents),
-          charged_amount_cents: String(chargedAmountCents),
-          wallet_debit_planned_cents: String(walletDebitPlannedCents),
-          lot_commission_rate: lotCommissionRate.toFixed(4),
-          session_quantity: String(quantity),
-          session_unit_amount_cents: String(unitAmount),
-          minimum_charge_topup_cents: String(
-            Math.max(0, chargedAmountCents - stripeShortfallCents),
-          ),
-          ...splitMetadata,
-        },
-      },
+      metadata: checkoutMetadata,
+      payment_intent_data: paymentIntentData,
     });
     return NextResponse.redirect(session.url!, { status: 303 });
   } catch (e: unknown) {
