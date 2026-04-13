@@ -12,7 +12,7 @@ import {
   resolveSplitExpenseRate,
   resolveSplitFixedExpenseCents,
   resolveSplitTaxRate,
-} from "../../../../shared/stripeSplit.ts";
+} from "../../../apps/shared/stripeSplit.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -358,6 +358,13 @@ function toCents(value: number): number {
   return Math.max(0, Math.round(value));
 }
 
+function resolveNonNegativeRate(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return fallback;
+  if (numeric > 1) return Math.min(1, numeric / 100);
+  return Math.min(1, numeric);
+}
+
 function asPlainRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -365,39 +372,11 @@ function asPlainRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
-function requiresLiveSplit(params: {
-  ownerStripeReady: boolean;
-  ownerStripeAccountId: string | null;
-}) {
-  return params.ownerStripeReady &&
-    typeof params.ownerStripeAccountId === "string" &&
-    params.ownerStripeAccountId.trim().length > 0;
-}
-
-function hasLiveSplitEvidence(params: {
-  splitPlan: ReturnType<typeof buildStripeSplitPlan> | null;
-  splitMetadata: Record<string, string>;
-  paymentIntentData: Record<string, unknown>;
-}) {
-  const transferData = params.paymentIntentData["transfer_data"];
-  const transferDestination = transferData &&
-      typeof transferData === "object" &&
-      !Array.isArray(transferData)
-    ? String(
-      (transferData as Record<string, unknown>)["destination"] ?? "",
-    ).trim()
-    : "";
-  const applicationFeeAmount = Number(
-    params.paymentIntentData["application_fee_amount"] ?? Number.NaN,
-  );
-  return params.splitPlan !== null &&
-    params.splitMetadata["split_enabled"] === "1" &&
-    String(params.splitMetadata["split_destination_account_id"] ?? "").trim()
-      .length > 0 &&
-    String(params.splitMetadata["split_rule"] ?? "").trim().length > 0 &&
-    transferDestination.length > 0 &&
-    Number.isFinite(applicationFeeAmount) &&
-    applicationFeeAmount >= 0;
+function resolveSettlementModel(metadata: Record<string, unknown>) {
+  const raw = String(metadata["settlement_model"] ?? "agentic")
+    .trim()
+    .toLowerCase();
+  return raw === "company" ? "company" : "agentic";
 }
 
 async function resolveLocationSplitContext(locationUuid: string) {
@@ -410,6 +389,7 @@ async function resolveLocationSplitContext(locationUuid: string) {
   const verificationMetadata = asPlainRecord(
     locationData?.["verification_metadata"],
   );
+  const settlementModel = resolveSettlementModel(verificationMetadata);
   const lotPayoutMode = resolveLotPayoutMode(verificationMetadata);
   const ownerId = String(locationData?.["owner_id"] ?? "").trim();
 
@@ -429,6 +409,7 @@ async function resolveLocationSplitContext(locationUuid: string) {
   }
 
   return {
+    settlementModel,
     lotPayoutMode,
     ownerStripeAccountId: splitDestination.destinationAccountId,
     ownerStripeReady: splitDestination.splitEligible,
@@ -441,6 +422,11 @@ async function resolveLocationSplitContext(locationUuid: string) {
       verificationMetadata,
       Deno.env.get("PAYPARQ_SPLIT_TAX_RATE") ??
         Deno.env.get("NEXT_PUBLIC_PAYPARQ_SPLIT_TAX_RATE") ?? null,
+    ),
+    companyVatRate: resolveSplitTaxRate(
+      verificationMetadata,
+      Deno.env.get("PAYPARQ_COMPANY_VAT_RATE") ??
+        Deno.env.get("NEXT_PUBLIC_PAYPARQ_COMPANY_VAT_RATE") ?? "0.25",
     ),
     splitFixedExpenseCents: resolveSplitFixedExpenseCents(
       verificationMetadata,
@@ -1860,11 +1846,13 @@ serve(async (req: Request) => {
     const splitContext = locationUuid
       ? await resolveLocationSplitContext(locationUuid)
       : {
+        settlementModel: "agentic",
         lotPayoutMode: "regular",
         ownerStripeAccountId: null,
         ownerStripeReady: false,
         splitExpenseRate: 0,
         splitTaxRate: 0,
+        companyVatRate: 0,
         splitFixedExpenseCents: 0,
         caseOwnerFixedPayoutCents: 0,
       };
@@ -1878,9 +1866,27 @@ serve(async (req: Request) => {
           pricingType: type,
           flowType: flow || "payment",
           destinationAccountId: splitContext.ownerStripeAccountId,
-          expenseRate: splitContext.splitExpenseRate,
-          taxRate: splitContext.splitTaxRate,
-          fixedExpenseCents: splitContext.splitFixedExpenseCents,
+          expenseRate: Math.max(
+            splitContext.splitExpenseRate,
+            resolveNonNegativeRate(
+              Deno.env.get("PAYPARQ_STRIPE_FEE_RATE") ??
+                Deno.env.get("NEXT_PUBLIC_PAYPARQ_STRIPE_FEE_RATE") ?? "0.029",
+              0.029,
+            ),
+          ),
+          taxRate: splitContext.settlementModel === "company"
+            ? splitContext.companyVatRate
+            : splitContext.splitTaxRate,
+          fixedExpenseCents: Math.max(
+            splitContext.splitFixedExpenseCents,
+            toCents(
+              Number(
+                Deno.env.get("PAYPARQ_STRIPE_FEE_FIXED_CENTS") ??
+                  Deno.env.get("NEXT_PUBLIC_PAYPARQ_STRIPE_FEE_FIXED_CENTS") ??
+                  "30",
+              ),
+            ),
+          ),
           caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
           payoutMode: splitContext.lotPayoutMode,
         })
@@ -1888,54 +1894,6 @@ serve(async (req: Request) => {
     const splitMetadata = buildStripeSplitMetadata({
       splitPlan,
       caseOwnerFixedPayoutCents: splitContext.caseOwnerFixedPayoutCents,
-    });
-    const checkoutMetadata = {
-      location_id: locationUuid,
-      display_id: displayId,
-      type,
-      flow: flow || "payment",
-      quantity: String(quantity),
-      amount_cents: String(unitAmountCents),
-      purchase_time_berlin: purchaseTimeDisplay,
-      plate: plate,
-      mobile: mobile,
-      email: email,
-      permit_id: permitId || undefined,
-      check_in: derivedCheckInIso || undefined,
-      check_out: derivedCheckOutIso || undefined,
-      activation_at: activationAt || undefined,
-      allow_plate_override: allowPlateOverride ? "1" : "0",
-      extend_target_session_id: extendTargetSessionId || undefined,
-      extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
-      ...splitMetadata,
-    };
-    const paymentIntentData = buildStripeSplitPaymentIntentData(splitPlan);
-    if (
-      requiresLiveSplit({
-        ownerStripeReady: splitContext.ownerStripeReady,
-        ownerStripeAccountId: splitContext.ownerStripeAccountId,
-      }) &&
-      !hasLiveSplitEvidence({ splitPlan, splitMetadata, paymentIntentData })
-    ) {
-      console.error("[SPLIT] Missing live split evidence", {
-        locationUuid,
-        displayId,
-        payoutMode: splitContext.lotPayoutMode,
-        ownerStripeReady: splitContext.ownerStripeReady,
-        ownerStripeAccountId: splitContext.ownerStripeAccountId,
-        splitMetadata,
-      });
-      return json({ error: "split_configuration_missing" }, 409);
-    }
-    console.log("[SPLIT] Checkout split snapshot", {
-      locationUuid,
-      displayId,
-      payoutMode: splitContext.lotPayoutMode,
-      splitEnabled: checkoutMetadata.split_enabled,
-      splitRule: checkoutMetadata.split_rule,
-      splitDestination: checkoutMetadata.split_destination_account_id,
-      splitApplicationFeeCents: checkoutMetadata.split_application_fee_cents,
-      splitOwnerPayoutCents: checkoutMetadata.split_owner_payout_cents,
     });
     const resolvedCustomerId = await resolveCheckoutCustomer({ email, mobile });
     const sessionOptions: any = {
@@ -1971,8 +1929,28 @@ serve(async (req: Request) => {
       }),
       locale: checkoutLocale,
       line_items: [lineItem],
-      metadata: checkoutMetadata,
-      payment_intent_data: paymentIntentData,
+      metadata: {
+        location_id: locationUuid, // Use UUID
+        display_id: displayId,
+        type,
+        flow: flow || "payment",
+        quantity: String(quantity),
+        amount_cents: String(unitAmountCents),
+        purchase_time_berlin: purchaseTimeDisplay,
+        plate: plate,
+        mobile: mobile,
+        email: email,
+        permit_id: permitId || undefined,
+        check_in: derivedCheckInIso || undefined,
+        check_out: derivedCheckOutIso || undefined,
+        activation_at: activationAt || undefined,
+        allow_plate_override: allowPlateOverride ? "1" : "0",
+        settlement_model: splitContext.settlementModel,
+        extend_target_session_id: extendTargetSessionId || undefined,
+        extend_minutes: extendMinutes > 0 ? String(extendMinutes) : undefined,
+        ...splitMetadata,
+      },
+      payment_intent_data: buildStripeSplitPaymentIntentData(splitPlan),
     };
 
     // V6.4: Dynamic Promo Code Management (Manual Entry)
@@ -2139,7 +2117,7 @@ serve(async (req: Request) => {
         entry_time: inactiveEntryTime,
         duration_minutes: inactiveDurationMinutes,
         stripe_metadata: JSON.stringify({
-          ...checkoutMetadata,
+          ...sessionOptions.metadata,
           inactive_pending_seed: shouldSeedInactivePending ? "1" : "0",
           stripe_id: paymentSession.id,
         }),

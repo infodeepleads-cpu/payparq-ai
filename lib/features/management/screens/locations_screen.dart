@@ -580,6 +580,54 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     }
   }
 
+  String _resolveSettlementModel(Map<String, dynamic> metadata) {
+    final raw = (metadata['settlement_model'] ?? 'agentic')
+        .toString()
+        .trim()
+        .toLowerCase();
+    return raw == 'company' ? 'company' : 'agentic';
+  }
+
+  Future<void> _toggleSettlementModel(
+      Map<String, dynamic> loc, String settlementModel) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final Map<String, dynamic> meta =
+        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+    final String previous = _resolveSettlementModel(meta);
+    try {
+      await ref
+          .read(locationsControllerProvider)
+          .updateSettlementModel(loc, settlementModel);
+      if (!mounted) return;
+      final enabledCompany = settlementModel == 'company';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(Lang.sel(
+              ref.read(localeIsCroatianProvider),
+              enabledCompany
+                  ? 'Settlement set to Company (VAT-first)'
+                  : 'Settlement set to Agentic (current split)',
+              enabledCompany
+                  ? 'Model poravnanja postavljen na Company (PDV prvo)'
+                  : 'Model poravnanja postavljen na Agentic (trenutni split)')),
+          backgroundColor: Colors.black,
+        ),
+      );
+    } catch (e) {
+      meta['settlement_model'] = previous;
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(Lang.sel(
+              ref.read(localeIsCroatianProvider),
+              'Error: ${ErrorMapper.message(e)}',
+              'Greška: ${ErrorMapper.message(e)}')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   void _showCallDialog(Map<String, dynamic> loc) async {
     showDialog(
       context: context,
@@ -736,6 +784,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final Map<String, dynamic> meta =
             (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
         final bool isHub = meta['hub_enabled'] == true;
+        final bool isAgenticSettlement =
+            _resolveSettlementModel(meta) == 'agentic';
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -1539,6 +1589,60 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     ),
                                   ],
                                 ),
+                              if (isSuperAdmin) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text(
+                                      Lang.sel(
+                                          ref.watch(localeIsCroatianProvider),
+                                          'Settlement Model',
+                                          'Model poravnanja'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Company',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: isAgenticSettlement,
+                                      activeThumbColor: Colors.black,
+                                      onChanged: (v) async {
+                                        setState(() {
+                                          final Map<String, dynamic> meta =
+                                              (loc['verification_metadata'] ??
+                                                  {}) as Map<String, dynamic>;
+                                          meta['settlement_model'] =
+                                              v ? 'agentic' : 'company';
+                                        });
+                                        await _toggleSettlementModel(
+                                            loc, v ? 'agentic' : 'company');
+                                        if (!dialogContext.mounted) return;
+                                        Navigator.pop(dialogContext);
+                                        _showLocationDetail(
+                                            loc, isSuperAdmin, isAdmin);
+                                      },
+                                    ),
+                                    Text(
+                                      'Agentic',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               if (isSuperAdmin && isHub) ...[
                                 const SizedBox(height: 8),
                                 Row(

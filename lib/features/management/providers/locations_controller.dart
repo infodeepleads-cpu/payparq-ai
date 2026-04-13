@@ -153,6 +153,19 @@ class LocationsController {
     return slug;
   }
 
+  Future<void> updateSettlementModel(
+      Map<String, dynamic> loc, String settlementModel) async {
+    final id = loc['id'].toString();
+    final Map<String, dynamic> meta =
+        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+    final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
+    final normalized = settlementModel.trim().toLowerCase();
+    newMeta['settlement_model'] =
+        normalized == 'company' ? 'company' : 'agentic';
+    await _repo.updateVerificationMetadata(id, newMeta);
+    _ref.invalidate(locationsStreamProvider);
+  }
+
   Future<void> updateCapacity(String id, int capacity) async {
     try {
       await _repo.updateCapacity(id, capacity);
