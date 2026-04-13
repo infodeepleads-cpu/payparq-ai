@@ -262,3 +262,27 @@ test("regular lot metadata exposes payout mode and deduct-first math", () => {
   assert.equal(metadata.split_owner_payout_cents, "1900");
   assert.equal(metadata.split_rule, "regular_daily_min_099");
 });
+
+test("company mode applies fee first, then tax, then regular split", () => {
+  const splitPlan = buildStripeSplitPlan({
+    chargedAmountCents: 100,
+    sessionAmountCents: 100,
+    parkTaxiDailyTicketTotalCents: 0,
+    sessionQuantity: 1,
+    pricingType: "hourly",
+    flowType: "payment",
+    destinationAccountId: "acct_manager",
+    expenseRate: 0.029,
+    taxRate: 0.25,
+    fixedExpenseCents: 30,
+    payoutMode: "regular",
+  });
+
+  // 100 gross -> fee 33 => 67 base, tax 17 => 50 distributable, 10% platform.
+  assert.equal(splitPlan.expenseCents, 33);
+  assert.equal(splitPlan.taxCents, 17);
+  assert.equal(splitPlan.distributableCents, 50);
+  assert.equal(splitPlan.ownerPayoutCents, 45);
+  assert.equal(splitPlan.applicationFeeAmount, 55);
+  assert.equal(splitPlan.splitRule, "regular_10pct");
+});
