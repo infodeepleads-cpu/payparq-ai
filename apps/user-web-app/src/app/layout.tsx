@@ -11,9 +11,21 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "payparq.com",
+  title: "Payparq | Frictionless Parking and Urban Mobility",
   description:
-    "The world’s first mobile software-only platform for frictionless urban mobility.",
+    "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
+  applicationName: "Payparq",
+  openGraph: {
+    title: "Payparq | Frictionless Parking and Urban Mobility",
+    description:
+      "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
+    siteName: "Payparq",
+  },
+  twitter: {
+    title: "Payparq | Frictionless Parking and Urban Mobility",
+    description:
+      "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico?v=pp_static_v4", type: "image/x-icon", sizes: "any" },
