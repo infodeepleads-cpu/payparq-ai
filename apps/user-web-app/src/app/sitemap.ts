@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { supabase } from "@/lib/supabase";
 
 const staticRoutes = [
   "/",
@@ -33,13 +34,34 @@ function resolveSiteUrl() {
   return "https://payparq.ai";
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = resolveSiteUrl();
   const now = new Date();
-  return staticRoutes.map((route) => ({
+
+  const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: now,
     changeFrequency: route === "/" ? "daily" : "weekly",
     priority: route === "/" ? 1 : 0.7,
   }));
+
+  let locationEntries: MetadataRoute.Sitemap = [];
+  try {
+    if (!supabase) throw new Error("Supabase not configured");
+    const { data } = await supabase
+      .from("locations")
+      .select("canonical_slug")
+      .contains("verification_metadata", { hub_enabled: true })
+      .limit(500);
+    locationEntries = (data || []).map((loc: { canonical_slug: string }) => ({
+      url: `${siteUrl}/locations/${loc.canonical_slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    }));
+  } catch {
+    // fail silently — static routes still served
+  }
+
+  return [...staticEntries, ...locationEntries];
 }

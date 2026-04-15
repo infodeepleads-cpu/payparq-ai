@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabase } from "@/lib/supabase";
 import { formatEuroLabel, normalizeLocationName, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
@@ -85,6 +86,65 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
   }
 
   return { hub, priceLabel, hero, faqItems, travelTime };
+}
+
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
+  const data = await fetchHub(params.slug);
+
+  if (!data) {
+    return {
+      title: "Parking Location | PayParq",
+      description: "Find and book secure parking with PayParq.",
+    };
+  }
+
+  const { hub, priceLabel, travelTime } = data;
+  // Parse Croatian addresses robustly — formats vary (full 6-part vs. short municipality-only)
+  const addrParts = hub.address ? hub.address.split(",").map((s: string) => s.trim()) : [];
+  const _isAdmin = (p: string) => /^(?:Općina|Grad|Gradska\s+četvrt)\s+/i.test(p);
+  const _isRegion = (p: string) => /županija/i.test(p);
+  const _isPostal = (p: string) => /^\d{5}$/.test(p);
+  const _isCountry = (p: string) => /^hrvatska$/i.test(p);
+  const _stripAdmin = (p: string) => p.replace(/^(?:Općina|Grad|Gradska\s+četvrt)\s+/i, "").trim();
+  const hasStreet = addrParts.length >= 4 && !_isAdmin(addrParts[0]);
+  const city = (() => {
+    const candidates = hasStreet ? addrParts.slice(1) : addrParts;
+    for (const p of candidates) {
+      if (_isRegion(p) || _isPostal(p) || _isCountry(p)) continue;
+      return _stripAdmin(p);
+    }
+    return _stripAdmin(addrParts[0]) || hub.name;
+  })();
+  const address = hub.address || hub.name;
+  const url = `https://payparq.ai/locations/${hub.canonical_slug}`;
+  const heroImage = Array.isArray(hub.verification_photos) && hub.verification_photos[0]
+    ? hub.verification_photos[0] as string
+    : undefined;
+
+  const title = `Parking ${city} | PayParq – From ${priceLabel}/hr`;
+  const description = `Secure parking at ${address}. ${travelTime} transfer to your destination. From ${priceLabel}/hr – AI camera monitoring, no ticket needed, instant booking on PayParq.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "PayParq",
+      type: "website",
+      locale: "hr_HR",
+      ...(heroImage ? { images: [{ url: heroImage, width: 1200, height: 630, alt: `PayParq ${city} parking` }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(heroImage ? { images: [heroImage] } : {}),
+    },
+  };
 }
 
 export default async function LocationPage(props: { params: Promise<{ slug: string }> }) {

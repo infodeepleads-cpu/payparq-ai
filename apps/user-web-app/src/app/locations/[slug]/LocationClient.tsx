@@ -558,23 +558,109 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     },
   ];
 
+  // Parse Croatian addresses robustly — formats vary:
+  // Full:  "Street, City, Municipality, Region, PostalCode, Country"  (6 parts)
+  // Short: "Općina City, Region, Country"                             (3 parts)
+  const addrParts = hub.address ? hub.address.split(",").map((s) => s.trim()) : [];
+  const _isAdmin = (p: string) => /^(?:Općina|Grad|Gradska\s+četvrt)\s+/i.test(p);
+  const _isRegion = (p: string) => /županija/i.test(p);
+  const _isPostal = (p: string) => /^\d{5}$/.test(p);
+  const _isCountry = (p: string) => /^hrvatska$/i.test(p);
+  const _stripAdmin = (p: string) => p.replace(/^(?:Općina|Grad|Gradska\s+četvrt)\s+/i, "").trim();
+  // If first part has no admin prefix and there are 4+ parts, it's a street; city is at index 1
+  const hasStreet = addrParts.length >= 4 && !_isAdmin(addrParts[0]);
+  const addressStreet = hasStreet ? addrParts[0] : "";
+  const addressCity = (() => {
+    const candidates = hasStreet ? addrParts.slice(1) : addrParts;
+    for (const p of candidates) {
+      if (_isRegion(p) || _isPostal(p) || _isCountry(p)) continue;
+      return _stripAdmin(p);
+    }
+    return _stripAdmin(addrParts[0]) || locationName;
+  })();
+  const addressRegion = addrParts.find((p) => _isRegion(p)) || "";
+  const addressPostal = addrParts.find((p) => _isPostal(p)) || "";
+  const hubUrl = `https://payparq.ai/locations/${hub.canonical_slug}`;
+  const heroPhoto = Array.isArray(hub.verification_photos) && hub.verification_photos[0]
+    ? hub.verification_photos[0] as string
+    : undefined;
+  const whatsapp = typeof hub.verification_metadata?.city_manager_whatsapp === "string"
+    ? hub.verification_metadata.city_manager_whatsapp
+    : undefined;
+  const googleMapsUrl = hub.latitude && hub.longitude
+    ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}`
+    : undefined;
+
   const locationSchema = {
     "@context": "https://schema.org",
-    "@type": "ParkingFacility",
-    name: `PayParq ${locationName}`,
+    "@type": ["ParkingFacility", "LocalBusiness"],
+    "@id": hubUrl,
+    name: locationName,
+    description: `Secure parking at ${hub.address || locationName}. AI camera monitoring, instant booking, no ticket needed. On-demand transfers available.`,
+    ...(heroPhoto ? { image: heroPhoto } : {}),
     address: {
       "@type": "PostalAddress",
-      addressLocality: hub.address ? hub.address.split(',')[0] : "Unknown",
-      addressRegion: hub.address ? hub.address.split(',')[1] : "Unknown",
+      streetAddress: addressStreet,
+      addressLocality: addressCity,
+      addressRegion: addressRegion,
+      postalCode: addressPostal,
       addressCountry: "HR",
     },
-    areaServed: "Split, Trogir, Kaštela, Dalmatian Coast",
-    url: `https://payparq.ai/locations/${hub.canonical_slug}`,
-    slogan: "Effortless airport parking",
+    ...(hub.latitude && hub.longitude ? {
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: hub.latitude,
+        longitude: hub.longitude,
+      },
+    } : {}),
+    ...(googleMapsUrl ? { sameAs: googleMapsUrl } : {}),
+    ...(whatsapp ? { telephone: whatsapp } : {}),
+    areaServed: addressCity,
+    url: hubUrl,
+    slogan: "Effortless parking",
+    priceRange: "€",
+    openingHours: "Mo-Su 00:00-23:59",
+    paymentAccepted: "Credit Card, Debit Card",
+    currenciesAccepted: "EUR",
+    brand: {
+      "@type": "Brand",
+      name: "PayParq",
+      url: "https://payparq.ai",
+    },
+    ...(totalReviews > 0 ? {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: averageRatingNumeric.toFixed(1),
+        reviewCount: totalReviews,
+        bestRating: "5",
+        worstRating: "1",
+      },
+      review: allReviewItems.slice(0, 5).map((r) => ({
+        "@type": "Review",
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: r.rating,
+          bestRating: "5",
+          worstRating: "1",
+        },
+        author: { "@type": "Person", name: r.author },
+        reviewBody: r.quote,
+      })),
+    } : {}),
     amenityFeature: [
       { "@type": "LocationFeatureSpecification", name: "On‑demand Parq vožnja", value: true },
       { "@type": "LocationFeatureSpecification", name: "AI Camera Monitoring", value: true },
       { "@type": "LocationFeatureSpecification", name: "Stripe Secure Checkout", value: true },
+    ],
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://payparq.ai" },
+      { "@type": "ListItem", position: 2, name: "Parking Locations", item: "https://payparq.ai/locations" },
+      { "@type": "ListItem", position: 3, name: `Parking ${addressCity}`, item: hubUrl },
     ],
   };
 
@@ -662,7 +748,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       name: i.q,
       acceptedAnswer: {
         "@type": "Answer",
-        text: i.a,
+        text: i.a.replace(/<[^>]*>/g, ""),
       },
     })),
   };
@@ -953,6 +1039,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       
       <main className="flex-1 bg-white pt-16 md:pt-20">
         <article className="max-w-6xl mx-auto px-4 md:px-10 pt-4 pb-5 md:pt-6 md:pb-5">
@@ -1071,24 +1161,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <a
-                      href={cityManagerMessageHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
-                    >
-                      Poruka
-                    </a>
-                    <a
-                      href={cityManagerMessageHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
-                    >
-                      Recenzije
-                    </a>
-                  </div>
+                  <a
+                    href={cityManagerMessageHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-[#5F3DFC]/25 bg-[#F8F6FF] px-3 py-1.5 text-[10px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors whitespace-nowrap"
+                  >
+                    Poruka
+                  </a>
                 </div>
               </div>
 
@@ -1225,24 +1305,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <p className="text-[10px] text-black/60 leading-snug">Pošaljite poruku sada! Odgovara u manje od 5 minuta.</p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <a
-                      href={cityManagerMessageHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
-                    >
-                      Poruka
-                    </a>
-                    <a
-                      href={cityManagerMessageHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-2 py-0.5 text-[9px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors"
-                    >
-                      Recenzije
-                    </a>
-                  </div>
+                  <a
+                    href={cityManagerMessageHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full bg-[#F8F6FF] border border-[#5F3DFC]/20 px-4 py-1.5 text-[11px] font-semibold text-[#5F3DFC] hover:bg-[#F0EBFF] transition-colors whitespace-nowrap"
+                  >
+                    Poruka
+                  </a>
                 </div>
               </div>
 
