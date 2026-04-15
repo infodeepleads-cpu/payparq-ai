@@ -94,8 +94,8 @@ const HARD_LOCKED_TEMPLATE_URLS = [
   "/resources/templates/widget-14.png",
   "/resources/templates/widget-15.png",
   "/resources/templates/widget-16.png",
-  "",
-  "",
+  "/resources/templates/widget-17.jpg",
+  "/resources/templates/widget-18.jpg",
 ] as const;
 type PersistedSignWidget = Pick<
   SignWidget,
@@ -540,6 +540,7 @@ function buildCheckoutQrUrl(params: {
   allowPromotionCodes?: boolean;
   promotionCodeLabel?: string;
   useMobileScannerFormat?: boolean;
+  dailyFooterHint?: boolean;
 }) {
   const query = new URLSearchParams({
     display_id: params.displayId,
@@ -549,6 +550,9 @@ function buildCheckoutQrUrl(params: {
     flow: "reserve",
     t: Date.now().toString(),
   });
+  if (params.dailyFooterHint) {
+    query.set("daily_footer", "1");
+  }
   if (typeof params.price === "number" && Number.isFinite(params.price) && params.price >= 0) {
     query.set("price", params.price.toFixed(2));
     query.set("amount", params.price.toFixed(2));
@@ -1637,6 +1641,7 @@ export default function ResourcesPage() {
             allowPromotionCodes: fixedQrLocation.allowPromotionCodes,
             promotionCodeLabel: fixedQrLocation.promotionCodeLabel,
             useMobileScannerFormat: true,
+            dailyFooterHint: true,
           });
           const { default: QRCodeStyling } = await import("qr-code-styling");
           const topQrStyling = new QRCodeStyling({
@@ -2100,6 +2105,7 @@ export default function ResourcesPage() {
         allowPromotionCodes: resourceForSign.allowPromotionCodes,
         promotionCodeLabel: resourceForSign.promotionCodeLabel,
         useMobileScannerFormat: isWidgetSixteen || isWidgetSeventeen,
+        dailyFooterHint: isWidgetSeventeen || isWidgetEighteen,
       });
       let qrImage: HTMLImageElement;
       let qrModuleCount: number | undefined;

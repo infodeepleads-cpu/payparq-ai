@@ -1501,6 +1501,14 @@ export async function GET(req: NextRequest) {
   const location_id = url.searchParams.get("loc") ||
     url.searchParams.get("location_id") || "";
   const display_id = url.searchParams.get("display_id") || "";
+  const isDailyFooterHint = url.searchParams.get("daily_footer") === "1";
+  const acceptLang = req.headers.get("accept-language") ?? "";
+  const isCroatian = /^hr\b/i.test(acceptLang.split(",")[0].trim());
+  const dailyFooterLine = isDailyFooterHint
+    ? (isCroatian
+        ? "\nZa dnevnu naplatu kliknite na link u podnožju."
+        : "\nFor daily checkout click on the link in the footer.")
+    : "";
   const requestedPlateNumber = url.searchParams.get("plate") || "";
   const flow_type = url.searchParams.get("flow") || "park_now";
   const check_in = url.searchParams.get("check_in") ||
@@ -1788,6 +1796,9 @@ export async function GET(req: NextRequest) {
         reservationDescription += `\nLocation ID: ${
           resolvedDisplayId || display_id
         }`;
+      }
+      if (dailyFooterLine) {
+        reservationDescription += dailyFooterLine;
       }
     }
   }
