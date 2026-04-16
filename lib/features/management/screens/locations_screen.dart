@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1745,14 +1746,28 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
-  void _showAddLocationDialog(
-      BuildContext context, String? locationId, String? ownerId) {
+  Future<void> _showAddLocationDialog(
+      BuildContext context, String? locationId, String? fallbackOwnerId) async {
+    // Pre-fetch managers (Lot Partners) so the dropdown is ready when dialog opens
+    List<Map<String, dynamic>> managers = [];
+    try {
+      final result = await Supabase.instance.client
+          .from('profiles')
+          .select('id, email')
+          .eq('role', 'manager')
+          .order('email');
+      managers = List<Map<String, dynamic>>.from(result as List);
+    } catch (_) {}
+
+    if (!context.mounted) return;
+
     final nameCtrl = TextEditingController();
     final capacityCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool isProcessing = false;
     LatLng? selectedLatLng;
     String selectedAddress = '';
+    String? selectedManagerId;
 
     showDialog(
       context: context,
@@ -1849,6 +1864,48 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         selectedAddress = address;
                       },
                     ),
+                    const SizedBox(height: 24),
+                    Text(
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Lot Partner (receives payments)', 'Lot Partner (prima uplate)'),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedManagerId,
+                      decoration: InputDecoration(
+                        hintText: Lang.sel(
+                            ref.watch(localeIsCroatianProvider),
+                            'Select Lot Partner',
+                            'Odaberi Lot Partnera'),
+                        filled: true,
+                        fillColor: AppTheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      items: managers.map((m) {
+                        return DropdownMenuItem<String>(
+                          value: m['id'] as String,
+                          child: Text(
+                            m['email'] as String? ?? m['id'] as String,
+                            style: GoogleFonts.inter(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) =>
+                          setDialogState(() => selectedManagerId = val),
+                      validator: (_) => selectedManagerId == null
+                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Select a Lot Partner', 'Odaberi Lot Partnera')
+                          : null,
+                    ),
                   ],
                 ),
               ),
@@ -1885,7 +1942,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 latitude: selectedLatLng!.latitude,
                                 longitude: selectedLatLng!.longitude,
                                 capacity: int.tryParse(capacityCtrl.text) ?? 0,
-                                ownerId: ownerId,
+                                ownerId: selectedManagerId ?? fallbackOwnerId,
                               );
                           if (context.mounted) {
                             Navigator.pop(context);

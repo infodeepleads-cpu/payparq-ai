@@ -19,23 +19,24 @@ const returnPath = (Deno.env.get("STRIPE_CONNECT_RETURN_PATH") ?? "/#/finance").
 const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" });
 type StripeAccount = Awaited<ReturnType<typeof stripe.accounts.create>>;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://payparq.com",
+  "https://www.payparq.com",
+  "https://mobile-scanner-ruddy.vercel.app",
+]);
+
+function makeCorsHeaders(origin: string): Record<string, string> {
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : "https://payparq.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  };
+}
 
 const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-
-function json(data: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function normalizeCountry(raw: string, fallbackCountry: string): string {
   const value = raw.trim().toUpperCase();
@@ -127,8 +128,13 @@ async function createExpressAccount(userId: string, country: string): Promise<St
 }
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const cors = makeCorsHeaders(origin);
+  const json = (data: Record<string, unknown>, status = 200): Response =>
+    new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);

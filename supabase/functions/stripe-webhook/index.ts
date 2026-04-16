@@ -85,36 +85,103 @@ function defaultValueForSessionColumn(column: string): unknown {
 
 async function insertSessionWithSchemaFallback(insertData: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
   let payload: Record<string, unknown> = { ...insertData };
+  const droppedColumns: string[] = [];
   for (let i = 0; i < 20; i++) {
     const { error } = await admin.from("parking_sessions").insert(payload);
-    if (!error || error.code === "23505") return { ok: true };
+    if (!error || error.code === "23505") {
+      if (droppedColumns.length > 0) {
+        console.warn(`[SCHEMA_FALLBACK] insert succeeded after dropping columns: ${droppedColumns.join(", ")}`);
+      }
+      return { ok: true };
+    }
     const notNullColumn = extractNotNullColumnName(error.message ?? "");
     if (notNullColumn) {
       const fallbackValue = defaultValueForSessionColumn(notNullColumn);
       if (fallbackValue !== undefined) {
+        console.warn(`[SCHEMA_FALLBACK] filling missing NOT NULL column: ${notNullColumn}=${JSON.stringify(fallbackValue)}`);
         payload = { ...payload, [notNullColumn]: fallbackValue };
         continue;
       }
     }
     const missingColumn = extractMissingColumnName(error.message ?? "");
-    if (!missingColumn || !(missingColumn in payload)) return { ok: false, message: error.message };
+    if (!missingColumn || !(missingColumn in payload)) {
+      console.error(`[SCHEMA_FALLBACK] unrecoverable insert error: ${error.message}`);
+      return { ok: false, message: error.message };
+    }
+    console.warn(`[SCHEMA_FALLBACK] dropping unknown column from insert: ${missingColumn}`);
+    droppedColumns.push(missingColumn);
     const { [missingColumn]: _removed, ...rest } = payload;
     payload = rest;
   }
-  return { ok: false, message: "Failed insert after fallbacks" };
+  const msg = `[SCHEMA_FALLBACK] CRITICAL: insert failed after 20 fallback attempts. Dropped: ${droppedColumns.join(", ")}`;
+  console.error(msg);
+  return { ok: false, message: msg };
 }
 
 async function updateSessionWithSchemaFallback(stripeSessionId: string, updateData: Record<string, unknown>): Promise<{ ok: boolean; message?: string }> {
   let payload: Record<string, unknown> = { ...updateData };
+  const droppedColumns: string[] = [];
   for (let i = 0; i < 20; i++) {
     const { error } = await admin.from("parking_sessions").update(payload).eq("stripe_session_id", stripeSessionId);
-    if (!error) return { ok: true };
+    if (!error) {
+      if (droppedColumns.length > 0) {
+        console.warn(`[SCHEMA_FALLBACK] update succeeded after dropping columns: ${droppedColumns.join(", ")}`);
+      }
+      return { ok: true };
+    }
     const missingColumn = extractMissingColumnName(error.message ?? "");
-    if (!missingColumn || !(missingColumn in payload)) return { ok: false, message: error.message };
+    if (!missingColumn || !(missingColumn in payload)) {
+      console.error(`[SCHEMA_FALLBACK] unrecoverable update error: ${error.message}`);
+      return { ok: false, message: error.message };
+    }
+    console.warn(`[SCHEMA_FALLBACK] dropping unknown column from update: ${missingColumn}`);
+    droppedColumns.push(missingColumn);
     const { [missingColumn]: _removed, ...rest } = payload;
     payload = rest;
   }
-  return { ok: false, message: "Failed update after fallbacks" };
+  const msg = `[SCHEMA_FALLBACK] CRITICAL: update failed after 20 fallback attempts. Dropped: ${droppedColumns.join(", ")}`;
+  console.error(msg);
+  return { ok: false, message: msg };
+}
+
+async function sendPaymentNotification(session: Stripe.Checkout.Session, locationDisplay: string): Promise<void> {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  if (!resendApiKey) return;
+  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") ?? "team@info.payparq.com";
+  const amountEur = (Number(session.amount_total ?? 0) / 100).toFixed(2);
+  const customerEmail = session.customer_details?.email ?? "—";
+  const customerName = session.customer_details?.name ?? "—";
+  const metadata = session.metadata ?? {};
+  const plate = metadata.plate || "—";
+  const type = metadata.type || "hourly";
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+
+  const body = `
+New payment received on PayParq.
+
+Amount:    €${amountEur}
+Location:  ${locationDisplay}
+Plate:     ${plate}
+Type:      ${type}
+Customer:  ${customerName} (${customerEmail})
+Session:   ${session.id}
+Time:      ${ts}
+`.trim();
+
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: ["payparq@outlook.com"],
+        subject: `💳 €${amountEur} payment — ${locationDisplay}`,
+        text: body,
+      }),
+    });
+  } catch (e) {
+    console.warn(`[NOTIFY] Failed to send payment email: ${e}`);
+  }
 }
 
 async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise<{ ok: boolean; status?: number; message?: string }> {
@@ -284,10 +351,15 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
 
   console.log(`[V19] Upserting data for session ${session.id}: ${JSON.stringify(insertData)}`);
 
+  const locationDisplay = resolvedLocation.display_id ?? resolvedLocation.id;
+
   if (existing?.id) {
     console.log(`[V19] Updating existing session: ${existing.id}`);
     const updated = await updateSessionWithSchemaFallback(session.id, insertData);
-    if (updated.ok) return { ok: true };
+    if (updated.ok) {
+      await sendPaymentNotification(session, locationDisplay);
+      return { ok: true };
+    }
     console.error(`[V19] Update failed: ${updated.message}`);
     return { ok: false, status: 500, message: updated.message };
   }
@@ -296,6 +368,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const inserted = await insertSessionWithSchemaFallback(insertData);
   if (inserted.ok) {
     console.log(`[V19] Insert successful`);
+    await sendPaymentNotification(session, locationDisplay);
     return { ok: true };
   }
   console.error(`[V19] Insert failed: ${inserted.message}`);

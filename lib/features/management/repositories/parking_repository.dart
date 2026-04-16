@@ -35,9 +35,20 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
   if (cached != null) {
     yield _decodeList(cached);
   }
-  yield* live.map((data) {
+  yield* live.handleError((error, _) {
+    // WebSocket normal-close (code 1000) fires as RealtimeSubscribeException —
+    // not a real error, just suppress it so Sentry stays clean.
+    debugPrint('Realtime stream closed: $error');
+  }).map((data) {
+    // Deduplicate by id to guard against Realtime initial-fetch + INSERT race
+    final seen = <String>{};
+    final deduped = data.where((e) {
+      final id = e['id']?.toString();
+      if (id == null) return true;
+      return seen.add(id);
+    }).toList();
     try {
-      final encodable = data
+      final encodable = deduped
           .map((e) => e.map(
               (k, v) => MapEntry(k, v is DateTime ? v.toIso8601String() : v)))
           .toList();
@@ -45,7 +56,7 @@ Stream<List<Map<String, dynamic>>> _cachedStream(
     } catch (e) {
       debugPrint('Cache encode failed for $key: $e');
     }
-    return data;
+    return deduped;
   });
 }
 

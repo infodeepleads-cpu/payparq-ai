@@ -333,7 +333,7 @@ function checkoutCustomFields(
   const label = hasKnownPlate
     ? `Vehicle Plate Number (current: ${plate})`
     : "Vehicle Plate Number (e.g. MA679XX)";
-  const textPrefill = (value: string) => ({ default_value: value, value });
+  const textPrefill = (value: string) => ({ default_value: value });
   return [
     {
       key: "plate_number",

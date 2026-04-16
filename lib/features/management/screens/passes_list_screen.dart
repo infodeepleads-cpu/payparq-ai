@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../theme.dart';
 import '../../../logic/providers/locale_provider.dart';
 import '../../../logic/providers/auth_providers.dart';
@@ -258,8 +259,11 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
                               ),
                             ),
                             Text(
-                              Lang.sel(isCroatian, 'Valid until: Dec 2026',
-                                  'Vrijedi do: Dec 2026'),
+                              Lang.sel(
+                                isCroatian,
+                                'Valid until: ${_formatPermitEndDate(permit['end_time'])}',
+                                'Vrijedi do: ${_formatPermitEndDate(permit['end_time'])}',
+                              ),
                               style: GoogleFonts.inter(
                                 color: AppTheme.textSecondary,
                                 fontSize: 14,
@@ -320,6 +324,16 @@ class _PassesListScreenState extends ConsumerState<PassesListScreen> {
         ),
       ),
     );
+  }
+
+  String _formatPermitEndDate(dynamic endTime) {
+    if (endTime == null) return '—';
+    try {
+      final dt = DateTime.parse(endTime.toString()).toLocal();
+      return DateFormat('MMM yyyy').format(dt);
+    } catch (_) {
+      return endTime.toString();
+    }
   }
 
   Widget _buildStatusBadge(String status, bool isHr) {

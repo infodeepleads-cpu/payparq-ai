@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'theme.dart';
 import 'main_scaffold.dart';
 import 'screens/auth_screen.dart';
@@ -15,37 +16,64 @@ import 'config/app_config.dart';
 import 'logic/providers/auth_providers.dart';
 
 Future<void> main() async {
-  debugPrint('--- MAIN STARTING ---');
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
-    debugPrint('--- BINDING INITIALIZED ---');
-  } catch (e) {
-    debugPrint('--- BINDING FAILED: $e ---');
-  }
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    debugPrint('FlutterError: ${details.exceptionAsString()}');
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('PlatformDispatcherError: $error');
-    debugPrintStack(stackTrace: stack);
-    return true;
-  };
-  try {
-    PerformanceMonitor.instance.startCleanupTimer();
-  } catch (e, st) {
-    debugPrint('PerformanceMonitor init failed: $e');
-    debugPrintStack(stackTrace: st);
-  }
+  const sentryDsn = String.fromEnvironment(
+    'SENTRY_DSN',
+    defaultValue: 'https://0aa7ae3ea338845af196ff6de9f68837@o4511225818120192.ingest.de.sentry.io/4511225823756368',
+  );
 
-  final prefs = await _loadSharedPreferencesSafely();
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = sentryDsn;
+      options.environment = AppConfig.env;
+      options.release = 'payparq-scanner@1.0.5+6';
+      options.tracesSampleRate = 0.2;
+      // Suppress noisy Supabase Realtime reconnection errors — these are
+      // expected on network changes / WebSocket timeouts, not real bugs.
+      options.beforeSend = (event, hint) {
+        final msg = event.exceptions?.firstOrNull?.value ?? '';
+        if (msg.contains('RealtimeSubscribeException')) return null;
+        return event;
+      };
+    },
+    appRunner: () async {
+      debugPrint('--- MAIN STARTING ---');
+      try {
+        WidgetsFlutterBinding.ensureInitialized();
+        debugPrint('--- BINDING INITIALIZED ---');
+      } catch (e) {
+        debugPrint('--- BINDING FAILED: $e ---');
+      }
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        debugPrint('FlutterError: ${details.exceptionAsString()}');
+        Sentry.captureException(
+          details.exception,
+          stackTrace: details.stack,
+        );
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        debugPrint('PlatformDispatcherError: $error');
+        debugPrintStack(stackTrace: stack);
+        Sentry.captureException(error, stackTrace: stack);
+        return true;
+      };
+      try {
+        PerformanceMonitor.instance.startCleanupTimer();
+      } catch (e, st) {
+        debugPrint('PerformanceMonitor init failed: $e');
+        debugPrintStack(stackTrace: st);
+      }
 
-  runApp(ProviderScope(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-    ],
-    child: const PayParqApp(),
-  ));
+      final prefs = await _loadSharedPreferencesSafely();
+
+      runApp(ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const PayParqApp(),
+      ));
+    },
+  );
 }
 
 Future<SharedPreferences> _loadSharedPreferencesSafely() async {

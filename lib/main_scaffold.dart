@@ -172,9 +172,6 @@ class _MasterScaffoldState extends ConsumerState<MasterScaffold> {
     _activeAuthUserId = currentSession?.user.id;
     _activeAuthSessionKey = _sessionKeyForSession(currentSession);
     _authStateSubscription = ref.listenManual(authStateProvider, (_, next) {
-      if (!next.hasValue) {
-        return;
-      }
       _handleAuthSessionChanged(next.value, force: true);
     });
     Future.microtask(_hydrateLocationSelection);

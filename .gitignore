@@ -67,3 +67,13 @@ apps/*
 !apps/city-manager/public/icon-512.png
 apps 2/
 .env*.local
+
+# Generated Flutter plugin registrant files (auto-generated, do not track)
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugins.cmake
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugins.cmake
+
+# Sentry wizard binary
+sentry-wizard.exe
