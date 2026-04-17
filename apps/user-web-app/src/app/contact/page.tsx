@@ -362,8 +362,8 @@ export default function Contact() {
               <p className="font-semibold mb-1">Q: How do I pay or dispute a parking notice?</p>
               <p>
                 A: Go to{" "}
-                <Link href="/cases" className="underline">
-                  PayParq Cases
+                <Link href="/payments" className="underline">
+                  PayParq Payments
                 </Link>{" "}
                 to complete payments or submit disputes.
               </p>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { Plus, Minus, Download, AlertTriangle } from "lucide-react";
@@ -37,8 +38,8 @@ type LookupResult = {
   error?: string;
 };
 
-const PAYEE_NAME = process.env.NEXT_PUBLIC_CASE_PAYEE_NAME || "PayParq Global Inc.";
-const PAYEE_IBAN = process.env.NEXT_PUBLIC_CASE_PAYEE_IBAN || "HR1210010051863000160";
+const PAYEE_NAME = process.env.NEXT_PUBLIC_CASE_PAYEE_NAME || "Indirektno";
+const PAYEE_IBAN = process.env.NEXT_PUBLIC_CASE_PAYEE_IBAN || "HR0523600001103001054";
 const PAYEE_MODEL = process.env.NEXT_PUBLIC_CASE_PAYEE_MODEL || "HR00";
 const PAYEE_ADDRESS_1 = process.env.NEXT_PUBLIC_CASE_PAYEE_ADDRESS_1 || "Trg Gaje Bulata 1";
 const PAYEE_ADDRESS_2 = process.env.NEXT_PUBLIC_CASE_PAYEE_ADDRESS_2 || "21000 Split, Hrvatska";
@@ -47,68 +48,36 @@ const PAYEE_DESCRIPTION = "Parking notice settlement";
 function buildHub3aText(reference: string, amountStr: string) {
   const cents = Math.round((parseFloat(amountStr) || 0) * 100);
   return [
-    "HRVHUB3",
-    "EUR",
-    cents.toString().padStart(15, "0"),
-    "",
-    "",
-    "",
-    PAYEE_NAME,
-    PAYEE_ADDRESS_1,
-    PAYEE_ADDRESS_2,
-    PAYEE_IBAN,
-    PAYEE_MODEL,
-    reference,
-    "OTHR",
-    PAYEE_DESCRIPTION,
+    "HRVHUB3", "EUR", cents.toString().padStart(15, "0"),
+    "", "", "",
+    PAYEE_NAME, PAYEE_ADDRESS_1, PAYEE_ADDRESS_2,
+    PAYEE_IBAN, PAYEE_MODEL, reference, "OTHR", PAYEE_DESCRIPTION,
   ].join("\n");
 }
 
 function buildEpcText(reference: string, amountStr: string) {
-  return [
-    "BCD",
-    "002",
-    "1",
-    "SCT",
-    "",
-    PAYEE_NAME,
-    PAYEE_IBAN,
-    `EUR${amountStr}`,
-    "",
-    "",
-    reference,
-  ].join("\n");
+  return ["BCD", "002", "1", "SCT", "", PAYEE_NAME, PAYEE_IBAN, `EUR${amountStr}`, "", "", reference].join("\n");
 }
 
 function QRCanvas({ text, size = 140 }: { text: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
   useEffect(() => {
     if (!canvasRef.current || !text) return;
     let cancelled = false;
     import("qrcode").then((QRCode) => {
       if (cancelled || !canvasRef.current) return;
-      QRCode.toCanvas(canvasRef.current, text, {
-        width: size,
-        margin: 1,
-        color: { dark: "#000000", light: "#ffffff" },
-      });
+      QRCode.toCanvas(canvasRef.current, text, { width: size, margin: 1, color: { dark: "#000000", light: "#ffffff" } });
     });
     return () => { cancelled = true; };
   }, [text, size]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={size}
-      height={size}
-      className="rounded-lg border border-gray-200 bg-white p-1"
-    />
-  );
+  return <canvas ref={canvasRef} width={size} height={size} className="rounded-lg border border-gray-200 bg-white p-1" />;
 }
 
 export default function PaymentsPage() {
+  const [searchMode, setSearchMode] = useState<"case_number" | "plate">("case_number");
   const [caseNumber, setCaseNumber] = useState("");
+  const [plate, setPlate] = useState("");
+  const [locationId, setLocationId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LookupResult | null>(null);
@@ -128,7 +97,7 @@ export default function PaymentsPage() {
     },
     {
       q: "How do I pay or dispute a parking notice?",
-      a: "Use PayParq Cases to find your notice using your license plate and 5‑digit location ID. Follow the on‑screen steps to pay or submit a dispute.",
+      a: "Use PayParq Payments to find your notice using your license plate and 5‑digit location ID. Follow the on‑screen steps to pay or submit a dispute.",
     },
     {
       q: "Where can I find my location ID?",
@@ -141,19 +110,38 @@ export default function PaymentsPage() {
   ];
   const [open, setOpen] = useState<Record<number, boolean>>({});
 
+  function switchMode(mode: "case_number" | "plate") {
+    setSearchMode(mode);
+    setError("");
+    setResult(null);
+  }
+
   async function handleLookup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    const caseVal = caseNumber.trim();
-    if (!/^\d{9}$/.test(caseVal)) {
-      setError("Enter a valid 9-digit case number.");
-      return;
-    }
-    setLoading(true);
     setResult(null);
+    setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("case_number", caseVal);
+      if (searchMode === "case_number") {
+        const caseVal = caseNumber.trim();
+        if (!/^\d{9}$/.test(caseVal)) {
+          setError("Enter a valid 9-digit case number.");
+          setLoading(false);
+          return;
+        }
+        params.set("case_number", caseVal);
+      } else {
+        const plateVal = plate.trim();
+        const locVal = locationId.trim();
+        if (!plateVal || !locVal || !/^\d{5}$/.test(locVal)) {
+          setError("Enter your license plate and a 5-digit location ID.");
+          setLoading(false);
+          return;
+        }
+        params.set("plate", plateVal.toUpperCase());
+        params.set("location_id", locVal);
+      }
       const res = await fetch(`/api/cases/lookup?${params.toString()}`, { method: "GET" });
       const data = await res.json();
       setResult(data);
@@ -164,10 +152,24 @@ export default function PaymentsPage() {
     }
   }
 
-  const activeCase = result?.case;
+  const cases = result?.cases ?? (result?.case ? [result.case] : []);
+  const primaryCase = cases.find(c => !c.is_warning) ?? cases[0];
+  const activeCase = primaryCase ?? result?.case;
+  const isWarning = cases.length > 0 && cases.every(c => c.is_warning);
+
+  const allCasePhotos: { src: string; caseNumber: string; time: string }[] = cases.flatMap(c => {
+    const photos = c.evidence_photos?.length ? c.evidence_photos : c.photo_url ? [c.photo_url] : [];
+    return photos.map(src => ({ src, caseNumber: c.case_number || c.notice_number || "", time: c.violation_time || "" }));
+  });
+
+  const shownCaseNumber = activeCase?.case_number || activeCase?.notice_number;
+  const otherOpenCases = cases.filter(c => {
+    const cn = c.case_number || c.notice_number;
+    return cn && cn !== shownCaseNumber && c.status?.toLowerCase() !== "paid";
+  });
+
   const amountDue = typeof activeCase?.amount_due === "number" ? activeCase.amount_due : null;
   const hubReference = activeCase?.case_number || activeCase?.notice_number || caseNumber || "000000000";
-  const isWarning = Boolean(activeCase?.is_warning);
 
   const violationDate = activeCase?.violation_time ? new Date(activeCase.violation_time) : null;
   const daysSince = violationDate ? (Date.now() - violationDate.getTime()) / (1000 * 60 * 60 * 24) : null;
@@ -182,9 +184,7 @@ export default function PaymentsPage() {
 
   function handleDownloadNotice() {
     const caseNum = activeCase?.case_number || activeCase?.notice_number || caseNumber;
-    if (caseNum) {
-      window.open(`/cases/notice?case_number=${encodeURIComponent(caseNum)}`, "_blank");
-    }
+    if (caseNum) window.open(`/payments/notice?case_number=${encodeURIComponent(caseNum)}`, "_blank");
   }
 
   return (
@@ -196,10 +196,13 @@ export default function PaymentsPage() {
             PayParq Payments
           </h1>
           <p className="text-sm md:text-base text-black/80 mb-8">
-            Search your parking case by 9-digit case number.
+            {searchMode === "case_number"
+              ? "Search your parking case by 9-digit case number."
+              : "Search your parking case by license plate and location ID."}
           </p>
+
           <form onSubmit={handleLookup} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
+            {searchMode === "case_number" ? (
               <input
                 type="text"
                 inputMode="numeric"
@@ -209,29 +212,55 @@ export default function PaymentsPage() {
                 onChange={(e) => setCaseNumber(e.target.value.replace(/\D/g, "").slice(0, 9))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm md:text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
               />
-            </div>
-            {error && (
-              <div className="text-[#5F3DFC] text-xs md:text-sm">{error}</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="License plate"
+                  value={plate}
+                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm md:text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="Location ID (5 digits)"
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm md:text-base placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                />
+              </div>
             )}
+
+            {error && <div className="text-[#5F3DFC] text-xs md:text-sm">{error}</div>}
+
             <button
               type="submit"
               className="inline-flex items-center justify-center px-5 py-3 rounded-full bg-[#5F3DFC] text-white text-[12px] md:text-[13px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
             >
               Find My Parking Case
             </button>
+
             <p className="text-xs md:text-sm text-black/70">
-              Search by plate and 5-digit location ID instead on{" "}
-              <Link href="/cases" className="underline">
-                PayParq Cases
-              </Link>
-              .
+              {searchMode === "case_number" ? (
+                <button type="button" onClick={() => switchMode("plate")} className="underline cursor-pointer">
+                  Search by plate and 5-digit location ID instead
+                </button>
+              ) : (
+                <button type="button" onClick={() => switchMode("case_number")} className="underline cursor-pointer">
+                  Search by 9-digit case number instead
+                </button>
+              )}
             </p>
           </form>
 
           <div className="mt-8">
-            {loading && (
-              <div className="text-sm md:text-base text-black/70">Looking up your case…</div>
-            )}
+            {loading && <div className="text-sm md:text-base text-black/70">Looking up your case…</div>}
             {!loading && result && (
               <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
                 {!result.found ? (
@@ -241,10 +270,7 @@ export default function PaymentsPage() {
                     </p>
                     <p className="text-sm md:text-base">
                       Contact support at{" "}
-                      <a href="mailto:payparq@outlook.com" className="underline">
-                        payparq@outlook.com
-                      </a>
-                      .
+                      <a href="mailto:payparq@outlook.com" className="underline">payparq@outlook.com</a>.
                     </p>
                   </div>
                 ) : isWarning ? (
@@ -263,17 +289,48 @@ export default function PaymentsPage() {
                         <div className="text-sm">{new Date(activeCase.violation_time).toLocaleString()}</div>
                       </div>
                     )}
-                    <Link
-                      href="/cases"
-                      className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors mt-2"
-                    >
-                      Search by Plate to Get a Parking Ticket
-                    </Link>
+                    {result.location?.display_id && (
+                      <Link
+                        href={`/pay?loc=${encodeURIComponent(result.location.display_id)}`}
+                        className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors mt-2"
+                      >
+                        Get a Parking Ticket Now
+                      </Link>
+                    )}
                   </div>
                 ) : (
-                  /* Fine panel — conversion-optimised */
                   <div className="space-y-5">
-                    {/* 1. Amount due + early-settlement clause */}
+                    {/* Evidence photos */}
+                    {allCasePhotos.length > 0 && (
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Dokazni materijal / Photo Evidence
+                      </div>
+                    )}
+                    {allCasePhotos.length > 0 ? (
+                      <div className={`grid gap-3 ${allCasePhotos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        {allCasePhotos.slice(0, 4).map((p, idx) => (
+                          <div key={`${p.src}-${idx}`} className="space-y-1">
+                            <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
+                              <Image src={p.src} alt={`Evidence ${idx + 1}`} fill className="object-contain" />
+                              {p.time && (
+                                <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full font-medium backdrop-blur-sm">
+                                  {new Date(p.time).toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                            {p.caseNumber && (
+                              <p className="text-[10px] text-gray-500 text-center font-mono">{p.caseNumber}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-video rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-sm">
+                        No evidence photo on file
+                      </div>
+                    )}
+
+                    {/* Amount due */}
                     <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 space-y-3">
                       <div className="flex items-baseline gap-3 flex-wrap">
                         <div>
@@ -290,28 +347,26 @@ export default function PaymentsPage() {
                           </div>
                         )}
                       </div>
-                      {earlyPayEligible && (
+                      {amountDue !== null && discountedAmount !== null && (
                         <div className="border-l-4 border-gray-800 pl-3 py-1">
                           <p className="text-xs font-semibold text-gray-800 leading-snug">
-                            Plaćanjem ove obavijesti u roku od 3 dana od datuma izdavanja, obavijest se smatra namirenom u cijelosti uz umanjenje kazne od 1/3.
+                            Plaćanjem ove obavijesti u roku od 3 dana od datuma izdavanja, obavijest se smatra namirenom u cijelosti uz umanjenje iznosa za 1/3 (umanjeni iznos: {new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(discountedAmount)}).
                           </p>
                           <p className="text-xs text-gray-500 mt-1 leading-snug">
-                            Payment of this notice within 3 days of the issue date will result in full settlement at a reduced amount — a 1/3 reduction applies. {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining.
+                            Payment of this notice within 3 days of the issue date will result in full settlement at a reduced amount — a 1/3 reduction applies (reduced amount: {new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(discountedAmount)}).{earlyPayEligible ? ` ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining.` : " Early payment period has elapsed — full amount is now due."}
                           </p>
                         </div>
                       )}
                     </div>
 
-                    {/* 2. Payment QRs */}
+                    {/* Payment QRs */}
                     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                       <h3 className="font-semibold text-base mb-2">Plaćanje / Payment</h3>
-
                       <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 mb-4 text-xs text-blue-800 leading-relaxed">
                         <span className="font-semibold">Kako platiti:</span> Otvorite bankovnu aplikaciju → Plaćanje → &ldquo;Plati QR kodom&rdquo; → skenirajte jedan od QR kodova ispod.<br />
                         <span className="font-semibold">How to pay:</span> Open your banking app → Payments → &ldquo;Pay by QR&rdquo; → scan one QR below. <span className="text-blue-600">Do not scan with your phone camera.</span>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-center mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center mb-4">
                         <div className="space-y-2">
                           <div className="flex justify-center"><QRCanvas text={hub3aText} size={160} /></div>
                           <p className="text-[11px] font-semibold text-gray-700">Hrvatska uplatnica</p>
@@ -323,7 +378,6 @@ export default function PaymentsPage() {
                           <p className="text-[10px] text-gray-500">Revolut · N26 · ING · Wise · sve EU</p>
                         </div>
                       </div>
-
                       <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs space-y-1.5">
                         <div className="flex justify-between gap-3"><span className="text-gray-500">Primatelj</span><span className="font-medium">{PAYEE_NAME}</span></div>
                         <div className="flex justify-between gap-3"><span className="text-gray-500">IBAN</span><span className="font-mono">{PAYEE_IBAN}</span></div>
@@ -333,30 +387,76 @@ export default function PaymentsPage() {
                       </div>
                     </div>
 
-                    {/* 3. Notice details */}
-                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm">
-                      <h3 className="font-semibold mb-3">Notice Details</h3>
-                      <div className="grid grid-cols-2 gap-y-2">
-                        <span className="text-gray-500">Case No.</span><span className="font-mono">{activeCase?.case_number || caseNumber}</span>
-                        <span className="text-gray-500">Plate</span><span className="font-mono">{activeCase?.plate || "N/A"}</span>
-                        <span className="text-gray-500">Location</span><span className="font-mono">{activeCase?.location_id || "N/A"}</span>
-                        <span className="text-gray-500">Issued</span><span>{activeCase?.violation_time ? new Date(activeCase.violation_time).toLocaleString() : "N/A"}</span>
-                        <span className="text-gray-500">Type</span><span>{activeCase?.violation_type || "Parking Violation"}</span>
-                        <span className="text-gray-500">Status</span><span className="capitalize">{activeCase?.status || "Issued"}</span>
+                    {/* Notice details */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-3">
+                        <h3 className="font-semibold">Notice Details</h3>
+                        <div className="grid grid-cols-2 gap-y-2 text-sm">
+                          <span className="text-gray-500">Case No.</span><span className="font-mono">{activeCase?.case_number || caseNumber || "N/A"}</span>
+                          <span className="text-gray-500">Plate</span><span className="font-mono">{activeCase?.plate || plate.toUpperCase() || "N/A"}</span>
+                          <span className="text-gray-500">Location</span><span className="font-mono">{activeCase?.location_id || locationId || "N/A"}</span>
+                          <span className="text-gray-500">Issued</span><span>{activeCase?.violation_time ? new Date(activeCase.violation_time).toLocaleString() : "N/A"}</span>
+                          <span className="text-gray-500">Type</span><span>{activeCase?.violation_type || "Parking Violation"}</span>
+                          <span className="text-gray-500">Status</span><span className="capitalize">{activeCase?.status || "Issued"}</span>
+                          {typeof result.location?.latitude === "number" && typeof result.location?.longitude === "number" && (
+                            <><span className="text-gray-500">GPS</span><span className="font-mono text-xs">{result.location.latitude.toFixed(5)}, {result.location.longitude.toFixed(5)}</span></>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
+                          <p>Neplaćanje ove obavijesti u roku može rezultirati dodatnim pravnim mjerama uključujući pokretanje naplate potraživanja. Failure to pay this notice within the due period may result in further legal action including referral to debt collection.</p>
+                          <p className="mt-1">Za sporove i upite: <a href="mailto:payparq@outlook.com" className="underline">payparq@outlook.com</a> · payparq.com/payments</p>
+                        </div>
+                        <button
+                          onClick={handleDownloadNotice}
+                          className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                          Download Official Notice
+                        </button>
+                        <div className="bg-[#5F3DFC]/5 rounded-xl border border-[#5F3DFC]/10 p-4">
+                          <h3 className="font-semibold text-[#5F3DFC] mb-1 text-sm">Dispute this notice</h3>
+                          <p className="text-xs text-gray-600 mb-3">If you believe this was issued in error, contact us with evidence.</p>
+                          <Link
+                            href="/contact"
+                            className="inline-flex items-center justify-center w-full px-4 py-2 rounded-lg bg-[#5F3DFC] text-white text-sm font-medium hover:bg-[#4330c4] transition-colors"
+                          >
+                            Contact Support to Dispute
+                          </Link>
+                        </div>
                       </div>
                     </div>
 
-                    {/* 4. Download + footer */}
-                    <button
-                      onClick={handleDownloadNotice}
-                      className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Official Notice
-                    </button>
                     <p className="text-xs text-gray-400 text-center">
                       Failure to pay may result in further legal action. · Neplaćanje može rezultirati daljnjim pravnim mjerama.
                     </p>
+
+                    {otherOpenCases.length > 0 && (
+                      <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                        <p className="text-xs font-semibold text-orange-800 mb-2 uppercase tracking-wide">
+                          Other open cases for this vehicle
+                        </p>
+                        <div className="space-y-1.5">
+                          {otherOpenCases.map(c => (
+                            <a
+                              key={c.id ?? c.case_number}
+                              href={`/payments?case_number=${encodeURIComponent(c.case_number || c.notice_number || "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between rounded-lg bg-white border border-orange-200 px-3 py-2 text-sm hover:bg-orange-50 transition-colors"
+                            >
+                              <span className="font-mono text-xs">{c.case_number || c.notice_number}</span>
+                              <span className="text-xs text-gray-500">
+                                {c.violation_time ? new Date(c.violation_time).toLocaleDateString() : ""}{" "}
+                                {c.amount_due != null ? `· €${c.amount_due.toFixed(2)}` : ""}
+                              </span>
+                              <span className="text-[#5F3DFC] text-xs font-medium">View →</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -372,7 +472,7 @@ export default function PaymentsPage() {
                   Frequently Asked Questions
                 </p>
                 <h2 className="text-3xl md:text-4xl font-semibold mb-6">
-                  Cases and Notices
+                  Payments and Notices
                 </h2>
                 <div className="space-y-2">
                   {faqs.map((item, i) => {
@@ -385,11 +485,7 @@ export default function PaymentsPage() {
                           aria-expanded={isOpen}
                         >
                           <span className="text-sm md:text-base font-semibold text-left">{item.q}</span>
-                          {isOpen ? (
-                            <Minus className="w-4 h-4 text-white/80" />
-                          ) : (
-                            <Plus className="w-4 h-4 text-white/80" />
-                          )}
+                          {isOpen ? <Minus className="w-4 h-4 text-white/80" /> : <Plus className="w-4 h-4 text-white/80" />}
                         </button>
                         {isOpen && (
                           <div className="pb-4 md:pb-5 text-sm md:text-base text-white/80 text-left">
