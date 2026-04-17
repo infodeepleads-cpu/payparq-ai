@@ -27,25 +27,6 @@ function buildEpcText(reference: string, amountStr: string) {
   return ["BCD", "002", "1", "SCT", "", PAYEE_NAME, PAYEE_IBAN, `EUR${amountStr}`, "", "", reference].join("\n");
 }
 
-const OG = "#f07030"; // official uplatnica orange
-
-function AmountCells({ amount }: { amount: number | null }) {
-  const raw = amount !== null
-    ? new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
-    : "";
-  // 10 chars wide (matches official form cell count), right-aligned
-  const padded = raw.padStart(10, " ").split("");
-  return (
-    <div style={{ display: "flex", gap: "1px" }}>
-      {padded.map((ch, i) => (
-        <div key={i} style={{ border: `1px solid ${OG}`, width: "15px", height: "18px", fontSize: "11px", fontWeight: 700, textAlign: "center", lineHeight: "18px", fontFamily: "monospace", background: "#fff" }}>
-          {ch.trim()}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function QRCanvas({ text, size }: { text: string; size: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -286,195 +267,81 @@ function NoticeContent() {
         </p>
       </div>
 
-      {/* HUB3A Uplatnica — Nalog za nacionalna plaćanja */}
-      <div style={{ breakBefore: "page", pageBreakBefore: "always", paddingTop: "4px", fontFamily: "Arial, Helvetica, sans-serif", fontSize: "10px" }}>
+      {/* HUB3A Uplatnica — image overlay (930×378 template) */}
+      <div style={{ breakBefore: "page", pageBreakBefore: "always", paddingTop: "4px" }}>
+        {/*
+          Image is 930×378. All overlays use percentage top/left so they scale
+          with the container at any width (screen or print).
+          Dynamic fields: Iznos, Poziv na broj primatelja, QR, stub Valuta, stub Model/Poziv.
+          Everything else is already baked into the template image.
+        */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "930 / 378" }}>
 
-        {/* Outer container: main form (75%) + right stub (25%) */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr", border: `2px solid ${OG}` }}>
+          {/* Base template */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/resources/uplatnica.png"
+            alt="Nalog za nacionalna plaćanja"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+          />
 
-          {/* ── LEFT: main form ── */}
-          <div style={{ borderRight: `2px solid ${OG}` }}>
+          {/* ── MAIN FORM OVERLAYS ── */}
 
-            {/* Title */}
-            <div style={{ textAlign: "center", color: OG, fontWeight: 700, fontSize: "12px", letterSpacing: "1.5px", textTransform: "uppercase", borderBottom: `1px solid ${OG}`, padding: "5px 8px" }}>
-              Nalog za nacionalna plaćanja
+          {/* Iznos — sits inside the cell grid row (top ≈8%, left ≈42%) */}
+          {payAmount !== null && (
+            <div style={{
+              position: "absolute", top: "8%", left: "42%",
+              fontFamily: "monospace", fontWeight: 700, fontSize: "1.3cqw",
+              letterSpacing: "0.15em", color: "#000", lineHeight: 1,
+              fontSize: "clamp(8px, 1.3%, 14px)" as never,
+            }}>
+              {new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payAmount)}
             </div>
+          )}
 
-            {/* ROW 1 — Platitelj (35%) | Hitno+Valuta+Iznos / IBAN platitelja / Model+Poziv platitelja */}
-            <div style={{ display: "grid", gridTemplateColumns: "35% 65%", borderBottom: `1px solid ${OG}`, minHeight: "96px" }}>
-
-              <div style={{ borderRight: `1px solid ${OG}`, padding: "5px 8px", display: "flex", flexDirection: "column" }}>
-                <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "7px" }}>PLATITELJ (naziv/ime i adresa):</div>
-                <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "20px", marginBottom: "6px" }}></div>
-                <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "20px", marginBottom: "6px" }}></div>
-                <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "20px" }}></div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column" }}>
-
-                {/* Hitno | Valuta | Iznos */}
-                <div style={{ display: "grid", gridTemplateColumns: "52px 90px 1fr", borderBottom: `1px solid ${OG}`, minHeight: "42px" }}>
-                  <div style={{ borderRight: `1px solid ${OG}`, padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Hitno:</div>
-                    <div style={{ border: `1.5px solid ${OG}`, width: "14px", height: "14px" }}></div>
-                  </div>
-                  <div style={{ borderRight: `1px solid ${OG}`, padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Valuta plaćanja:</div>
-                    <div style={{ fontWeight: 700, fontSize: "13px" }}>EUR</div>
-                  </div>
-                  <div style={{ padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Iznos:</div>
-                    <AmountCells amount={payAmount} />
-                  </div>
-                </div>
-
-                {/* IBAN platitelja */}
-                <div style={{ borderBottom: `1px solid ${OG}`, padding: "4px 6px", minHeight: "32px" }}>
-                  <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>IBAN ili broj računa platitelja:</div>
-                  <div style={{ display: "flex", gap: "1px" }}>
-                    {Array.from({ length: 21 }).map((_, i) => (
-                      <div key={i} style={{ border: `1px solid ${OG}`, width: "13px", height: "14px" }}></div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Model | Poziv platitelja */}
-                <div style={{ display: "grid", gridTemplateColumns: "88px 1fr", minHeight: "30px" }}>
-                  <div style={{ borderRight: `1px solid ${OG}`, padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Model:</div>
-                    <div style={{ border: `1px solid ${OG}`, height: "14px", width: "52px" }}></div>
-                  </div>
-                  <div style={{ padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Poziv na broj platitelja:</div>
-                    <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "14px" }}></div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* IBAN primatelja — full-width highlighted row */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 10px", display: "flex", alignItems: "center", gap: "12px", minHeight: "36px", background: "#fff8f2" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, whiteSpace: "nowrap" }}>IBAN ili broj računa primatelja:</div>
-              <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "15px", letterSpacing: "2.5px" }}>{PAYEE_IBAN}</div>
-            </div>
-
-            {/* ROW 3 — Primatelj (35%) | Model+Poziv / Šifra+Opis / Datum */}
-            <div style={{ display: "grid", gridTemplateColumns: "35% 65%", borderBottom: `1px solid ${OG}`, minHeight: "90px" }}>
-
-              <div style={{ borderRight: `1px solid ${OG}`, padding: "5px 8px", display: "flex", flexDirection: "column" }}>
-                <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "6px" }}>PRIMATELJ (naziv/ime i adresa):</div>
-                <div style={{ fontWeight: 700, fontSize: "12px", marginBottom: "4px" }}>{PAYEE_NAME}</div>
-                <div style={{ fontSize: "10px", marginBottom: "2px" }}>{PAYEE_ADDRESS_1}</div>
-                <div style={{ fontSize: "10px" }}>{PAYEE_ADDRESS_2}</div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column" }}>
-
-                {/* Model | Poziv primatelja */}
-                <div style={{ display: "grid", gridTemplateColumns: "88px 1fr", borderBottom: `1px solid ${OG}`, minHeight: "34px" }}>
-                  <div style={{ borderRight: `1px solid ${OG}`, padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Model:</div>
-                    <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "13px" }}>{PAYEE_MODEL}</div>
-                  </div>
-                  <div style={{ padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Poziv na broj primatelja:</div>
-                    <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "13px" }}>{reference}</div>
-                  </div>
-                </div>
-
-                {/* Šifra namjene | Opis plaćanja */}
-                <div style={{ display: "grid", gridTemplateColumns: "88px 1fr", borderBottom: `1px solid ${OG}`, minHeight: "30px" }}>
-                  <div style={{ borderRight: `1px solid ${OG}`, padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Šifra namjene:</div>
-                    <div style={{ border: `1px solid ${OG}`, height: "14px", width: "40px" }}></div>
-                  </div>
-                  <div style={{ padding: "4px 6px" }}>
-                    <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Opis plaćanja:</div>
-                    <div style={{ fontSize: "10px" }}>{PAYEE_DESCRIPTION}</div>
-                  </div>
-                </div>
-
-                {/* Datum izvršenja */}
-                <div style={{ padding: "4px 6px", minHeight: "26px" }}>
-                  <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Datum izvršenja:</div>
-                  <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "14px" }}></div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* ROW 4 — QR | Pečat | Potpis — equal thirds */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", minHeight: "110px" }}>
-              <div style={{ borderRight: `1px solid ${OG}`, padding: "8px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-                <QRCanvas text={hub3aText} size={88} />
-                <div style={{ fontSize: "7px", color: OG, fontWeight: 700, letterSpacing: "0.5px" }}>Obr. HUB 3A</div>
-              </div>
-              <div style={{ borderRight: `1px solid ${OG}`, padding: "7px 9px" }}>
-                <div style={{ color: OG, fontSize: "8px", fontWeight: 700 }}>Pečat korisnika PU</div>
-              </div>
-              <div style={{ padding: "7px 9px" }}>
-                <div style={{ color: OG, fontSize: "8px", fontWeight: 700 }}>Potpis korisnika PU</div>
-              </div>
-            </div>
-
+          {/* Poziv na broj primatelja — first sub-row of Primatelj section (top ≈40%, left ≈37%) */}
+          <div style={{
+            position: "absolute", top: "40%", left: "37%",
+            fontFamily: "monospace", fontWeight: 700,
+            fontSize: "clamp(7px, 1.2%, 13px)" as never,
+            letterSpacing: "0.08em", color: "#000", lineHeight: 1,
+          }}>
+            {reference}
           </div>
 
-          {/* ── RIGHT: bank stub ── */}
-          <div style={{ display: "flex", flexDirection: "column", fontSize: "9px" }}>
-
-            {/* Title placeholder (aligns with main title row) */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "30px" }}></div>
-
-            {/* Valuta i iznos */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "42px" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "5px" }}>Valuta i iznos:</div>
-              <div style={{ fontWeight: 700, fontSize: "11px" }}>
-                EUR {payAmount !== null ? new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payAmount) : ""}
-              </div>
-            </div>
-
-            {/* IBAN platitelja stub */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "46px" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "5px" }}>IBAN (račun) platitelja ili Platitelja:</div>
-              <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "16px" }}></div>
-            </div>
-
-            {/* Model i poziv platitelja stub */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "30px" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "5px" }}>Model i poziv na broj platitelja:</div>
-              <div style={{ borderBottom: `1px solid ${OG}`, minHeight: "14px" }}></div>
-            </div>
-
-            {/* IBAN primatelja stub */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "36px", background: "#fff8f2" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>IBAN (račun) primatelja:</div>
-              <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "8px", wordBreak: "break-all", letterSpacing: "0.5px" }}>{PAYEE_IBAN}</div>
-            </div>
-
-            {/* Model i poziv primatelja stub */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", minHeight: "30px" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Model i poziv na broj primatelja:</div>
-              <div style={{ fontFamily: "monospace", fontSize: "9px" }}>{PAYEE_MODEL} / {reference}</div>
-            </div>
-
-            {/* Opis plaćanja stub */}
-            <div style={{ borderBottom: `1px solid ${OG}`, padding: "5px 7px", flex: 1 }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700, marginBottom: "4px" }}>Opis plaćanja:</div>
-              <div style={{ fontSize: "9px" }}>{PAYEE_DESCRIPTION}</div>
-            </div>
-
-            {/* Ovjera */}
-            <div style={{ padding: "5px 7px", minHeight: "110px" }}>
-              <div style={{ color: OG, fontSize: "8px", fontWeight: 700 }}>Ovjera</div>
-            </div>
-
+          {/* QR canvas — over barcode area (bottom-left third, top ≈62%, left ≈0.5%) */}
+          <div style={{
+            position: "absolute", top: "62%", left: "0.5%",
+            background: "#fff", lineHeight: 0,
+          }}>
+            <QRCanvas text={hub3aText} size={118} />
           </div>
+
+          {/* ── STUB OVERLAYS (right 25%, x > 75%) ── */}
+
+          {/* Stub: Valuta i iznos value (top ≈14%, left ≈76.5%) */}
+          {payAmount !== null && (
+            <div style={{
+              position: "absolute", top: "14%", left: "76.5%",
+              fontFamily: "monospace", fontWeight: 700,
+              fontSize: "clamp(7px, 1%, 11px)" as never,
+              color: "#000", lineHeight: 1,
+            }}>
+              EUR {new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payAmount)}
+            </div>
+          )}
+
+          {/* Stub: Model i poziv na broj primatelja (top ≈52%, left ≈76.5%) */}
+          <div style={{
+            position: "absolute", top: "52%", left: "76.5%",
+            fontFamily: "monospace",
+            fontSize: "clamp(6px, 0.9%, 10px)" as never,
+            color: "#000", lineHeight: 1,
+          }}>
+            {PAYEE_MODEL} {reference}
+          </div>
+
         </div>
-
-        {/* Bottom label */}
-        <div style={{ fontSize: "8px", color: OG, fontWeight: 700, marginTop: "3px" }}>Obr. HUB 3A →</div>
-
       </div>
 
       <style>{`
