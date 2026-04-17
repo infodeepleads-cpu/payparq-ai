@@ -99,8 +99,8 @@ export default function PayPage() {
           plate_number: "",
           customer_email: customerEmail,
           flow_type: flow,
-          check_in: checkIn,
-          check_out: checkOut,
+          check_in: checkIn ? new Date(checkIn).toISOString() : undefined,
+          check_out: checkOut ? new Date(checkOut).toISOString() : undefined,
         }),
       });
 
