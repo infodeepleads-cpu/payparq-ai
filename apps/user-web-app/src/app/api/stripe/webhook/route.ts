@@ -37,6 +37,52 @@ function parseIso(value: string | null | undefined) {
   return parsed.toISOString();
 }
 
+function isNaiveDatetime(value: string): boolean {
+  const trimmed = value.trim();
+  if (/(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed)) return false;
+  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(trimmed);
+}
+
+function parseNaiveDateParts(value: string) {
+  const match = value.trim().match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/,
+  );
+  if (!match) return null;
+  return {
+    year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
+    hour: Number(match[4]), minute: Number(match[5]), second: Number(match[6] ?? '0'),
+  };
+}
+
+function resolveZagrebOffsetMinutes(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zagreb',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const zonedAsUtc = Date.UTC(get('year'), Math.max(0, get('month') - 1), get('day'), get('hour'), get('minute'), get('second'));
+  return Math.round((zonedAsUtc - date.getTime()) / 60000);
+}
+
+function parseMetadataDatetime(value: string | null | undefined): string | null {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  if (!isNaiveDatetime(raw)) {
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  const naive = parseNaiveDateParts(raw);
+  if (!naive) return null;
+  let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const offsetMinutes = resolveZagrebOffsetMinutes(new Date(utcMillis));
+    utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second)
+      - offsetMinutes * 60000;
+  }
+  return new Date(utcMillis).toISOString();
+}
+
 function toCents(value: unknown): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -433,8 +479,8 @@ export async function POST(req: Request) {
     const chargedAmountCents = toCents(sessionMetadata.charged_amount_cents ?? session.amount_total ?? 0);
     const walletDebitPlannedCents = toCents(sessionMetadata.wallet_debit_planned_cents);
     const lotCommissionRate = toCommissionRate(sessionMetadata.lot_commission_rate);
-    const checkInFromMetadata = parseIso(sessionMetadata.check_in);
-    const checkOutFromMetadata = parseIso(sessionMetadata.check_out);
+    const checkInFromMetadata = parseMetadataDatetime(sessionMetadata.check_in);
+    const checkOutFromMetadata = parseMetadataDatetime(sessionMetadata.check_out);
     const shouldResolveExtensionFallback =
       flowType === 'reserve' && (!checkInFromMetadata || !checkOutFromMetadata);
     const extensionEntryTime = shouldResolveExtensionFallback
