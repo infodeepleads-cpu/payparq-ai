@@ -267,81 +267,14 @@ function NoticeContent() {
         </p>
       </div>
 
-      {/* HUB3A Uplatnica — image overlay (930×378 template) */}
+      {/* HUB3A Uplatnica */}
       <div style={{ breakBefore: "page", pageBreakBefore: "always", paddingTop: "4px" }}>
-        {/*
-          Image is 930×378. All overlays use percentage top/left so they scale
-          with the container at any width (screen or print).
-          Dynamic fields: Iznos, Poziv na broj primatelja, QR, stub Valuta, stub Model/Poziv.
-          Everything else is already baked into the template image.
-        */}
-        <div style={{ position: "relative", width: "100%", aspectRatio: "930 / 378" }}>
-
-          {/* Base template */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/resources/uplatnica.png"
-            alt="Nalog za nacionalna plaćanja"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
-          />
-
-          {/* ── MAIN FORM OVERLAYS ── */}
-
-          {/* Iznos — sits inside the cell grid row (top ≈8%, left ≈42%) */}
-          {payAmount !== null && (
-            <div style={{
-              position: "absolute", top: "8%", left: "42%",
-              fontFamily: "monospace", fontWeight: 700, fontSize: "1.3cqw",
-              letterSpacing: "0.15em", color: "#000", lineHeight: 1,
-              fontSize: "clamp(8px, 1.3%, 14px)" as never,
-            }}>
-              {new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payAmount)}
-            </div>
-          )}
-
-          {/* Poziv na broj primatelja — first sub-row of Primatelj section (top ≈40%, left ≈37%) */}
-          <div style={{
-            position: "absolute", top: "40%", left: "37%",
-            fontFamily: "monospace", fontWeight: 700,
-            fontSize: "clamp(7px, 1.2%, 13px)" as never,
-            letterSpacing: "0.08em", color: "#000", lineHeight: 1,
-          }}>
-            {reference}
-          </div>
-
-          {/* QR canvas — over barcode area (bottom-left third, top ≈62%, left ≈0.5%) */}
-          <div style={{
-            position: "absolute", top: "62%", left: "0.5%",
-            background: "#fff", lineHeight: 0,
-          }}>
-            <QRCanvas text={hub3aText} size={118} />
-          </div>
-
-          {/* ── STUB OVERLAYS (right 25%, x > 75%) ── */}
-
-          {/* Stub: Valuta i iznos value (top ≈14%, left ≈76.5%) */}
-          {payAmount !== null && (
-            <div style={{
-              position: "absolute", top: "14%", left: "76.5%",
-              fontFamily: "monospace", fontWeight: 700,
-              fontSize: "clamp(7px, 1%, 11px)" as never,
-              color: "#000", lineHeight: 1,
-            }}>
-              EUR {new Intl.NumberFormat("hr-HR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(payAmount)}
-            </div>
-          )}
-
-          {/* Stub: Model i poziv na broj primatelja (top ≈52%, left ≈76.5%) */}
-          <div style={{
-            position: "absolute", top: "52%", left: "76.5%",
-            fontFamily: "monospace",
-            fontSize: "clamp(6px, 0.9%, 10px)" as never,
-            color: "#000", lineHeight: 1,
-          }}>
-            {PAYEE_MODEL} {reference}
-          </div>
-
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/resources/uplatnica.png"
+          alt="Nalog za nacionalna plaćanja"
+          style={{ width: "100%", display: "block" }}
+        />
       </div>
 
       <style>{`
