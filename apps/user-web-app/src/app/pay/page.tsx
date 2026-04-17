@@ -16,7 +16,6 @@ export default function PayPage() {
   const [activeTab, setActiveTab] = useState<FlowType>("park_now");
   const [locationId, setLocationId] = useState("");
   const [monthlyLocationId, setMonthlyLocationId] = useState("");
-  const [reserveLocation, setReserveLocation] = useState("");
   const [processing, setProcessing] = useState<FlowType | null>(null);
   const [error, setError] = useState("");
   const [checkIn, setCheckIn] = useState("");
@@ -43,7 +42,6 @@ export default function PayPage() {
       Promise.resolve().then(() => {
         setLocationId(loc);
         setMonthlyLocationId(loc);
-        setReserveLocation(loc);
         setCheckIn(inVal);
         setCheckOut(outVal);
         setAmountCentsHint(normalizedAmountCents);
@@ -461,7 +459,20 @@ export default function PayPage() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                handleCheckout("park_now", locationId);
+                if (!locationId.trim()) {
+                  setError("Enter a location ID or name from on-site signage.");
+                  return;
+                }
+                setError("");
+                const now = new Date();
+                const params = new URLSearchParams({
+                  flow: "reserve",
+                  type: "hourly",
+                  loc: locationId.trim(),
+                  in: now.toISOString(),
+                  daily_footer: "1",
+                });
+                window.location.href = `/api/stripe/checkout?${params.toString()}`;
               }}
             >
               <div className="space-y-1">
@@ -478,14 +489,10 @@ export default function PayPage() {
               </div>
               <button
                 type="submit"
-                disabled={processing === "park_now"}
-                className="mt-2 inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                className="mt-2 inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
               >
-                {processing === "park_now" ? "Redirecting…" : "Pay now"}
+                Pay Hourly
               </button>
-              {showWalletTopupExplainer ? (
-                <p className="text-[11px] text-black/65">Card min €0.50. Extra is added to wallet.</p>
-              ) : null}
             </form>
           )}
 
@@ -520,36 +527,18 @@ export default function PayPage() {
           )}
 
           {activeTab === "reserve" && (
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCheckout("reserve", reserveLocation);
-              }}
-            >
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-black/80">
-                  Location name or ID
-                </label>
-                <input
-                  type="text"
-                  value={reserveLocation}
-                  onChange={(e) => setReserveLocation(e.target.value)}
-                  placeholder="Enter the location name or code you want to reserve"
-                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm text-black placeholder:text-black/40 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC] focus:ring-offset-1 focus:ring-offset-white"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={processing === "reserve"}
-                className="mt-2 inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            <div className="space-y-4">
+              <p className="text-sm text-black/70">
+                Browse available locations, pick your spot, and choose your arrival and
+                departure times — then complete your reservation with a single tap.
+              </p>
+              <Link
+                href="/locations"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
               >
-                {processing === "reserve" ? "Redirecting…" : "Reserve parking"}
-              </button>
-              {showWalletTopupExplainer ? (
-                <p className="text-[11px] text-black/65">Card min €0.50. Extra is added to wallet.</p>
-              ) : null}
-            </form>
+                Browse locations
+              </Link>
+            </div>
           )}
 
           <div className="mt-10 border-t border-black/5 pt-6 text-xs text-black/70 space-y-1">

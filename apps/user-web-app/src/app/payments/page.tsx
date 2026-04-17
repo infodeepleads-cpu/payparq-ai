@@ -1,80 +1,145 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
-import { Plus, Minus } from "lucide-react";
-import Image from "next/image";
+import { Plus, Minus, Download, AlertTriangle } from "lucide-react";
+
+type CaseItem = {
+  id?: string;
+  case_number?: string;
+  notice_number?: string;
+  plate?: string;
+  location_id?: string;
+  photo_url?: string;
+  evidence_photos?: string[];
+  violation_time?: string;
+  violation_type?: string;
+  is_warning?: boolean;
+  amount_due?: number;
+  status?: string;
+};
+
+type LookupResult = {
+  found: boolean;
+  supportEmail?: string;
+  case?: CaseItem;
+  cases?: CaseItem[];
+  location?: {
+    name?: string | null;
+    slug?: string | null;
+    display_id?: string | null;
+    photos?: string[] | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  error?: string;
+};
+
+const PAYEE_NAME = process.env.NEXT_PUBLIC_CASE_PAYEE_NAME || "PayParq Global Inc.";
+const PAYEE_IBAN = process.env.NEXT_PUBLIC_CASE_PAYEE_IBAN || "HR1210010051863000160";
+const PAYEE_MODEL = process.env.NEXT_PUBLIC_CASE_PAYEE_MODEL || "HR00";
+const PAYEE_ADDRESS_1 = process.env.NEXT_PUBLIC_CASE_PAYEE_ADDRESS_1 || "Trg Gaje Bulata 1";
+const PAYEE_ADDRESS_2 = process.env.NEXT_PUBLIC_CASE_PAYEE_ADDRESS_2 || "21000 Split, Hrvatska";
+const PAYEE_DESCRIPTION = "Parking notice settlement";
+
+function buildHub3aText(reference: string, amountStr: string) {
+  const cents = Math.round((parseFloat(amountStr) || 0) * 100);
+  return [
+    "HRVHUB3",
+    "EUR",
+    cents.toString().padStart(15, "0"),
+    "",
+    "",
+    "",
+    PAYEE_NAME,
+    PAYEE_ADDRESS_1,
+    PAYEE_ADDRESS_2,
+    PAYEE_IBAN,
+    PAYEE_MODEL,
+    reference,
+    "OTHR",
+    PAYEE_DESCRIPTION,
+  ].join("\n");
+}
+
+function buildEpcText(reference: string, amountStr: string) {
+  return [
+    "BCD",
+    "002",
+    "1",
+    "SCT",
+    "",
+    PAYEE_NAME,
+    PAYEE_IBAN,
+    `EUR${amountStr}`,
+    "",
+    "",
+    reference,
+  ].join("\n");
+}
+
+function QRCanvas({ text, size = 140 }: { text: string; size?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !text) return;
+    let cancelled = false;
+    import("qrcode").then((QRCode) => {
+      if (cancelled || !canvasRef.current) return;
+      QRCode.toCanvas(canvasRef.current, text, {
+        width: size,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+    });
+    return () => { cancelled = true; };
+  }, [text, size]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={size}
+      height={size}
+      className="rounded-lg border border-gray-200 bg-white p-1"
+    />
+  );
+}
 
 export default function PaymentsPage() {
   const [caseNumber, setCaseNumber] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<null | {
-    found: boolean;
-    supportEmail?: string;
-    case?: {
-      id?: string;
-      case_number?: string;
-      notice_number?: string;
-      plate?: string;
-      location_id?: string;
-      photo_url?: string;
-      evidence_photos?: string[];
-      violation_time?: string;
-      violation_type?: string;
-      amount_due?: number;
-      status?: string;
-    };
-    location?: {
-      name?: string | null;
-      slug?: string | null;
-      display_id?: string | null;
-      photos?: string[] | null;
-      latitude?: number | null;
-      longitude?: number | null;
-    };
-    error?: string;
-  }>(null);
+  const [result, setResult] = useState<LookupResult | null>(null);
+
   const faqs = [
     {
       q: "Why did I receive a notice?",
-      a:
-        "You or another operator of your vehicle recently parked at a PayParq‑managed facility and left without paying. Your notice includes a vehicle photo with location and time stamp.",
+      a: "You or another operator of your vehicle recently parked at a PayParq‑managed facility and left without paying. Your notice includes a vehicle photo with location and time stamp.",
     },
     {
       q: "Can I dispute the notice?",
-      a:
-        "Yes. Enter your license plate and 5‑digit location ID above to locate your notice, then use the contact and dispute options on the following page.",
+      a: "Yes. Enter your license plate and 5‑digit location ID above to locate your notice, then use the contact and dispute options on the following page.",
     },
     {
-      q: "What happens if I don’t pay my notice?",
-      a:
-        "Failure to pay in a timely manner may result in additional action, including referral to collections or other legal processes. Please resolve your notice today.",
+      q: "What happens if I don't pay my notice?",
+      a: "Failure to pay in a timely manner may result in additional action, including referral to collections or other legal processes. Please resolve your notice today.",
     },
     {
       q: "How do I pay or dispute a parking notice?",
-      a:
-        "Use PayParq Cases to find your notice using your license plate and 5‑digit location ID. Follow the on‑screen steps to pay or submit a dispute.",
+      a: "Use PayParq Cases to find your notice using your license plate and 5‑digit location ID. Follow the on‑screen steps to pay or submit a dispute.",
     },
     {
       q: "Where can I find my location ID?",
-      a:
-        "Check on‑site signage. The location ID is a 5‑digit number printed near the PayParq instructions.",
+      a: "Check on‑site signage. The location ID is a 5‑digit number printed near the PayParq instructions.",
     },
     {
       q: "Wrong plate or ID?",
-      a:
-        'Re‑enter your details above. If issues persist, contact <a href="mailto:payparq@outlook.com" class="underline">payparq@outlook.com</a>.',
+      a: 'Re‑enter your details above. If issues persist, contact <a href="mailto:payparq@outlook.com" class="underline">payparq@outlook.com</a>.',
     },
   ];
   const [open, setOpen] = useState<Record<number, boolean>>({});
-  const payeeName = "PayParq Global Inc.";
-  const payeeIban = "HR1210010051863000160";
-  const payeeModel = "HR00";
-  const payeePurpose = "NOVC";
-  const payeeDescription = "Parking notice settlement";
 
   async function handleLookup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,21 +164,28 @@ export default function PaymentsPage() {
     }
   }
 
-  const amountDue = typeof result?.case?.amount_due === "number" ? result.case.amount_due : null;
-  const amountNow = amountDue !== null ? Number(amountDue.toFixed(2)) : null;
-  const hubReference = result?.case?.case_number || result?.case?.notice_number || caseNumber || "000000000";
-  const hub3aText = [
-    "HUB3A",
-    payeeName,
-    payeeIban,
-    payeeModel,
-    hubReference,
-    amountNow !== null ? amountNow.toFixed(2) : "0.00",
-    "EUR",
-    payeePurpose,
-    payeeDescription,
-  ].join("|");
-  const euroQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(hub3aText)}`;
+  const activeCase = result?.case;
+  const amountDue = typeof activeCase?.amount_due === "number" ? activeCase.amount_due : null;
+  const hubReference = activeCase?.case_number || activeCase?.notice_number || caseNumber || "000000000";
+  const isWarning = Boolean(activeCase?.is_warning);
+
+  const violationDate = activeCase?.violation_time ? new Date(activeCase.violation_time) : null;
+  const daysSince = violationDate ? (Date.now() - violationDate.getTime()) / (1000 * 60 * 60 * 24) : null;
+  const earlyPayEligible = daysSince !== null && daysSince <= 3 && amountDue !== null;
+  const daysLeft = earlyPayEligible && daysSince !== null ? Math.max(0, Math.ceil(3 - daysSince)) : 0;
+  const discountedAmount = amountDue !== null ? Math.round((amountDue * 2) / 3 * 100) / 100 : null;
+  const payAmount = earlyPayEligible && discountedAmount !== null ? discountedAmount : amountDue;
+  const amountFormatted = payAmount !== null ? payAmount.toFixed(2) : "0.00";
+
+  const hub3aText = buildHub3aText(hubReference, amountFormatted);
+  const epcText = buildEpcText(hubReference, amountFormatted);
+
+  function handleDownloadNotice() {
+    const caseNum = activeCase?.case_number || activeCase?.notice_number || caseNumber;
+    if (caseNum) {
+      window.open(`/cases/notice?case_number=${encodeURIComponent(caseNum)}`, "_blank");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -139,9 +211,7 @@ export default function PaymentsPage() {
               />
             </div>
             {error && (
-              <div className="text-[#5F3DFC] text-xs md:text-sm">
-                {error}
-              </div>
+              <div className="text-[#5F3DFC] text-xs md:text-sm">{error}</div>
             )}
             <button
               type="submit"
@@ -177,95 +247,116 @@ export default function PaymentsPage() {
                       .
                     </p>
                   </div>
+                ) : isWarning ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                      <h3 className="font-semibold text-amber-900">Advisory Warning — No Fine Due</h3>
+                    </div>
+                    <p className="text-sm text-amber-800">
+                      This is a warning notice. No payment is required at this time.
+                      To avoid receiving an actual fine in future visits, please purchase a parking ticket before leaving.
+                    </p>
+                    {activeCase?.violation_time && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Issued</div>
+                        <div className="text-sm">{new Date(activeCase.violation_time).toLocaleString()}</div>
+                      </div>
+                    )}
+                    <Link
+                      href="/cases"
+                      className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition-colors mt-2"
+                    >
+                      Search by Plate to Get a Parking Ticket
+                    </Link>
+                  </div>
                 ) : (
-                  <div className="grid gap-8 md:grid-cols-[1.5fr,1fr] items-start">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(result.case?.evidence_photos?.length ? result.case.evidence_photos.slice(0, 2) : [result.case?.photo_url || "", ""]).map((photo, idx) => (
-                          photo ? (
-                            <div key={`${photo}-${idx}`} className="relative w-full aspect-video rounded-xl overflow-hidden border border-black/5 bg-black">
-                              <Image
-                                src={photo}
-                                alt={`Violation evidence ${idx + 1}`}
-                                fill
-                                className="object-contain"
-                              />
-                              <div className="absolute top-3 left-3 bg-black/60 text-white text-[11px] px-3 py-1.5 rounded-full font-medium backdrop-blur-sm">
-                                {new Date(result.case?.violation_time || "").toLocaleString()}
-                              </div>
-                            </div>
-                          ) : (
-                            <div key={`empty-${idx}`} className="w-full aspect-video rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-500 text-sm">
-                              Evidence photo {idx + 1} unavailable
-                            </div>
-                          )
-                        ))}
-                      </div>
-
-                      <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                        <h3 className="font-semibold text-lg mb-4">Legal Notice Details</h3>
-                        <div className="grid grid-cols-2 gap-y-4 text-sm">
-                          <div className="text-gray-500">Case Number</div>
-                          <div className="font-mono">{result.case?.case_number || result.case?.notice_number || caseNumber}</div>
-
-                          <div className="text-gray-500">License Plate</div>
-                          <div className="font-mono">{result.case?.plate || "N/A"}</div>
-
-                          <div className="text-gray-500">Location ID</div>
-                          <div className="font-mono">{result.case?.location_id || "N/A"}</div>
-
-                          <div className="text-gray-500">Violation Timestamp</div>
-                          <div>{result.case?.violation_time ? new Date(result.case.violation_time).toLocaleString() : "N/A"}</div>
-
-                          <div className="text-gray-500">GPS Coordinates</div>
-                          <div className="font-mono">
-                            {typeof result.location?.latitude === "number" && typeof result.location?.longitude === "number"
-                              ? `${result.location.latitude.toFixed(6)}, ${result.location.longitude.toFixed(6)}`
-                              : "N/A"}
-                          </div>
-
-                          <div className="text-gray-500">Violation Type</div>
-                          <div>{result.case?.violation_type || "Parking Violation"}</div>
-
-                          <div className="text-gray-500">Status</div>
-                          <div className="capitalize">{result.case?.status || "Issued"}</div>
-
-                          <div className="text-gray-500 font-semibold pt-2">Amount Due</div>
-                          <div className="font-semibold text-lg pt-1">
-                            {typeof result.case?.amount_due === "number"
-                              ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(result.case.amount_due)
-                              : "Check status"}
+                  /* Fine panel — conversion-optimised */
+                  <div className="space-y-5">
+                    {/* 1. Amount due + early-settlement clause */}
+                    <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 space-y-3">
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-0.5">Iznos za uplatu / Amount Due</div>
+                          <div className="text-2xl font-bold">
+                            {payAmount !== null
+                              ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(payAmount)
+                              : "—"}
                           </div>
                         </div>
+                        {earlyPayEligible && amountDue !== null && (
+                          <div className="text-sm text-gray-400 line-through self-end pb-0.5">
+                            {new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(amountDue)}
+                          </div>
+                        )}
+                      </div>
+                      {earlyPayEligible && (
+                        <div className="border-l-4 border-gray-800 pl-3 py-1">
+                          <p className="text-xs font-semibold text-gray-800 leading-snug">
+                            Plaćanjem ove obavijesti u roku od 3 dana od datuma izdavanja, obavijest se smatra namirenom u cijelosti uz umanjenje kazne od 1/3.
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 leading-snug">
+                            Payment of this notice within 3 days of the issue date will result in full settlement at a reduced amount — a 1/3 reduction applies. {daysLeft} day{daysLeft !== 1 ? "s" : ""} remaining.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Payment QRs */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                      <h3 className="font-semibold text-base mb-2">Plaćanje / Payment</h3>
+
+                      <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 mb-4 text-xs text-blue-800 leading-relaxed">
+                        <span className="font-semibold">Kako platiti:</span> Otvorite bankovnu aplikaciju → Plaćanje → &ldquo;Plati QR kodom&rdquo; → skenirajte jedan od QR kodova ispod.<br />
+                        <span className="font-semibold">How to pay:</span> Open your banking app → Payments → &ldquo;Pay by QR&rdquo; → scan one QR below. <span className="text-blue-600">Do not scan with your phone camera.</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-center mb-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-center"><QRCanvas text={hub3aText} size={160} /></div>
+                          <p className="text-[11px] font-semibold text-gray-700">Hrvatska uplatnica</p>
+                          <p className="text-[10px] text-gray-500">HUB3A · ZABA · PBZ · Erste · RBA</p>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-center"><QRCanvas text={epcText} size={160} /></div>
+                          <p className="text-[11px] font-semibold text-gray-700">EU Payment (SEPA)</p>
+                          <p className="text-[10px] text-gray-500">Revolut · N26 · ING · Wise · sve EU</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs space-y-1.5">
+                        <div className="flex justify-between gap-3"><span className="text-gray-500">Primatelj</span><span className="font-medium">{PAYEE_NAME}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-500">IBAN</span><span className="font-mono">{PAYEE_IBAN}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-500">Model</span><span className="font-mono">{PAYEE_MODEL}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-500">Poziv na broj</span><span className="font-mono">{hubReference}</span></div>
+                        <div className="flex justify-between gap-3"><span className="text-gray-500">Iznos / Amount</span><span className="font-semibold">{payAmount !== null ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(payAmount) : "N/A"}</span></div>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <h3 className="font-semibold text-base mb-2">Croatia Invoice HUB3A</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          Pay the full notice amount to the platform using the invoice details or euro QR code.
-                        </p>
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs space-y-2">
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">Primatelj</span><span className="font-medium text-right">{payeeName}</span></div>
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">IBAN</span><span className="font-mono text-right">{payeeIban}</span></div>
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">Model</span><span className="font-mono text-right">{payeeModel}</span></div>
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">Poziv na broj</span><span className="font-mono text-right">{hubReference}</span></div>
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">Svrha</span><span className="font-mono text-right">{payeePurpose}</span></div>
-                          <div className="flex justify-between gap-3"><span className="text-gray-500">Iznos za uplatu</span><span className="font-semibold text-right">{amountNow !== null ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(amountNow) : "N/A"}</span></div>
-                        </div>
-                        <div className="mt-4 flex justify-center">
-                          <Image
-                            src={euroQrUrl}
-                            alt="Euro QR code"
-                            width={176}
-                            height={176}
-                            unoptimized
-                            className="w-44 h-44 rounded-lg border border-gray-200 bg-white p-2"
-                          />
-                        </div>
+                    {/* 3. Notice details */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm">
+                      <h3 className="font-semibold mb-3">Notice Details</h3>
+                      <div className="grid grid-cols-2 gap-y-2">
+                        <span className="text-gray-500">Case No.</span><span className="font-mono">{activeCase?.case_number || caseNumber}</span>
+                        <span className="text-gray-500">Plate</span><span className="font-mono">{activeCase?.plate || "N/A"}</span>
+                        <span className="text-gray-500">Location</span><span className="font-mono">{activeCase?.location_id || "N/A"}</span>
+                        <span className="text-gray-500">Issued</span><span>{activeCase?.violation_time ? new Date(activeCase.violation_time).toLocaleString() : "N/A"}</span>
+                        <span className="text-gray-500">Type</span><span>{activeCase?.violation_type || "Parking Violation"}</span>
+                        <span className="text-gray-500">Status</span><span className="capitalize">{activeCase?.status || "Issued"}</span>
                       </div>
                     </div>
+
+                    {/* 4. Download + footer */}
+                    <button
+                      onClick={handleDownloadNotice}
+                      className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Official Notice
+                    </button>
+                    <p className="text-xs text-gray-400 text-center">
+                      Failure to pay may result in further legal action. · Neplaćanje može rezultirati daljnjim pravnim mjerama.
+                    </p>
                   </div>
                 )}
               </div>
@@ -313,51 +404,27 @@ export default function PaymentsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
-                  <Link href="/about" className="block hover:text-white transition-colors">
-                    About
-                  </Link>
-                  <Link href="/careers" className="block hover:text-white transition-colors">
-                    Careers
-                  </Link>
-                  <Link href="/news" className="block hover:text-white transition-colors">
-                    News
-                  </Link>
+                  <Link href="/about" className="block hover:text-white transition-colors">About</Link>
+                  <Link href="/careers" className="block hover:text-white transition-colors">Careers</Link>
+                  <Link href="/news" className="block hover:text-white transition-colors">News</Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Vision</p>
-                  <Link href="/product" className="block hover:text-white transition-colors">
-                    Product
-                  </Link>
-                  <Link href="/parking" className="block hover:text-white transition-colors">
-                    Parking
-                  </Link>
-                  <Link href="/security" className="block hover:text-white transition-colors">
-                    Security
-                  </Link>
+                  <Link href="/product" className="block hover:text-white transition-colors">Product</Link>
+                  <Link href="/parking" className="block hover:text-white transition-colors">Parking</Link>
+                  <Link href="/security" className="block hover:text-white transition-colors">Security</Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
-                  <Link href="/legal" className="block hover:text-white transition-colors">
-                    Legal
-                  </Link>
-                  <Link href="/privacy" className="block hover:text-white transition-colors">
-                    Privacy
-                  </Link>
-                  <Link href="/terms" className="block hover:text-white transition-colors">
-                    Terms
-                  </Link>
+                  <Link href="/legal" className="block hover:text-white transition-colors">Legal</Link>
+                  <Link href="/privacy" className="block hover:text-white transition-colors">Privacy</Link>
+                  <Link href="/terms" className="block hover:text-white transition-colors">Terms</Link>
                 </div>
                 <div className="space-y-3">
                   <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
-                  <Link href="/locations" className="block hover:text-white transition-colors">
-                    Locations
-                  </Link>
-                  <Link href="/members" className="block hover:text-white transition-colors">
-                    Members
-                  </Link>
-                  <Link href="/support" className="block hover:text-white transition-colors">
-                    Support
-                  </Link>
+                  <Link href="/locations" className="block hover:text-white transition-colors">Locations</Link>
+                  <Link href="/members" className="block hover:text-white transition-colors">Members</Link>
+                  <Link href="/support" className="block hover:text-white transition-colors">Support</Link>
                 </div>
               </div>
             </div>
