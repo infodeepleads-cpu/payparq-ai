@@ -119,13 +119,13 @@ function resolveOwnerCaseProcessFeeCents() {
     const caseNum = typeof v.case_number === "number" ? v.case_number : NaN;
     const caseNumText = toCaseNumberString(Number.isNaN(caseNum) ? Number(case_number) : caseNum);
     const fallbackNotice = typeof v.id === "string" ? v.id.slice(0, 8).toUpperCase() : "";
-    const primaryPhotoUrl = toPublicEvidenceUrl(client, typeof v.evidence_r2_url === "string" ? v.evidence_r2_url : null);
+    const primaryPhotoUrl = toPublicEvidenceUrl(client!, typeof v.evidence_r2_url === "string" ? v.evidence_r2_url : null);
     const secondaryEvidencePath =
       (typeof v.evidence_r2_url_secondary === "string" && v.evidence_r2_url_secondary) ||
       (typeof v.evidence_r2_url_2 === "string" && v.evidence_r2_url_2) ||
       (typeof v.secondary_evidence_r2_url === "string" && v.secondary_evidence_r2_url) ||
       null;
-    const secondaryPhotoUrl = toPublicEvidenceUrl(client, secondaryEvidencePath);
+    const secondaryPhotoUrl = toPublicEvidenceUrl(client!, secondaryEvidencePath);
     const evidencePhotos = [primaryPhotoUrl, secondaryPhotoUrl].filter((value): value is string => Boolean(value));
     const violationTypeRaw = (typeof v.violation_type === "string" && v.violation_type) || "Parking Violation";
     const isWarning = violationTypeRaw.toLowerCase().includes("warning");
