@@ -975,8 +975,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     await ref
                         .read(locationsControllerProvider)
                         .updateAddonsConfig(
-                          id: loc['id'].toString(),
-                          config: _buildAddonsConfig(
+                          loc['id'].toString(),
+                          _buildAddonsConfig(
                             valetOn: addonValetOn,
                             valetPrice: valetPriceCtrl.text,
                             evOn: addonEvOn,
