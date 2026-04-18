@@ -87,6 +87,7 @@ function ShuttleTicket({
   pickupPoint,
   phoneSms,
   formatDateTime,
+  onSummon,
 }: {
   sessionId: string;
   locationName: string | null;
@@ -96,6 +97,7 @@ function ShuttleTicket({
   pickupPoint: { lat?: number; lng?: number; label?: string } | null;
   phoneSms: string | null;
   formatDateTime: (v: string | null | undefined) => string;
+  onSummon?: (() => void) | null;
 }) {
   const ticketNo = deriveShuttleCode(sessionId);
   return (
@@ -177,8 +179,20 @@ function ShuttleTicket({
         )}
       </div>
       {/* Bottom strip */}
-      <div className="bg-[#0F6E56]/10 px-4 py-2 text-center">
-        <p className="text-[10px] text-[#0F6E56]/70 font-medium">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</p>
+      <div className="bg-[#0F6E56]/10 px-4 py-3 space-y-2">
+        <p className="text-[10px] text-[#0F6E56]/70 font-medium text-center">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</p>
+        {onSummon && (
+          <button
+            type="button"
+            onClick={onSummon}
+            className="w-full py-2.5 rounded-xl bg-[#0F6E56] text-white text-[13px] font-semibold hover:bg-[#0a5241] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <rect x="1" y="8" width="22" height="10" rx="2"/><path d="M5 18v2M19 18v2"/><path d="M1 12h22"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Pozovi shuttle
+          </button>
+        )}
       </div>
     </div>
   );
@@ -194,6 +208,7 @@ function ValetTicket({
   phoneSms,
   lotZone,
   formatDateTime,
+  onSummon,
 }: {
   sessionId: string;
   locationName: string | null;
@@ -204,6 +219,7 @@ function ValetTicket({
   phoneSms: string | null;
   lotZone: string | null;
   formatDateTime: (v: string | null | undefined) => string;
+  onSummon?: (() => void) | null;
 }) {
   const ticketNo = deriveTicketNumber(sessionId);
   return (
@@ -230,25 +246,27 @@ function ValetTicket({
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
-        {pickupPoint?.label && (
-          <div className="flex justify-between">
-            <span className="text-black/50">Drop-off / Pick-up</span>
-            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
-          </div>
-        )}
-        {pickupPoint?.lat && pickupPoint?.lng && (
-          <div className="flex justify-between items-center">
-            <span className="text-black/50">Navigacija</span>
-            <a
-              href={`https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[#5F3DFC] underline text-[12px]"
-            >
-              Otvori kartu
-            </a>
-          </div>
-        )}
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (() => {
+          const mapsHref = pickupPoint?.lat && pickupPoint?.lng
+            ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+            : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`;
+          return (
+            <>
+              {pickupPoint?.label && (
+                <div className="flex justify-between">
+                  <span className="text-black/50">Drop-off / Pick-up</span>
+                  <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-black/50">Navigacija</span>
+                <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#5F3DFC] underline text-[12px]">
+                  Otvori kartu
+                </a>
+              </div>
+            </>
+          );
+        })()}
         {lotZone && (
           <div className="flex justify-between">
             <span className="text-black/50">Lot zona</span>
@@ -288,8 +306,22 @@ function ValetTicket({
         )}
       </div>
       {/* Bottom strip */}
-      <div className="bg-[#5F3DFC]/10 px-4 py-2 text-center">
-        <p className="text-[10px] text-[#5F3DFC]/70 font-medium">Pokažite kod valet agentu pri predaji ključeva</p>
+      <div className="bg-[#5F3DFC]/10 px-4 py-3 space-y-2">
+        <p className="text-[10px] text-[#5F3DFC]/70 font-medium text-center">Pokažite kod valet agentu pri predaji ključeva</p>
+        {onSummon && (
+          <button
+            type="button"
+            onClick={onSummon}
+            className="w-full py-2.5 rounded-xl bg-[#5F3DFC] text-white text-[13px] font-semibold hover:bg-[#4e2fdb] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+              <rect x="9" y="11" width="14" height="10" rx="1"/>
+              <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+            </svg>
+            Pozovi auto
+          </button>
+        )}
       </div>
     </div>
   );
@@ -692,6 +724,7 @@ function SuccessContent() {
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
               formatDateTime={formatDateTime}
+              onSummon={() => handleSummon('car')}
             />
           )}
 
@@ -706,6 +739,7 @@ function SuccessContent() {
               pickupPoint={summary.addons_config?.pickup_point ?? null}
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               formatDateTime={formatDateTime}
+              onSummon={() => handleSummon('shuttle')}
             />
           )}
 
