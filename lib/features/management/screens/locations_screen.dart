@@ -787,6 +787,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final bool isHub = meta['hub_enabled'] == true;
         final bool isAgenticSettlement =
             _resolveSettlementModel(meta) == 'agentic';
+        bool valetEnabled = effectiveLoc['valet_enabled'] == true;
+        bool shuttleEnabled = effectiveLoc['shuttle_enabled'] == true;
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -1680,6 +1682,48 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                           'Open Hub Page',
                                           'Otvori Hub stranicu')),
                                     )
+                                  ],
+                                ),
+                              ],
+                              if (canEdit) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text(
+                                      Lang.sel(ref.watch(localeIsCroatianProvider), 'Valet parking', 'Valet parking'),
+                                      style: GoogleFonts.inter(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Switch(
+                                      value: valetEnabled,
+                                      activeThumbColor: Colors.black,
+                                      onChanged: (v) async {
+                                        setState(() => valetEnabled = v);
+                                        await ref.read(locationsControllerProvider).updateServiceFlags(
+                                          idStr, valetEnabled: v, shuttleEnabled: shuttleEnabled,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      Lang.sel(ref.watch(localeIsCroatianProvider), 'Shuttle transport', 'Shuttle prijevoz'),
+                                      style: GoogleFonts.inter(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Switch(
+                                      value: shuttleEnabled,
+                                      activeThumbColor: Colors.black,
+                                      onChanged: (v) async {
+                                        setState(() => shuttleEnabled = v);
+                                        await ref.read(locationsControllerProvider).updateServiceFlags(
+                                          idStr, valetEnabled: valetEnabled, shuttleEnabled: v,
+                                        );
+                                      },
+                                    ),
                                   ],
                                 ),
                               ],

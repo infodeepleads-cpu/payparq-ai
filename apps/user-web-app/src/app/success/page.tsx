@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Car } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
+import { FooterBrand } from '@/components/FooterBrand';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type SessionSummary = {
@@ -24,6 +25,8 @@ type SessionSummary = {
   loyalty_bonus_credit_cents?: number;
   membership_exists: boolean;
   email_verified: boolean;
+  valet_enabled?: boolean | null;
+  shuttle_enabled?: boolean | null;
 };
 
 function SuccessContent() {
@@ -68,16 +71,13 @@ function SuccessContent() {
     searchParams.get('end') ||
     null;
 
-  const formatStartTimeShort = (value: string | null | undefined) => {
+  const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return '—';
-    return parsed.toLocaleTimeString('hr-HR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Europe/Zagreb',
-    });
+    const date = parsed.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Zagreb' });
+    const time = parsed.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+    return `${date} ${time}`;
   };
 
   const formatAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
@@ -148,10 +148,11 @@ function SuccessContent() {
     return `/members?email=${encodeURIComponent(summary.email)}`;
   }, [summary?.email]);
 
-  const orderParqRideHref = useMemo(() => {
-    const params = new URLSearchParams({ tab: 'home' });
+  const insuranceHref = useMemo(() => {
+    const params = new URLSearchParams();
     if (summary?.email) params.set('email', summary.email);
-    return `/members?${params.toString()}`;
+    const qs = params.toString();
+    return qs ? `/insurance/apply?${qs}` : '/insurance/apply';
   }, [summary?.email]);
 
   const getMemberAuthHeaders = async () => {
@@ -220,7 +221,7 @@ function SuccessContent() {
       <SiteHeader />
 
       <main className="flex-1 pt-20 pb-12">
-        <div className="max-w-sm mx-auto px-4 space-y-3 mt-4">
+        <div className="max-w-sm mx-auto px-4 space-y-3 mt-8">
 
           {/* 1 — Confirmation card */}
           <div className="rounded-2xl border border-black/10 bg-white p-4">
@@ -251,11 +252,11 @@ function SuccessContent() {
               </div>
               <div>
                 <p className="text-black/50">Od</p>
-                <p className="font-semibold text-black">{formatStartTimeShort(checkoutStart)}</p>
+                <p className="font-semibold text-black">{formatDateTime(checkoutStart)}</p>
               </div>
               <div>
                 <p className="text-black/50">Do</p>
-                <p className="font-semibold text-black">{formatStartTimeShort(checkoutEnd)}</p>
+                <p className="font-semibold text-black">{formatDateTime(checkoutEnd)}</p>
               </div>
             </div>
             {(lookupLoading || lookupError) && (
@@ -296,6 +297,7 @@ function SuccessContent() {
           </div>
 
           {/* 3 — Dodaci */}
+          {(summary?.valet_enabled || summary?.shuttle_enabled) && (
           <div className="rounded-2xl border border-black/10 bg-white p-4">
             <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
               Dodaci
@@ -303,6 +305,7 @@ function SuccessContent() {
             <div className="space-y-2">
 
               {/* Valet */}
+              {summary?.valet_enabled && (
               <button
                 type="button"
                 onClick={() => setValetEnabled(v => !v)}
@@ -338,8 +341,10 @@ function SuccessContent() {
                   </div>
                 </div>
               </button>
+              )}
 
               {/* Shuttle */}
+              {summary?.shuttle_enabled && (
               <button
                 type="button"
                 onClick={() => setShuttleEnabled(s => !s)}
@@ -379,16 +384,20 @@ function SuccessContent() {
                   </div>
                 </div>
               </button>
+              )}
 
             </div>
           </div>
+          )}
 
           {/* 4 — Pozovi vozilo */}
+          {(summary?.valet_enabled || summary?.shuttle_enabled) && (
           <div className="rounded-2xl border border-black/10 bg-white p-4">
             <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
               Pozovi vozilo
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${summary?.valet_enabled && summary?.shuttle_enabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {summary?.valet_enabled && (
               <button
                 type="button"
                 onClick={() => handleSummon('car')}
@@ -398,6 +407,8 @@ function SuccessContent() {
                 <span className="text-[13px] font-medium text-black">Pozovi auto</span>
                 <span className="text-[11px] text-black/50">Valet dovozi</span>
               </button>
+              )}
+              {summary?.shuttle_enabled && (
               <button
                 type="button"
                 onClick={() => handleSummon('shuttle')}
@@ -412,6 +423,7 @@ function SuccessContent() {
                 <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
                 <span className="text-[11px] text-black/50">ETA ~4 min</span>
               </button>
+              )}
             </div>
             {summonStatus && (
               <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
@@ -419,33 +431,37 @@ function SuccessContent() {
               </div>
             )}
           </div>
+          )}
 
           {/* 5 — Secondary actions */}
           <div className="flex flex-col gap-2">
-            <Link
-              href={orderParqRideHref}
+            <a
+              href="https://m.uber.com/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
             >
               Naruči Uber
-            </Link>
+            </a>
             <Link
-              href={membersHref}
+              href={insuranceHref}
               className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
             >
               Osiguranje
             </Link>
-            <Link
-              href={membersHref}
+            <button
+              type="button"
+              onClick={() => window.print()}
               className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
             >
               Preuzmi potvrdu
-            </Link>
+            </button>
           </div>
 
-          {/* 6 — Footer stub */}
+          {/* 6 — Members zona link */}
           {summary?.email && (
-            <p className="text-center text-[11px] text-black/40 pb-6">
-              <Link href={membersHref} className="hover:text-black/60 transition-colors">
+            <p className="text-center text-[11px] text-black/40 pb-2">
+              <Link href={membersHref} className="text-[#0F6E56] font-medium hover:text-[#1D9E75] transition-colors">
                 Members zona
               </Link>
               {' · '}
@@ -455,6 +471,12 @@ function SuccessContent() {
 
         </div>
       </main>
+
+      <footer className="bg-[#020617] px-6 py-8 print:hidden">
+        <div className="max-w-sm mx-auto">
+          <FooterBrand />
+        </div>
+      </footer>
 
       <style jsx global>{`
         @media print {

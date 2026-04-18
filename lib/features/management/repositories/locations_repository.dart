@@ -61,6 +61,14 @@ class LocationsRepository {
     return _client.storage.from('location-verification').getPublicUrl(fileName);
   }
 
+  Future<void> updateServiceFlags(
+      String id, {required bool valetEnabled, required bool shuttleEnabled}) async {
+    await _client.from('locations').update({
+      'valet_enabled': valetEnabled,
+      'shuttle_enabled': shuttleEnabled,
+    }).eq('id', id);
+  }
+
   Future<Map<String, dynamic>> createLocation({
     required String name,
     required String address,

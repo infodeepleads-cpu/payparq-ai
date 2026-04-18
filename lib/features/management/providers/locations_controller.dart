@@ -166,6 +166,12 @@ class LocationsController {
     _ref.invalidate(locationsStreamProvider);
   }
 
+  Future<void> updateServiceFlags(
+      String id, {required bool valetEnabled, required bool shuttleEnabled}) async {
+    await _repo.updateServiceFlags(id, valetEnabled: valetEnabled, shuttleEnabled: shuttleEnabled);
+    _ref.invalidate(locationsStreamProvider);
+  }
+
   Future<void> updateCapacity(String id, int capacity) async {
     try {
       await _repo.updateCapacity(id, capacity);

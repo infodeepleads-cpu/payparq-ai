@@ -106,7 +106,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   if (locationCandidate) {
     const byId = await dbClient
       .from('locations')
-      .select('id,display_id,name')
+      .select('id,display_id,name,valet_enabled,shuttle_enabled')
       .eq('id', locationCandidate)
       .maybeSingle();
     let locationRow = byId.data as
@@ -115,7 +115,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     if (!locationRow) {
       const byDisplayId = await dbClient
         .from('locations')
-        .select('id,display_id,name')
+        .select('id,display_id,name,valet_enabled,shuttle_enabled')
         .eq('display_id', locationCandidate)
         .maybeSingle();
       locationRow = byDisplayId.data as
@@ -280,6 +280,8 @@ export async function GET(req: NextRequest) {
       (sessionMetadata.display_id ?? sessionMetadata.location_id ?? '').toString().trim() || null;
     let activityLocationName: string | null = null;
     let activityLocationDisplayId: string | null = null;
+    let valetEnabled = false;
+    let shuttleEnabled = false;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -351,22 +353,24 @@ export async function GET(req: NextRequest) {
       if (locationCandidate) {
         const byId = await dbClient
           .from('locations')
-          .select('id,display_id,name')
+          .select('id,display_id,name,valet_enabled,shuttle_enabled')
           .eq('id', locationCandidate)
           .maybeSingle();
         let locationRow = byId.data as
-          | { id?: string | null; display_id?: string | null; name?: string | null }
+          | { id?: string | null; display_id?: string | null; name?: string | null; valet_enabled?: boolean | null; shuttle_enabled?: boolean | null }
           | null;
         if (!locationRow) {
           const byDisplayId = await dbClient
             .from('locations')
-            .select('id,display_id,name')
+            .select('id,display_id,name,valet_enabled,shuttle_enabled')
             .eq('display_id', locationCandidate)
             .maybeSingle();
           locationRow = byDisplayId.data as
-            | { id?: string | null; display_id?: string | null; name?: string | null }
+            | { id?: string | null; display_id?: string | null; name?: string | null; valet_enabled?: boolean | null; shuttle_enabled?: boolean | null }
             | null;
         }
+        valetEnabled = locationRow?.valet_enabled ?? false;
+        shuttleEnabled = locationRow?.shuttle_enabled ?? false;
         if (locationRow) {
           activityLocationName = locationRow.name ? normalizeLocationName(String(locationRow.name)) : null;
           activityLocationDisplayId = locationRow.display_id ? String(locationRow.display_id) : null;
@@ -389,6 +393,8 @@ export async function GET(req: NextRequest) {
       location_id: activityLocationId,
       location_name: activityLocationName,
       location_display_id: activityLocationDisplayId,
+      valet_enabled: valetEnabled,
+      shuttle_enabled: shuttleEnabled,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,
@@ -415,7 +421,7 @@ export async function GET(req: NextRequest) {
       for (const candidate of locationHintCandidates) {
         const byId = await dbClient
           .from('locations')
-          .select('id,display_id,name')
+          .select('id,display_id,name,valet_enabled,shuttle_enabled')
           .eq('id', candidate)
           .maybeSingle();
         let locationRow = byId.data as
@@ -424,7 +430,7 @@ export async function GET(req: NextRequest) {
         if (!locationRow) {
           const byDisplayId = await dbClient
             .from('locations')
-            .select('id,display_id,name')
+            .select('id,display_id,name,valet_enabled,shuttle_enabled')
             .eq('display_id', candidate)
             .maybeSingle();
           locationRow = byDisplayId.data as
