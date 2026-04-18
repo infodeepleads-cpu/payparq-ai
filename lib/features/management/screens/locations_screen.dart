@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,6 +25,7 @@ import '../../../utils/async_action_handler.dart';
 import '../../../widgets/confirm_delete_dialog.dart';
 import '../providers/locations_controller.dart';
 import '../../../services/error_mapper.dart';
+import '../../../config/app_config.dart';
 
 class LocationsScreen extends ConsumerStatefulWidget {
   const LocationsScreen({super.key});
@@ -40,6 +43,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   final ScrollController _scrollController = ScrollController();
   int _visibleCount = 20;
   final Map<String, Map<String, dynamic>> _locOverrides = {};
+  String _pendingMoveReason = '';
 
   @override
   void initState() {
@@ -950,6 +954,113 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   return MemoryImage(bytes);
                 }
 
+                Future<void> _notifyLocationMove({
+                  required String locationId,
+                  required String locationName,
+                  required String newAddress,
+                  required double oldLat,
+                  required double oldLng,
+                  required double newLat,
+                  required double newLng,
+                  required String? reason,
+                }) async {
+                  try {
+                    final webBase = AppConfig.webAppBaseUrl.replaceAll(RegExp(r'/$'), '');
+                    final movedBy = Supabase.instance.client.auth.currentUser?.id ?? '';
+                    await http.post(
+                      Uri.parse('$webBase/api/admin/notify-location-move'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-moved-by': movedBy,
+                      },
+                      body: jsonEncode({
+                        'location_id': locationId,
+                        'location_name': locationName,
+                        'new_address': newAddress,
+                        'reason': reason,
+                        'old_lat': oldLat,
+                        'old_lng': oldLng,
+                        'new_lat': newLat,
+                        'new_lng': newLng,
+                      }),
+                    ).timeout(const Duration(seconds: 15));
+                  } catch (_) {}
+                }
+
+                Future<bool> _showRelocationConfirmDialog({
+                  required String? reason,
+                }) async {
+                  final reasonCtrl = TextEditingController(text: reason ?? '');
+                  final confirmed = await showDialog<bool>(
+                    context: dialogContext,
+                    barrierDismissible: false,
+                    builder: (ctx) => StatefulBuilder(
+                      builder: (ctx, setLocalState) => AlertDialog(
+                        title: Row(children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(
+                            Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Relocate Verified Hub',
+                              'Premještanje verificirane lokacije'),
+                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                          )),
+                        ]),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              Lang.sel(ref.watch(localeIsCroatianProvider),
+                                'Changing the coordinates of a verified hub will:\n\n• Suspend the hub (status → pending)\n• Disable hub access until re-verified\n• Notify users with upcoming reservations\n\nThis action is logged.',
+                                'Promjena koordinata verificirane lokacije će:\n\n• Suspendirati hub (status → na čekanju)\n• Onemogućiti pristup hubu do ponovne verifikacije\n• Obavijestiti korisnike s budućim rezervacijama\n\nOva radnja se bilježi.'),
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: reasonCtrl,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Reason (required)', 'Razlog (obavezno)'),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Cancel', 'Odustani')),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                            onPressed: () {
+                              if (reasonCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                  content: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Reason is required', 'Razlog je obavezan')),
+                                ));
+                                return;
+                              }
+                              Navigator.of(ctx).pop(true);
+                            },
+                            child: Text(
+                              Lang.sel(ref.watch(localeIsCroatianProvider), 'Confirm Relocation', 'Potvrdi premještanje'),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                  if (confirmed == true) {
+                    // expose reason back via side-channel
+                    _pendingMoveReason = reasonCtrl.text.trim();
+                  }
+                  return confirmed == true;
+                }
+
                 Future<void> saveChanges() async {
                   if (!canEdit) return;
                   final newName = nameCtrl.text.trim();
@@ -964,6 +1075,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     );
                     return;
                   }
+                  // Detect whether hub coordinates changed
+                  final origLat = (loc['latitude'] is num)
+                      ? (loc['latitude'] as num).toDouble()
+                      : double.tryParse('${loc['latitude'] ?? 0}') ?? 0.0;
+                  final origLng = (loc['longitude'] is num)
+                      ? (loc['longitude'] as num).toDouble()
+                      : double.tryParse('${loc['longitude'] ?? 0}') ?? 0.0;
+                  final coordsChanged = (pendingLatitude - origLat).abs() > 0.000001 ||
+                      (pendingLongitude - origLng).abs() > 0.000001;
+                  final currentStatus = (loc['verification_status'] ?? 'unverified') as String;
+                  final isVerified = currentStatus == 'verified';
+
+                  if (coordsChanged && isVerified) {
+                    // Must confirm before proceeding
+                    _pendingMoveReason = '';
+                    final confirmed = await _showRelocationConfirmDialog(reason: null);
+                    if (!confirmed) return;
+                  }
+
                   setState(() => saving = true);
                   try {
                     final newCapacity =
@@ -989,17 +1119,46 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         };
                       });
                     }
-                    await ref
-                        .read(locationsControllerProvider)
-                        .updateLocationDetails(
-                          id: loc['id'].toString(),
-                          name: newName,
-                          address: newAddress,
-                          latitude: pendingLatitude,
-                          longitude: pendingLongitude,
-                          capacity: newCapacity,
-                          invalidateStream: false,
-                        );
+                    if (coordsChanged && isVerified) {
+                      await ref
+                          .read(locationsControllerProvider)
+                          .relocateVerifiedLocation(
+                            id: loc['id'].toString(),
+                            name: newName,
+                            address: newAddress,
+                            latitude: pendingLatitude,
+                            longitude: pendingLongitude,
+                            capacity: newCapacity,
+                            currentMetadata: meta,
+                            oldLat: origLat,
+                            oldLng: origLng,
+                            reason: _pendingMoveReason,
+                            invalidateStream: false,
+                          );
+                      // Fire-and-forget notification (don't block UI)
+                      unawaited(_notifyLocationMove(
+                        locationId: loc['id'].toString(),
+                        locationName: newName,
+                        newAddress: newAddress,
+                        oldLat: origLat,
+                        oldLng: origLng,
+                        newLat: pendingLatitude,
+                        newLng: pendingLongitude,
+                        reason: _pendingMoveReason,
+                      ));
+                    } else {
+                      await ref
+                          .read(locationsControllerProvider)
+                          .updateLocationDetails(
+                            id: loc['id'].toString(),
+                            name: newName,
+                            address: newAddress,
+                            latitude: pendingLatitude,
+                            longitude: pendingLongitude,
+                            capacity: newCapacity,
+                            invalidateStream: false,
+                          );
+                    }
                     await ref
                         .read(locationsControllerProvider)
                         .updateAddonsConfig(
@@ -1094,15 +1253,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         _locOverrides.remove(loc['id'].toString());
                       });
                     }
+                    if (coordsChanged && isVerified) {
+                      loc['verification_status'] = 'pending';
+                      if (loc['verification_metadata'] is Map) {
+                        (loc['verification_metadata'] as Map<String, dynamic>)['hub_enabled'] = false;
+                      }
+                    }
                     ref.invalidate(locationsStreamProvider);
                     if (dialogContext.mounted) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                            content: Text(Lang.sel(
-                                ref.watch(localeIsCroatianProvider),
-                                'Location updated',
-                                'Lokacija ažurirana'))),
-                      );
+                      final msg = (coordsChanged && isVerified)
+                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Location moved — hub suspended, re-verification required',
+                              'Lokacija premještena — hub suspendiran, potrebna re-verifikacija')
+                          : Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Location updated', 'Lokacija ažurirana');
+                      messenger.showSnackBar(SnackBar(
+                        content: Text(msg),
+                        duration: Duration(seconds: coordsChanged && isVerified ? 5 : 3),
+                        backgroundColor: coordsChanged && isVerified ? Colors.orange[800] : null,
+                      ));
                       navigator.pop();
                     }
                   } catch (e) {
@@ -1683,7 +1852,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ],
                                 ),
                               ],
-                              if (canEdit) ...[
+                              if (isSuperAdmin) ...[
                                 const SizedBox(height: 12),
                                 Align(
                                   alignment: Alignment.centerLeft,

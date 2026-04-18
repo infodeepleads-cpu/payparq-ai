@@ -216,6 +216,42 @@ class LocationsController {
     }
   }
 
+  Future<void> relocateVerifiedLocation({
+    required String id,
+    required String name,
+    required String? address,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+    required Map<String, dynamic> currentMetadata,
+    required double oldLat,
+    required double oldLng,
+    required String? reason,
+    bool invalidateStream = true,
+  }) async {
+    try {
+      final movedBy = Supabase.instance.client.auth.currentUser?.id;
+      await _repo.relocateVerifiedLocation(
+        id: id,
+        name: name,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        capacity: capacity,
+        currentMetadata: currentMetadata,
+        movedBy: movedBy,
+        oldLat: oldLat,
+        oldLng: oldLng,
+        reason: reason,
+      );
+      if (invalidateStream) {
+        _ref.invalidate(locationsStreamProvider);
+      }
+    } catch (e) {
+      throw AppError('Relocation failed: $e', cause: e);
+    }
+  }
+
   Future<void> updateVerificationPhotos({
     required String id,
     required List<String> photoUrls,
