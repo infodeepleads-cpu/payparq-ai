@@ -2686,13 +2686,6 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
               },
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(Lang.sel(
-                  ref.watch(localeIsCroatianProvider), 'Close', 'Zatvori')),
-            ),
-          ],
         );
       },
     );
