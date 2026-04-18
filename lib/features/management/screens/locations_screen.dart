@@ -597,14 +597,19 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   String _buildHubLocationUrl(Map<String, dynamic> loc) {
+    final String? canonicalSlug = loc['canonical_slug']?.toString();
+    if (canonicalSlug != null && canonicalSlug.trim().isNotEmpty) {
+      return 'https://payparq.ai/locations/${canonicalSlug.trim()}';
+    }
+    // Fallback: build from name + display_id (mirrors DB canonical_slug format)
     final String displayId = (loc['display_id'] ?? '').toString();
     final String name = (loc['name'] ?? '')
         .toString()
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\\s-]'), '')
-        .replaceAll(RegExp(r'\\s+'), '-');
-    final String slug = name.isNotEmpty ? name : displayId.toLowerCase();
-    return 'https://payparq.com/locations/$slug';
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-');
+    final String slug = name.isNotEmpty ? '$name-$displayId' : displayId.toLowerCase();
+    return 'https://payparq.ai/locations/$slug';
   }
 
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
@@ -613,11 +618,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
     final bool previous = meta['hub_enabled'] == true;
     try {
-      final slug = await ref
+      await ref
           .read(locationsControllerProvider)
           .updateHubDesignation(loc, enabled);
       if (enabled) {
-        final url = 'https://payparq.com/locations/$slug';
+        final url = _buildHubLocationUrl(loc);
         try {
           await launchUrl(Uri.parse(url));
         } catch (_) {}

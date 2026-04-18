@@ -33,9 +33,11 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
   
+  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config";
+
   const { data: locationData, error } = await client
     .from("locations")
-    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config")
+    .select(selectCols)
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
 
@@ -43,7 +45,17 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     console.error('[locations/[slug]] Error:', error);
   }
 
-  const hub = locationData?.[0];
+  let hub = locationData?.[0];
+
+  // Fallback: some older locations have hub_slug in metadata but no canonical_slug match
+  if (!hub) {
+    const { data: fallback } = await client
+      .from("locations")
+      .select(selectCols)
+      .contains("verification_metadata", { hub_slug: hyphenDisplay })
+      .limit(1);
+    hub = fallback?.[0];
+  }
 
   if (!hub) {
     return null;
