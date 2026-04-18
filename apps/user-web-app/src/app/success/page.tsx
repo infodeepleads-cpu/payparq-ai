@@ -2,7 +2,6 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Car } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
@@ -274,7 +273,8 @@ function SuccessContent() {
   const addonEvCfg = cfg.ev_charging?.enabled ? cfg.ev_charging : null;
   const addonWashCfg = cfg.car_wash?.enabled ? cfg.car_wash : null;
   const addonFuelCfg = cfg.fuel?.enabled ? cfg.fuel : null;
-  const hasAnyAddon = Boolean(addonValetCfg || addonEvCfg || addonWashCfg || addonFuelCfg);
+  const showValetAddon = Boolean(summary?.valet_enabled || addonValetCfg);
+  const hasAnyAddon = Boolean(showValetAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
 
   const addonValetPriceCents = (addonValetCfg?.price_cents ?? 500) * addonValetDays;
   const addonEvPriceCents = addonEvCfg?.price_cents ?? 2000;
@@ -299,8 +299,8 @@ function SuccessContent() {
     setAddonsCheckoutError('');
     type AddonItem = { id: string; label: string; price_cents: number; quantity?: number };
     const items: AddonItem[] = [];
-    if (addonValetOn && addonValetCfg) {
-      items.push({ id: 'valet', label: `Valet parking (${addonValetDays} dan/a)`, price_cents: addonValetCfg.price_cents ?? 500, quantity: addonValetDays });
+    if (addonValetOn && showValetAddon) {
+      items.push({ id: 'valet', label: `Valet parking (${addonValetDays} dan/a)`, price_cents: addonValetCfg?.price_cents ?? 500, quantity: addonValetDays });
     }
     if (addonEvOn && addonEvCfg) {
       items.push({ id: 'ev_charging', label: 'EV punjenje', price_cents: addonEvCfg.price_cents ?? 2000 });
@@ -421,52 +421,13 @@ function SuccessContent() {
             )}
           </div>
 
-          {/* 3 — Dodaci */}
-          {(summary?.valet_enabled || summary?.shuttle_enabled) && (
+          {/* 3 — Dodaci (shuttle only) */}
+          {summary?.shuttle_enabled && (
           <div className="rounded-2xl border border-black/10 bg-white p-4">
             <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
               Dodaci
             </p>
             <div className="space-y-2">
-
-              {/* Valet */}
-              {summary?.valet_enabled && (
-              <button
-                type="button"
-                onClick={() => setValetEnabled(v => !v)}
-                className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                      <line x1="9" y1="9" x2="9.01" y2="9"/>
-                      <line x1="15" y1="9" x2="15.01" y2="9"/>
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-black">Valet parking</p>
-                    <p className="text-[11px] text-black/50">Mi parkiramo vaš automobil</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-[13px] font-medium text-black">5,00 €</span>
-                  <div
-                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative"
-                    style={{
-                      background: valetEnabled ? '#5F3DFC' : '#f3f4f6',
-                      borderColor: valetEnabled ? '#5F3DFC' : '#e5e7eb',
-                    }}
-                  >
-                    <div
-                      className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm"
-                      style={{ left: valetEnabled ? '18px' : '2px' }}
-                    />
-                  </div>
-                </div>
-              </button>
-              )}
 
               {/* Shuttle */}
               {summary?.shuttle_enabled && (
@@ -515,24 +476,13 @@ function SuccessContent() {
           </div>
           )}
 
-          {/* 4 — Pozovi vozilo */}
-          {(summary?.valet_enabled || summary?.shuttle_enabled) && (
+          {/* 4 — Pozovi vozilo (shuttle only) */}
+          {summary?.shuttle_enabled && (
           <div className="rounded-2xl border border-black/10 bg-white p-4">
             <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
               Pozovi vozilo
             </p>
-            <div className={`grid gap-3 ${summary?.valet_enabled && summary?.shuttle_enabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {summary?.valet_enabled && (
-              <button
-                type="button"
-                onClick={() => handleSummon('car')}
-                className="flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <Car size={28} strokeWidth={1.5} className="text-black" />
-                <span className="text-[13px] font-medium text-black">Pozovi auto</span>
-                <span className="text-[11px] text-black/50">Valet dovozi</span>
-              </button>
-              )}
+            <div className="grid grid-cols-1 gap-3">
               {summary?.shuttle_enabled && (
               <button
                 type="button"
@@ -558,15 +508,15 @@ function SuccessContent() {
           </div>
           )}
 
-          {/* 5 — Platite usluge (paid add-ons from addons_config) */}
+          {/* 5 — Odaberi dodatne usluge */}
           {hasAnyAddon && (
             <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
               <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">
-                Platite usluge
+                Odaberi dodatne usluge:
               </p>
 
               {/* Valet */}
-              {addonValetCfg && (
+              {showValetAddon && (
                 <div className="rounded-xl border border-black/10 overflow-hidden">
                   <button
                     type="button"
@@ -583,7 +533,7 @@ function SuccessContent() {
                       </div>
                     </div>
                     <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                      {formatAmount(addonValetCfg.price_cents ?? 500, 'eur')}/dan
+                      {formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan
                     </span>
                   </button>
                   {addonValetOn && (
