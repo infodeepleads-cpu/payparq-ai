@@ -1322,6 +1322,44 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ),
                                 ],
                               ),
+                              if (pendingLatitude != 0.0 && pendingLongitude != 0.0) ...[
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  const Icon(Icons.local_parking, size: 16, color: Colors.redAccent),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    Lang.sel(ref.watch(localeIsCroatianProvider), 'Parking lokacija', 'Parking Location'),
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  ),
+                                ]),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: SizedBox(
+                                    height: 200,
+                                    child: FlutterMap(
+                                      options: MapOptions(
+                                        initialCenter: LatLng(pendingLatitude, pendingLongitude),
+                                        initialZoom: 15,
+                                        interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                                      ),
+                                      children: [
+                                        TileLayer(
+                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                          userAgentPackageName: 'com.payparq.ai',
+                                        ),
+                                        MarkerLayer(markers: [
+                                          Marker(
+                                            point: LatLng(pendingLatitude, pendingLongitude),
+                                            width: 40, height: 40,
+                                            child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                                          ),
+                                        ]),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                               Builder(builder: (_) {
                                 final pickupMap = addonsConfig['pickup_point'] as Map?;
                                 final pLat = (pickupMap?['lat'] as num?)?.toDouble() ?? 0.0;
