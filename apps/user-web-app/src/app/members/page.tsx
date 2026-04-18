@@ -69,6 +69,8 @@ type MembersHomeContext = {
   rideUrl: string | null;
   invoiceAvailable: boolean;
   parkTaxiIncluded: boolean;
+  valetEnabled: boolean;
+  shuttleEnabled: boolean;
 };
 type WalletSummary = {
   balanceCents: number;
@@ -253,6 +255,9 @@ export default function MembersPage() {
   >({});
   const [extendMinutes, setExtendMinutes] = useState("120");
   const [extendSyncActive, setExtendSyncActive] = useState(false);
+  const [valetToggled, setValetToggled] = useState(false);
+  const [shuttleToggled, setShuttleToggled] = useState(true);
+  const [summonStatus, setSummonStatus] = useState<string | null>(null);
 
   const isSignedIn = !!user || devSignedIn;
   const normalizedMemberEmail = (user?.email ?? email).trim().toLowerCase();
@@ -1462,7 +1467,68 @@ export default function MembersPage() {
                 </p>
               )}
             </div>
+            {homeContext?.valetEnabled && (
+              <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
+                <p className="text-sm font-semibold text-black">Valet parking</p>
+                <p className="text-[11px] text-black/50">Mi parkiramo vaš automobil · 5,00 €</p>
+                <button
+                  type="button"
+                  onClick={() => setValetToggled(v => !v)}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0"
+                    style={{ background: valetToggled ? '#5F3DFC' : '#f3f4f6', borderColor: valetToggled ? '#5F3DFC' : '#e5e7eb' }}
+                  >
+                    <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: valetToggled ? '18px' : '2px' }} />
+                  </div>
+                  <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
+                </button>
+                {valetToggled && (
+                  <button
+                    type="button"
+                    onClick={() => { setSummonStatus('Vaš automobil je na putu · ETA ~6 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
+                  >
+                    Pozovi auto
+                  </button>
+                )}
+              </div>
+            )}
+            {homeContext?.shuttleEnabled && (
+              <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
+                <p className="text-sm font-semibold text-black">Shuttle prijevoz</p>
+                <p className="text-[11px] text-black/50">Do/od destinacije besplatno</p>
+                <button
+                  type="button"
+                  onClick={() => setShuttleToggled(s => !s)}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0"
+                    style={{ background: shuttleToggled ? '#1D9E75' : '#f3f4f6', borderColor: shuttleToggled ? '#0F6E56' : '#e5e7eb' }}
+                  >
+                    <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: shuttleToggled ? '18px' : '2px' }} />
+                  </div>
+                  <span className="text-xs font-medium text-black">{shuttleToggled ? 'Uključeno' : 'Isključeno'}</span>
+                </button>
+                {shuttleToggled && (
+                  <button
+                    type="button"
+                    onClick={() => { setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#1D9E75] text-white text-xs font-semibold hover:bg-[#0F6E56] transition-colors"
+                  >
+                    Pozovi shuttle
+                  </button>
+                )}
+              </div>
+            )}
           </div>
+          {summonStatus && (
+            <div className="mt-2 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
+              {summonStatus}
+            </div>
+          )}
           {actionError && (
             <p className="text-[11px] text-red-600">{actionError}</p>
           )}

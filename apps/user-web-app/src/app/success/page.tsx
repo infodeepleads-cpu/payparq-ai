@@ -75,7 +75,7 @@ function SuccessContent() {
     if (!value) return '—';
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return '—';
-    const date = parsed.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Zagreb' });
+    const date = parsed.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zagreb' });
     const time = parsed.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
     return `${date} ${time}`;
   };
@@ -207,6 +207,38 @@ function SuccessContent() {
     }
   };
 
+  const handleDownloadReceipt = async () => {
+    const stripeSessionId = (summary?.session_id ?? sessionId ?? '').toString().trim();
+    const params = new URLSearchParams();
+    if (stripeSessionId) {
+      params.set('stripe_session_id', stripeSessionId);
+      params.set('fallback_stripe_session_id', stripeSessionId);
+    }
+    if (summary?.email) params.set('fallback_location_name', summary.location_name ?? '');
+    if (summary?.check_in) params.set('fallback_check_in', summary.check_in);
+    if (summary?.check_out) params.set('fallback_check_out', summary.check_out);
+    if (summary?.amount_total) params.set('fallback_amount', (summary.amount_total / 100).toFixed(2));
+    if (summary?.currency) params.set('fallback_currency', summary.currency);
+    const url = `/api/members/invoice?mode=document&${params.toString()}`;
+    try {
+      const headers = await getMemberAuthHeaders();
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error('fetch_failed');
+      const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = contentType.includes('application/pdf') ? 'payparq-receipt.pdf' : 'payparq-receipt.html';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const handleSummon = (type: 'car' | 'shuttle') => {
     setSummonStatus(
       type === 'car'
@@ -234,7 +266,7 @@ function SuccessContent() {
               </div>
               <div className="min-w-0">
                 <p className="text-[12px] text-black/50">Rezervacija potvrđena</p>
-                <p className="text-[15px] font-semibold text-black leading-tight truncate">
+                <p className="text-[15px] font-semibold text-black leading-tight">
                   {checkoutLocationName || checkoutLocationIdLabel || 'Safe Parking by PayParq'}
                 </p>
               </div>
@@ -451,7 +483,7 @@ function SuccessContent() {
             </Link>
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handleDownloadReceipt}
               className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
             >
               Preuzmi potvrdu

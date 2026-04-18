@@ -1221,10 +1221,12 @@ export async function GET(req: NextRequest) {
   let latitude: number | null = null;
   let longitude: number | null = null;
   let metadata: Record<string, unknown> | null = null;
+  let valetEnabled = false;
+  let shuttleEnabled = false;
   if (locationKey) {
     const byId = await client
       .from("locations")
-      .select("id,name,display_id,latitude,longitude,verification_metadata")
+      .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled")
       .eq("id", locationKey)
       .maybeSingle();
     let row = byId.data as
@@ -1234,12 +1236,14 @@ export async function GET(req: NextRequest) {
           latitude?: number | null;
           longitude?: number | null;
           verification_metadata?: Record<string, unknown> | null;
+          valet_enabled?: boolean | null;
+          shuttle_enabled?: boolean | null;
         }
       | null;
     if (!row) {
       const byDisplayId = await client
         .from("locations")
-        .select("id,name,display_id,latitude,longitude,verification_metadata")
+        .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled")
         .eq("display_id", locationKey)
         .maybeSingle();
       row = byDisplayId.data as
@@ -1249,6 +1253,8 @@ export async function GET(req: NextRequest) {
             latitude?: number | null;
             longitude?: number | null;
             verification_metadata?: Record<string, unknown> | null;
+            valet_enabled?: boolean | null;
+            shuttle_enabled?: boolean | null;
           }
         | null;
     }
@@ -1258,6 +1264,8 @@ export async function GET(req: NextRequest) {
       latitude = toNumber(row.latitude);
       longitude = toNumber(row.longitude);
       metadata = row.verification_metadata ?? null;
+      valetEnabled = row.valet_enabled ?? false;
+      shuttleEnabled = row.shuttle_enabled ?? false;
     }
   }
   const window = resolveSessionWindow(session);
@@ -1310,6 +1318,8 @@ export async function GET(req: NextRequest) {
       rideUrl,
       invoiceAvailable: Boolean(resolvedStripeSessionId || session.id),
       parkTaxiIncluded: isParkTaxiIncluded(sessionMetadata),
+      valetEnabled,
+      shuttleEnabled,
     },
     wallet: {
       balanceCents: walletBalanceCents,
