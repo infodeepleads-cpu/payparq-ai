@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { Car } from 'lucide-react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
-import { FooterBrand } from '@/components/FooterBrand';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type SessionSummary = {
@@ -38,9 +37,12 @@ function SuccessContent() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
-  const [extendMinutes, setExtendMinutes] = useState('1440');
   const [extendLoading, setExtendLoading] = useState(false);
   const [extendFeedback, setExtendFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [valetEnabled, setValetEnabled] = useState(false);
+  const [shuttleEnabled, setShuttleEnabled] = useState(true);
+  const [summonStatus, setSummonStatus] = useState<string | null>(null);
+
   const fallbackDisplayId =
     searchParams.get('display_id') ||
     searchParams.get('displayId') ||
@@ -65,39 +67,7 @@ function SuccessContent() {
     searchParams.get('out') ||
     searchParams.get('end') ||
     null;
-  const formatDateTime = (value: string | null | undefined) => {
-    if (!value) return '—';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return parsed.toLocaleString('hr-HR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-      timeZone: 'Europe/Zagreb',
-    });
-  };
-  const checkoutLocation = summary?.location_id ?? fallbackLocationId;
-  const checkoutLocationName = summary?.location_name ?? null;
-  const checkoutLocationDisplayId = summary?.location_display_id ?? null;
-  const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
-  const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
-  const checkoutFlowType = summary?.flow_type ?? searchParams.get('flow');
-  const refCode = summary?.ref_id ?? (hasRealSessionId && sessionId ? sessionId.slice(-8) : null);
-  const isParkTaxiFlow = checkoutFlowType === 'park_now';
-  const parkTaxiDays = useMemo(() => {
-    if (!checkoutStart || !checkoutEnd) return 1;
-    const start = new Date(checkoutStart);
-    const end = new Date(checkoutEnd);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
-    const diff = end.getTime() - start.getTime();
-    if (diff <= 0) return 1;
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [checkoutEnd, checkoutStart]);
+
   const formatStartTimeShort = (value: string | null | undefined) => {
     if (!value) return '—';
     const parsed = new Date(value);
@@ -109,6 +79,7 @@ function SuccessContent() {
       timeZone: 'Europe/Zagreb',
     });
   };
+
   const formatAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
     const normalized = Number(amount ?? 0);
     const value = Number.isFinite(normalized) ? normalized / 100 : 0;
@@ -120,14 +91,18 @@ function SuccessContent() {
       maximumFractionDigits: 2,
     }).format(value);
   };
-  const parkTaxiUltrabrief = isParkTaxiFlow
-    ? `${checkoutLocationName || 'Safe Parking by PayParq Split Airport/Trogir'} • ID ${checkoutLocationIdLabel || '—'} • Od ${formatDateTime(checkoutStart)} • Do ${formatDateTime(checkoutEnd)} • Ukupno ${formatAmount(summary?.amount_total, summary?.currency)} • Prva vožnja ${formatStartTimeShort(checkoutStart)} • Uključeno ${parkTaxiDays} ${parkTaxiDays === 1 ? 'dan' : 'dana'} parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`
-    : '';
+
+  const checkoutLocationName = summary?.location_name ?? null;
+  const checkoutLocationDisplayId = summary?.location_display_id ?? null;
+  const checkoutLocation = summary?.location_id ?? fallbackLocationId;
+  const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
+  const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
+  const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
+  const refCode = summary?.ref_id ?? (hasRealSessionId && sessionId ? sessionId.slice(-8) : null);
+
   useEffect(() => {
     let active = true;
-    if (!sessionId) {
-      return;
-    }
+    if (!sessionId) return;
     if (!hasRealSessionId) {
       setLookupError('Payment confirmation is still syncing. Please refresh this page in a few seconds.');
       return;
@@ -138,18 +113,10 @@ function SuccessContent() {
       try {
         const lookupParams = new URLSearchParams();
         lookupParams.set('session_id', sessionId);
-        if (fallbackDisplayId) {
-          lookupParams.set('display_id', fallbackDisplayId);
-        }
-        if (fallbackLocationId) {
-          lookupParams.set('location_id', fallbackLocationId);
-        }
-        if (fallbackCheckIn) {
-          lookupParams.set('check_in', fallbackCheckIn);
-        }
-        if (fallbackCheckOut) {
-          lookupParams.set('check_out', fallbackCheckOut);
-        }
+        if (fallbackDisplayId) lookupParams.set('display_id', fallbackDisplayId);
+        if (fallbackLocationId) lookupParams.set('location_id', fallbackLocationId);
+        if (fallbackCheckIn) lookupParams.set('check_in', fallbackCheckIn);
+        if (fallbackCheckOut) lookupParams.set('check_out', fallbackCheckOut);
         const response = await fetch(`/api/stripe/session?${lookupParams.toString()}`);
         const payload = (await response.json().catch(() => null)) as SessionSummary | { error?: string } | null;
         if (!active) return;
@@ -173,52 +140,38 @@ function SuccessContent() {
       }
     };
     run();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [sessionId, hasRealSessionId, fallbackDisplayId, fallbackLocationId, fallbackCheckIn, fallbackCheckOut]);
 
   const membersHref = useMemo(() => {
     if (!summary?.email) return '/members';
     return `/members?email=${encodeURIComponent(summary.email)}`;
   }, [summary?.email]);
+
   const orderParqRideHref = useMemo(() => {
-    const params = new URLSearchParams({
-      tab: 'home',
-    });
-    if (summary?.email) {
-      params.set('email', summary.email);
-    }
+    const params = new URLSearchParams({ tab: 'home' });
+    if (summary?.email) params.set('email', summary.email);
     return `/members?${params.toString()}`;
   }, [summary?.email]);
+
   const getMemberAuthHeaders = async () => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (supabase && isSupabaseConfigured) {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token ?? '';
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) headers.Authorization = `Bearer ${token}`;
       const sessionEmail = data.session?.user?.email?.trim().toLowerCase() ?? '';
-      if (sessionEmail) {
-        headers['x-member-email'] = sessionEmail;
-      }
+      if (sessionEmail) headers['x-member-email'] = sessionEmail;
     }
     if (!headers['x-member-email']) {
       const fallbackEmail = (summary?.email ?? '').trim().toLowerCase();
-      if (fallbackEmail) {
-        headers['x-member-email'] = fallbackEmail;
-      }
+      if (fallbackEmail) headers['x-member-email'] = fallbackEmail;
     }
     return headers;
   };
-  const handleExtendAction = async () => {
-    const parsedMinutes = Number.parseInt(extendMinutes, 10);
-    const safeMinutes = Number.isFinite(parsedMinutes)
-      ? Math.min(2880, Math.max(60, parsedMinutes))
-      : 1440;
+
+  const handleExtendWith = async (minutes: number) => {
+    const safeMinutes = Math.min(2880, Math.max(60, minutes));
     const targetSessionId = (summary?.session_id ?? sessionId ?? '').toString().trim();
     const fallbackLocation = (summary?.location_id ?? fallbackLocationId ?? '').toString().trim();
     const fallbackIn = (summary?.check_in ?? fallbackCheckIn ?? '').toString().trim();
@@ -241,238 +194,272 @@ function SuccessContent() {
         | { ok?: boolean; message?: string; actionUrl?: string; error?: string }
         | null;
       if (!response.ok || !payload?.ok) {
-        setExtendFeedback({
-          type: 'error',
-          text: payload?.error || 'Action failed. Please try again.',
-        });
+        setExtendFeedback({ type: 'error', text: payload?.error || 'Action failed. Please try again.' });
         return;
       }
-      if (payload.actionUrl) {
-        window.open(payload.actionUrl, '_blank', 'noopener,noreferrer');
-      }
-      setExtendFeedback({
-        type: 'success',
-        text: payload.message || 'Extension prepared.',
-      });
+      if (payload.actionUrl) window.open(payload.actionUrl, '_blank', 'noopener,noreferrer');
+      setExtendFeedback({ type: 'success', text: payload.message || 'Extension prepared.' });
     } catch {
-      setExtendFeedback({
-        type: 'error',
-        text: 'Action failed. Please try again.',
-      });
+      setExtendFeedback({ type: 'error', text: 'Action failed. Please try again.' });
     } finally {
       setExtendLoading(false);
     }
   };
 
+  const handleSummon = (type: 'car' | 'shuttle') => {
+    setSummonStatus(
+      type === 'car'
+        ? 'Vaš automobil je na putu · ETA ~6 min'
+        : 'Shuttle je pozvan · Dolazi za ~4 min'
+    );
+    setTimeout(() => setSummonStatus(null), 5000);
+  };
+
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
-      
-      <main className="flex-1 pt-24 md:pt-28 pb-16">
-        <div className="max-w-3xl mx-auto px-6 md:px-10">
-          
-          {/* Success Header */}
-          <div className="mt-[0.5cm] mb-10 text-center md:text-left">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              <div className="space-y-2">
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">
-                  Rezervacija potvrđena
-                </h1>
-                <p className="text-sm md:text-base text-black/70 max-w-lg">
-                  Vaša sesija parkiranja je uspješno rezervirana.
-                  {refCode && <span className="block mt-1 text-xs text-black/40 font-mono">Ref: {refCode}</span>}
+
+      <main className="flex-1 pt-20 pb-12">
+        <div className="max-w-sm mx-auto px-4 space-y-3 mt-4">
+
+          {/* 1 — Confirmation card */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-[#E1F5EE] flex items-center justify-center shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <circle cx="12" cy="12" r="10"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12px] text-black/50">Rezervacija potvrđena</p>
+                <p className="text-[15px] font-semibold text-black leading-tight truncate">
+                  {checkoutLocationName || checkoutLocationIdLabel || 'Safe Parking by PayParq'}
                 </p>
-                <div className="mt-3 rounded-xl border border-black/10 bg-white p-3 text-xs text-black/70 space-y-1">
-                  <p>
-                    <span className="font-semibold text-black">Lokacija:</span>{' '}
-                    {checkoutLocationName || checkoutLocationIdLabel || '—'}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-black">ID lokacije:</span>{' '}
-                    {checkoutLocationIdLabel || '—'}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-black">Vrijedi od:</span> {formatDateTime(checkoutStart)}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-black">Vrijedi do:</span> {formatDateTime(checkoutEnd)}
-                  </p>
-                </div>
-                {parkTaxiUltrabrief && (
-                  <p className="mt-2 text-[11px] text-black/70">
-                    {parkTaxiUltrabrief}
-                  </p>
-                )}
-                <div className="mt-3 rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 text-xs text-[#3E22C6] space-y-1">
-                  <p>
-                    <span className="font-semibold">Parking cost:</span>{" "}
-                    {formatAmount(summary?.amount_total ?? 0, summary?.currency ?? "EUR")}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Wallet debit used:</span>{" "}
-                    {formatAmount(summary?.wallet_debit_applied_cents ?? 0, summary?.currency ?? "EUR")}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Wallet top-up credit:</span>{" "}
-                    {formatAmount(summary?.wallet_topup_credit_cents ?? 0, summary?.currency ?? "EUR")}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Loyalty bonus credit:</span>{" "}
-                    {formatAmount(summary?.loyalty_bonus_credit_cents ?? 0, summary?.currency ?? "EUR")}
-                  </p>
-                </div>
-                {summary?.email && (
-                  <p className="text-xs text-black/50 mt-2">
-                    Membership is ready for {summary.email}. Verify email to unlock promotions.
-                  </p>
-                )}
-                {!summary?.email_verified && summary?.email && (
-                  <p className="text-[11px] text-black/50 mt-1">
-                    Check Inbox and Junk/Spam after tapping verify.
-                  </p>
-                )}
               </div>
             </div>
-          </div>
-
-          <div className="bg-gray-50 border border-black/5 rounded-3xl p-6 md:p-8 space-y-5 no-print shadow-sm">
-            <div className="space-y-1.5">
-              <h3 className="text-lg font-semibold text-black">Nastavite u Members zoni</h3>
-              <p className="text-sm text-black/70">
-                Osiguranje, Uber, produženje boravka i preuzimanje potvrde računa dostupni su unutar Members zone.
+            <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
+              <div>
+                <p className="text-black/50">Ref</p>
+                <p className="font-semibold text-black font-mono tracking-tight">{refCode || '—'}</p>
+              </div>
+              <div>
+                <p className="text-black/50">Cijena</p>
+                <p className="font-semibold text-black">
+                  {formatAmount(summary?.amount_total ?? 0, summary?.currency ?? 'EUR')}
+                </p>
+              </div>
+              <div>
+                <p className="text-black/50">Od</p>
+                <p className="font-semibold text-black">{formatStartTimeShort(checkoutStart)}</p>
+              </div>
+              <div>
+                <p className="text-black/50">Do</p>
+                <p className="font-semibold text-black">{formatStartTimeShort(checkoutEnd)}</p>
+              </div>
+            </div>
+            {(lookupLoading || lookupError) && (
+              <p className="mt-3 text-[11px] text-black/40">
+                {lookupLoading ? 'Učitavanje...' : lookupError}
               </p>
-              {(lookupLoading || lookupError) && (
-                <p className="text-[11px] text-black/50">
-                  {lookupLoading ? 'Loading payment details...' : lookupError}
-                </p>
-              )}
+            )}
+          </div>
+
+          {/* 2 — Produži boravak */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
+              Produži boravak
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                { label: '+1h', minutes: 60 },
+                { label: '+2h', minutes: 120 },
+                { label: '+1d', minutes: 1440 },
+                { label: '+2d', minutes: 2880 },
+              ] as const).map(({ label, minutes }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleExtendWith(minutes)}
+                  disabled={extendLoading}
+                  className="py-2 rounded-xl border border-black/10 bg-gray-50 text-[13px] font-medium text-black hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                >
+                  {extendLoading ? '…' : label}
+                </button>
+              ))}
             </div>
-            <div className="grid md:grid-cols-3 gap-3 items-start">
-              <Link
-                href={membersHref}
-                className="inline-flex h-9 items-center justify-center gap-2 px-4 rounded-full border border-[#5F3DFC]/25 bg-[#F5F2FF] text-[#5F3DFC] text-xs font-semibold hover:bg-[#ECE7FF] transition-colors"
+            {extendFeedback && (
+              <p className={`mt-2 text-[11px] ${extendFeedback.type === 'error' ? 'text-red-600' : 'text-[#0F6E56]'}`}>
+                {extendFeedback.text}
+              </p>
+            )}
+          </div>
+
+          {/* 3 — Dodaci */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
+              Dodaci
+            </p>
+            <div className="space-y-2">
+
+              {/* Valet */}
+              <button
+                type="button"
+                onClick={() => setValetEnabled(v => !v)}
+                className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
               >
-                Otvori Members page
-              </Link>
-              <div className="space-y-1">
-                <div className="inline-flex h-9 w-full items-center justify-center gap-2 px-4 rounded-full border border-black/15 bg-white">
-                  <select
-                    value={extendMinutes}
-                    onChange={(event) => setExtendMinutes(event.target.value)}
-                    className="rounded-full border border-black/10 px-2 py-1 text-xs text-black bg-white outline-none focus:border-black/40"
-                  >
-                    <option value="1440">+1d</option>
-                    <option value="2880">+2d</option>
-                    <option value="60">+1h</option>
-                    <option value="120">+2h</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleExtendAction}
-                    disabled={extendLoading}
-                    className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors disabled:opacity-60"
-                  >
-                    {extendLoading ? 'Obrada...' : 'Produži'}
-                  </button>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                      <line x1="9" y1="9" x2="9.01" y2="9"/>
+                      <line x1="15" y1="9" x2="15.01" y2="9"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-black">Valet parking</p>
+                    <p className="text-[11px] text-black/50">Mi parkiramo vaš automobil</p>
+                  </div>
                 </div>
-                <p className={`min-h-[16px] text-[11px] ${extendFeedback?.type === 'error' ? 'text-red-600' : 'text-black/70'}`}>
-                  {extendFeedback?.text ?? ''}
-                </p>
-              </div>
-              <Link
-                href={orderParqRideHref}
-                className="inline-flex h-9 items-center justify-center gap-2 px-4 rounded-full bg-black text-white text-xs font-semibold shadow-sm hover:bg-gray-900 transition-colors"
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-[13px] font-medium text-black">5,00 €</span>
+                  <div
+                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative"
+                    style={{
+                      background: valetEnabled ? '#5F3DFC' : '#f3f4f6',
+                      borderColor: valetEnabled ? '#5F3DFC' : '#e5e7eb',
+                    }}
+                  >
+                    <div
+                      className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm"
+                      style={{ left: valetEnabled ? '18px' : '2px' }}
+                    />
+                  </div>
+                </div>
+              </button>
+
+              {/* Shuttle */}
+              <button
+                type="button"
+                onClick={() => setShuttleEnabled(s => !s)}
+                className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
               >
-                <Car size={14} />
-                Naruči Uber
-              </Link>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
+                      <rect x="1" y="8" width="22" height="10" rx="2"/>
+                      <path d="M5 18v2M19 18v2"/>
+                      <path d="M1 12h22"/>
+                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-black">Shuttle prijevoz</p>
+                    <p className="text-[11px] text-black/50">Do/od destinacije besplatno</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  {shuttleEnabled && (
+                    <span className="text-[11px] font-medium text-[#0F6E56] bg-[#E1F5EE] px-2 py-0.5 rounded-md">
+                      Uključeno
+                    </span>
+                  )}
+                  <div
+                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative"
+                    style={{
+                      background: shuttleEnabled ? '#1D9E75' : '#f3f4f6',
+                      borderColor: shuttleEnabled ? '#0F6E56' : '#e5e7eb',
+                    }}
+                  >
+                    <div
+                      className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm"
+                      style={{ left: shuttleEnabled ? '18px' : '2px' }}
+                    />
+                  </div>
+                </div>
+              </button>
+
             </div>
           </div>
 
-          {/* Back to Home */}
-          <div className="mt-8 text-center md:text-left no-print">
-            <Link 
-              href="/" 
-              className="inline-flex items-center text-sm font-medium text-black/40 hover:text-black transition-colors"
+          {/* 4 — Pozovi vozilo */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
+              Pozovi vozilo
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleSummon('car')}
+                className="flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <Car size={28} strokeWidth={1.5} className="text-black" />
+                <span className="text-[13px] font-medium text-black">Pozovi auto</span>
+                <span className="text-[11px] text-black/50">Valet dovozi</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSummon('shuttle')}
+                className="flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
+                  <rect x="1" y="8" width="22" height="10" rx="2"/>
+                  <path d="M5 18v2M19 18v2"/>
+                  <path d="M1 12h22"/>
+                  <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
+                <span className="text-[11px] text-black/50">ETA ~4 min</span>
+              </button>
+            </div>
+            {summonStatus && (
+              <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
+                {summonStatus}
+              </div>
+            )}
+          </div>
+
+          {/* 5 — Secondary actions */}
+          <div className="flex flex-col gap-2">
+            <Link
+              href={orderParqRideHref}
+              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
             >
-              ← Return to Home
+              Naruči Uber
+            </Link>
+            <Link
+              href={membersHref}
+              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
+            >
+              Osiguranje
+            </Link>
+            <Link
+              href={membersHref}
+              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
+            >
+              Preuzmi potvrdu
             </Link>
           </div>
+
+          {/* 6 — Footer stub */}
+          {summary?.email && (
+            <p className="text-center text-[11px] text-black/40 pb-6">
+              <Link href={membersHref} className="hover:text-black/60 transition-colors">
+                Members zona
+              </Link>
+              {' · '}
+              {summary.email}
+            </p>
+          )}
+
         </div>
       </main>
 
-      <section className="bg-[#05020A] border-t border-white/10 no-print">
-        <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Company
-              </p>
-              <Link href="/about" className="block hover:text-white transition-colors">
-                About
-              </Link>
-              <Link href="/careers" className="block hover:text-white transition-colors">
-                Careers
-              </Link>
-              <Link href="/news" className="block hover:text-white transition-colors">
-                News
-              </Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Vision
-              </p>
-              <Link href="/product" className="block hover:text-white transition-colors">
-                Product
-              </Link>
-              <Link href="/parking" className="block hover:text-white transition-colors">
-                Parking
-              </Link>
-              <Link href="/security" className="block hover:text-white transition-colors">
-                Security
-              </Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Policies
-              </p>
-              <Link href="/legal" className="block hover:text-white transition-colors">
-                Legal
-              </Link>
-              <Link href="/privacy" className="block hover:text-white transition-colors">
-                Privacy
-              </Link>
-              <Link href="/terms" className="block hover:text-white transition-colors">
-                Terms
-              </Link>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">
-                Platform
-              </p>
-              <Link href="/locations" className="block hover:text-white transition-colors">
-                Locations
-              </Link>
-              <Link href="/members" className="block hover:text-white transition-colors">
-                Members
-              </Link>
-              <Link href="/support" className="block hover:text-white transition-colors">
-                Support
-              </Link>
-            </div>
-          </div>
-          <div className="mt-12 pt-6 border-t border-white/10">
-            <FooterBrand />
-          </div>
-        </div>
-      </section>
-
-      {/* Print Styles */}
       <style jsx global>{`
         @media print {
           body { background: white; color: black; }
-          .no-print { display: none !important; }
-          header, footer { display: none !important; }
+          header { display: none !important; }
         }
       `}</style>
     </div>
@@ -481,7 +468,11 @@ function SuccessContent() {
 
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#05020A] text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center text-black/40 text-sm">
+        Učitavanje...
+      </div>
+    }>
       <SuccessContent />
     </Suspense>
   );
