@@ -8,13 +8,15 @@ import { FooterBrand } from '@/components/FooterBrand';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type AddonsConfigOption = { id: string; label: string; price_cents: number };
-type AddonsConfigEntry = { enabled?: boolean; price_cents?: number; options?: AddonsConfigOption[] };
+type AddonsConfigEntry = { enabled?: boolean; price_cents?: number; options?: AddonsConfigOption[]; lot_zone?: string };
 type AddonsConfig = {
   valet?: AddonsConfigEntry;
   ev_charging?: AddonsConfigEntry;
   car_wash?: AddonsConfigEntry;
   fuel?: AddonsConfigEntry;
   shuttle?: AddonsConfigEntry;
+  hotspot?: string;
+  phone_sms?: string;
 };
 
 type SessionSummary = {
@@ -37,6 +39,7 @@ type SessionSummary = {
   valet_enabled?: boolean | null;
   shuttle_enabled?: boolean | null;
   addons_config?: AddonsConfig | null;
+  valet_attendant?: string | null;
 };
 
 type Credits = number | '∞';
@@ -54,6 +57,113 @@ function CreditBadge({ value }: { value: Credits }) {
     >
       {label}
     </span>
+  );
+}
+
+function deriveTicketNumber(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 31 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  const num = 1000 + (Math.abs(hash) % 9000);
+  return `VLT-${num}`;
+}
+
+function ValetTicket({
+  sessionId,
+  locationName,
+  checkIn,
+  checkOut,
+  attendant,
+  hotspot,
+  phoneSms,
+  lotZone,
+  formatDateTime,
+}: {
+  sessionId: string;
+  locationName: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  attendant: string | null;
+  hotspot: string | null;
+  phoneSms: string | null;
+  lotZone: string | null;
+  formatDateTime: (v: string | null | undefined) => string;
+}) {
+  const ticketNo = deriveTicketNumber(sessionId);
+  return (
+    <div className="rounded-2xl border border-[#5F3DFC]/30 overflow-hidden">
+      {/* Ticket header */}
+      <div className="bg-[#5F3DFC] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+            <rect x="9" y="11" width="14" height="10" rx="1"/>
+            <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+          </svg>
+          <span className="text-white text-[12px] font-semibold uppercase tracking-widest">Valet potvrda</span>
+        </div>
+        <span className="text-white/80 text-[11px] font-mono">{ticketNo}</span>
+      </div>
+      {/* Dashed divider */}
+      <div className="border-t-2 border-dashed border-[#5F3DFC]/20 mx-0" />
+      {/* Ticket body */}
+      <div className="bg-[#F5F2FF] px-4 py-3 space-y-2 text-[12px]">
+        {locationName && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Lokacija</span>
+            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
+          </div>
+        )}
+        {hotspot && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Drop-off / Pick-up</span>
+            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{hotspot}</span>
+          </div>
+        )}
+        {lotZone && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Lot zona</span>
+            <span className="font-semibold text-black text-right max-w-[55%]">{lotZone}</span>
+          </div>
+        )}
+        {checkIn && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Check-in</span>
+            <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
+          </div>
+        )}
+        {checkOut && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Check-out</span>
+            <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
+          </div>
+        )}
+        {attendant && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Voditelj</span>
+            <span className="font-semibold text-black">{attendant}</span>
+          </div>
+        )}
+        {phoneSms && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">SMS / WhatsApp</span>
+            <a
+              href={`https://wa.me/${phoneSms.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#5F3DFC] underline"
+            >
+              {phoneSms}
+            </a>
+          </div>
+        )}
+      </div>
+      {/* Bottom strip */}
+      <div className="bg-[#5F3DFC]/10 px-4 py-2 text-center">
+        <p className="text-[10px] text-[#5F3DFC]/70 font-medium">Pokažite kod valet agentu pri predaji ključeva</p>
+      </div>
+    </div>
   );
 }
 
@@ -437,6 +547,21 @@ function SuccessContent() {
               <p className="mt-3 text-[11px] text-black/40">{lookupLoading ? 'Učitavanje...' : lookupError}</p>
             )}
           </div>
+
+          {/* 1b — Valet confirmation ticket (when valet included in price) */}
+          {showIncludedValet && summary?.session_id && (
+            <ValetTicket
+              sessionId={summary.session_id}
+              locationName={checkoutLocationName}
+              checkIn={checkoutStart}
+              checkOut={checkoutEnd}
+              attendant={summary.valet_attendant ?? null}
+              hotspot={(summary.addons_config?.hotspot as string | null | undefined) ?? null}
+              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
+              lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
+              formatDateTime={formatDateTime}
+            />
+          )}
 
           {/* 2 — Produži boravak */}
           <div className="rounded-2xl border border-black/10 bg-white p-4">

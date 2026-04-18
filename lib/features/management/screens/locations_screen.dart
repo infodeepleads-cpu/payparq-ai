@@ -529,9 +529,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     required bool washOn, required String washBasic, required String washPremium,
     required bool fuelOn, required String fuelDiesel, required String fuelBenzin,
     required bool shuttleOn, required String shuttlePrice,
+    required String hotspot, required String phoneSms, required String lotZone,
   }) {
     return {
-      if (valetOn) 'valet': {'enabled': true, 'price_cents': int.tryParse(valetPrice) ?? 500},
+      if (valetOn) 'valet': {
+        'enabled': true,
+        'price_cents': int.tryParse(valetPrice) ?? 500,
+        if (lotZone.trim().isNotEmpty) 'lot_zone': lotZone.trim(),
+      },
       if (evOn) 'ev_charging': {'enabled': true, 'price_cents': int.tryParse(evPrice) ?? 2000},
       if (washOn) 'car_wash': {'enabled': true, 'options': [
         {'id': 'basic', 'label': 'Basic', 'price_cents': int.tryParse(washBasic) ?? 1500},
@@ -542,6 +547,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         {'id': 'benzin', 'label': 'Benzin', 'price_cents': int.tryParse(fuelBenzin) ?? 5500},
       ]},
       if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': int.tryParse(shuttlePrice) ?? 200},
+      if (hotspot.trim().isNotEmpty) 'hotspot': hotspot.trim(),
+      if (phoneSms.trim().isNotEmpty) 'phone_sms': phoneSms.trim(),
     };
   }
 
@@ -867,6 +874,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 as Map?)?['price_cents']?.toString() ?? '5500');
         final shuttlePriceCtrl = TextEditingController(
             text: ((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?)?.toString() ?? '200');
+        final hotspotCtrl = TextEditingController(
+            text: (addonsConfig['hotspot'] as String?) ?? '');
+        final phoneSmsCtrl = TextEditingController(
+            text: (addonsConfig['phone_sms'] as String?) ?? '+385 91 5963139');
+        final lotZoneCtrl = TextEditingController(
+            text: ((addonsConfig['valet'] as Map?)?['lot_zone'] as String?) ?? '');
         bool addonValetOn = (addonsConfig['valet'] as Map?)?['enabled'] == true;
         bool addonEvOn = (addonsConfig['ev_charging'] as Map?)?['enabled'] == true;
         bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
@@ -994,6 +1007,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             fuelBenzin: fuelBenzinCtrl.text,
                             shuttleOn: addonShuttleOn,
                             shuttlePrice: shuttlePriceCtrl.text,
+                            hotspot: hotspotCtrl.text,
+                            phoneSms: phoneSmsCtrl.text,
+                            lotZone: lotZoneCtrl.text,
                           ),
                         );
                     if (photosChanged) {
@@ -1896,6 +1912,41 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   priceCtrl: shuttlePriceCtrl,
                                   onToggle: (v) => setState(() => addonShuttleOn = v),
                                 ),
+                                if (addonValetOn || addonShuttleOn) ...[
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: hotspotCtrl,
+                                    decoration: InputDecoration(
+                                      labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Hotspot / pickup point', 'Hotspot / pickup point'),
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: phoneSmsCtrl,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: InputDecoration(
+                                      labelText: 'Telefon (SMS/WhatsApp)',
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                    ),
+                                  ),
+                                ],
+                                if (addonValetOn) ...[
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: lotZoneCtrl,
+                                    decoration: InputDecoration(
+                                      labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Lot zone (valet)', 'Lot zona (valet)'),
+                                      filled: true,
+                                      fillColor: AppTheme.surface,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                    ),
+                                  ),
+                                ],
                               ],
                               if (canEdit) ...[
                                 const SizedBox(height: 16),

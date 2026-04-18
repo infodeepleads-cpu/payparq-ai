@@ -58,6 +58,24 @@ function resolveStripeSecretKey(): string | null {
   return secret;
 }
 
+async function resolveValetAttendant(locationId: string): Promise<string | null> {
+  const dbClient = supabaseAdmin;
+  if (!dbClient || !locationId) return null;
+  try {
+    const { data: assignments } = await dbClient
+      .from('officer_assignments')
+      .select('officer_id')
+      .eq('location_id', locationId)
+      .limit(1);
+    const officerId = (assignments as { officer_id?: string }[] | null)?.[0]?.officer_id ?? null;
+    if (!officerId) return null;
+    const { data: { user } } = await dbClient.auth.admin.getUserById(officerId);
+    return (user?.user_metadata?.full_name as string | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   const dbClient = supabaseAdmin ?? supabase;
   if (!dbClient) return null;
@@ -283,6 +301,7 @@ export async function GET(req: NextRequest) {
     let valetEnabled = false;
     let shuttleEnabled = false;
     let addonsConfig: Record<string, unknown> = {};
+    let valetAttendant: string | null = null;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -389,6 +408,8 @@ export async function GET(req: NextRequest) {
           shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
           addonsConfig = (flagsRow as { addons_config?: Record<string, unknown> | null } | null)?.addons_config ?? {};
         } catch {}
+        // Query city manager (officer assignment) for valet attendant name
+        valetAttendant = await resolveValetAttendant(resolvedId);
       }
     } else {
       entryTime = metadataCheckIn || null;
@@ -407,6 +428,7 @@ export async function GET(req: NextRequest) {
       valet_enabled: valetEnabled,
       shuttle_enabled: shuttleEnabled,
       addons_config: addonsConfig,
+      valet_attendant: valetAttendant,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,
