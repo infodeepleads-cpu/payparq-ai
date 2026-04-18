@@ -353,24 +353,22 @@ export async function GET(req: NextRequest) {
       if (locationCandidate) {
         const byId = await dbClient
           .from('locations')
-          .select('id,display_id,name,valet_enabled,shuttle_enabled')
+          .select('id,display_id,name')
           .eq('id', locationCandidate)
           .maybeSingle();
         let locationRow = byId.data as
-          | { id?: string | null; display_id?: string | null; name?: string | null; valet_enabled?: boolean | null; shuttle_enabled?: boolean | null }
+          | { id?: string | null; display_id?: string | null; name?: string | null }
           | null;
         if (!locationRow) {
           const byDisplayId = await dbClient
             .from('locations')
-            .select('id,display_id,name,valet_enabled,shuttle_enabled')
+            .select('id,display_id,name')
             .eq('display_id', locationCandidate)
             .maybeSingle();
           locationRow = byDisplayId.data as
-            | { id?: string | null; display_id?: string | null; name?: string | null; valet_enabled?: boolean | null; shuttle_enabled?: boolean | null }
+            | { id?: string | null; display_id?: string | null; name?: string | null }
             | null;
         }
-        valetEnabled = locationRow?.valet_enabled ?? false;
-        shuttleEnabled = locationRow?.shuttle_enabled ?? false;
         if (locationRow) {
           activityLocationName = locationRow.name ? normalizeLocationName(String(locationRow.name)) : null;
           activityLocationDisplayId = locationRow.display_id ? String(locationRow.display_id) : null;
@@ -378,6 +376,17 @@ export async function GET(req: NextRequest) {
             activityLocationId = String(locationRow.id);
           }
         }
+        // Separate query for service flags — gracefully handles missing columns
+        const resolvedId = locationRow?.id ?? locationCandidate;
+        try {
+          const { data: flagsRow } = await dbClient
+            .from('locations')
+            .select('valet_enabled,shuttle_enabled')
+            .eq('id', resolvedId)
+            .maybeSingle();
+          valetEnabled = (flagsRow as { valet_enabled?: boolean | null } | null)?.valet_enabled ?? false;
+          shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
+        } catch {}
       }
     } else {
       entryTime = metadataCheckIn || null;

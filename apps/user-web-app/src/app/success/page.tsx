@@ -221,7 +221,7 @@ function SuccessContent() {
       <SiteHeader />
 
       <main className="flex-1 pt-20 pb-12">
-        <div className="max-w-sm mx-auto px-4 space-y-3 mt-8">
+        <div className="max-w-sm mx-auto px-4 space-y-3 mt-12">
 
           {/* 1 — Confirmation card */}
           <div className="rounded-2xl border border-black/10 bg-white p-4">
