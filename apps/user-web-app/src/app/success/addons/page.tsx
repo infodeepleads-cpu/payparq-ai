@@ -184,7 +184,9 @@ function AddonsSuccessContent() {
             const phoneSms = (session?.phone_sms ?? '385915963139').replace(/\D/g, '') || '385915963139';
             const mapHref = pickup?.lat && pickup?.lng
               ? `https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`
-              : null;
+              : pickup?.label
+                ? `https://www.google.com/maps/search/${encodeURIComponent(pickup.label)}`
+                : null;
             return (
               <div className="rounded-2xl border border-[#0F6E56]/20 overflow-hidden">
                 {/* Header */}
@@ -219,7 +221,7 @@ function AddonsSuccessContent() {
                       {pickup?.label && (
                         <p className="text-[12px] text-black/60">{pickup.label}</p>
                       )}
-                      {mapHref ? (
+                      {mapHref && (
                         <a
                           href={mapHref}
                           target="_blank"
@@ -232,8 +234,6 @@ function AddonsSuccessContent() {
                           </svg>
                           Prikaži pick-up / drop-off zonu na karti
                         </a>
-                      ) : (
-                        <p className="text-[12px] text-black/40 italic">Karta nije dostupna</p>
                       )}
                       <p className="text-[12px] text-black/60">Po dolasku pritisnite tipku &quot;Pozovi shuttle&quot; u Members zoni · <strong className="text-black">ETA 3–8 min</strong></p>
                     </div>

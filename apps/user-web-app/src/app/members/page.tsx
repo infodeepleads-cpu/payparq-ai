@@ -1486,6 +1486,84 @@ export default function MembersPage() {
               )}
             </div>
           </div>
+          {/* Shuttle confirmation card — shown when shuttle is included in price */}
+          {homeContext?.shuttleEnabled && (() => {
+            const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+            const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+            const pickup = (cfg.pickup_point as { lat?: number; lng?: number; label?: string } | undefined) ?? null;
+            const shtCode = deriveShuttleCode(homeContext.stripeSessionId);
+            const mapHref = pickup?.lat && pickup?.lng
+              ? `https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`
+              : pickup?.label
+                ? `https://www.google.com/maps/search/${encodeURIComponent(pickup.label)}`
+                : null;
+            return (
+              <div className="rounded-xl border border-[#0F6E56]/20 overflow-hidden">
+                {/* Header */}
+                <div className="bg-[#0F6E56] px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <rect x="1" y="8" width="22" height="10" rx="2"/><path d="M5 18v2M19 18v2"/><path d="M1 12h22"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    <span className="text-white text-[11px] font-semibold uppercase tracking-widest">Shuttle potvrda</span>
+                  </div>
+                  <span className="text-white/80 text-[11px] font-mono font-bold">{shtCode}</span>
+                </div>
+                {/* Steps */}
+                <div className="bg-[#E1F5EE] px-4 py-3 space-y-3 text-[12px]">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">1</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Dođite na ukrcajnu točku</p>
+                      {pickup?.label && <p className="text-black/60 mt-0.5">{pickup.label}</p>}
+                      {mapHref && (
+                        <a href={mapHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-0.5 text-[#0F6E56] font-semibold underline underline-offset-2">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          Prikaži pick-up / drop-off zonu
+                        </a>
+                      )}
+                      <p className="text-black/60 mt-0.5">Po dolasku pritisnite &ldquo;Pozovi shuttle&rdquo; · <strong className="text-black">ETA 3–8 min</strong></p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">2</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Ukrcaj i vožnja</p>
+                      <p className="text-black/60 mt-0.5">Vozač skenira kod <span className="font-mono font-bold text-[#0F6E56]">{shtCode}</span>. Shuttle vozi izravno — bez zaustavljanja.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">3</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Povratak</p>
+                      <p className="text-black/60 mt-0.5">Pozovite shuttle putem gumba &ldquo;Pozovi shuttle&rdquo; ispod.</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Footer */}
+                <div className="bg-white border-t border-[#0F6E56]/10 px-4 py-2.5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-black/50">Hitni kontakt · 24/7</p>
+                    <a href={`tel:+${phoneSms}`} className="text-[12px] font-bold text-[#0F6E56]">+{phoneSms}</a>
+                  </div>
+                  <a
+                    href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext.locationName ?? homeContext.locationDisplayId ?? ''} · ${shtCode}`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#0F6E56] underline underline-offset-2"
+                  >
+                    Chat s vozačem
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex gap-3 overflow-x-auto pb-1">
             <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
               <p className="text-sm font-semibold text-black">Produženje boravka</p>

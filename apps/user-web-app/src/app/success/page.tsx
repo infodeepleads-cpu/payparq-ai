@@ -123,25 +123,27 @@ function ShuttleTicket({
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
-        {pickupPoint?.label && (
-          <div className="flex justify-between">
-            <span className="text-black/50">Ukrcaj / Iskrcaj</span>
-            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
-          </div>
-        )}
-        {pickupPoint?.lat && pickupPoint?.lng && (
-          <div className="flex justify-between items-center">
-            <span className="text-black/50">Navigacija</span>
-            <a
-              href={`https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[#0F6E56] underline text-[12px]"
-            >
-              Otvori kartu
-            </a>
-          </div>
-        )}
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (() => {
+          const mapsHref = pickupPoint?.lat && pickupPoint?.lng
+            ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+            : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`;
+          return (
+            <>
+              {pickupPoint?.label && (
+                <div className="flex justify-between">
+                  <span className="text-black/50">Pick-up / Drop-off</span>
+                  <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-black/50">Navigacija</span>
+                <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0F6E56] underline text-[12px]">
+                  Otvori kartu
+                </a>
+              </div>
+            </>
+          );
+        })()}
         {checkIn && (
           <div className="flex justify-between">
             <span className="text-black/50">Check-in</span>
