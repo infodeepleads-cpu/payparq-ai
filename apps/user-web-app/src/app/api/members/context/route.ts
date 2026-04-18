@@ -1223,10 +1223,11 @@ export async function GET(req: NextRequest) {
   let metadata: Record<string, unknown> | null = null;
   let valetEnabled = false;
   let shuttleEnabled = false;
+  let addonsConfig: Record<string, unknown> | null = null;
   if (locationKey) {
     const byId = await client
       .from("locations")
-      .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled")
+      .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled,addons_config")
       .eq("id", locationKey)
       .maybeSingle();
     let row = byId.data as
@@ -1238,12 +1239,13 @@ export async function GET(req: NextRequest) {
           verification_metadata?: Record<string, unknown> | null;
           valet_enabled?: boolean | null;
           shuttle_enabled?: boolean | null;
+          addons_config?: Record<string, unknown> | null;
         }
       | null;
     if (!row) {
       const byDisplayId = await client
         .from("locations")
-        .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled")
+        .select("id,name,display_id,latitude,longitude,verification_metadata,valet_enabled,shuttle_enabled,addons_config")
         .eq("display_id", locationKey)
         .maybeSingle();
       row = byDisplayId.data as
@@ -1255,6 +1257,7 @@ export async function GET(req: NextRequest) {
             verification_metadata?: Record<string, unknown> | null;
             valet_enabled?: boolean | null;
             shuttle_enabled?: boolean | null;
+            addons_config?: Record<string, unknown> | null;
           }
         | null;
     }
@@ -1266,6 +1269,7 @@ export async function GET(req: NextRequest) {
       metadata = row.verification_metadata ?? null;
       valetEnabled = row.valet_enabled ?? false;
       shuttleEnabled = row.shuttle_enabled ?? false;
+      addonsConfig = (row.addons_config as Record<string, unknown> | null) ?? null;
     }
   }
   // Merge purchased addons into enabled flags
@@ -1328,6 +1332,7 @@ export async function GET(req: NextRequest) {
       shuttleEnabled,
       valetCode: addonValetCode,
       purchasedAddons,
+      addonsConfig,
     },
     wallet: {
       balanceCents: walletBalanceCents,
