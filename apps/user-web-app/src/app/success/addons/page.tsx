@@ -17,7 +17,19 @@ type AddonSession = {
   valet_code: string | null;
   addons: string | null;
   original_session_id: string | null;
+  pickup_point?: { lat?: number; lng?: number; label?: string } | null;
+  phone_sms?: string | null;
 };
+
+function deriveShuttleCode(sessionId: string | null | undefined): string {
+  const id = (sessionId ?? '').trim();
+  if (!id) return 'SH-0000';
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 37 + id.charCodeAt(i)) & 0xffffffff;
+  }
+  return `SH-${1000 + (Math.abs(hash) % 9000)}`;
+}
 
 function parseAddons(raw: string | null): string[] {
   if (!raw) return [];
@@ -166,70 +178,118 @@ function AddonsSuccessContent() {
           )}
 
           {/* Shuttle instructions */}
-          {hasShuttle && (
-            <div className="rounded-2xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#0F6E56] flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                    <rect x="1" y="8" width="22" height="10" rx="2"/>
-                    <path d="M5 18v2M19 18v2"/>
-                    <path d="M1 12h22"/>
-                    <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                  </svg>
-                </div>
-                <p className="text-[14px] font-semibold text-[#0F6E56]">Shuttle upute</p>
-              </div>
-
-              {session?.valet_code && (
-                <div className="rounded-xl bg-white border border-[#0F6E56]/20 px-4 py-3 text-center">
-                  <p className="text-[11px] text-black/50 mb-1">Vaš shuttle kod</p>
-                  <p className="text-[28px] font-bold tracking-widest text-[#0F6E56] font-mono">{session.valet_code.replace('VLT-', 'SHT-')}</p>
-                  <p className="text-[10px] text-black/40 mt-1">Pokažite kod vozaču shuttlea pri ukrcaju</p>
-                </div>
-              )}
-
-              <div className="space-y-2 text-[13px]">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px] font-bold text-[#0F6E56]">1</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-black">Dođite na ukrcajnu točku</p>
-                    <p className="text-black/50 text-[12px]">Pričekajte na označenom pick-up / drop-off punktu. Shuttle dolazi za <strong className="text-black">~4 min</strong>.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px] font-bold text-[#0F6E56]">2</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-black">Ukrcaj i vožnja</p>
-                    <p className="text-black/50 text-[12px]">Vozač skenira vaš kod. Shuttle vozi izravno do odredišta — bez zaustavljanja.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px] font-bold text-[#0F6E56]">3</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-black">Povratak</p>
-                    <p className="text-black/50 text-[12px]">Za povratak pošaljite poruku vozaču ili pozovite shuttle putem Members zone.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#E1F5EE] flex items-center justify-center shrink-0 mt-0.5">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2.5">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          {hasShuttle && (() => {
+            const shtCode = deriveShuttleCode(session?.original_session_id);
+            const pickup = session?.pickup_point ?? null;
+            const phoneSms = (session?.phone_sms ?? '385915963139').replace(/\D/g, '') || '385915963139';
+            const mapHref = pickup?.lat && pickup?.lng
+              ? `https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`
+              : null;
+            return (
+              <div className="rounded-2xl border border-[#0F6E56]/20 overflow-hidden">
+                {/* Header */}
+                <div className="bg-[#0F6E56] px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <rect x="1" y="8" width="22" height="10" rx="2"/>
+                      <path d="M5 18v2M19 18v2"/>
+                      <path d="M1 12h22"/>
+                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
                     </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-black">Sigurnost osigurana</p>
-                    <p className="text-black/50 text-[12px]">Svi vozači su verificirani i osigurani putem Payparq sustava. GPS praćenje aktivno.</p>
+                    <span className="text-white text-[12px] font-semibold uppercase tracking-widest">Shuttle potvrda</span>
                   </div>
                 </div>
+
+                {/* Code block */}
+                <div className="bg-[#E1F5EE] px-4 py-4 text-center border-b border-[#0F6E56]/10">
+                  <p className="text-[11px] text-black/50 mb-1 uppercase tracking-widest">Kod rezervacije</p>
+                  <p className="text-[32px] font-bold tracking-widest text-[#0F6E56] font-mono">{shtCode}</p>
+                  <p className="text-[10px] text-black/40 mt-1">Pokažite kod vozaču pri ukrcaju</p>
+                </div>
+
+                {/* Steps */}
+                <div className="bg-white px-4 py-4 space-y-4">
+                  {/* Step 1 */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px] font-bold text-white">1</span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[13px] font-semibold text-black">Dođite na ukrcajnu točku</p>
+                      {pickup?.label && (
+                        <p className="text-[12px] text-black/60">{pickup.label}</p>
+                      )}
+                      {mapHref ? (
+                        <a
+                          href={mapHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#0F6E56] underline underline-offset-2"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                          </svg>
+                          Prikaži pick-up / drop-off zonu na karti
+                        </a>
+                      ) : (
+                        <p className="text-[12px] text-black/40 italic">Karta nije dostupna</p>
+                      )}
+                      <p className="text-[12px] text-black/60">Po dolasku pritisnite tipku &quot;Pozovi shuttle&quot; u Members zoni · <strong className="text-black">ETA 3–8 min</strong></p>
+                    </div>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px] font-bold text-white">2</span>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-black">Ukrcaj i vožnja</p>
+                      <p className="text-[12px] text-black/60 mt-0.5">Vozač skenira vaš kod rezervacije <span className="font-mono font-semibold text-[#0F6E56]">{shtCode}</span>. Shuttle vozi izravno do odredišta — bez zaustavljanja.</p>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px] font-bold text-white">3</span>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-black">Povratak</p>
+                      <p className="text-[12px] text-black/60 mt-0.5">Za povratak pozovite shuttle istim mehanizmom putem Members zone.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Emergency + support */}
+                <div className="bg-[#E1F5EE]/60 border-t border-[#0F6E56]/10 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-black">Hitni kontakt</p>
+                      <a href={`tel:+${phoneSms}`} className="text-[13px] font-bold text-[#0F6E56]">+{phoneSms}</a>
+                      <p className="text-[10px] text-black/40">Dostupno 24/7</p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-[11px] font-semibold text-black">Podrška</p>
+                      <Link href="/members" className="block text-[12px] font-semibold text-[#0F6E56] underline underline-offset-2">
+                        Members zona
+                      </Link>
+                      <a
+                        href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${session?.location_name ?? ''} · ${shtCode}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[12px] font-semibold text-[#0F6E56] underline underline-offset-2"
+                      >
+                        Chat s vozačem
+                      </a>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-black/40">Svi vozači verificirani i osigurani putem Payparq sustava. GPS praćenje aktivno.</p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* EV Charging */}
           {hasEv && (

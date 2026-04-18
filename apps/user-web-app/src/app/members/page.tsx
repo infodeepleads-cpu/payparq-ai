@@ -127,7 +127,7 @@ function deriveShuttleCode(sessionId: string | null | undefined): string {
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 37 + id.charCodeAt(i)) & 0xffffffff;
   }
-  return `SHT-${1000 + (Math.abs(hash) % 9000)}`;
+  return `SH-${1000 + (Math.abs(hash) % 9000)}`;
 }
 
 function parseActivityAddons(row: ActivityRow): string[] {

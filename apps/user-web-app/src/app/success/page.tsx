@@ -75,7 +75,7 @@ function deriveShuttleCode(sessionId: string): string {
     hash = (hash * 37 + sessionId.charCodeAt(i)) & 0xffffffff;
   }
   const num = 1000 + (Math.abs(hash) % 9000);
-  return `SHT-${num}`;
+  return `SH-${num}`;
 }
 
 function ShuttleTicket({
@@ -176,7 +176,7 @@ function ShuttleTicket({
       </div>
       {/* Bottom strip */}
       <div className="bg-[#0F6E56]/10 px-4 py-2 text-center">
-        <p className="text-[10px] text-[#0F6E56]/70 font-medium">Pokažite kod vozaču shuttlea pri ukrcaju · ETA ~4 min</p>
+        <p className="text-[10px] text-[#0F6E56]/70 font-medium">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</p>
       </div>
     </div>
   );
