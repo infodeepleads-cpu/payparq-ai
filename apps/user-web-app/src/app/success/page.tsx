@@ -545,21 +545,50 @@ function SuccessContent() {
     }
   };
 
-  const handleSummon = (type: 'car' | 'shuttle') => {
-    const ticketNo = summary?.session_id ? deriveTicketNumber(summary.session_id) : 'VLT-0000';
-    const phone = (summary?.addons_config?.phone_sms ?? '').replace(/\D/g, '') || '385915963139';
-    if (type === 'car') {
-      if (valetCredits === 0) return;
-      if (valetCredits !== '∞') setValetCredits((v) => (v as number) - 1);
-      setSummonStatus('Vaš automobil je na putu · ETA ~6 min');
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`${ticketNo} - Poziv vozila`)}`, '_blank', 'noopener,noreferrer');
-    } else {
-      if (shuttleCredits === 0) return;
-      if (shuttleCredits !== '∞') setShuttleCredits((s) => (s as number) - 1);
-      setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min');
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`Shuttle zahtjev · ${summary?.location_name ?? summary?.location_display_id ?? ''} · ${ticketNo}`)}`, '_blank', 'noopener,noreferrer');
+  const handleSummon = async (type: 'car' | 'shuttle') => {
+    const requestType = type === 'car' ? 'valet' : 'shuttle';
+    const ticketNo = summary?.session_id
+      ? (requestType === 'shuttle' ? deriveShuttleCode(summary.session_id) : deriveTicketNumber(summary.session_id))
+      : null;
+    const cfg = summary?.addons_config ?? {};
+    const pickup = cfg.pickup_point as { lat?: number; lng?: number; label?: string } | null | undefined;
+
+    if (type === 'car' && valetCredits === 0) return;
+    if (type === 'shuttle' && shuttleCredits === 0) return;
+
+    setSummonStatus('Šaljemo zahtjev...');
+    try {
+      const res = await fetch('/api/service-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: requestType,
+          location_id: summary?.location_id ?? null,
+          session_id: summary?.session_id ?? null,
+          ticket_no: ticketNo,
+          guest_name: null,
+          pickup_label: pickup?.label ?? summary?.location_name ?? null,
+          pickup_lat: pickup?.lat ?? null,
+          pickup_lng: pickup?.lng ?? null,
+          plate: null, // populated by driver from session lookup
+          parking_zone: type === 'car' ? ((cfg.valet as { lot_zone?: string } | undefined)?.lot_zone ?? null) : null,
+        }),
+      });
+      const { request } = await res.json();
+      if (request?.id) {
+        if (type === 'car') {
+          if (valetCredits !== '∞') setValetCredits((v) => (v as number) - 1);
+        } else {
+          if (shuttleCredits !== '∞') setShuttleCredits((s) => (s as number) - 1);
+        }
+        window.location.href = `/track?id=${request.id}&type=${requestType}`;
+        return;
+      }
+    } catch {
+      // fallback below
     }
-    setTimeout(() => setSummonStatus(null), 5000);
+    setSummonStatus('Greška pri slanju zahtjeva.');
+    setTimeout(() => setSummonStatus(null), 4000);
   };
 
   // Addon config derived values
