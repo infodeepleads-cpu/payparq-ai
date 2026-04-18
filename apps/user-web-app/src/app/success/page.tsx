@@ -399,14 +399,18 @@ function SuccessContent() {
   };
 
   const handleSummon = (type: 'car' | 'shuttle') => {
+    const ticketNo = summary?.session_id ? deriveTicketNumber(summary.session_id) : 'VLT-0000';
+    const phone = (summary?.addons_config?.phone_sms ?? '').replace(/\D/g, '') || '385915963139';
     if (type === 'car') {
       if (valetCredits === 0) return;
       if (valetCredits !== '∞') setValetCredits((v) => (v as number) - 1);
       setSummonStatus('Vaš automobil je na putu · ETA ~6 min');
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`${ticketNo} - Poziv vozila`)}`, '_blank', 'noopener,noreferrer');
     } else {
       if (shuttleCredits === 0) return;
       if (shuttleCredits !== '∞') setShuttleCredits((s) => (s as number) - 1);
       setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min');
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`Shuttle zahtjev · ${summary?.location_name ?? summary?.location_display_id ?? ''} · ${ticketNo}`)}`, '_blank', 'noopener,noreferrer');
     }
     setTimeout(() => setSummonStatus(null), 5000);
   };

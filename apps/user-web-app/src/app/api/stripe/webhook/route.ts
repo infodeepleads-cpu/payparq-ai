@@ -450,6 +450,35 @@ export async function POST(req: Request) {
 
     if (flowType === 'addons') {
       console.log('✅ Addons payment received:', session.id, sessionMetadata.addons ?? '');
+      const originalSessionId = (sessionMetadata.original_session_id ?? '').toString().trim();
+      if (originalSessionId) {
+        const dbClient = supabaseAdmin ?? supabase;
+        if (dbClient) {
+          try {
+            const { data: origRows } = await dbClient
+              .from('parking_sessions')
+              .select('id,stripe_metadata')
+              .eq('stripe_session_id', originalSessionId)
+              .limit(1);
+            const origRow = Array.isArray(origRows) ? origRows[0] ?? null : null;
+            if (origRow) {
+              const existingMeta = (origRow as { stripe_metadata?: Record<string, unknown> | null }).stripe_metadata ?? {};
+              const updatedMeta = {
+                ...existingMeta,
+                purchased_addons: (sessionMetadata.addons ?? '').toString(),
+                addon_session_id: session.id,
+                ...(sessionMetadata.valet_code ? { valet_code: sessionMetadata.valet_code } : {}),
+              };
+              await dbClient
+                .from('parking_sessions')
+                .update({ stripe_metadata: updatedMeta })
+                .eq('id', (origRow as { id: string }).id);
+            }
+          } catch (e) {
+            console.error('Failed to update original session with addon info:', e);
+          }
+        }
+      }
       return NextResponse.json({ received: true });
     }
     const emailCandidates = [

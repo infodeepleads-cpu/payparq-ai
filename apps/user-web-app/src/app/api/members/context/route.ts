@@ -1268,6 +1268,12 @@ export async function GET(req: NextRequest) {
       shuttleEnabled = row.shuttle_enabled ?? false;
     }
   }
+  // Merge purchased addons into enabled flags
+  const sessionMeta = parseStripeMetadata(session.stripe_metadata);
+  const purchasedAddons = (readMetadataStringValue(sessionMeta, ['purchased_addons']) ?? '').split(',').map((s: string) => s.split(':')[0].trim()).filter(Boolean);
+  const addonValetCode = readMetadataStringValue(sessionMeta, ['valet_code']) ?? null;
+  if (purchasedAddons.includes('valet')) valetEnabled = true;
+  if (purchasedAddons.includes('shuttle')) shuttleEnabled = true;
   const window = resolveSessionWindow(session);
   const sessionMetadata = parseStripeMetadata(session.stripe_metadata);
   const resolvedStripeSessionId =
@@ -1320,6 +1326,8 @@ export async function GET(req: NextRequest) {
       parkTaxiIncluded: isParkTaxiIncluded(sessionMetadata),
       valetEnabled,
       shuttleEnabled,
+      valetCode: addonValetCode,
+      purchasedAddons,
     },
     wallet: {
       balanceCents: walletBalanceCents,

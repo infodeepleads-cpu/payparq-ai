@@ -19,6 +19,7 @@ type HubData = {
   longitude?: number;
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
+  addons_config?: Record<string, unknown> | null;
 };
 
 async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }>; travelTime: string } | null> {
@@ -34,7 +35,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
   
   const { data: locationData, error } = await client
     .from("locations")
-    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling")
+    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config")
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
 

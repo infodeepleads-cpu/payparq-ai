@@ -19,6 +19,7 @@ type HubData = {
   longitude?: number;
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
+  addons_config?: Record<string, unknown> | null;
   rate_per_hour?: number;
   base_price_hourly?: number;
   base_price_daily?: number;
@@ -1473,7 +1474,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       )}
                     </button>
                     {openSections.map ? (
-                      <div className="px-4 md:px-6 pb-4 md:pb-6">
+                      <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
                         <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
                           <iframe
                             className="absolute inset-0 w-full h-full"
@@ -1486,6 +1487,40 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             }
                           />
                         </div>
+                        {(() => {
+                          const pickup = hub.addons_config?.pickup_point as { lat?: number; lng?: number; label?: string } | null | undefined;
+                          if (!pickup?.lat || !pickup?.lng) return null;
+                          return (
+                            <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] overflow-hidden">
+                              <div className="px-4 py-3 flex items-center gap-2 border-b border-[#5F3DFC]/10">
+                                <Car className="w-4 h-4 text-[#5F3DFC] shrink-0" />
+                                <span className="text-sm font-semibold text-[#5F3DFC]">Pick-Up / Drop Off Zone</span>
+                                {pickup.label && (
+                                  <span className="text-xs text-[#5F3DFC]/70 ml-1">· {pickup.label}</span>
+                                )}
+                              </div>
+                              <div className="relative w-full h-[200px] overflow-hidden">
+                                <iframe
+                                  className="absolute inset-0 w-full h-full"
+                                  loading="lazy"
+                                  referrerPolicy="no-referrer-when-downgrade"
+                                  src={`https://www.google.com/maps?q=${pickup.lat},${pickup.lng}&output=embed`}
+                                />
+                              </div>
+                              <div className="px-4 py-2 flex items-center justify-between">
+                                <span className="text-[11px] text-[#5F3DFC]/70">Točka predaje i preuzimanja vozila</span>
+                                <a
+                                  href={`https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] font-semibold text-[#5F3DFC] underline"
+                                >
+                                  Navigacija
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     ) : null}
                   </div>

@@ -71,6 +71,8 @@ type MembersHomeContext = {
   parkTaxiIncluded: boolean;
   valetEnabled: boolean;
   shuttleEnabled: boolean;
+  valetCode?: string | null;
+  purchasedAddons?: string[];
 };
 type WalletSummary = {
   balanceCents: number;
@@ -107,6 +109,16 @@ type PaymentMethodRow = {
   expYear: number | null;
   isDefault: boolean;
 };
+function deriveValetCode(sessionId: string | null | undefined): string {
+  const id = (sessionId ?? '').trim();
+  if (!id) return 'VLT-0000';
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
+  }
+  return `VLT-${1000 + (Math.abs(hash) % 9000)}`;
+}
+
 function normalizeRole(value: unknown) {
   const normalized = (value ?? "")
     .toString()
@@ -1485,13 +1497,15 @@ export default function MembersPage() {
                   <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
                 </button>
                 {valetToggled && (
-                  <button
-                    type="button"
+                  <a
+                    href={`https://wa.me/385915963139?text=${encodeURIComponent(`${homeContext?.valetCode ?? deriveValetCode(homeContext?.stripeSessionId)} - Poziv vozila`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => { setSummonStatus('Vaš automobil je na putu · ETA ~6 min'); setTimeout(() => setSummonStatus(null), 5000); }}
                     className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
                   >
                     Pozovi auto
-                  </button>
+                  </a>
                 )}
               </div>
             )}
@@ -1513,13 +1527,15 @@ export default function MembersPage() {
                   <span className="text-xs font-medium text-black">{shuttleToggled ? 'Uključeno' : 'Isključeno'}</span>
                 </button>
                 {shuttleToggled && (
-                  <button
-                    type="button"
+                  <a
+                    href={`https://wa.me/385915963139?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext?.locationName ?? homeContext?.locationDisplayId ?? ''} · ${deriveValetCode(homeContext?.stripeSessionId)}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => { setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min'); setTimeout(() => setSummonStatus(null), 5000); }}
                     className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#1D9E75] text-white text-xs font-semibold hover:bg-[#0F6E56] transition-colors"
                   >
                     Pozovi shuttle
-                  </button>
+                  </a>
                 )}
               </div>
             )}
