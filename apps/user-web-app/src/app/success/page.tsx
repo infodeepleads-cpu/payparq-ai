@@ -38,6 +38,24 @@ type SessionSummary = {
   addons_config?: AddonsConfig | null;
 };
 
+type Credits = number | '∞';
+
+function CreditBadge({ value }: { value: Credits }) {
+  const label = value === '∞' ? '∞' : String(value);
+  const isZero = value === 0;
+  return (
+    <span
+      className="absolute top-2 right-2 min-w-[20px] h-5 rounded-full flex items-center justify-center text-[10px] font-bold px-1"
+      style={{
+        background: isZero ? '#f3f4f6' : '#5F3DFC',
+        color: isZero ? '#9ca3af' : 'white',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -51,11 +69,17 @@ function SuccessContent() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
   const [extendFeedback, setExtendFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [valetEnabled, setValetEnabled] = useState(false);
-  const [shuttleEnabled, setShuttleEnabled] = useState(true);
+
+  // Included service toggles
+  const [valetToggled, setValetToggled] = useState(false);
+  const [shuttleToggled, setShuttleToggled] = useState(false);
   const [summonStatus, setSummonStatus] = useState<string | null>(null);
 
-  // Addon selections
+  // Credits: ∞ when included in price, 1 when paid addon, 0 when not available
+  const [valetCredits, setValetCredits] = useState<Credits>(0);
+  const [shuttleCredits, setShuttleCredits] = useState<Credits>(0);
+
+  // Paid addon selections
   const [addonValetOn, setAddonValetOn] = useState(false);
   const [addonValetDays, setAddonValetDays] = useState(1);
   const [addonEvOn, setAddonEvOn] = useState(false);
@@ -67,10 +91,7 @@ function SuccessContent() {
   const [addonsCheckoutError, setAddonsCheckoutError] = useState('');
 
   const fallbackDisplayId =
-    searchParams.get('display_id') ||
-    searchParams.get('displayId') ||
-    searchParams.get('id') ||
-    null;
+    searchParams.get('display_id') || searchParams.get('displayId') || searchParams.get('id') || null;
   const fallbackLocationId =
     fallbackDisplayId ||
     searchParams.get('location_id') ||
@@ -79,17 +100,9 @@ function SuccessContent() {
     searchParams.get('location') ||
     null;
   const fallbackCheckIn =
-    searchParams.get('check_in') ||
-    searchParams.get('checkIn') ||
-    searchParams.get('in') ||
-    searchParams.get('start') ||
-    null;
+    searchParams.get('check_in') || searchParams.get('checkIn') || searchParams.get('in') || searchParams.get('start') || null;
   const fallbackCheckOut =
-    searchParams.get('check_out') ||
-    searchParams.get('checkOut') ||
-    searchParams.get('out') ||
-    searchParams.get('end') ||
-    null;
+    searchParams.get('check_out') || searchParams.get('checkOut') || searchParams.get('out') || searchParams.get('end') || null;
 
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
@@ -103,10 +116,9 @@ function SuccessContent() {
   const formatAmount = (amount: number | null | undefined, currency: string | null | undefined) => {
     const normalized = Number(amount ?? 0);
     const value = Number.isFinite(normalized) ? normalized / 100 : 0;
-    const resolvedCurrency = (currency || 'EUR').toUpperCase();
     return new Intl.NumberFormat('hr-HR', {
       style: 'currency',
-      currency: resolvedCurrency,
+      currency: (currency || 'EUR').toUpperCase(),
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -118,7 +130,6 @@ function SuccessContent() {
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
   const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
   const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
-  const refCode = summary?.ref_id ?? (hasRealSessionId && sessionId ? sessionId.slice(-8) : null);
 
   useEffect(() => {
     let active = true;
@@ -142,14 +153,17 @@ function SuccessContent() {
         if (!active) return;
         if (!response.ok) {
           setSummary(null);
-          setLookupError(
-            payload && 'error' in payload && payload.error
-              ? payload.error
-              : 'Unable to load payment details.'
-          );
+          setLookupError(payload && 'error' in payload && payload.error ? payload.error : 'Unable to load payment details.');
           return;
         }
-        setSummary(payload as SessionSummary);
+        const s = payload as SessionSummary;
+        setSummary(s);
+        // Derive credits: ∞ when included in price
+        setValetCredits(s.valet_enabled ? '∞' : 0);
+        setShuttleCredits(s.shuttle_enabled ? '∞' : 0);
+        // Auto-toggle included services on
+        if (s.valet_enabled) setValetToggled(true);
+        if (s.shuttle_enabled) setShuttleToggled(true);
       } catch {
         if (!active) return;
         setSummary(null);
@@ -260,22 +274,38 @@ function SuccessContent() {
   };
 
   const handleSummon = (type: 'car' | 'shuttle') => {
-    setSummonStatus(
-      type === 'car'
-        ? 'Vaš automobil je na putu · ETA ~6 min'
-        : 'Shuttle je pozvan · Dolazi za ~4 min'
-    );
+    if (type === 'car') {
+      if (valetCredits === 0) return;
+      if (valetCredits !== '∞') setValetCredits((v) => (v as number) - 1);
+      setSummonStatus('Vaš automobil je na putu · ETA ~6 min');
+    } else {
+      if (shuttleCredits === 0) return;
+      if (shuttleCredits !== '∞') setShuttleCredits((s) => (s as number) - 1);
+      setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min');
+    }
     setTimeout(() => setSummonStatus(null), 5000);
   };
 
+  // Addon config derived values
   const cfg = summary?.addons_config ?? {};
   const addonValetCfg = cfg.valet?.enabled ? cfg.valet : null;
   const addonEvCfg = cfg.ev_charging?.enabled ? cfg.ev_charging : null;
   const addonWashCfg = cfg.car_wash?.enabled ? cfg.car_wash : null;
   const addonFuelCfg = cfg.fuel?.enabled ? cfg.fuel : null;
-  const showValetAddon = Boolean(summary?.valet_enabled || addonValetCfg);
-  const hasAnyAddon = Boolean(showValetAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
 
+  // "Included in price" sub-section visibility
+  const showIncludedValet = Boolean(summary?.valet_enabled);
+  const showIncludedShuttle = Boolean(summary?.shuttle_enabled);
+  const showIncludedSection = showIncludedValet || showIncludedShuttle;
+
+  // "Paid addon" sub-section: valet only when NOT already included
+  const showValetPaidAddon = Boolean(addonValetCfg && !summary?.valet_enabled);
+  const showPaidSection = Boolean(showValetPaidAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
+
+  const hasAnyAddonWidget = showIncludedSection || showPaidSection;
+  const showSummonSection = showIncludedValet || showIncludedShuttle;
+
+  // Prices
   const addonValetPriceCents = (addonValetCfg?.price_cents ?? 500) * addonValetDays;
   const addonEvPriceCents = addonEvCfg?.price_cents ?? 2000;
   const addonWashBasicCents = addonWashCfg?.options?.find((o) => o.id === 'basic')?.price_cents ?? 1500;
@@ -291,29 +321,28 @@ function SuccessContent() {
     (addonWashOn ? addonWashPriceCents : 0) +
     (addonFuelOn ? addonFuelPriceCents : 0);
 
-  const anyAddonSelected = addonValetOn || addonEvOn || addonWashOn || addonFuelOn;
+  const anyPaidAddonSelected = addonValetOn || addonEvOn || addonWashOn || addonFuelOn;
 
   const handleAddonsCheckout = async () => {
-    if (!anyAddonSelected) return;
+    if (!anyPaidAddonSelected) return;
     setAddonsCheckoutLoading(true);
     setAddonsCheckoutError('');
     type AddonItem = { id: string; label: string; price_cents: number; quantity?: number };
     const items: AddonItem[] = [];
-    if (addonValetOn && showValetAddon) {
+    if (addonValetOn && showValetPaidAddon) {
       items.push({ id: 'valet', label: `Valet parking (${addonValetDays} dan/a)`, price_cents: addonValetCfg?.price_cents ?? 500, quantity: addonValetDays });
     }
     if (addonEvOn && addonEvCfg) {
       items.push({ id: 'ev_charging', label: 'EV punjenje', price_cents: addonEvCfg.price_cents ?? 2000 });
     }
     if (addonWashOn && addonWashCfg) {
-      const tier = addonWashTier === 'premium' ? 'premium' : 'basic';
+      const tier = addonWashTier;
       const opt = addonWashCfg.options?.find((o) => o.id === tier);
       items.push({ id: `car_wash_${tier}`, label: `Pranje vozila (${tier === 'premium' ? 'Premium' : 'Basic'})`, price_cents: opt?.price_cents ?? addonWashPriceCents });
     }
     if (addonFuelOn && addonFuelCfg) {
-      const fuelId = addonFuelType;
-      const opt = addonFuelCfg.options?.find((o) => o.id === fuelId);
-      items.push({ id: `fuel_${fuelId}`, label: `Punjenje gorivom (${fuelId === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
+      const opt = addonFuelCfg.options?.find((o) => o.id === addonFuelType);
+      items.push({ id: `fuel_${addonFuelType}`, label: `Punjenje gorivom (${addonFuelType === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
     }
     try {
       const res = await fetch('/api/stripe/addons-checkout', {
@@ -340,6 +369,18 @@ function SuccessContent() {
       setAddonsCheckoutLoading(false);
     }
   };
+
+  const Toggle = ({ on }: { on: boolean }) => (
+    <div
+      className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0"
+      style={{ background: on ? '#5F3DFC' : '#f3f4f6', borderColor: on ? '#5F3DFC' : '#e5e7eb' }}
+    >
+      <div
+        className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm"
+        style={{ left: on ? '18px' : '2px' }}
+      />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
@@ -371,9 +412,7 @@ function SuccessContent() {
               </div>
               <div>
                 <p className="text-black/50">Cijena</p>
-                <p className="font-semibold text-black">
-                  {formatAmount(summary?.amount_total ?? 0, summary?.currency ?? 'EUR')}
-                </p>
+                <p className="font-semibold text-black">{formatAmount(summary?.amount_total ?? 0, summary?.currency ?? 'EUR')}</p>
               </div>
               <div>
                 <p className="text-black/50">Od</p>
@@ -385,24 +424,15 @@ function SuccessContent() {
               </div>
             </div>
             {(lookupLoading || lookupError) && (
-              <p className="mt-3 text-[11px] text-black/40">
-                {lookupLoading ? 'Učitavanje...' : lookupError}
-              </p>
+              <p className="mt-3 text-[11px] text-black/40">{lookupLoading ? 'Učitavanje...' : lookupError}</p>
             )}
           </div>
 
           {/* 2 — Produži boravak */}
           <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
-              Produži boravak
-            </p>
+            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">Produži boravak</p>
             <div className="grid grid-cols-4 gap-2">
-              {([
-                { label: '+1h', minutes: 60 },
-                { label: '+2h', minutes: 120 },
-                { label: '+1d', minutes: 1440 },
-                { label: '+2d', minutes: 2880 },
-              ] as const).map(({ label, minutes }) => (
+              {([{ label: '+1h', minutes: 60 }, { label: '+2h', minutes: 120 }, { label: '+1d', minutes: 1440 }, { label: '+2d', minutes: 2880 }] as const).map(({ label, minutes }) => (
                 <button
                   key={label}
                   type="button"
@@ -421,278 +451,307 @@ function SuccessContent() {
             )}
           </div>
 
-          {/* 3 — Dodaci (shuttle only) */}
-          {summary?.shuttle_enabled && (
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
-              Dodaci
-            </p>
-            <div className="space-y-2">
-
-              {/* Shuttle */}
-              {summary?.shuttle_enabled && (
-              <button
-                type="button"
-                onClick={() => setShuttleEnabled(s => !s)}
-                className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
-                      <rect x="1" y="8" width="22" height="10" rx="2"/>
-                      <path d="M5 18v2M19 18v2"/>
-                      <path d="M1 12h22"/>
-                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-medium text-black">Shuttle prijevoz</p>
-                    <p className="text-[11px] text-black/50">Do/od destinacije besplatno</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  {shuttleEnabled && (
-                    <span className="text-[11px] font-medium text-[#0F6E56] bg-[#E1F5EE] px-2 py-0.5 rounded-md">
-                      Uključeno
-                    </span>
-                  )}
-                  <div
-                    className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative"
-                    style={{
-                      background: shuttleEnabled ? '#1D9E75' : '#f3f4f6',
-                      borderColor: shuttleEnabled ? '#0F6E56' : '#e5e7eb',
-                    }}
-                  >
-                    <div
-                      className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm"
-                      style={{ left: shuttleEnabled ? '18px' : '2px' }}
-                    />
-                  </div>
-                </div>
-              </button>
-              )}
-
-            </div>
-          </div>
-          )}
-
-          {/* 4 — Pozovi vozilo (shuttle only) */}
-          {summary?.shuttle_enabled && (
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">
-              Pozovi vozilo
-            </p>
-            <div className="grid grid-cols-1 gap-3">
-              {summary?.shuttle_enabled && (
-              <button
-                type="button"
-                onClick={() => handleSummon('shuttle')}
-                className="flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
-                  <rect x="1" y="8" width="22" height="10" rx="2"/>
-                  <path d="M5 18v2M19 18v2"/>
-                  <path d="M1 12h22"/>
-                  <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                </svg>
-                <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
-                <span className="text-[11px] text-black/50">ETA ~4 min</span>
-              </button>
-              )}
-            </div>
-            {summonStatus && (
-              <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
-                {summonStatus}
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* 5 — Odaberi dodatne usluge */}
-          {hasAnyAddon && (
+          {/* 3 — Odaberi dodatne usluge (single merged widget) */}
+          {hasAnyAddonWidget && (
             <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
               <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">
                 Odaberi dodatne usluge:
               </p>
 
-              {/* Valet */}
-              {showValetAddon && (
-                <div className="rounded-xl border border-black/10 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setAddonValetOn((v) => !v)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'bg-[#5F3DFC] border-[#5F3DFC]' : 'border-black/20 bg-white'}`}>
-                        {addonValetOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+              {/* ── Included in price sub-section ── */}
+              {showIncludedSection && (
+                <div className="space-y-2">
+                  {showIncludedValet && (
+                    <button
+                      type="button"
+                      onClick={() => setValetToggled((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
+                            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+                            <rect x="9" y="11" width="14" height="10" rx="1"/>
+                            <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Valet parking</p>
+                          <p className="text-[11px] text-[#5F3DFC] font-medium">Uključeno u cijenu · ∞</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-black">Valet parking</p>
-                        <p className="text-[11px] text-black/40">Mi parkiramo vaš automobil</p>
+                      <Toggle on={valetToggled} />
+                    </button>
+                  )}
+
+                  {showIncludedShuttle && (
+                    <button
+                      type="button"
+                      onClick={() => setShuttleToggled((s) => !s)}
+                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
+                            <rect x="1" y="8" width="22" height="10" rx="2"/>
+                            <path d="M5 18v2M19 18v2"/>
+                            <path d="M1 12h22"/>
+                            <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Shuttle prijevoz</p>
+                          <p className="text-[11px] text-[#0F6E56] font-medium">Uključeno u cijenu · ∞</p>
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                      {formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan
-                    </span>
-                  </button>
-                  {addonValetOn && (
-                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                      <p className="text-[11px] text-black/50 mb-2">Broj dana</p>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4].map((d) => (
-                          <button
-                            key={d}
-                            type="button"
-                            onClick={() => setAddonValetDays(d)}
-                            className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${addonValetDays === d ? 'bg-[#5F3DFC] text-white border-[#5F3DFC]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                          >
-                            {d}d
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[11px] text-black/50 mt-2 text-right">
-                        Ukupno: <span className="font-semibold text-black">{formatAmount(addonValetPriceCents, 'eur')}</span>
-                      </p>
-                    </div>
+                      <Toggle on={shuttleToggled} />
+                    </button>
                   )}
                 </div>
               )}
 
-              {/* EV Charging */}
-              {addonEvCfg && (
-                <button
-                  type="button"
-                  onClick={() => setAddonEvOn((v) => !v)}
-                  className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'bg-[#2E7D32] border-[#2E7D32]' : 'border-black/20 bg-white'}`}>
-                      {addonEvOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-black">EV punjenje</p>
-                      <p className="text-[11px] text-black/40">Type 2 / CCS · do 22 kW</p>
-                    </div>
-                  </div>
-                  <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                    {formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}
-                  </span>
-                </button>
-              )}
-
-              {/* Car Wash */}
-              {addonWashCfg && (
-                <div className="rounded-xl border border-black/10 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setAddonWashOn((v) => !v)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'bg-[#1565C0] border-[#1565C0]' : 'border-black/20 bg-white'}`}>
-                        {addonWashOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-black">Pranje vozila</p>
-                        <p className="text-[11px] text-black/40">Basic ili Premium</p>
-                      </div>
-                    </div>
-                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                      od {formatAmount(addonWashBasicCents, 'eur')}
-                    </span>
-                  </button>
-                  {addonWashOn && (
-                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                      <div className="flex gap-2">
-                        {(['basic', 'premium'] as const).map((tier) => {
-                          const priceCents = tier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
-                          return (
-                            <button
-                              key={tier}
-                              type="button"
-                              onClick={() => setAddonWashTier(tier)}
-                              className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonWashTier === tier ? 'bg-[#1565C0] text-white border-[#1565C0]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                            >
-                              {tier === 'premium' ? 'Premium' : 'Basic'}<br />
-                              <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+              {/* Divider between included and paid sections */}
+              {showIncludedSection && showPaidSection && (
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="flex-1 h-px bg-black/8" />
+                  <span className="text-[10px] text-black/30 uppercase tracking-widest">Dodaj uslugu</span>
+                  <div className="flex-1 h-px bg-black/8" />
                 </div>
               )}
 
-              {/* Fuel */}
-              {addonFuelCfg && (
-                <div className="rounded-xl border border-black/10 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setAddonFuelOn((v) => !v)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'bg-[#F57F17] border-[#F57F17]' : 'border-black/20 bg-white'}`}>
-                        {addonFuelOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
-                        <p className="text-[11px] text-black/40">Diesel ili Benzin · mobilna punjaonica</p>
-                      </div>
-                    </div>
-                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                      od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}
-                    </span>
-                  </button>
-                  {addonFuelOn && (
-                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                      <div className="flex gap-2">
-                        {(['diesel', 'benzin'] as const).map((fuelType) => {
-                          const priceCents = fuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
-                          return (
-                            <button
-                              key={fuelType}
-                              type="button"
-                              onClick={() => setAddonFuelType(fuelType)}
-                              className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonFuelType === fuelType ? 'bg-[#F57F17] text-white border-[#F57F17]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                            >
-                              {fuelType === 'diesel' ? 'Diesel' : 'Benzin'}<br />
-                              <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+              {/* ── Paid addons sub-section ── */}
+              {showPaidSection && (
+                <div className="space-y-2">
+
+                  {/* Paid valet (only when not already included) */}
+                  {showValetPaidAddon && (
+                    <div className="rounded-xl border border-black/10 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setAddonValetOn((v) => !v)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'bg-[#5F3DFC] border-[#5F3DFC]' : 'border-black/20 bg-white'}`}>
+                            {addonValetOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-black">Valet parking</p>
+                            <p className="text-[11px] text-black/40">Mi parkiramo vaš automobil</p>
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                          {formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan
+                        </span>
+                      </button>
+                      {addonValetOn && (
+                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                          <p className="text-[11px] text-black/50 mb-2">Broj dana</p>
+                          <div className="flex gap-2">
+                            {[1, 2, 3, 4].map((d) => (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => setAddonValetDays(d)}
+                                className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${addonValetDays === d ? 'bg-[#5F3DFC] text-white border-[#5F3DFC]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                              >
+                                {d}d
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-black/50 mt-2 text-right">
+                            Ukupno: <span className="font-semibold text-black">{formatAmount(addonValetPriceCents, 'eur')}</span>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Checkout CTA */}
-              {anyAddonSelected && (
-                <div className="pt-1 space-y-2">
-                  <div className="flex items-center justify-between text-[13px] px-1">
-                    <span className="text-black/50">Ukupno za usluge</span>
-                    <span className="font-bold text-black">{formatAmount(addonsTotalCents, 'eur')}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddonsCheckout}
-                    disabled={addonsCheckoutLoading}
-                    className="w-full py-3 rounded-xl bg-[#5F3DFC] text-white text-[14px] font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
-                  >
-                    {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
-                  </button>
-                  {addonsCheckoutError && (
-                    <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>
+                  {/* EV Charging */}
+                  {addonEvCfg && (
+                    <button
+                      type="button"
+                      onClick={() => setAddonEvOn((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'bg-[#2E7D32] border-[#2E7D32]' : 'border-black/20 bg-white'}`}>
+                          {addonEvOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">EV punjenje</p>
+                          <p className="text-[11px] text-black/40">Type 2 / CCS · do 22 kW</p>
+                        </div>
+                      </div>
+                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                        {formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Car Wash */}
+                  {addonWashCfg && (
+                    <div className="rounded-xl border border-black/10 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setAddonWashOn((v) => !v)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'bg-[#1565C0] border-[#1565C0]' : 'border-black/20 bg-white'}`}>
+                            {addonWashOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-black">Pranje vozila</p>
+                            <p className="text-[11px] text-black/40">Basic ili Premium</p>
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                          od {formatAmount(addonWashBasicCents, 'eur')}
+                        </span>
+                      </button>
+                      {addonWashOn && (
+                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                          <div className="flex gap-2">
+                            {(['basic', 'premium'] as const).map((tier) => {
+                              const priceCents = tier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
+                              return (
+                                <button
+                                  key={tier}
+                                  type="button"
+                                  onClick={() => setAddonWashTier(tier)}
+                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonWashTier === tier ? 'bg-[#1565C0] text-white border-[#1565C0]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                                >
+                                  {tier === 'premium' ? 'Premium' : 'Basic'}<br />
+                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fuel */}
+                  {addonFuelCfg && (
+                    <div className="rounded-xl border border-black/10 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setAddonFuelOn((v) => !v)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'bg-[#F57F17] border-[#F57F17]' : 'border-black/20 bg-white'}`}>
+                            {addonFuelOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
+                            <p className="text-[11px] text-black/40">Diesel ili Benzin · mobilna punjaonica</p>
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                          od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}
+                        </span>
+                      </button>
+                      {addonFuelOn && (
+                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                          <div className="flex gap-2">
+                            {(['diesel', 'benzin'] as const).map((fuelType) => {
+                              const priceCents = fuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
+                              return (
+                                <button
+                                  key={fuelType}
+                                  type="button"
+                                  onClick={() => setAddonFuelType(fuelType)}
+                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonFuelType === fuelType ? 'bg-[#F57F17] text-white border-[#F57F17]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                                >
+                                  {fuelType === 'diesel' ? 'Diesel' : 'Benzin'}<br />
+                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Checkout CTA */}
+                  {anyPaidAddonSelected && (
+                    <div className="pt-1 space-y-2">
+                      <div className="flex items-center justify-between text-[13px] px-1">
+                        <span className="text-black/50">Ukupno za usluge</span>
+                        <span className="font-bold text-black">{formatAmount(addonsTotalCents, 'eur')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddonsCheckout}
+                        disabled={addonsCheckoutLoading}
+                        className="w-full py-3 rounded-xl bg-[#5F3DFC] text-white text-[14px] font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
+                      >
+                        {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
+                      </button>
+                      {addonsCheckoutError && (
+                        <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* 7 — Secondary actions */}
+          {/* 4 — Pozovi vozilo (with credit badges) */}
+          {showSummonSection && (
+            <div className="rounded-2xl border border-black/10 bg-white p-4">
+              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">Pozovi vozilo</p>
+              <div className={`grid gap-3 ${showIncludedValet && showIncludedShuttle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {showIncludedValet && (
+                  <button
+                    type="button"
+                    onClick={() => handleSummon('car')}
+                    disabled={valetCredits === 0 || !valetToggled}
+                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    <CreditBadge value={valetCredits} />
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
+                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+                      <rect x="9" y="11" width="14" height="10" rx="1"/>
+                      <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+                    </svg>
+                    <span className="text-[13px] font-medium text-black">Pozovi auto</span>
+                    <span className="text-[11px] text-black/50">Valet dovozi · ~6 min</span>
+                  </button>
+                )}
+                {showIncludedShuttle && (
+                  <button
+                    type="button"
+                    onClick={() => handleSummon('shuttle')}
+                    disabled={shuttleCredits === 0 || !shuttleToggled}
+                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    <CreditBadge value={shuttleCredits} />
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
+                      <rect x="1" y="8" width="22" height="10" rx="2"/>
+                      <path d="M5 18v2M19 18v2"/>
+                      <path d="M1 12h22"/>
+                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
+                    <span className="text-[11px] text-black/50">1 smjer · ~4 min</span>
+                  </button>
+                )}
+              </div>
+              {summonStatus && (
+                <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
+                  {summonStatus}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5 — Secondary actions */}
           <div className="flex flex-col gap-2">
             <a
               href="https://m.uber.com/"
@@ -717,7 +776,7 @@ function SuccessContent() {
             </button>
           </div>
 
-          {/* 8 — Members zona link */}
+          {/* 6 — Members zona link */}
           {summary?.email && (
             <p className="text-center text-[11px] text-black/40 pb-2">
               <Link href={membersHref} className="text-[#0F6E56] font-medium hover:text-[#1D9E75] transition-colors">
