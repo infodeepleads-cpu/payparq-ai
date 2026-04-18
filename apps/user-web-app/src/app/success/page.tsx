@@ -14,6 +14,7 @@ type AddonsConfig = {
   ev_charging?: AddonsConfigEntry;
   car_wash?: AddonsConfigEntry;
   fuel?: AddonsConfigEntry;
+  shuttle?: AddonsConfigEntry;
 };
 
 type SessionSummary = {
@@ -87,6 +88,7 @@ function SuccessContent() {
   const [addonWashTier, setAddonWashTier] = useState<'basic' | 'premium'>('basic');
   const [addonFuelOn, setAddonFuelOn] = useState(false);
   const [addonFuelType, setAddonFuelType] = useState<'diesel' | 'benzin'>('diesel');
+  const [addonShuttleOn, setAddonShuttleOn] = useState(false);
   const [addonsCheckoutLoading, setAddonsCheckoutLoading] = useState(false);
   const [addonsCheckoutError, setAddonsCheckoutError] = useState('');
 
@@ -292,15 +294,17 @@ function SuccessContent() {
   const addonEvCfg = cfg.ev_charging?.enabled ? cfg.ev_charging : null;
   const addonWashCfg = cfg.car_wash?.enabled ? cfg.car_wash : null;
   const addonFuelCfg = cfg.fuel?.enabled ? cfg.fuel : null;
+  const addonShuttleCfg = cfg.shuttle?.enabled ? cfg.shuttle : null;
 
   // "Included in price" sub-section visibility
   const showIncludedValet = Boolean(summary?.valet_enabled);
   const showIncludedShuttle = Boolean(summary?.shuttle_enabled);
   const showIncludedSection = showIncludedValet || showIncludedShuttle;
 
-  // "Paid addon" sub-section: valet only when NOT already included
+  // "Paid addon" sub-section: valet/shuttle only when NOT already included
   const showValetPaidAddon = Boolean(addonValetCfg && !summary?.valet_enabled);
-  const showPaidSection = Boolean(showValetPaidAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
+  const showShuttlePaidAddon = Boolean(addonShuttleCfg && !summary?.shuttle_enabled);
+  const showPaidSection = Boolean(showValetPaidAddon || showShuttlePaidAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
 
   const hasAnyAddonWidget = showIncludedSection || showPaidSection;
   const showSummonSection = showIncludedValet || showIncludedShuttle;
@@ -315,13 +319,16 @@ function SuccessContent() {
   const addonFuelBenzinCents = addonFuelCfg?.options?.find((o) => o.id === 'benzin')?.price_cents ?? 5500;
   const addonFuelPriceCents = addonFuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
 
+  const addonShuttlePriceCents = addonShuttleCfg?.price_cents ?? 200;
+
   const addonsTotalCents =
     (addonValetOn ? addonValetPriceCents : 0) +
     (addonEvOn ? addonEvPriceCents : 0) +
     (addonWashOn ? addonWashPriceCents : 0) +
-    (addonFuelOn ? addonFuelPriceCents : 0);
+    (addonFuelOn ? addonFuelPriceCents : 0) +
+    (addonShuttleOn ? addonShuttlePriceCents : 0);
 
-  const anyPaidAddonSelected = addonValetOn || addonEvOn || addonWashOn || addonFuelOn;
+  const anyPaidAddonSelected = addonValetOn || addonEvOn || addonWashOn || addonFuelOn || addonShuttleOn;
 
   const handleAddonsCheckout = async () => {
     if (!anyPaidAddonSelected) return;
@@ -343,6 +350,9 @@ function SuccessContent() {
     if (addonFuelOn && addonFuelCfg) {
       const opt = addonFuelCfg.options?.find((o) => o.id === addonFuelType);
       items.push({ id: `fuel_${addonFuelType}`, label: `Punjenje gorivom (${addonFuelType === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
+    }
+    if (addonShuttleOn && addonShuttleCfg) {
+      items.push({ id: 'shuttle', label: 'Shuttle (1 smjer)', price_cents: addonShuttleCfg.price_cents ?? 200 });
     }
     try {
       const res = await fetch('/api/stripe/addons-checkout', {
@@ -565,6 +575,28 @@ function SuccessContent() {
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* Paid shuttle (only when not included in price) */}
+                  {showShuttlePaidAddon && (
+                    <button
+                      type="button"
+                      onClick={() => setAddonShuttleOn((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonShuttleOn ? 'bg-[#0F6E56] border-[#0F6E56]' : 'border-black/20 bg-white'}`}>
+                          {addonShuttleOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Shuttle</p>
+                          <p className="text-[11px] text-black/40">1 smjer · do/od destinacije</p>
+                        </div>
+                      </div>
+                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                        {formatAmount(addonShuttleCfg?.price_cents ?? 200, 'eur')}
+                      </span>
+                    </button>
                   )}
 
                   {/* EV Charging */}

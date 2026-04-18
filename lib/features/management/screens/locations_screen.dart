@@ -528,6 +528,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     required bool evOn, required String evPrice,
     required bool washOn, required String washBasic, required String washPremium,
     required bool fuelOn, required String fuelDiesel, required String fuelBenzin,
+    required bool shuttleOn, required String shuttlePrice,
   }) {
     return {
       if (valetOn) 'valet': {'enabled': true, 'price_cents': int.tryParse(valetPrice) ?? 500},
@@ -540,6 +541,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         {'id': 'diesel', 'label': 'Diesel', 'price_cents': int.tryParse(fuelDiesel) ?? 6000},
         {'id': 'benzin', 'label': 'Benzin', 'price_cents': int.tryParse(fuelBenzin) ?? 5500},
       ]},
+      if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': int.tryParse(shuttlePrice) ?? 200},
     };
   }
 
@@ -863,10 +865,13 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             text: (((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
                 (o) => (o as Map)['id'] == 'benzin', orElse: () => <String, dynamic>{})
                 as Map?)?['price_cents']?.toString() ?? '5500');
+        final shuttlePriceCtrl = TextEditingController(
+            text: ((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?)?.toString() ?? '200');
         bool addonValetOn = (addonsConfig['valet'] as Map?)?['enabled'] == true;
         bool addonEvOn = (addonsConfig['ev_charging'] as Map?)?['enabled'] == true;
         bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
         bool addonFuelOn = (addonsConfig['fuel'] as Map?)?['enabled'] == true;
+        bool addonShuttleOn = (addonsConfig['shuttle'] as Map?)?['enabled'] == true;
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -987,6 +992,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             fuelOn: addonFuelOn,
                             fuelDiesel: fuelDieselCtrl.text,
                             fuelBenzin: fuelBenzinCtrl.text,
+                            shuttleOn: addonShuttleOn,
+                            shuttlePrice: shuttlePriceCtrl.text,
                           ),
                         );
                     if (photosChanged) {
@@ -1882,6 +1889,13 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                       decoration: InputDecoration(labelText: 'Benzin (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
                                   ]),
                                 ],
+                                const SizedBox(height: 6),
+                                _buildAddonRow(
+                                  label: Lang.sel(ref.watch(localeIsCroatianProvider), 'Shuttle (paid)', 'Shuttle (plaćeni)'),
+                                  enabled: addonShuttleOn,
+                                  priceCtrl: shuttlePriceCtrl,
+                                  onToggle: (v) => setState(() => addonShuttleOn = v),
+                                ),
                               ],
                               if (canEdit) ...[
                                 const SizedBox(height: 16),

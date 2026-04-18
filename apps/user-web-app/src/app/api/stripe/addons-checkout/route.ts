@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     success_url: successUrl,
     cancel_url: cancelUrl,
     customer_email: email || undefined,
+    allow_promotion_codes: true,
     metadata: {
       flow_type: 'addons',
       original_session_id: session_id ?? '',
