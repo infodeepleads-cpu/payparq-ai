@@ -599,7 +599,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   String _buildHubLocationUrl(Map<String, dynamic> loc) {
     final String? canonicalSlug = loc['canonical_slug']?.toString();
     if (canonicalSlug != null && canonicalSlug.trim().isNotEmpty) {
-      return 'https://payparq.ai/locations/${canonicalSlug.trim()}';
+      return 'https://www.payparq.com/locations/${canonicalSlug.trim()}';
     }
     // Fallback: build from name + display_id (mirrors DB canonical_slug format)
     final String displayId = (loc['display_id'] ?? '').toString();
@@ -609,7 +609,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
         .replaceAll(RegExp(r'\s+'), '-');
     final String slug = name.isNotEmpty ? '$name-$displayId' : displayId.toLowerCase();
-    return 'https://payparq.ai/locations/$slug';
+    return 'https://www.payparq.com/locations/$slug';
   }
 
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
