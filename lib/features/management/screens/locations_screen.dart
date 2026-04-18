@@ -907,13 +907,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             : double.tryParse('${effectiveLoc['longitude'] ?? 0.0}') ?? 0.0;
         final bool canEdit = isSuperAdmin || isAdmin;
 
-        return AlertDialog(
-          title: Text(
-              Lang.sel(ref.watch(localeIsCroatianProvider), 'Location Details',
-                  'Detalji lokacije'),
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          content: SizedBox(
-            width: 420,
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 660,
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.92,
+            ),
             child: StatefulBuilder(
               builder: (context, setState) {
                 final messenger = ScaffoldMessenger.of(dialogContext);
@@ -1303,23 +1304,428 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   }
                 }
 
-                return ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(dialogContext).size.height * 0.78,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border),
+                Widget statusChip(String label, Color bg, Color fg) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                  child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: fg)));
+                final verStatus = (loc['verification_status'] ?? 'unverified').toString();
+                final verBg = verStatus == 'verified'
+                    ? Colors.green[400]!.withValues(alpha: 0.15)
+                    : verStatus == 'pending'
+                        ? Colors.orange.withValues(alpha: 0.15)
+                        : Colors.grey[200]!;
+                final verFg = verStatus == 'verified'
+                    ? Colors.green[700]!
+                    : verStatus == 'pending'
+                        ? Colors.orange[800]!
+                        : Colors.grey[600]!;
+                final verLabel = verStatus == 'verified' ? 'VERIFIED' : verStatus == 'pending' ? 'PENDING' : 'UNVERIFIED';
+
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+
+                    // ────────────── HEADER ──────────────
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(currentName, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                          const SizedBox(height: 6),
+                          Wrap(spacing: 6, runSpacing: 4, children: [
+                            statusChip(verLabel, verBg, verFg),
+                            statusChip('ID $displayId', Colors.grey[100]!, Colors.black45),
+                            if (isHub) statusChip('HUB', Colors.black, Colors.white),
+                            if (valetEnabled) statusChip('VALET', const Color(0xFF5F3DFC).withValues(alpha: 0.12), const Color(0xFF5F3DFC)),
+                            if (shuttleEnabled) statusChip('SHUTTLE', const Color(0xFF0F6E56).withValues(alpha: 0.12), const Color(0xFF0F6E56)),
+                          ]),
+                        ])),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close, size: 20, color: Colors.black45),
+                          padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                      ]),
+                    ),
+                    const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                    // ────────────── SCROLLABLE BODY ──────────────
+                    Flexible(child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                        // Basic info
+                        if (!canEdit)
+                          Row(children: [
+                            Icon(Icons.edit_location_alt_outlined, size: 15, color: Colors.grey[400]),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('$currentName · $displayId',
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w500))),
+                          ])
+                        else
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Location Name', 'Naziv lokacije'),
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                            const SizedBox(height: 5),
+                            TextField(controller: nameCtrl, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: 'e.g. Parking Trogir', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            const SizedBox(height: 10),
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Address', 'Adresa'),
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                            const SizedBox(height: 5),
+                            TextField(controller: addressCtrl, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: 'e.g. City center', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                          ]),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Icon(Icons.local_parking, size: 15, color: Colors.grey[400]),
+                          const SizedBox(width: 8),
+                          if (!canEdit)
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Capacity: $currentCapacity', 'Kapacitet: $currentCapacity'),
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w500))
+                          else ...[
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Capacity', 'Kapacitet'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 10),
+                            SizedBox(width: 90, child: TextField(controller: capacityCtrl,
+                              keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: '150', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                          ],
+                        ]),
+
+                        const SizedBox(height: 16),
+                        const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                        // Section 1: Maps
+                        ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          childrenPadding: const EdgeInsets.only(bottom: 12),
+                          leading: const Icon(Icons.map_outlined, size: 17, color: Colors.black54),
+                          title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Maps', 'Mape'),
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                          iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                          children: [
+                            Text('${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                            const SizedBox(height: 8),
+                            if (pendingLatitude != 0.0 && pendingLongitude != 0.0) ...[
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Parking Location', 'Parking lokacija'),
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45)),
+                              const SizedBox(height: 4),
+                              ClipRRect(borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(height: 150, child: FlutterMap(
+                                  options: MapOptions(initialCenter: LatLng(pendingLatitude, pendingLongitude), initialZoom: 15,
+                                    interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                                  children: [
+                                    TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                    MarkerLayer(markers: [Marker(point: LatLng(pendingLatitude, pendingLongitude), width: 34, height: 34,
+                                      child: const Icon(Icons.location_on, color: Colors.red, size: 34))]),
+                                  ]))),
+                            ],
+                            Builder(builder: (_) {
+                              final pm = addonsConfig['pickup_point'] as Map?;
+                              final pLat = (pm?['lat'] as num?)?.toDouble() ?? 0.0;
+                              final pLng = (pm?['lng'] as num?)?.toDouble() ?? 0.0;
+                              final pLabel = (pm?['label'] as String?) ?? '';
+                              if (pLat == 0.0 && pLng == 0.0) return const SizedBox.shrink();
+                              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  const Icon(Icons.directions_car, size: 13, color: Colors.black38),
+                                  const SizedBox(width: 5),
+                                  Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off', 'Zona preuzimanja'),
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45)),
+                                  if (pLabel.isNotEmpty) Text(' · $pLabel', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38)),
+                                ]),
+                                const SizedBox(height: 4),
+                                ClipRRect(borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(height: 150, child: FlutterMap(
+                                    options: MapOptions(initialCenter: LatLng(pLat, pLng), initialZoom: 16,
+                                      interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                                    children: [
+                                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                      MarkerLayer(markers: [Marker(point: LatLng(pLat, pLng), width: 34, height: 34,
+                                        child: const Icon(Icons.location_on, color: Colors.red, size: 34))]),
+                                    ]))),
+                              ]);
+                            }),
+                          ],
+                        ),
+                        const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                        // Section 2: Photos
+                        if (canEdit || editablePhotoUrls.isNotEmpty) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.photo_library_outlined, size: 17, color: Colors.black54),
+                            title: Text(
+                              '${Lang.sel(ref.watch(localeIsCroatianProvider), "Photos", "Fotografije")} (${editablePhotoUrls.length + newlySelectedPhotos.length})',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              if (editablePhotoUrls.isNotEmpty)
+                                GridView.builder(
+                                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 6, mainAxisSpacing: 6),
+                                  itemCount: editablePhotoUrls.length > 24 ? 24 : editablePhotoUrls.length,
+                                  itemBuilder: (context, index) {
+                                    final url = editablePhotoUrls[index];
+                                    return Stack(fit: StackFit.expand, children: [
+                                      ClipRRect(borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(url, fit: BoxFit.cover,
+                                          errorBuilder: (c, e, s) => Container(color: AppTheme.background, child: const Icon(Icons.broken_image, size: 14)))),
+                                      if (canEdit) Positioned(top: 2, right: 2,
+                                        child: InkWell(
+                                          onTap: () => setState(() => editablePhotoUrls.removeAt(index)),
+                                          child: Container(padding: const EdgeInsets.all(3),
+                                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                            child: const Icon(Icons.close, size: 9, color: Colors.white)))),
+                                    ]);
+                                  }),
+                              if (newlySelectedPhotos.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                GridView.builder(
+                                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 6, mainAxisSpacing: 6),
+                                  itemCount: newlySelectedPhotos.length > 24 ? 24 : newlySelectedPhotos.length,
+                                  itemBuilder: (context, index) {
+                                    final xf = newlySelectedPhotos[index];
+                                    return FutureBuilder<Uint8List>(
+                                      future: localPhotoPreviewBytes[xf.path] != null
+                                        ? Future.value(localPhotoPreviewBytes[xf.path]!)
+                                        : xf.readAsBytes().then((b) { localPhotoPreviewBytes[xf.path] = b; return b; }),
+                                      builder: (c, snap) => ClipRRect(borderRadius: BorderRadius.circular(6),
+                                        child: snap.hasData ? Image.memory(snap.data!, fit: BoxFit.cover) : Container(color: AppTheme.background)));
+                                  }),
+                              ],
+                              if (canEdit) ...[
+                                const SizedBox(height: 8),
+                                Wrap(spacing: 8, children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => pickLocationPhotos(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+                                    label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Camera', 'Kamera'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black)),
+                                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7))),
+                                  OutlinedButton.icon(
+                                    onPressed: () => pickLocationPhotos(ImageSource.gallery),
+                                    icon: const Icon(Icons.photo_library, size: 14, color: Colors.black),
+                                    label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Gallery', 'Galerija'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black)),
+                                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7))),
+                                ]),
+                              ],
+                            ],
                           ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 3: Services & Add-ons
+                        if (canEdit) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.extension_outlined, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Services & Add-ons', 'Usluge i dodaci'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              Row(children: [
+                                Switch(value: valetEnabled, activeThumbColor: Colors.black,
+                                  onChanged: (v) async { setState(() => valetEnabled = v); await ref.read(locationsControllerProvider).updateServiceFlags(idStr, valetEnabled: v, shuttleEnabled: shuttleEnabled); }),
+                                Text('Valet', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                                const SizedBox(width: 16),
+                                Switch(value: shuttleEnabled, activeThumbColor: Colors.black,
+                                  onChanged: (v) async { setState(() => shuttleEnabled = v); await ref.read(locationsControllerProvider).updateServiceFlags(idStr, valetEnabled: valetEnabled, shuttleEnabled: v); }),
+                                Text('Shuttle', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              const SizedBox(height: 6),
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'ADD-ON PRICES', 'CIJENE DODATAKA'),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.8)),
+                              const SizedBox(height: 8),
+                              _buildAddonRow(label: 'Valet', enabled: addonValetOn, priceCtrl: valetPriceCtrl, onToggle: (v) => setState(() => addonValetOn = v)),
+                              const SizedBox(height: 6),
+                              _buildAddonRow(label: Lang.sel(ref.watch(localeIsCroatianProvider), 'EV Charging', 'EV punjenje'), enabled: addonEvOn, priceCtrl: evPriceCtrl, onToggle: (v) => setState(() => addonEvOn = v)),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                Switch(value: addonWashOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonWashOn = v)),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Car Wash', 'Pranje auta'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              if (addonWashOn) Padding(padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  Expanded(child: TextField(controller: washBasicCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Basic', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: TextField(controller: washPremiumCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Premium', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                ])),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                Switch(value: addonFuelOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonFuelOn = v)),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Fuel', 'Gorivo'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              if (addonFuelOn) Padding(padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  Expanded(child: TextField(controller: fuelDieselCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Diesel', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: TextField(controller: fuelBenzinCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Benzin', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                ])),
+                              const SizedBox(height: 6),
+                              _buildAddonRow(label: Lang.sel(ref.watch(localeIsCroatianProvider), 'Shuttle (paid)', 'Shuttle (plaćeni)'), enabled: addonShuttleOn, priceCtrl: shuttlePriceCtrl, onToggle: (v) => setState(() => addonShuttleOn = v)),
+                              const SizedBox(height: 10),
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'PICK-UP / DROP OFF ZONE', 'ZONA PREUZIMANJA'),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.8)),
+                              const SizedBox(height: 6),
+                              LotLocationPicker(
+                                initialLocation: LatLng(pickupLat != 0.0 ? pickupLat : pendingLatitude, pickupLng != 0.0 ? pickupLng : pendingLongitude),
+                                onLocationSelected: (latLng, address) { setState(() { pickupLat = latLng.latitude; pickupLng = latLng.longitude; if (address.trim().isNotEmpty) pickupLabel = address.trim(); }); }),
+                              const SizedBox(height: 6),
+                              TextField(controller: phoneSmsCtrl, keyboardType: TextInputType.phone, style: GoogleFonts.inter(fontSize: 13),
+                                decoration: InputDecoration(labelText: 'Telefon (SMS/WhatsApp)', filled: true, fillColor: AppTheme.background,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                              if (addonValetOn) ...[
+                                const SizedBox(height: 6),
+                                TextField(controller: lotZoneCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                  decoration: InputDecoration(
+                                    labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Lot zone (valet)', 'Lot zona (valet)'),
+                                    filled: true, fillColor: AppTheme.background,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                              ],
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 4: Admin (super_admin only)
+                        if (isSuperAdmin) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.admin_panel_settings_outlined, size: 17, color: Colors.black54),
+                            title: Text('Admin', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              Row(children: [
+                                Switch(value: isHub, activeThumbColor: Colors.black,
+                                  onChanged: (v) async {
+                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['hub_enabled'] = v; });
+                                    await _toggleHub(loc, v);
+                                    if (v == true) { try { await launchUrl(Uri.parse(_buildHubLocationUrl(loc))); } catch (_) {} }
+                                    if (!dialogContext.mounted) return;
+                                    Navigator.pop(dialogContext);
+                                    _showLocationDetail(loc, isSuperAdmin, isAdmin);
+                                  }),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Hub Enabled', 'Hub omogućen'),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
+                              ]),
+                              const SizedBox(height: 4),
+                              Row(children: [
+                                Text('Company', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+                                Switch(value: isAgenticSettlement, activeThumbColor: Colors.black,
+                                  onChanged: (v) async {
+                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['settlement_model'] = v ? 'agentic' : 'company'; });
+                                    await ref.read(locationsControllerProvider).updateSettlementModel(loc, v ? 'agentic' : 'company');
+                                  }),
+                                Text('Agentic', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+                              ]),
+                              if (isHub) ...[
+                                const SizedBox(height: 8),
+                                Row(children: [
+                                  const Icon(Icons.link, size: 14, color: Colors.black38),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: SelectableText(_buildHubLocationUrl(loc),
+                                    style: GoogleFonts.inter(fontSize: 11, color: Colors.blue[700], decoration: TextDecoration.underline))),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () async { await launchUrl(Uri.parse(_buildHubLocationUrl(loc))); },
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                    child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Open Hub', 'Otvori Hub'), style: GoogleFonts.inter(fontSize: 12))),
+                                ]),
+                              ],
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: () => setState(() => showLocationPicker = !showLocationPicker),
+                                icon: Icon(showLocationPicker ? Icons.expand_less : Icons.map_outlined, size: 14, color: Colors.black),
+                                label: Text(showLocationPicker
+                                  ? Lang.sel(ref.watch(localeIsCroatianProvider), 'Hide map', 'Sakrij mapu')
+                                  : Lang.sel(ref.watch(localeIsCroatianProvider), 'Change location', 'Promijeni lokaciju'),
+                                  style: GoogleFonts.inter(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8))),
+                              if (showLocationPicker) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.border)),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Tap to move pin', 'Klikni za promjenu pina'),
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 8),
+                                    LotLocationPicker(
+                                      initialLocation: LatLng(pendingLatitude, pendingLongitude),
+                                      onLocationSelected: (latLng, address) {
+                                        setState(() { pendingLatitude = latLng.latitude; pendingLongitude = latLng.longitude; if (address.trim().isNotEmpty) addressCtrl.text = address.trim(); });
+                                      }),
+                                  ])),
+                              ],
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+                      ]),
+                    )),
+
+                    // ────────────── FOOTER ──────────────
+                    if (canEdit) ...[
+                      const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (saving && uploadStatusText != null) ...[
+                            Text(uploadStatusText!, style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 6),
+                          ],
+                          SizedBox(width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: saving ? null : saveChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black, foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                              child: saving
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Save Changes', 'Spremi promjene'),
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)))),
+                        ])),
+                    ],
+                  ]),
+                );
+              },
+            ),
+          ),
+        );
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
