@@ -9,6 +9,7 @@ import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -529,7 +530,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     required bool washOn, required String washBasic, required String washPremium,
     required bool fuelOn, required String fuelDiesel, required String fuelBenzin,
     required bool shuttleOn, required String shuttlePrice,
-    required String hotspot, required String phoneSms, required String lotZone,
+    required double pickupLat, required double pickupLng, required String pickupLabel,
+    required String phoneSms, required String lotZone,
   }) {
     return {
       if (valetOn) 'valet': {
@@ -547,7 +549,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         {'id': 'benzin', 'label': 'Benzin', 'price_cents': int.tryParse(fuelBenzin) ?? 5500},
       ]},
       if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': int.tryParse(shuttlePrice) ?? 200},
-      if (hotspot.trim().isNotEmpty) 'hotspot': hotspot.trim(),
+      if (pickupLat != 0.0 || pickupLng != 0.0) 'pickup_point': {
+        'lat': pickupLat,
+        'lng': pickupLng,
+        if (pickupLabel.trim().isNotEmpty) 'label': pickupLabel.trim(),
+      },
       if (phoneSms.trim().isNotEmpty) 'phone_sms': phoneSms.trim(),
     };
   }
@@ -874,8 +880,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                 as Map?)?['price_cents']?.toString() ?? '5500');
         final shuttlePriceCtrl = TextEditingController(
             text: ((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?)?.toString() ?? '200');
-        final hotspotCtrl = TextEditingController(
-            text: (addonsConfig['hotspot'] as String?) ?? '');
+        double pickupLat = ((addonsConfig['pickup_point'] as Map?)?['lat'] as num?)?.toDouble() ?? 0.0;
+        double pickupLng = ((addonsConfig['pickup_point'] as Map?)?['lng'] as num?)?.toDouble() ?? 0.0;
+        String pickupLabel = ((addonsConfig['pickup_point'] as Map?)?['label'] as String?) ?? '';
         final phoneSmsCtrl = TextEditingController(
             text: (addonsConfig['phone_sms'] as String?) ?? '+385 91 5963139');
         final lotZoneCtrl = TextEditingController(
@@ -1007,7 +1014,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             fuelBenzin: fuelBenzinCtrl.text,
                             shuttleOn: addonShuttleOn,
                             shuttlePrice: shuttlePriceCtrl.text,
-                            hotspot: hotspotCtrl.text,
+                            pickupLat: pickupLat,
+                            pickupLng: pickupLng,
+                            pickupLabel: pickupLabel,
                             phoneSms: phoneSmsCtrl.text,
                             lotZone: lotZoneCtrl.text,
                           ),
@@ -1310,6 +1319,61 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   ),
                                 ],
                               ),
+                              Builder(builder: (_) {
+                                final pickupMap = addonsConfig['pickup_point'] as Map?;
+                                final pLat = (pickupMap?['lat'] as num?)?.toDouble() ?? 0.0;
+                                final pLng = (pickupMap?['lng'] as num?)?.toDouble() ?? 0.0;
+                                final pLabel = (pickupMap?['label'] as String?) ?? '';
+                                if (pLat == 0.0 && pLng == 0.0) return const SizedBox.shrink();
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Row(children: [
+                                      Icon(Icons.directions_car, size: 18, color: Colors.grey[600]),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
+                                        style: GoogleFonts.inter(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                                      ),
+                                    ]),
+                                    if (pLabel.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 26),
+                                        child: Text(pLabel, style: GoogleFonts.inter(fontSize: 12, color: Colors.black54)),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: SizedBox(
+                                        height: 200,
+                                        child: FlutterMap(
+                                          options: MapOptions(
+                                            initialCenter: LatLng(pLat, pLng),
+                                            initialZoom: 16,
+                                            interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                                          ),
+                                          children: [
+                                            TileLayer(
+                                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                              userAgentPackageName: 'com.payparq.ai',
+                                            ),
+                                            MarkerLayer(markers: [
+                                              Marker(
+                                                point: LatLng(pLat, pLng),
+                                                width: 40, height: 40,
+                                                child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                                              ),
+                                            ]),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }),
                               const SizedBox(height: 16),
                               Text(
                                 Lang.sel(
@@ -1914,14 +1978,23 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 if (addonValetOn || addonShuttleOn) ...[
                                   const SizedBox(height: 8),
-                                  TextField(
-                                    controller: hotspotCtrl,
-                                    decoration: InputDecoration(
-                                      labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Hotspot / pickup point', 'Hotspot / pickup point'),
-                                      filled: true,
-                                      fillColor: AppTheme.surface,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                  Text(
+                                    Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  LotLocationPicker(
+                                    initialLocation: LatLng(
+                                      pickupLat != 0.0 ? pickupLat : pendingLatitude,
+                                      pickupLng != 0.0 ? pickupLng : pendingLongitude,
                                     ),
+                                    onLocationSelected: (latLng, address) {
+                                      setState(() {
+                                        pickupLat = latLng.latitude;
+                                        pickupLng = latLng.longitude;
+                                        if (address.trim().isNotEmpty) pickupLabel = address.trim();
+                                      });
+                                    },
                                   ),
                                   const SizedBox(height: 6),
                                   TextField(
@@ -2032,6 +2105,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     bool isProcessing = false;
     LatLng? selectedLatLng;
     String selectedAddress = '';
+    LatLng? selectedPickupLatLng;
+    String selectedPickupLabel = '';
     String? selectedManagerId;
 
     showDialog(
@@ -2132,6 +2207,30 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     const SizedBox(height: 24),
                     Text(
                       Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Optional — where drivers hand over / collect their car',
+                          'Neobavezno — gdje vozači predaju / preuzimaju auto'),
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 8),
+                    LotLocationPicker(
+                      onLocationSelected: (latLng, address) {
+                        selectedPickupLatLng = latLng;
+                        if (address.trim().isNotEmpty) selectedPickupLabel = address.trim();
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
                           'Lot Partner (receives payments)', 'Lot Partner (prima uplate)'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -2208,6 +2307,15 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 longitude: selectedLatLng!.longitude,
                                 capacity: int.tryParse(capacityCtrl.text) ?? 0,
                                 ownerId: selectedManagerId ?? fallbackOwnerId,
+                                addonsConfig: selectedPickupLatLng != null
+                                    ? {
+                                        'pickup_point': {
+                                          'lat': selectedPickupLatLng!.latitude,
+                                          'lng': selectedPickupLatLng!.longitude,
+                                          if (selectedPickupLabel.isNotEmpty) 'label': selectedPickupLabel,
+                                        },
+                                      }
+                                    : null,
                               );
                           if (context.mounted) {
                             Navigator.pop(context);

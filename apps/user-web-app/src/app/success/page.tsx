@@ -15,7 +15,7 @@ type AddonsConfig = {
   car_wash?: AddonsConfigEntry;
   fuel?: AddonsConfigEntry;
   shuttle?: AddonsConfigEntry;
-  hotspot?: string;
+  pickup_point?: { lat?: number; lng?: number; label?: string } | null;
   phone_sms?: string;
 };
 
@@ -75,7 +75,7 @@ function ValetTicket({
   checkIn,
   checkOut,
   attendant,
-  hotspot,
+  pickupPoint,
   phoneSms,
   lotZone,
   formatDateTime,
@@ -85,7 +85,7 @@ function ValetTicket({
   checkIn: string | null;
   checkOut: string | null;
   attendant: string | null;
-  hotspot: string | null;
+  pickupPoint: { lat?: number; lng?: number; label?: string } | null;
   phoneSms: string | null;
   lotZone: string | null;
   formatDateTime: (v: string | null | undefined) => string;
@@ -115,10 +115,23 @@ function ValetTicket({
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
-        {hotspot && (
+        {pickupPoint?.label && (
           <div className="flex justify-between">
             <span className="text-black/50">Drop-off / Pick-up</span>
-            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{hotspot}</span>
+            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
+          </div>
+        )}
+        {pickupPoint?.lat && pickupPoint?.lng && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Navigacija</span>
+            <a
+              href={`https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#5F3DFC] underline text-[12px]"
+            >
+              Otvori kartu
+            </a>
           </div>
         )}
         {lotZone && (
@@ -556,7 +569,7 @@ function SuccessContent() {
               checkIn={checkoutStart}
               checkOut={checkoutEnd}
               attendant={summary.valet_attendant ?? null}
-              hotspot={(summary.addons_config?.hotspot as string | null | undefined) ?? null}
+              pickupPoint={summary.addons_config?.pickup_point ?? null}
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
               formatDateTime={formatDateTime}

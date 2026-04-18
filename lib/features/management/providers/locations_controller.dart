@@ -269,6 +269,7 @@ class LocationsController {
     required double longitude,
     required int capacity,
     required String? ownerId,
+    Map<String, dynamic>? addonsConfig,
   }) async {
     final response = await _repo.createLocation(
       name: name,
@@ -287,6 +288,11 @@ class LocationsController {
           'location_id': newLocId,
           'assigned_by': currentUserId,
         });
+      } catch (_) {}
+    }
+    if (newLocId != null && addonsConfig != null && addonsConfig.isNotEmpty) {
+      try {
+        await _repo.updateAddonsConfig(newLocId, addonsConfig);
       } catch (_) {}
     }
     final newDisplayId = response['display_id']?.toString();
