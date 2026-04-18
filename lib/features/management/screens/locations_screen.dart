@@ -1976,38 +1976,36 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                   priceCtrl: shuttlePriceCtrl,
                                   onToggle: (v) => setState(() => addonShuttleOn = v),
                                 ),
-                                if (addonValetOn || addonShuttleOn) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
-                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                const SizedBox(height: 8),
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 6),
+                                LotLocationPicker(
+                                  initialLocation: LatLng(
+                                    pickupLat != 0.0 ? pickupLat : pendingLatitude,
+                                    pickupLng != 0.0 ? pickupLng : pendingLongitude,
                                   ),
-                                  const SizedBox(height: 6),
-                                  LotLocationPicker(
-                                    initialLocation: LatLng(
-                                      pickupLat != 0.0 ? pickupLat : pendingLatitude,
-                                      pickupLng != 0.0 ? pickupLng : pendingLongitude,
-                                    ),
-                                    onLocationSelected: (latLng, address) {
-                                      setState(() {
-                                        pickupLat = latLng.latitude;
-                                        pickupLng = latLng.longitude;
-                                        if (address.trim().isNotEmpty) pickupLabel = address.trim();
-                                      });
-                                    },
+                                  onLocationSelected: (latLng, address) {
+                                    setState(() {
+                                      pickupLat = latLng.latitude;
+                                      pickupLng = latLng.longitude;
+                                      if (address.trim().isNotEmpty) pickupLabel = address.trim();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: phoneSmsCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  decoration: InputDecoration(
+                                    labelText: 'Telefon (SMS/WhatsApp)',
+                                    filled: true,
+                                    fillColor: AppTheme.surface,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                                   ),
-                                  const SizedBox(height: 6),
-                                  TextField(
-                                    controller: phoneSmsCtrl,
-                                    keyboardType: TextInputType.phone,
-                                    decoration: InputDecoration(
-                                      labelText: 'Telefon (SMS/WhatsApp)',
-                                      filled: true,
-                                      fillColor: AppTheme.surface,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                                    ),
-                                  ),
-                                ],
+                                ),
                                 if (addonValetOn) ...[
                                   const SizedBox(height: 6),
                                   TextField(
