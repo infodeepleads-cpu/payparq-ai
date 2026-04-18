@@ -47,7 +47,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
 
   let hub = locationData?.[0];
 
-  // Fallback: some older locations have hub_slug in metadata but no canonical_slug match
+  // Fallback 1: try hub_slug in metadata (older locations before canonical_slug was added)
   if (!hub) {
     const { data: fallback } = await client
       .from("locations")
@@ -55,6 +55,19 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
       .contains("verification_metadata", { hub_slug: hyphenDisplay })
       .limit(1);
     hub = fallback?.[0];
+  }
+
+  // Fallback 2: extract display_id from slug suffix (e.g. "parking-trogir-61440" → "61440")
+  if (!hub) {
+    const displayIdMatch = hyphenDisplay.match(/-(\d{4,6})$/);
+    if (displayIdMatch) {
+      const { data: fallback } = await client
+        .from("locations")
+        .select(selectCols)
+        .eq("display_id", displayIdMatch[1])
+        .limit(1);
+      hub = fallback?.[0];
+    }
   }
 
   if (!hub) {
@@ -217,10 +230,18 @@ export async function generateStaticParams() {
     }
     const { data: locations } = await client
       .from("locations")
-      .select("canonical_slug")
+      .select("canonical_slug,display_id,name,verification_metadata")
       .contains("verification_metadata", { hub_enabled: true })
       .limit(500);
-    const slugs = (locations || []).map((loc: { canonical_slug: string }) => loc.canonical_slug.trim().toLowerCase());
+    const slugs = (locations || []).flatMap((loc: { canonical_slug?: string | null; display_id?: string; name?: string }) => {
+      if (loc.canonical_slug?.trim()) return [loc.canonical_slug.trim().toLowerCase()];
+      // For locations without canonical_slug, build slug from name + display_id
+      if (loc.display_id) {
+        const namePart = (loc.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        return [namePart ? `${namePart}-${loc.display_id}` : loc.display_id];
+      }
+      return [];
+    });
     return slugs.map((slug) => ({ slug }));
   } catch {
     return [];
