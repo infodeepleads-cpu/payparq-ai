@@ -46,6 +46,7 @@ function AddonsSuccessContent() {
 
   const addonIds = parseAddons(session?.addons ?? null);
   const hasValet = addonIds.includes('valet');
+  const hasShuttle = addonIds.includes('shuttle');
   const hasEv = addonIds.includes('ev_charging');
   const hasWash = addonIds.some((id) => id.startsWith('car_wash'));
   const hasFuel = addonIds.some((id) => id.startsWith('fuel'));
@@ -158,6 +159,72 @@ function AddonsSuccessContent() {
                   <div>
                     <p className="font-medium text-black">Sigurnost osigurana</p>
                     <p className="text-black/50 text-[12px]">Vozilo je pod videonadzorom. Svi agenti su verificirani i osigurani putem Payparq sustava.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Shuttle instructions */}
+          {hasShuttle && (
+            <div className="rounded-2xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#0F6E56] flex items-center justify-center shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <rect x="1" y="8" width="22" height="10" rx="2"/>
+                    <path d="M5 18v2M19 18v2"/>
+                    <path d="M1 12h22"/>
+                    <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </div>
+                <p className="text-[14px] font-semibold text-[#0F6E56]">Shuttle upute</p>
+              </div>
+
+              {session?.valet_code && (
+                <div className="rounded-xl bg-white border border-[#0F6E56]/20 px-4 py-3 text-center">
+                  <p className="text-[11px] text-black/50 mb-1">Vaš shuttle kod</p>
+                  <p className="text-[28px] font-bold tracking-widest text-[#0F6E56] font-mono">{session.valet_code.replace('VLT-', 'SHT-')}</p>
+                  <p className="text-[10px] text-black/40 mt-1">Pokažite kod vozaču shuttlea pri ukrcaju</p>
+                </div>
+              )}
+
+              <div className="space-y-2 text-[13px]">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold text-[#0F6E56]">1</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-black">Dođite na ukrcajnu točku</p>
+                    <p className="text-black/50 text-[12px]">Pričekajte na označenom pick-up / drop-off punktu. Shuttle dolazi za <strong className="text-black">~4 min</strong>.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold text-[#0F6E56]">2</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-black">Ukrcaj i vožnja</p>
+                    <p className="text-black/50 text-[12px]">Vozač skenira vaš kod. Shuttle vozi izravno do odredišta — bez zaustavljanja.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#0F6E56]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[10px] font-bold text-[#0F6E56]">3</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-black">Povratak</p>
+                    <p className="text-black/50 text-[12px]">Za povratak pošaljite poruku vozaču ili pozovite shuttle putem Members zone.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#E1F5EE] flex items-center justify-center shrink-0 mt-0.5">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2.5">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-black">Sigurnost osigurana</p>
+                    <p className="text-black/50 text-[12px]">Svi vozači su verificirani i osigurani putem Payparq sustava. GPS praćenje aktivno.</p>
                   </div>
                 </div>
               </div>

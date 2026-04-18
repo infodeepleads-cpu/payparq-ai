@@ -69,6 +69,119 @@ function deriveTicketNumber(sessionId: string): string {
   return `VLT-${num}`;
 }
 
+function deriveShuttleCode(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 37 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  const num = 1000 + (Math.abs(hash) % 9000);
+  return `SHT-${num}`;
+}
+
+function ShuttleTicket({
+  sessionId,
+  locationName,
+  checkIn,
+  checkOut,
+  attendant,
+  pickupPoint,
+  phoneSms,
+  formatDateTime,
+}: {
+  sessionId: string;
+  locationName: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  attendant: string | null;
+  pickupPoint: { lat?: number; lng?: number; label?: string } | null;
+  phoneSms: string | null;
+  formatDateTime: (v: string | null | undefined) => string;
+}) {
+  const ticketNo = deriveShuttleCode(sessionId);
+  return (
+    <div className="rounded-2xl border border-[#0F6E56]/30 overflow-hidden">
+      {/* Ticket header */}
+      <div className="bg-[#0F6E56] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <rect x="1" y="8" width="22" height="10" rx="2"/>
+            <path d="M5 18v2M19 18v2"/>
+            <path d="M1 12h22"/>
+            <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span className="text-white text-[12px] font-semibold uppercase tracking-widest">Shuttle potvrda</span>
+        </div>
+        <span className="text-white/80 text-[11px] font-mono">{ticketNo}</span>
+      </div>
+      {/* Dashed divider */}
+      <div className="border-t-2 border-dashed border-[#0F6E56]/20 mx-0" />
+      {/* Ticket body */}
+      <div className="bg-[#E1F5EE] px-4 py-3 space-y-2 text-[12px]">
+        {locationName && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Lokacija</span>
+            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
+          </div>
+        )}
+        {pickupPoint?.label && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Ukrcaj / Iskrcaj</span>
+            <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
+          </div>
+        )}
+        {pickupPoint?.lat && pickupPoint?.lng && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Navigacija</span>
+            <a
+              href={`https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#0F6E56] underline text-[12px]"
+            >
+              Otvori kartu
+            </a>
+          </div>
+        )}
+        {checkIn && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Check-in</span>
+            <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
+          </div>
+        )}
+        {checkOut && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Check-out</span>
+            <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
+          </div>
+        )}
+        {attendant && (
+          <div className="flex justify-between">
+            <span className="text-black/50">Vozač</span>
+            <span className="font-semibold text-black">{attendant}</span>
+          </div>
+        )}
+        {phoneSms && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">SMS / WhatsApp</span>
+            <a
+              href={`https://wa.me/${phoneSms.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#0F6E56] underline"
+            >
+              {phoneSms}
+            </a>
+          </div>
+        )}
+      </div>
+      {/* Bottom strip */}
+      <div className="bg-[#0F6E56]/10 px-4 py-2 text-center">
+        <p className="text-[10px] text-[#0F6E56]/70 font-medium">Pokažite kod vozaču shuttlea pri ukrcaju · ETA ~4 min</p>
+      </div>
+    </div>
+  );
+}
+
 function ValetTicket({
   sessionId,
   locationName,
@@ -576,6 +689,20 @@ function SuccessContent() {
               pickupPoint={summary.addons_config?.pickup_point ?? null}
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
+              formatDateTime={formatDateTime}
+            />
+          )}
+
+          {/* 1c — Shuttle confirmation ticket (when shuttle included in price) */}
+          {showIncludedShuttle && summary?.session_id && (
+            <ShuttleTicket
+              sessionId={summary.session_id}
+              locationName={checkoutLocationName}
+              checkIn={checkoutStart}
+              checkOut={checkoutEnd}
+              attendant={summary.valet_attendant ?? null}
+              pickupPoint={summary.addons_config?.pickup_point ?? null}
+              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               formatDateTime={formatDateTime}
             />
           )}
