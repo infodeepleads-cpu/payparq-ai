@@ -512,9 +512,10 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         if (enabled)
           TextField(
             controller: priceCtrl,
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: 'Cijena (centi, npr. 500 = 5,00 €)',
+              labelText: 'Cijena',
+              suffixText: '€',
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
@@ -536,19 +537,19 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     return {
       if (valetOn) 'valet': {
         'enabled': true,
-        'price_cents': int.tryParse(valetPrice) ?? 500,
+        'price_cents': ((double.tryParse(valetPrice) ?? 5.0) * 100).round(),
         if (lotZone.trim().isNotEmpty) 'lot_zone': lotZone.trim(),
       },
-      if (evOn) 'ev_charging': {'enabled': true, 'price_cents': int.tryParse(evPrice) ?? 2000},
+      if (evOn) 'ev_charging': {'enabled': true, 'price_cents': ((double.tryParse(evPrice) ?? 20.0) * 100).round()},
       if (washOn) 'car_wash': {'enabled': true, 'options': [
-        {'id': 'basic', 'label': 'Basic', 'price_cents': int.tryParse(washBasic) ?? 1500},
-        {'id': 'premium', 'label': 'Premium', 'price_cents': int.tryParse(washPremium) ?? 3000},
+        {'id': 'basic', 'label': 'Basic', 'price_cents': ((double.tryParse(washBasic) ?? 15.0) * 100).round()},
+        {'id': 'premium', 'label': 'Premium', 'price_cents': ((double.tryParse(washPremium) ?? 30.0) * 100).round()},
       ]},
       if (fuelOn) 'fuel': {'enabled': true, 'options': [
-        {'id': 'diesel', 'label': 'Diesel', 'price_cents': int.tryParse(fuelDiesel) ?? 6000},
-        {'id': 'benzin', 'label': 'Benzin', 'price_cents': int.tryParse(fuelBenzin) ?? 5500},
+        {'id': 'diesel', 'label': 'Diesel', 'price_cents': ((double.tryParse(fuelDiesel) ?? 60.0) * 100).round()},
+        {'id': 'benzin', 'label': 'Benzin', 'price_cents': ((double.tryParse(fuelBenzin) ?? 55.0) * 100).round()},
       ]},
-      if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': int.tryParse(shuttlePrice) ?? 200},
+      if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': ((double.tryParse(shuttlePrice) ?? 2.0) * 100).round()},
       if (pickupLat != 0.0 || pickupLng != 0.0) 'pickup_point': {
         'lat': pickupLat,
         'lng': pickupLng,
@@ -858,28 +859,30 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             (effectiveLoc['addons_config'] ?? {}) as Map<String, dynamic>;
         final Map<String, dynamic> addonsConfig = Map<String, dynamic>.from(addonsRaw);
         // Price controllers for add-ons
+        num _centsToEur(num? cents, num fallbackCents) =>
+            ((cents ?? fallbackCents) / 100);
         final valetPriceCtrl = TextEditingController(
-            text: ((addonsConfig['valet'] as Map?)?['price_cents'] as num?)?.toString() ?? '500');
+            text: _centsToEur((addonsConfig['valet'] as Map?)?['price_cents'] as num?, 500).toStringAsFixed(2));
         final evPriceCtrl = TextEditingController(
-            text: ((addonsConfig['ev_charging'] as Map?)?['price_cents'] as num?)?.toString() ?? '2000');
+            text: _centsToEur((addonsConfig['ev_charging'] as Map?)?['price_cents'] as num?, 2000).toStringAsFixed(2));
         final washBasicCtrl = TextEditingController(
-            text: (((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+            text: _centsToEur((((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
                 (o) => (o as Map)['id'] == 'basic', orElse: () => <String, dynamic>{})
-                as Map?)?['price_cents']?.toString() ?? '1500');
+                as Map?)?['price_cents'] as num?, 1500).toStringAsFixed(2));
         final washPremiumCtrl = TextEditingController(
-            text: (((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+            text: _centsToEur((((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
                 (o) => (o as Map)['id'] == 'premium', orElse: () => <String, dynamic>{})
-                as Map?)?['price_cents']?.toString() ?? '3000');
+                as Map?)?['price_cents'] as num?, 3000).toStringAsFixed(2));
         final fuelDieselCtrl = TextEditingController(
-            text: (((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+            text: _centsToEur((((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
                 (o) => (o as Map)['id'] == 'diesel', orElse: () => <String, dynamic>{})
-                as Map?)?['price_cents']?.toString() ?? '6000');
+                as Map?)?['price_cents'] as num?, 6000).toStringAsFixed(2));
         final fuelBenzinCtrl = TextEditingController(
-            text: (((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+            text: _centsToEur((((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
                 (o) => (o as Map)['id'] == 'benzin', orElse: () => <String, dynamic>{})
-                as Map?)?['price_cents']?.toString() ?? '5500');
+                as Map?)?['price_cents'] as num?, 5500).toStringAsFixed(2));
         final shuttlePriceCtrl = TextEditingController(
-            text: ((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?)?.toString() ?? '200');
+            text: _centsToEur((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?, 200).toStringAsFixed(2));
         double pickupLat = ((addonsConfig['pickup_point'] as Map?)?['lat'] as num?)?.toDouble() ?? 0.0;
         double pickupLng = ((addonsConfig['pickup_point'] as Map?)?['lng'] as num?)?.toDouble() ?? 0.0;
         String pickupLabel = ((addonsConfig['pickup_point'] as Map?)?['label'] as String?) ?? '';
@@ -1942,11 +1945,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 if (addonWashOn) ...[
                                   Row(children: [
-                                    Expanded(child: TextField(controller: washBasicCtrl, keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(labelText: 'Basic (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    Expanded(child: TextField(controller: washBasicCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(labelText: 'Basic', suffixText: '€', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
                                     const SizedBox(width: 8),
-                                    Expanded(child: TextField(controller: washPremiumCtrl, keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(labelText: 'Premium (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    Expanded(child: TextField(controller: washPremiumCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(labelText: 'Premium', suffixText: '€', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
                                   ]),
                                 ],
                                 const SizedBox(height: 6),
@@ -1962,11 +1965,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 ),
                                 if (addonFuelOn) ...[
                                   Row(children: [
-                                    Expanded(child: TextField(controller: fuelDieselCtrl, keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(labelText: 'Diesel (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    Expanded(child: TextField(controller: fuelDieselCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(labelText: 'Diesel', suffixText: '€', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
                                     const SizedBox(width: 8),
-                                    Expanded(child: TextField(controller: fuelBenzinCtrl, keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(labelText: 'Benzin (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    Expanded(child: TextField(controller: fuelBenzinCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      decoration: InputDecoration(labelText: 'Benzin', suffixText: '€', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
                                   ]),
                                 ],
                                 const SizedBox(height: 6),

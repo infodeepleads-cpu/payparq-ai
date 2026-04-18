@@ -1475,50 +1475,45 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.map ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
-                        <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
-                          <iframe
-                            className="absolute inset-0 w-full h-full"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            src={
-                              hub.latitude && hub.longitude
-                                ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
-                                : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
-                            }
-                          />
-                        </div>
                         {(() => {
                           const pickup = hub.addons_config?.pickup_point as { lat?: number; lng?: number; label?: string } | null | undefined;
-                          if (!pickup?.lat || !pickup?.lng) return null;
+                          const hasPickup = !!(pickup?.lat && pickup?.lng);
+                          const hasHub = !!(hub.latitude && hub.longitude);
+                          const mapSrc = hasHub && hasPickup
+                            ? `https://www.google.com/maps?saddr=${hub.latitude},${hub.longitude}&daddr=${pickup!.lat},${pickup!.lng}&output=embed`
+                            : hasHub
+                              ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
+                              : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`;
                           return (
-                            <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] overflow-hidden">
-                              <div className="px-4 py-3 flex items-center gap-2 border-b border-[#5F3DFC]/10">
-                                <Car className="w-4 h-4 text-[#5F3DFC] shrink-0" />
-                                <span className="text-sm font-semibold text-[#5F3DFC]">Pick-Up / Drop Off Zone</span>
-                                {pickup.label && (
-                                  <span className="text-xs text-[#5F3DFC]/70 ml-1">· {pickup.label}</span>
-                                )}
-                              </div>
-                              <div className="relative w-full h-[200px] overflow-hidden">
+                            <>
+                              <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
                                 <iframe
                                   className="absolute inset-0 w-full h-full"
                                   loading="lazy"
                                   referrerPolicy="no-referrer-when-downgrade"
-                                  src={`https://www.google.com/maps?q=${pickup.lat},${pickup.lng}&output=embed`}
+                                  src={mapSrc}
                                 />
                               </div>
-                              <div className="px-4 py-2 flex items-center justify-between">
-                                <span className="text-[11px] text-[#5F3DFC]/70">Točka predaje i preuzimanja vozila</span>
-                                <a
-                                  href={`https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[11px] font-semibold text-[#5F3DFC] underline"
-                                >
-                                  Navigacija
-                                </a>
-                              </div>
-                            </div>
+                              {hasPickup && (
+                                <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] px-4 py-3 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Car className="w-4 h-4 text-[#5F3DFC] shrink-0" />
+                                    <span className="text-sm font-semibold text-[#5F3DFC]">Pick-Up / Drop Off Zone</span>
+                                    {pickup!.label && (
+                                      <span className="text-xs text-[#5F3DFC]/70 truncate">· {pickup!.label}</span>
+                                    )}
+                                  </div>
+                                  <a
+                                    href={`https://www.google.com/maps?q=${pickup!.lat},${pickup!.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[11px] font-semibold text-[#5F3DFC] underline shrink-0"
+                                  >
+                                    Navigacija
+                                  </a>
+                                </div>
+                              )}
+                            </>
                           );
                         })()}
                       </div>
