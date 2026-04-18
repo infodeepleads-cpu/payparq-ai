@@ -282,6 +282,7 @@ export async function GET(req: NextRequest) {
     let activityLocationDisplayId: string | null = null;
     let valetEnabled = false;
     let shuttleEnabled = false;
+    let addonsConfig: Record<string, unknown> = {};
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -381,11 +382,12 @@ export async function GET(req: NextRequest) {
         try {
           const { data: flagsRow } = await dbClient
             .from('locations')
-            .select('valet_enabled,shuttle_enabled')
+            .select('valet_enabled,shuttle_enabled,addons_config')
             .eq('id', resolvedId)
             .maybeSingle();
           valetEnabled = (flagsRow as { valet_enabled?: boolean | null } | null)?.valet_enabled ?? false;
           shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
+          addonsConfig = (flagsRow as { addons_config?: Record<string, unknown> | null } | null)?.addons_config ?? {};
         } catch {}
       }
     } else {
@@ -404,6 +406,7 @@ export async function GET(req: NextRequest) {
       location_display_id: activityLocationDisplayId,
       valet_enabled: valetEnabled,
       shuttle_enabled: shuttleEnabled,
+      addons_config: addonsConfig,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,

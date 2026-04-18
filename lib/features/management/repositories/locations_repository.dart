@@ -69,6 +69,10 @@ class LocationsRepository {
     }).eq('id', id);
   }
 
+  Future<void> updateAddonsConfig(String id, Map<String, dynamic> config) async {
+    await _client.from('locations').update({'addons_config': config}).eq('id', id);
+  }
+
   Future<Map<String, dynamic>> createLocation({
     required String name,
     required String address,

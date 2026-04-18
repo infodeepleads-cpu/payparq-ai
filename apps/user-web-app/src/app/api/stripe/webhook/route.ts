@@ -447,6 +447,11 @@ export async function POST(req: Request) {
 
     const pricingType = (sessionMetadata.pricing_type ?? 'hourly').toString();
     const flowType = (sessionMetadata.flow_type ?? '').toString().trim().toLowerCase();
+
+    if (flowType === 'addons') {
+      console.log('✅ Addons payment received:', session.id, sessionMetadata.addons ?? '');
+      return NextResponse.json({ received: true });
+    }
     const emailCandidates = [
       session.customer_details?.email,
       session.customer_email,

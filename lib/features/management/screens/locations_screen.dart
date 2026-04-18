@@ -493,6 +493,56 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
+  Widget _buildAddonRow({
+    required String label,
+    required bool enabled,
+    required TextEditingController priceCtrl,
+    required void Function(bool) onToggle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Switch(value: enabled, activeThumbColor: Colors.black, onChanged: onToggle),
+            Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87))),
+          ],
+        ),
+        if (enabled)
+          TextField(
+            controller: priceCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Cijena (centi, npr. 500 = 5,00 €)',
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Map<String, dynamic> _buildAddonsConfig({
+    required bool valetOn, required String valetPrice,
+    required bool evOn, required String evPrice,
+    required bool washOn, required String washBasic, required String washPremium,
+    required bool fuelOn, required String fuelDiesel, required String fuelBenzin,
+  }) {
+    return {
+      if (valetOn) 'valet': {'enabled': true, 'price_cents': int.tryParse(valetPrice) ?? 500},
+      if (evOn) 'ev_charging': {'enabled': true, 'price_cents': int.tryParse(evPrice) ?? 2000},
+      if (washOn) 'car_wash': {'enabled': true, 'options': [
+        {'id': 'basic', 'label': 'Basic', 'price_cents': int.tryParse(washBasic) ?? 1500},
+        {'id': 'premium', 'label': 'Premium', 'price_cents': int.tryParse(washPremium) ?? 3000},
+      ]},
+      if (fuelOn) 'fuel': {'enabled': true, 'options': [
+        {'id': 'diesel', 'label': 'Diesel', 'price_cents': int.tryParse(fuelDiesel) ?? 6000},
+        {'id': 'benzin', 'label': 'Benzin', 'price_cents': int.tryParse(fuelBenzin) ?? 5500},
+      ]},
+    };
+  }
+
   void _confirmDelete(String id, String displayId) {
     final isHr = ref.read(localeIsCroatianProvider);
     AsyncActionHandler.run<void>(
@@ -789,6 +839,34 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             _resolveSettlementModel(meta) == 'agentic';
         bool valetEnabled = effectiveLoc['valet_enabled'] == true;
         bool shuttleEnabled = effectiveLoc['shuttle_enabled'] == true;
+        final Map<String, dynamic> addonsRaw =
+            (effectiveLoc['addons_config'] ?? {}) as Map<String, dynamic>;
+        final Map<String, dynamic> addonsConfig = Map<String, dynamic>.from(addonsRaw);
+        // Price controllers for add-ons
+        final valetPriceCtrl = TextEditingController(
+            text: ((addonsConfig['valet'] as Map?)?['price_cents'] as num?)?.toString() ?? '500');
+        final evPriceCtrl = TextEditingController(
+            text: ((addonsConfig['ev_charging'] as Map?)?['price_cents'] as num?)?.toString() ?? '2000');
+        final washBasicCtrl = TextEditingController(
+            text: (((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'basic', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents']?.toString() ?? '1500');
+        final washPremiumCtrl = TextEditingController(
+            text: (((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'premium', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents']?.toString() ?? '3000');
+        final fuelDieselCtrl = TextEditingController(
+            text: (((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'diesel', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents']?.toString() ?? '6000');
+        final fuelBenzinCtrl = TextEditingController(
+            text: (((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'benzin', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents']?.toString() ?? '5500');
+        bool addonValetOn = (addonsConfig['valet'] as Map?)?['enabled'] == true;
+        bool addonEvOn = (addonsConfig['ev_charging'] as Map?)?['enabled'] == true;
+        bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
+        bool addonFuelOn = (addonsConfig['fuel'] as Map?)?['enabled'] == true;
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -893,6 +971,23 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           longitude: pendingLongitude,
                           capacity: newCapacity,
                           invalidateStream: false,
+                        );
+                    await ref
+                        .read(locationsControllerProvider)
+                        .updateAddonsConfig(
+                          id: loc['id'].toString(),
+                          config: _buildAddonsConfig(
+                            valetOn: addonValetOn,
+                            valetPrice: valetPriceCtrl.text,
+                            evOn: addonEvOn,
+                            evPrice: evPriceCtrl.text,
+                            washOn: addonWashOn,
+                            washBasic: washBasicCtrl.text,
+                            washPremium: washPremiumCtrl.text,
+                            fuelOn: addonFuelOn,
+                            fuelDiesel: fuelDieselCtrl.text,
+                            fuelBenzin: fuelBenzinCtrl.text,
+                          ),
                         );
                     if (photosChanged) {
                       setState(() {
@@ -1726,6 +1821,67 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                     ),
                                   ],
                                 ),
+                              ],
+                              if (canEdit) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider), 'Add-on Services & Prices', 'Dodaci & cijene'),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildAddonRow(
+                                  label: Lang.sel(ref.watch(localeIsCroatianProvider), 'Valet parking', 'Valet parking'),
+                                  enabled: addonValetOn,
+                                  priceCtrl: valetPriceCtrl,
+                                  onToggle: (v) => setState(() => addonValetOn = v),
+                                ),
+                                const SizedBox(height: 6),
+                                _buildAddonRow(
+                                  label: Lang.sel(ref.watch(localeIsCroatianProvider), 'EV Charging', 'EV punjenje'),
+                                  enabled: addonEvOn,
+                                  priceCtrl: evPriceCtrl,
+                                  onToggle: (v) => setState(() => addonEvOn = v),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider), 'Car Wash', 'Pranje auta'),
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                Row(
+                                  children: [
+                                    Switch(value: addonWashOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonWashOn = v)),
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Enabled', 'Omogućeno'), style: GoogleFonts.inter(fontSize: 12)),
+                                  ],
+                                ),
+                                if (addonWashOn) ...[
+                                  Row(children: [
+                                    Expanded(child: TextField(controller: washBasicCtrl, keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: 'Basic (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: TextField(controller: washPremiumCtrl, keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: 'Premium (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  ]),
+                                ],
+                                const SizedBox(height: 6),
+                                Text(
+                                  Lang.sel(ref.watch(localeIsCroatianProvider), 'Fuel', 'Gorivo'),
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87),
+                                ),
+                                Row(
+                                  children: [
+                                    Switch(value: addonFuelOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonFuelOn = v)),
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Enabled', 'Omogućeno'), style: GoogleFonts.inter(fontSize: 12)),
+                                  ],
+                                ),
+                                if (addonFuelOn) ...[
+                                  Row(children: [
+                                    Expanded(child: TextField(controller: fuelDieselCtrl, keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: 'Diesel (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: TextField(controller: fuelBenzinCtrl, keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(labelText: 'Benzin (cents)', filled: true, fillColor: AppTheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  ]),
+                                ],
                               ],
                               if (canEdit) ...[
                                 const SizedBox(height: 16),

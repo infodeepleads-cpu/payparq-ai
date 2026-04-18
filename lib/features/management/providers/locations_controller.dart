@@ -172,6 +172,15 @@ class LocationsController {
     _ref.invalidate(locationsStreamProvider);
   }
 
+  Future<void> updateAddonsConfig(String id, Map<String, dynamic> config) async {
+    try {
+      await _repo.updateAddonsConfig(id, config);
+      _ref.invalidate(locationsStreamProvider);
+    } catch (e) {
+      throw AppError('Update addons config failed: $e', cause: e);
+    }
+  }
+
   Future<void> updateCapacity(String id, int capacity) async {
     try {
       await _repo.updateCapacity(id, capacity);

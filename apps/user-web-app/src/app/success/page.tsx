@@ -8,6 +8,15 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+type AddonsConfigOption = { id: string; label: string; price_cents: number };
+type AddonsConfigEntry = { enabled?: boolean; price_cents?: number; options?: AddonsConfigOption[] };
+type AddonsConfig = {
+  valet?: AddonsConfigEntry;
+  ev_charging?: AddonsConfigEntry;
+  car_wash?: AddonsConfigEntry;
+  fuel?: AddonsConfigEntry;
+};
+
 type SessionSummary = {
   session_id: string;
   ref_id: string;
@@ -27,6 +36,7 @@ type SessionSummary = {
   email_verified: boolean;
   valet_enabled?: boolean | null;
   shuttle_enabled?: boolean | null;
+  addons_config?: AddonsConfig | null;
 };
 
 function SuccessContent() {
@@ -45,6 +55,17 @@ function SuccessContent() {
   const [valetEnabled, setValetEnabled] = useState(false);
   const [shuttleEnabled, setShuttleEnabled] = useState(true);
   const [summonStatus, setSummonStatus] = useState<string | null>(null);
+
+  // Addon selections
+  const [addonValetOn, setAddonValetOn] = useState(false);
+  const [addonValetDays, setAddonValetDays] = useState(1);
+  const [addonEvOn, setAddonEvOn] = useState(false);
+  const [addonWashOn, setAddonWashOn] = useState(false);
+  const [addonWashTier, setAddonWashTier] = useState<'basic' | 'premium'>('basic');
+  const [addonFuelOn, setAddonFuelOn] = useState(false);
+  const [addonFuelType, setAddonFuelType] = useState<'diesel' | 'benzin'>('diesel');
+  const [addonsCheckoutLoading, setAddonsCheckoutLoading] = useState(false);
+  const [addonsCheckoutError, setAddonsCheckoutError] = useState('');
 
   const fallbackDisplayId =
     searchParams.get('display_id') ||
@@ -248,6 +269,78 @@ function SuccessContent() {
     setTimeout(() => setSummonStatus(null), 5000);
   };
 
+  const cfg = summary?.addons_config ?? {};
+  const addonValetCfg = cfg.valet?.enabled ? cfg.valet : null;
+  const addonEvCfg = cfg.ev_charging?.enabled ? cfg.ev_charging : null;
+  const addonWashCfg = cfg.car_wash?.enabled ? cfg.car_wash : null;
+  const addonFuelCfg = cfg.fuel?.enabled ? cfg.fuel : null;
+  const hasAnyAddon = Boolean(addonValetCfg || addonEvCfg || addonWashCfg || addonFuelCfg);
+
+  const addonValetPriceCents = (addonValetCfg?.price_cents ?? 500) * addonValetDays;
+  const addonEvPriceCents = addonEvCfg?.price_cents ?? 2000;
+  const addonWashBasicCents = addonWashCfg?.options?.find((o) => o.id === 'basic')?.price_cents ?? 1500;
+  const addonWashPremiumCents = addonWashCfg?.options?.find((o) => o.id === 'premium')?.price_cents ?? 3000;
+  const addonWashPriceCents = addonWashTier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
+  const addonFuelDieselCents = addonFuelCfg?.options?.find((o) => o.id === 'diesel')?.price_cents ?? 6000;
+  const addonFuelBenzinCents = addonFuelCfg?.options?.find((o) => o.id === 'benzin')?.price_cents ?? 5500;
+  const addonFuelPriceCents = addonFuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
+
+  const addonsTotalCents =
+    (addonValetOn ? addonValetPriceCents : 0) +
+    (addonEvOn ? addonEvPriceCents : 0) +
+    (addonWashOn ? addonWashPriceCents : 0) +
+    (addonFuelOn ? addonFuelPriceCents : 0);
+
+  const anyAddonSelected = addonValetOn || addonEvOn || addonWashOn || addonFuelOn;
+
+  const handleAddonsCheckout = async () => {
+    if (!anyAddonSelected) return;
+    setAddonsCheckoutLoading(true);
+    setAddonsCheckoutError('');
+    type AddonItem = { id: string; label: string; price_cents: number; quantity?: number };
+    const items: AddonItem[] = [];
+    if (addonValetOn && addonValetCfg) {
+      items.push({ id: 'valet', label: `Valet parking (${addonValetDays} dan/a)`, price_cents: addonValetCfg.price_cents ?? 500, quantity: addonValetDays });
+    }
+    if (addonEvOn && addonEvCfg) {
+      items.push({ id: 'ev_charging', label: 'EV punjenje', price_cents: addonEvCfg.price_cents ?? 2000 });
+    }
+    if (addonWashOn && addonWashCfg) {
+      const tier = addonWashTier === 'premium' ? 'premium' : 'basic';
+      const opt = addonWashCfg.options?.find((o) => o.id === tier);
+      items.push({ id: `car_wash_${tier}`, label: `Pranje vozila (${tier === 'premium' ? 'Premium' : 'Basic'})`, price_cents: opt?.price_cents ?? addonWashPriceCents });
+    }
+    if (addonFuelOn && addonFuelCfg) {
+      const fuelId = addonFuelType;
+      const opt = addonFuelCfg.options?.find((o) => o.id === fuelId);
+      items.push({ id: `fuel_${fuelId}`, label: `Punjenje gorivom (${fuelId === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
+    }
+    try {
+      const res = await fetch('/api/stripe/addons-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: summary?.session_id ?? sessionId ?? '',
+          location_id: summary?.location_id ?? '',
+          location_display_id: summary?.location_display_id ?? '',
+          location_name: summary?.location_name ?? '',
+          email: summary?.email ?? '',
+          addons: items,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !data?.url) {
+        setAddonsCheckoutError(data?.error || 'Greška pri kreiranju plaćanja.');
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setAddonsCheckoutError('Greška pri kreiranju plaćanja.');
+    } finally {
+      setAddonsCheckoutLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-black flex flex-col">
       <SiteHeader />
@@ -273,8 +366,8 @@ function SuccessContent() {
             </div>
             <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
               <div>
-                <p className="text-black/50">Ref</p>
-                <p className="font-semibold text-black font-mono tracking-tight">{refCode || '—'}</p>
+                <p className="text-black/50">Lokacija ID</p>
+                <p className="font-semibold text-black font-mono tracking-tight">{checkoutLocationDisplayId || checkoutLocationIdLabel || '—'}</p>
               </div>
               <div>
                 <p className="text-black/50">Cijena</p>
@@ -465,7 +558,191 @@ function SuccessContent() {
           </div>
           )}
 
-          {/* 5 — Secondary actions */}
+          {/* 5 — Platite usluge (paid add-ons from addons_config) */}
+          {hasAnyAddon && (
+            <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
+              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">
+                Platite usluge
+              </p>
+
+              {/* Valet */}
+              {addonValetCfg && (
+                <div className="rounded-xl border border-black/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setAddonValetOn((v) => !v)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'bg-[#5F3DFC] border-[#5F3DFC]' : 'border-black/20 bg-white'}`}>
+                        {addonValetOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-black">Valet parking</p>
+                        <p className="text-[11px] text-black/40">Mi parkiramo vaš automobil</p>
+                      </div>
+                    </div>
+                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                      {formatAmount(addonValetCfg.price_cents ?? 500, 'eur')}/dan
+                    </span>
+                  </button>
+                  {addonValetOn && (
+                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                      <p className="text-[11px] text-black/50 mb-2">Broj dana</p>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4].map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setAddonValetDays(d)}
+                            className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${addonValetDays === d ? 'bg-[#5F3DFC] text-white border-[#5F3DFC]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                          >
+                            {d}d
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-black/50 mt-2 text-right">
+                        Ukupno: <span className="font-semibold text-black">{formatAmount(addonValetPriceCents, 'eur')}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* EV Charging */}
+              {addonEvCfg && (
+                <button
+                  type="button"
+                  onClick={() => setAddonEvOn((v) => !v)}
+                  className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'bg-[#2E7D32] border-[#2E7D32]' : 'border-black/20 bg-white'}`}>
+                      {addonEvOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-black">EV punjenje</p>
+                      <p className="text-[11px] text-black/40">Type 2 / CCS · do 22 kW</p>
+                    </div>
+                  </div>
+                  <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                    {formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}
+                  </span>
+                </button>
+              )}
+
+              {/* Car Wash */}
+              {addonWashCfg && (
+                <div className="rounded-xl border border-black/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setAddonWashOn((v) => !v)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'bg-[#1565C0] border-[#1565C0]' : 'border-black/20 bg-white'}`}>
+                        {addonWashOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-black">Pranje vozila</p>
+                        <p className="text-[11px] text-black/40">Basic ili Premium</p>
+                      </div>
+                    </div>
+                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                      od {formatAmount(addonWashBasicCents, 'eur')}
+                    </span>
+                  </button>
+                  {addonWashOn && (
+                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                      <div className="flex gap-2">
+                        {(['basic', 'premium'] as const).map((tier) => {
+                          const priceCents = tier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
+                          return (
+                            <button
+                              key={tier}
+                              type="button"
+                              onClick={() => setAddonWashTier(tier)}
+                              className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonWashTier === tier ? 'bg-[#1565C0] text-white border-[#1565C0]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                            >
+                              {tier === 'premium' ? 'Premium' : 'Basic'}<br />
+                              <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fuel */}
+              {addonFuelCfg && (
+                <div className="rounded-xl border border-black/10 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setAddonFuelOn((v) => !v)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'bg-[#F57F17] border-[#F57F17]' : 'border-black/20 bg-white'}`}>
+                        {addonFuelOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
+                        <p className="text-[11px] text-black/40">Diesel ili Benzin · mobilna punjaonica</p>
+                      </div>
+                    </div>
+                    <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
+                      od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}
+                    </span>
+                  </button>
+                  {addonFuelOn && (
+                    <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
+                      <div className="flex gap-2">
+                        {(['diesel', 'benzin'] as const).map((fuelType) => {
+                          const priceCents = fuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
+                          return (
+                            <button
+                              key={fuelType}
+                              type="button"
+                              onClick={() => setAddonFuelType(fuelType)}
+                              className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonFuelType === fuelType ? 'bg-[#F57F17] text-white border-[#F57F17]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
+                            >
+                              {fuelType === 'diesel' ? 'Diesel' : 'Benzin'}<br />
+                              <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Checkout CTA */}
+              {anyAddonSelected && (
+                <div className="pt-1 space-y-2">
+                  <div className="flex items-center justify-between text-[13px] px-1">
+                    <span className="text-black/50">Ukupno za usluge</span>
+                    <span className="font-bold text-black">{formatAmount(addonsTotalCents, 'eur')}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddonsCheckout}
+                    disabled={addonsCheckoutLoading}
+                    className="w-full py-3 rounded-xl bg-[#5F3DFC] text-white text-[14px] font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
+                  >
+                    {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
+                  </button>
+                  {addonsCheckoutError && (
+                    <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 7 — Secondary actions */}
           <div className="flex flex-col gap-2">
             <a
               href="https://m.uber.com/"
@@ -490,7 +767,7 @@ function SuccessContent() {
             </button>
           </div>
 
-          {/* 6 — Members zona link */}
+          {/* 8 — Members zona link */}
           {summary?.email && (
             <p className="text-center text-[11px] text-black/40 pb-2">
               <Link href={membersHref} className="text-[#0F6E56] font-medium hover:text-[#1D9E75] transition-colors">
