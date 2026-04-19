@@ -73,9 +73,13 @@ function TrackInner() {
   const [tip, setTip] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [pendingTimeout, setPendingTimeout] = useState(false);
+
+  const SUPPORT_WA = '385915963139';
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gpsWatchRef = useRef<number | null>(null);
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const fetchState = useCallback(async () => {
@@ -107,6 +111,18 @@ function TrackInner() {
   useEffect(() => {
     if (request?.status === 'done' || request?.status === 'cancelled') {
       if (pollRef.current) clearInterval(pollRef.current);
+    }
+    // Start 90s timeout when pending, clear if driver accepts
+    if (request?.status === 'pending') {
+      if (!pendingTimerRef.current) {
+        pendingTimerRef.current = setTimeout(() => setPendingTimeout(true), 90000);
+      }
+    } else {
+      if (pendingTimerRef.current) {
+        clearTimeout(pendingTimerRef.current);
+        pendingTimerRef.current = null;
+      }
+      setPendingTimeout(false);
     }
   }, [request?.status]);
 
@@ -425,6 +441,21 @@ function TrackInner() {
                 className="px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[13px] font-bold disabled:opacity-40"
               >→</button>
             </div>
+          </div>
+        )}
+
+        {/* 90s timeout fallback */}
+        {pendingTimeout && (
+          <div className="mt-3 rounded-2xl bg-orange-50 border border-orange-200 px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-orange-700 text-[12px] font-bold leading-tight">Nema dostupnog vozača.<br/>Kontaktirajte podršku.</p>
+            <a
+              href={`https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent(`Pozivam ${isShuttle ? 'shuttle vozača' : 'valet attendanta'} — zahtjev ${request.ticket_no ?? requestId}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-2 rounded-xl bg-green-500 text-white text-[12px] font-black whitespace-nowrap"
+            >
+              WhatsApp
+            </a>
           </div>
         )}
 

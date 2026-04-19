@@ -545,6 +545,15 @@ function SuccessContent() {
     }
   };
 
+  const SUPPORT_WHATSAPP = '385915963139';
+
+  const openWhatsAppFallback = (requestType: 'shuttle' | 'valet') => {
+    const label = requestType === 'shuttle' ? 'shuttle vozača' : 'valet attendanta';
+    const loc = summary?.location_name ?? 'lokaciji';
+    const msg = encodeURIComponent(`Pozdrav! Pozivam ${label} na lokaciji: ${loc}. Molim hitnu pomoć.`);
+    window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${msg}`, '_blank', 'noopener,noreferrer');
+  };
+
   const handleSummon = async (type: 'car' | 'shuttle') => {
     const requestType = type === 'car' ? 'valet' : 'shuttle';
     const ticketNo = summary?.session_id
@@ -556,8 +565,19 @@ function SuccessContent() {
     if (type === 'car' && valetCredits === 0) return;
     if (type === 'shuttle' && shuttleCredits === 0) return;
 
-    setSummonStatus('Šaljemo zahtjev...');
+    setSummonStatus('Provjera dostupnosti...');
     try {
+      // Check if any driver is online before creating a request
+      const availRes = await fetch('/api/drivers/available');
+      const { available } = availRes.ok ? await availRes.json() : { available: false };
+
+      if (!available) {
+        setSummonStatus(null);
+        openWhatsAppFallback(requestType);
+        return;
+      }
+
+      setSummonStatus('Vozač dolazi...');
       const res = await fetch('/api/service-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -576,8 +596,8 @@ function SuccessContent() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setSummonStatus(`Greška: ${json?.error ?? res.status}`);
-        setTimeout(() => setSummonStatus(null), 6000);
+        setSummonStatus(null);
+        openWhatsAppFallback(requestType);
         return;
       }
       const { request } = json;
@@ -590,11 +610,11 @@ function SuccessContent() {
         window.location.href = `/track?id=${request.id}&type=${requestType}`;
         return;
       }
-      setSummonStatus(`Greška: nema ID u odgovoru`);
-    } catch (err) {
-      setSummonStatus(`Greška: ${err instanceof Error ? err.message : 'mreža'}`);
+      openWhatsAppFallback(requestType);
+    } catch {
+      openWhatsAppFallback(requestType);
     }
-    setTimeout(() => setSummonStatus(null), 30000);
+    setSummonStatus(null);
   };
 
   // Addon config derived values
