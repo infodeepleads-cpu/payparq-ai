@@ -18,7 +18,7 @@ const OPTIONS = [
   { value: 2.5,  emoji: '😞', label: 'Loše',        color: '#e8372a' },
   { value: 5,    emoji: '😕', label: 'Zadovoljava', color: '#f4a400' },
   { value: 7.5,  emoji: '🙂', label: 'Dobro',       color: '#4caf50' },
-  { value: 10,   emoji: '😍', label: 'Izvrsno',     color: '#5F3DFC' },
+  { value: 10,   emoji: '😄', label: 'Izvrsno',     color: '#5F3DFC' },
 ];
 
 function overallLabel(v: number) {
