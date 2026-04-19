@@ -134,10 +134,7 @@ function ReviewInner() {
     <div className="min-h-screen bg-[#F9FAFB] font-sans">
       {/* Top bar */}
       <div className="bg-[#5F3DFC] px-5 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 bg-white rounded flex items-center justify-center shrink-0">
-          <span className="text-[#5F3DFC] font-black text-[11px] tracking-tight">PP</span>
-        </div>
-        <span className="text-white font-semibold text-sm">PayParq</span>
+        <span className="text-white font-bold text-sm tracking-wide">PayParq</span>
       </div>
 
       <div className="max-w-xl mx-auto px-4 py-6 space-y-4">
