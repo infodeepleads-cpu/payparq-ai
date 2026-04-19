@@ -64,7 +64,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [companyOpen, setCompanyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
-  const [openAllReviews, setOpenAllReviews] = useState(false);
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     howItWorks: true,
     map: true,
@@ -405,46 +404,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const cityManagerMessageHref = cityManagerWhatsapp
     ? `https://wa.me/${cityManagerWhatsapp}?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}` 
     : `https://wa.me/?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}`;
-  const defaultReviewItems = [
-    { quote: "Čisto, brzo i bez čekanja. Ušli smo i izašli bez papira.", author: "Ana M.", rating: "5.0" },
-    { quote: "Podrška je odmah odgovorila i pomogla oko promjene termina.", author: "Marko R.", rating: "4.9" },
-    { quote: "Lokacija je jednostavna, cijena jasna i sve je prošlo bez stresa.", author: "Ivana K.", rating: "4.8" },
-    { quote: "Prijava je bila jednostavna, sve jasno u aplikaciji.", author: "Petra L.", rating: "4.9" },
-    { quote: "Odlična lokacija i brz transfer.", author: "Nikola B.", rating: "4.8" },
-    { quote: "Preporučujem za putovanja, bez stresa.", author: "Maja T.", rating: "4.9" },
-    { quote: "Sve je prošlo točno kako je napisano.", author: "Luka S.", rating: "5.0" },
-    { quote: "Podrška na WhatsAppu je stvarno brza.", author: "Karlo D.", rating: "4.8" },
-    { quote: "Parking čist i pregledan, lako za pronaći.", author: "Nina P.", rating: "4.9" },
-    { quote: "Vrlo korektna cijena i usluga.", author: "Iva K.", rating: "4.8" },
-    { quote: "Bez čekanja i komplikacija kod ulaza.", author: "Dario V.", rating: "4.9" },
-    { quote: "Idealno za aerodrom, sve radi kako treba.", author: "Sara J.", rating: "5.0" },
-    { quote: "Produženje parkinga u aplikaciji radi odlično.", author: "Tomislav N.", rating: "4.8" },
-    { quote: "Jasne upute i odlična komunikacija.", author: "Marina C.", rating: "4.9" },
-    { quote: "Brza potvrda i uredno iskustvo.", author: "Ivan G.", rating: "4.8" },
-    { quote: "Vožnja je stigla odmah nakon poziva.", author: "Antonela Z.", rating: "4.9" },
-    { quote: "Najjednostavniji parking koji sam koristio.", author: "Filip H.", rating: "5.0" },
-    { quote: "Sve preporuke za ovu lokaciju.", author: "Jelena R.", rating: "4.8" },
-    { quote: "Sigurno, osvijetljeno i praktično.", author: "Bruno E.", rating: "4.9" },
-    { quote: "Točno vrijeme i odlična organizacija.", author: "Lea M.", rating: "4.8" },
-    { quote: "Aplikacija i plaćanje prošli bez problema.", author: "Matej U.", rating: "4.9" },
-    { quote: "Jako ljubazna korisnička podrška.", author: "Katarina O.", rating: "4.8" },
-    { quote: "Lokacija blizu svega bitnog.", author: "Stipe A.", rating: "4.9" },
-    { quote: "Povratak po auto također bez čekanja.", author: "Ena F.", rating: "4.8" },
-    { quote: "Jednostavno i pouzdano od početka do kraja.", author: "Dominik I.", rating: "4.9" },
-    { quote: "Sve preporuke, opet koristim.", author: "Marta Š.", rating: "5.0" },
-    { quote: "Transparentno i profesionalno.", author: "Roko P.", rating: "4.8" },
-  ];
   const hasRealReviews = (hub.review_count ?? 0) > 0 && hub.review_score != null;
-  const allReviewItems = isBaskaVodaPuntaRataLocation
-    ? []
-    : (hasRealReviews ? [] : (isInsigniaLocation ? defaultReviewItems : defaultReviewItems));
-  const totalReviews = hasRealReviews ? (hub.review_count ?? 0) : allReviewItems.length;
-  const averageRatingNumeric = hasRealReviews
-    ? (hub.review_score ?? 0)
-    : (totalReviews > 0 ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews : 0);
-  const averageRating = totalReviews > 0 ? averageRatingNumeric.toFixed(1) : "—";
-  const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "New Object";
-  const reviewItems = allReviewItems.slice(0, 3);
+  const totalReviews = hasRealReviews ? (hub.review_count ?? 0) : 0;
+  const averageRatingNumeric = hasRealReviews ? (hub.review_score ?? 0) : 0;
+  const averageRating = hasRealReviews ? averageRatingNumeric.toFixed(1) : "—";
+  const reviewsLabel = hasRealReviews ? `${averageRating} / 10 (${totalReviews})` : "New Object";
 
   const handlePrevPhoto = () => {
     setCurrentPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
@@ -1671,79 +1635,43 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.reviews ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
-                        <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3”>
-                          <div className=”flex items-center gap-6”>
-                            <div>
-                              <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Prosječna ocjena</p>
-                              <p className=”text-lg font-semibold text-black”>{hasRealReviews ? `${averageRating} / 10` : `${averageRating} / 5`}</p>
-                            </div>
-                            <div>
-                              <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Ukupno recenzija</p>
-                              <p className=”text-lg font-semibold text-black”>{totalReviews}</p>
-                            </div>
-                          </div>
-                          {!hasRealReviews && (
-                            <button
-                              type=”button”
-                              onClick={() => setOpenAllReviews((prev) => !prev)}
-                              className=”inline-flex items-center justify-center gap-2 rounded-xl border border-[#5F3DFC]/25 px-4 py-2 text-sm font-semibold text-[#5F3DFC] hover:bg-[#F5F2FF] transition-colors”
-                            >
-                              {openAllReviews ? <Minus className=”w-4 h-4” /> : <Plus className=”w-4 h-4” />}
-                              <span>{openAllReviews ? “Sakrij sve recenzije” : “Pregledaj sve recenzije”}</span>
-                            </button>
-                          )}
-                        </div>
-                        {hasRealReviews && hub.review_scores && (
-                          <div className=”grid grid-cols-2 md:grid-cols-3 gap-2”>
-                            {[
-                              ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
-                              ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
-                              ['value', 'Vrijednost'], ['location', 'Lokacija'],
-                            ].map(([key, label]) => {
-                              const scores = hub.review_scores as Record<string, number>;
-                              const v = scores[key] ?? 0;
-                              const color = v >= 9 ? '#003580' : v >= 7 ? '#5F3DFC' : '#dc2626';
-                              return (
-                                <div key={key} className=”rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between”>
-                                  <span className=”text-[11px] text-black/60”>{label}</span>
-                                  <span className=”text-[14px] font-black” style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {!hasRealReviews && (
+                        {hasRealReviews ? (
                           <>
-                            <div className=”grid gap-3 md:grid-cols-3”>
-                              {reviewItems.length > 0 ? reviewItems.map((item) => (
-                                <div key={item.author} className=”rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
-                                  <p className=”text-[11px] font-semibold text-[#5F3DFC]”>{item.rating} / 5</p>
-                                  <p className=”mt-1 text-xs leading-relaxed text-black/80”>”{item.quote}”</p>
-                                  <p className=”mt-2 text-[11px] font-semibold text-black”>{item.author}</p>
-                                </div>
-                              )) : (
-                                <div className=”md:col-span-3 rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
-                                  <p className=”text-xs leading-relaxed text-black/80”>
-                                    Recenzije su premještene na lokaciju New Object PayParq Insignia.
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                            {openAllReviews ? (
-                              <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4”>
-                                <p className=”text-sm font-semibold text-black”>Sve recenzije za ovu lokaciju</p>
-                                <div className=”mt-3 grid gap-3 md:grid-cols-2”>
-                                  {allReviewItems.map((item, idx) => (
-                                    <div key={`${item.author}-${idx}`} className=”rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
-                                      <p className=”text-[11px] font-semibold text-[#5F3DFC]”>{item.rating} / 5</p>
-                                      <p className=”mt-1 text-xs leading-relaxed text-black/80”>”{item.quote}”</p>
-                                      <p className=”mt-2 text-[11px] font-semibold text-black”>{item.author}</p>
-                                    </div>
-                                  ))}
-                                </div>
+                            <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex items-center gap-6”>
+                              <div>
+                                <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Prosječna ocjena</p>
+                                <p className=”text-lg font-semibold text-black”>{averageRating} / 10</p>
                               </div>
-                            ) : null}
+                              <div>
+                                <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Ukupno recenzija</p>
+                                <p className=”text-lg font-semibold text-black”>{totalReviews}</p>
+                              </div>
+                            </div>
+                            {hub.review_scores && (
+                              <div className=”grid grid-cols-2 md:grid-cols-3 gap-2”>
+                                {[
+                                  ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
+                                  ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
+                                  ['value', 'Vrijednost'], ['location', 'Lokacija'],
+                                ].map(([key, label]) => {
+                                  const scores = hub.review_scores as Record<string, number>;
+                                  const v = scores[key] ?? 0;
+                                  const color = v >= 9 ? '#16a34a' : v >= 7 ? '#5F3DFC' : v >= 5 ? '#f59e0b' : '#dc2626';
+                                  return (
+                                    <div key={key} className=”rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between”>
+                                      <span className=”text-[11px] text-black/60”>{label}</span>
+                                      <span className=”text-[14px] font-black” style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </>
+                        ) : (
+                          <div className=”rounded-2xl border border-black/10 bg-[#FBFAFF] p-4 md:p-5 text-center”>
+                            <p className=”text-sm font-semibold text-black/70”>New Object</p>
+                            <p className=”text-xs text-black/40 mt-1”>Ova lokacija još nema recenzija. Budite prvi koji će ocijeniti iskustvo.</p>
+                          </div>
                         )}
                         <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
