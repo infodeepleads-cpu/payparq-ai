@@ -30,6 +30,12 @@ type HubData = {
   base_price_daily_ceiling?: number;
   base_price_monthly_floor?: number;
   base_price_monthly_ceiling?: number;
+  review_score?: number | null;
+  review_count?: number | null;
+  review_scores?: {
+    security?: number; accessibility?: number; cleanliness?: number;
+    staff?: number; value?: number; location?: number;
+  } | null;
 };
 
 type SectionKey =
@@ -428,13 +434,14 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { quote: "Sve preporuke, opet koristim.", author: "Marta Š.", rating: "5.0" },
     { quote: "Transparentno i profesionalno.", author: "Roko P.", rating: "4.8" },
   ];
+  const hasRealReviews = (hub.review_count ?? 0) > 0 && hub.review_score != null;
   const allReviewItems = isBaskaVodaPuntaRataLocation
     ? []
-    : (isInsigniaLocation ? defaultReviewItems : defaultReviewItems);
-  const totalReviews = allReviewItems.length;
-  const averageRatingNumeric = totalReviews > 0
-    ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews
-    : 0;
+    : (hasRealReviews ? [] : (isInsigniaLocation ? defaultReviewItems : defaultReviewItems));
+  const totalReviews = hasRealReviews ? (hub.review_count ?? 0) : allReviewItems.length;
+  const averageRatingNumeric = hasRealReviews
+    ? (hub.review_score ?? 0)
+    : (totalReviews > 0 ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews : 0);
   const averageRating = totalReviews > 0 ? averageRatingNumeric.toFixed(1) : "—";
   const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "New Object";
   const reviewItems = allReviewItems.slice(0, 3);
@@ -1664,55 +1671,80 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.reviews ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
-                        <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                          <div className="flex items-center gap-6">
+                        <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3”>
+                          <div className=”flex items-center gap-6”>
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
-                              <p className="text-lg font-semibold text-black">{averageRating} / 5</p>
+                              <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Prosječna ocjena</p>
+                              <p className=”text-lg font-semibold text-black”>{hasRealReviews ? `${averageRating} / 10` : `${averageRating} / 5`}</p>
                             </div>
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
-                              <p className="text-lg font-semibold text-black">{totalReviews}</p>
+                              <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Ukupno recenzija</p>
+                              <p className=”text-lg font-semibold text-black”>{totalReviews}</p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setOpenAllReviews((prev) => !prev)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#5F3DFC]/25 px-4 py-2 text-sm font-semibold text-[#5F3DFC] hover:bg-[#F5F2FF] transition-colors"
-                          >
-                            {openAllReviews ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                            <span>{openAllReviews ? "Sakrij sve recenzije" : "Pregledaj sve recenzije"}</span>
-                          </button>
-                        </div>
-                        <div className="grid gap-3 md:grid-cols-3">
-                          {reviewItems.length > 0 ? reviewItems.map((item) => (
-                            <div key={item.author} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                              <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
-                              <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
-                              <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
-                            </div>
-                          )) : (
-                            <div className="md:col-span-3 rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                              <p className="text-xs leading-relaxed text-black/80">
-                                Recenzije su premještene na lokaciju New Object PayParq Insignia.
-                              </p>
-                            </div>
+                          {!hasRealReviews && (
+                            <button
+                              type=”button”
+                              onClick={() => setOpenAllReviews((prev) => !prev)}
+                              className=”inline-flex items-center justify-center gap-2 rounded-xl border border-[#5F3DFC]/25 px-4 py-2 text-sm font-semibold text-[#5F3DFC] hover:bg-[#F5F2FF] transition-colors”
+                            >
+                              {openAllReviews ? <Minus className=”w-4 h-4” /> : <Plus className=”w-4 h-4” />}
+                              <span>{openAllReviews ? “Sakrij sve recenzije” : “Pregledaj sve recenzije”}</span>
+                            </button>
                           )}
                         </div>
-                        {openAllReviews ? (
-                          <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4">
-                            <p className="text-sm font-semibold text-black">Sve recenzije za ovu lokaciju</p>
-                            <div className="mt-3 grid gap-3 md:grid-cols-2">
-                              {allReviewItems.map((item, idx) => (
-                                <div key={`${item.author}-${idx}`} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                                  <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
-                                  <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
-                                  <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
+                        {hasRealReviews && hub.review_scores && (
+                          <div className=”grid grid-cols-2 md:grid-cols-3 gap-2”>
+                            {[
+                              ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
+                              ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
+                              ['value', 'Vrijednost'], ['location', 'Lokacija'],
+                            ].map(([key, label]) => {
+                              const scores = hub.review_scores as Record<string, number>;
+                              const v = scores[key] ?? 0;
+                              const color = v >= 9 ? '#003580' : v >= 7 ? '#5F3DFC' : '#dc2626';
+                              return (
+                                <div key={key} className=”rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between”>
+                                  <span className=”text-[11px] text-black/60”>{label}</span>
+                                  <span className=”text-[14px] font-black” style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
                                 </div>
-                              ))}
-                            </div>
+                              );
+                            })}
                           </div>
-                        ) : null}
+                        )}
+                        {!hasRealReviews && (
+                          <>
+                            <div className=”grid gap-3 md:grid-cols-3”>
+                              {reviewItems.length > 0 ? reviewItems.map((item) => (
+                                <div key={item.author} className=”rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
+                                  <p className=”text-[11px] font-semibold text-[#5F3DFC]”>{item.rating} / 5</p>
+                                  <p className=”mt-1 text-xs leading-relaxed text-black/80”>”{item.quote}”</p>
+                                  <p className=”mt-2 text-[11px] font-semibold text-black”>{item.author}</p>
+                                </div>
+                              )) : (
+                                <div className=”md:col-span-3 rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
+                                  <p className=”text-xs leading-relaxed text-black/80”>
+                                    Recenzije su premještene na lokaciju New Object PayParq Insignia.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            {openAllReviews ? (
+                              <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4”>
+                                <p className=”text-sm font-semibold text-black”>Sve recenzije za ovu lokaciju</p>
+                                <div className=”mt-3 grid gap-3 md:grid-cols-2”>
+                                  {allReviewItems.map((item, idx) => (
+                                    <div key={`${item.author}-${idx}`} className=”rounded-xl border border-black/10 bg-[#FBFAFF] p-3”>
+                                      <p className=”text-[11px] font-semibold text-[#5F3DFC]”>{item.rating} / 5</p>
+                                      <p className=”mt-1 text-xs leading-relaxed text-black/80”>”{item.quote}”</p>
+                                      <p className=”mt-2 text-[11px] font-semibold text-black”>{item.author}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
                         <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             {cityManagerPhoto ? (

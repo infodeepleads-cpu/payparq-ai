@@ -33,7 +33,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
   
-  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config";
+  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config,review_score,review_count,review_scores";
 
   const { data: locationData, error } = await client
     .from("locations")

@@ -16,6 +16,7 @@ type NavItemId =
   | "vehicles"
   | "promotions"
   | "rewards"
+  | "reviews"
   | "help";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
@@ -270,6 +271,14 @@ export default function MembersPage() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
   const [permitsRows, setPermitsRows] = useState<PermitRow[]>([]);
+  const [reviewsRows, setReviewsRows] = useState<Array<{
+    id: string; location_id: string | null; overall_score: number | null;
+    score_security: number; score_accessibility: number; score_cleanliness: number;
+    score_staff: number; score_value: number; score_location: number;
+    comment: string | null; submitted_at: string | null; email_sent_at: string;
+    location_name?: string | null;
+  }>>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [permitsLoading, setPermitsLoading] = useState(false);
 
   const [devSignedIn, setDevSignedIn] = useState(false);
@@ -627,7 +636,15 @@ export default function MembersPage() {
     if (activeItem === "activity") {
       void refreshActivity();
     }
-  }, [activeItem, refreshActivity]);
+    if (activeItem === "reviews" && normalizedMemberEmail && !reviewsLoading && reviewsRows.length === 0) {
+      setReviewsLoading(true);
+      fetch(`/api/members/reviews?email=${encodeURIComponent(normalizedMemberEmail)}`)
+        .then((r) => r.json())
+        .then((j) => { setReviewsRows(j.reviews ?? []); })
+        .catch(() => {})
+        .finally(() => setReviewsLoading(false));
+    }
+  }, [activeItem, refreshActivity, normalizedMemberEmail]);
   useEffect(() => {
     if (!hasMemberIdentity) {
       setActivityRows([]);
@@ -2391,6 +2408,70 @@ export default function MembersPage() {
       );
     }
 
+    if (activeItem === "reviews") {
+      const CATEGORY_LABELS: Record<string, string> = {
+        score_security: 'Sigurnost', score_accessibility: 'Pristupačnost',
+        score_cleanliness: 'Čistoća', score_staff: 'Osoblje',
+        score_value: 'Vrijednost', score_location: 'Lokacija',
+      };
+      function scoreLabel(v: number) {
+        if (v >= 9) return 'Izvrsno'; if (v >= 8) return 'Odlično';
+        if (v >= 7) return 'Dobro'; if (v >= 6) return 'Zadovoljava'; return 'Loše';
+      }
+      function scoreColor(v: number) {
+        if (v >= 9) return '#003580'; if (v >= 7) return '#5F3DFC'; return '#dc2626';
+      }
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-black">Moje recenzije</h2>
+          <p className="text-sm text-black/70">Recenzije koje ste dali za parkiranje na PayParq lokacijama.</p>
+          {reviewsLoading && (
+            <div className="flex items-center gap-2 text-sm text-black/50">
+              <div className="w-4 h-4 border-2 border-[#5F3DFC] border-t-transparent rounded-full animate-spin" />
+              Učitavanje...
+            </div>
+          )}
+          {!reviewsLoading && reviewsRows.length === 0 && (
+            <div className="rounded-xl border border-black/10 bg-[#FBFAFF] p-4 text-sm text-black/60">
+              Još niste dali nijednu recenziju. Nakon završetka parkinga dobit ćete e-mail s linkom za recenziju.
+            </div>
+          )}
+          {!reviewsLoading && reviewsRows.map((row) => (
+            <div key={row.id} className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+                <div>
+                  <p className="text-sm font-semibold text-black">{row.location_name ?? 'PayParq'}</p>
+                  <p className="text-[11px] text-black/40">
+                    {row.submitted_at ? new Date(row.submitted_at).toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[22px] font-black leading-none" style={{ color: scoreColor(row.overall_score ?? 0) }}>{row.overall_score?.toFixed(1) ?? '—'}</p>
+                  <p className="text-[11px] text-black/40">{row.overall_score ? scoreLabel(row.overall_score) : ''}</p>
+                </div>
+              </div>
+              <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                {(['score_security','score_accessibility','score_cleanliness','score_staff','score_value','score_location'] as const).map((key) => {
+                  const v = row[key] ?? 0;
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-lg bg-[#F9FAFB] px-2 py-1.5">
+                      <span className="text-[11px] text-black/60">{CATEGORY_LABELS[key]}</span>
+                      <span className="text-[13px] font-black" style={{ color: v > 0 ? scoreColor(v) : '#9ca3af' }}>{v > 0 ? v : '—'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {row.comment && (
+                <div className="px-4 pb-3">
+                  <p className="text-[12px] text-black/60 italic">"{row.comment}"</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2622,6 +2703,17 @@ export default function MembersPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setActiveItem("reviews")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "reviews"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Recenzije</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveItem("help")}
                     className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
                       activeItem === "help"
@@ -2745,6 +2837,20 @@ export default function MembersPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => setActiveItem("reviews")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "reviews"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        ★
+                      </span>
+                      <span>Recenzije</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setActiveItem("help")}
                       className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
                         activeItem === "help"
@@ -2818,6 +2924,8 @@ export default function MembersPage() {
                         ? "Promotions"
                         : activeItem === "rewards"
                         ? "Rewards"
+                        : activeItem === "reviews"
+                        ? "Recenzije"
                         : "Help"}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">
