@@ -28,6 +28,15 @@ const staticRoutes = [
   "/vision",
 ];
 
+const blogRoutes = [
+  "/news/blog/parking-aerodrom-split",
+  "/news/blog/parking-trogir",
+  "/news/blog/parking-baska-voda-punta-rata",
+  "/news/blog/smart-parking-hrvatska-2025",
+  "/news/blog/parking-dalmacija-ljeto-2025",
+  "/news/blog/park-taxi-brela",
+];
+
 function resolveSiteUrl() {
   const value = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (value) return value.replace(/\/+$/, "");
@@ -63,5 +72,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // fail silently — static routes still served
   }
 
-  return [...staticEntries, ...locationEntries];
+  const blogEntries: MetadataRoute.Sitemap = blogRoutes.map((route) => ({
+    url: `${siteUrl}${route}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.8,
+  }));
+
+  return [...staticEntries, ...blogEntries, ...locationEntries];
 }

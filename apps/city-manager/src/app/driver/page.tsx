@@ -176,7 +176,7 @@ export default function DriverPage() {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         await supabase.from('drivers').upsert({
-          id: user.id,
+          id: effectiveUser.id,
           last_location: `POINT(${longitude} ${latitude})`,
           is_online: true,
         }, { onConflict: 'id' });
@@ -184,15 +184,15 @@ export default function DriverPage() {
       (err) => setGpsError(`GPS greška: ${err.message}`),
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
     );
-  }, [user, supabase]);
+  }, [effectiveUser, supabase]);
 
   const stopGps = useCallback(async () => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    if (user) {
-      await supabase.from('drivers').upsert({ id: user.id, is_online: false }, { onConflict: 'id' });
+    if (effectiveUser) {
+      await supabase.from('drivers').upsert({ id: effectiveUser.id, is_online: false }, { onConflict: 'id' });
     }
     knownIdsRef.current.clear();
     document.title = 'PayParq Driver';
@@ -209,10 +209,10 @@ export default function DriverPage() {
   };
 
   const acceptRequest = async (req: ServiceRequest) => {
-    if (!user) return;
+    if (!effectiveUser) return;
     await supabase.from('service_requests').update({
       status: 'accepted',
-      driver_id: user.id,
+      driver_id: effectiveUser.id,
       eta_minutes: parseInt(etaInput) || 5,
     }).eq('id', req.id);
     setSelectedId(req.id);
@@ -241,7 +241,10 @@ export default function DriverPage() {
   const visible = requests.filter((r) => r.type === activeTab);
   const selected = requests.find((r) => r.id === selectedId) ?? null;
 
-  if (!user) {
+  const isDev = process.env.NODE_ENV === 'development';
+  const effectiveUser = user ?? (isDev ? { id: 'dev-driver', email: 'dev@local.test' } : null);
+
+  if (!effectiveUser) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center flex-col gap-4">
         <p className="text-white/60 text-sm">Molimo prijavite se u sustav.</p>
@@ -256,7 +259,7 @@ export default function DriverPage() {
       <div className="px-4 pt-5 pb-3 flex items-center justify-between border-b border-white/10">
         <div>
           <p className="text-white font-bold text-base">PayParq Driver</p>
-          <p className="text-white/40 text-[11px]">{user.email}</p>
+          <p className="text-white/40 text-[11px]">{effectiveUser.email}</p>
         </div>
         <button
           onClick={toggleOnline}
@@ -310,7 +313,7 @@ export default function DriverPage() {
         {visible.map((req) => {
           const isSelected = req.id === selectedId;
           const isPending = req.status === 'pending';
-          const isOwnedByMe = req.driver_id === user.id;
+          const isOwnedByMe = req.driver_id === effectiveUser.id;
           const canAdvance = isOwnedByMe && !!STATUS_NEXT[req.status];
 
           return (

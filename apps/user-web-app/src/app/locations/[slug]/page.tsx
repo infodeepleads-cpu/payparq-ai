@@ -215,7 +215,50 @@ export default async function LocationPage(props: { params: Promise<{ slug: stri
     );
   }
   
-  return <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />;
+  const { hub, priceLabel } = data;
+  const hubUrl = `https://www.payparq.com/locations/${hub.canonical_slug ?? params.slug}`;
+  const localBusinessLd = {
+    "@context": "https://schema.org",
+    "@type": "ParkingFacility",
+    "@id": `${hubUrl}#parking`,
+    "name": hub.name,
+    "url": hubUrl,
+    "description": `Secure parking at ${hub.name}. From ${priceLabel}/hr — AI camera monitoring, no ticket needed, instant booking on PayParq.`,
+    "priceRange": priceLabel,
+    "openingHours": "Mo-Su 00:00-24:00",
+    "paymentAccepted": "Credit Card, Debit Card",
+    "currenciesAccepted": "EUR",
+    ...(hub.address ? {
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": hub.address.split(",")[0]?.trim() ?? hub.address,
+        "addressCountry": "HR",
+      },
+    } : {}),
+    ...(hub.latitude && hub.longitude ? {
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": hub.latitude,
+        "longitude": hub.longitude,
+      },
+    } : {}),
+    "image": Array.isArray(hub.verification_photos) && hub.verification_photos[0]
+      ? hub.verification_photos[0]
+      : undefined,
+    "brand": { "@type": "Brand", "name": "PayParq" },
+    "amenityFeature": [
+      { "@type": "LocationFeatureSpecification", "name": "AI License Plate Recognition", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "24/7 Surveillance", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Online Booking", "value": true },
+    ],
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }} />
+      <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />
+    </>
+  );
 }
 
 export const revalidate = 300;
