@@ -86,8 +86,10 @@ function TrackInner() {
   const [msgInput, setMsgInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestPos, setGuestPos] = useState<[number, number] | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gpsWatchRef = useRef<number | null>(null);
 
   const isShuttle = type === 'shuttle';
   const accent = isShuttle ? '#0F6E56' : '#5F3DFC';
@@ -115,10 +117,20 @@ function TrackInner() {
   useEffect(() => {
     if (!requestId) { setError('Nema ID zahtjeva.'); return; }
     fetchState();
-    // Poll every 4 seconds for driver location + status
     pollRef.current = setInterval(fetchState, 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [requestId, fetchState]);
+
+  // Guest GPS
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => setGuestPos([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+    );
+    return () => { if (gpsWatchRef.current !== null) navigator.geolocation.clearWatch(gpsWatchRef.current); };
+  }, []);
 
   // Stop polling when done/cancelled/arrived
   useEffect(() => {
@@ -149,7 +161,7 @@ function TrackInner() {
   const pickupPos: [number, number] | null =
     request?.pickup_lat && request?.pickup_lng
       ? [request.pickup_lat, request.pickup_lng]
-      : null;
+      : guestPos ?? null;
 
   if (error) {
     return (
@@ -205,18 +217,11 @@ function TrackInner() {
 
       {/* Map */}
       <div className="mx-4 rounded-2xl overflow-hidden" style={{ height: 240 }}>
-        {(driverPos || pickupPos) ? (
-          <TrackMap
-            driverPos={driverPos}
-            pickupPos={pickupPos}
-            accent={accent}
-            isShuttle={isShuttle}
-          />
-        ) : (
-          <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center">
-            <p className="text-white/30 text-xs">Čekamo lokaciju vozača...</p>
-          </div>
-        )}
+        <TrackMap
+          driverPos={driverPos}
+          pickupPos={pickupPos}
+          guestPos={guestPos}
+        />
       </div>
 
       {/* Valet car info */}
