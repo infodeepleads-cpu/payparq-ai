@@ -18,7 +18,7 @@ const OPTIONS = [
   { value: 2.5,  emoji: '😞', label: 'Loše',        color: '#e8372a' },
   { value: 5,    emoji: '😕', label: 'Zadovoljava', color: '#f4a400' },
   { value: 7.5,  emoji: '🙂', label: 'Dobro',       color: '#4caf50' },
-  { value: 10,   emoji: '😍', label: 'Izvrsno',     color: '#003580' },
+  { value: 10,   emoji: '😍', label: 'Izvrsno',     color: '#5F3DFC' },
 ];
 
 function overallLabel(v: number) {
@@ -30,7 +30,7 @@ function overallLabel(v: number) {
 }
 
 function overallColor(v: number) {
-  if (v >= 9) return '#003580';
+  if (v >= 9) return '#5F3DFC';
   if (v >= 7) return '#4caf50';
   if (v >= 5) return '#f4a400';
   return '#e8372a';
@@ -39,8 +39,8 @@ function overallColor(v: number) {
 export default function ReviewPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#f2f6fa] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#003580] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#5F3DFC] border-t-transparent rounded-full animate-spin" />
       </div>
     }>
       <ReviewInner />
@@ -98,15 +98,15 @@ function ReviewInner() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-[#003580] flex flex-col items-center justify-center text-white text-center px-6">
+      <div className="min-h-screen bg-[#5F3DFC] flex flex-col items-center justify-center text-white text-center px-6">
         <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
-          <svg className="w-10 h-10 text-[#003580]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+          <svg className="w-10 h-10 text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <h1 className="text-2xl font-bold mb-2">Hvala na recenziji!</h1>
         <p className="text-white/70 text-sm mb-8">Vaša povratna informacija pomaže poboljšati iskustvo svim gostima.</p>
-        <a href="/" className="px-8 py-3 bg-white text-[#003580] font-bold rounded-lg text-sm hover:bg-white/90 transition-colors">
+        <a href="/" className="px-8 py-3 bg-white text-[#5F3DFC] font-bold rounded-lg text-sm hover:bg-white/90 transition-colors">
           Povratak na PayParq
         </a>
       </div>
@@ -115,27 +115,27 @@ function ReviewInner() {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#f2f6fa] flex flex-col items-center justify-center text-center px-6">
+      <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center text-center px-6">
         <p className="text-black/50 text-sm mb-4">{loadError}</p>
-        <a href="/" className="text-[#003580] text-sm font-semibold underline">Povratak na PayParq</a>
+        <a href="/" className="text-[#5F3DFC] text-sm font-semibold underline">Povratak na PayParq</a>
       </div>
     );
   }
 
   if (!locationName) {
     return (
-      <div className="min-h-screen bg-[#f2f6fa] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[#003580] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#5F3DFC] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f2f6fa] font-sans">
+    <div className="min-h-screen bg-[#F9FAFB] font-sans">
       {/* Top bar */}
-      <div className="bg-[#003580] px-5 py-4 flex items-center gap-3">
+      <div className="bg-[#5F3DFC] px-5 py-4 flex items-center gap-3">
         <div className="w-8 h-8 bg-white rounded flex items-center justify-center shrink-0">
-          <span className="text-[#003580] font-black text-[11px] tracking-tight">PP</span>
+          <span className="text-[#5F3DFC] font-black text-[11px] tracking-tight">PP</span>
         </div>
         <span className="text-white font-semibold text-sm">PayParq</span>
       </div>
@@ -144,7 +144,7 @@ function ReviewInner() {
 
         {/* Location header card */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="bg-[#003580] px-5 py-5">
+          <div className="bg-[#5F3DFC] px-5 py-5">
             <p className="text-white/70 text-xs font-medium mb-1 uppercase tracking-wider">Recenzija za</p>
             <h1 className="text-white text-xl font-bold leading-tight">{locationName}</h1>
           </div>
@@ -191,19 +191,19 @@ function ReviewInner() {
 
               {/* Score bar */}
               <div className="px-5 py-2">
-                <div className="w-full h-1.5 bg-[#e8edf2] rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#ede9fe] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-300"
                     style={{
                       width: v > 0 ? `${v * 10}%` : '0%',
-                      background: selected?.color ?? '#e8edf2',
+                      background: selected?.color ?? '#ede9fe',
                     }}
                   />
                 </div>
               </div>
 
               {/* Emoji buttons */}
-              <div className="grid grid-cols-4 gap-px bg-[#e8edf2] border-t border-[#e8edf2] mt-2">
+              <div className="grid grid-cols-4 gap-px bg-[#ede9fe] border-t border-[#ede9fe] mt-2">
                 {OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -237,7 +237,7 @@ function ReviewInner() {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Što vam se svidjelo? Što biste poboljšali?"
             rows={4}
-            className="w-full bg-[#f2f6fa] border border-[#e8edf2] rounded-lg px-4 py-3 text-sm text-black placeholder:text-black/25 outline-none focus:border-[#003580] resize-none transition-colors"
+            className="w-full bg-[#F9FAFB] border border-[#ede9fe] rounded-lg px-4 py-3 text-sm text-black placeholder:text-black/25 outline-none focus:border-[#5F3DFC] resize-none transition-colors"
           />
         </div>
 
@@ -246,7 +246,7 @@ function ReviewInner() {
           onClick={submit}
           disabled={!allFilled || submitting}
           className="w-full py-4 rounded-xl font-bold text-[15px] text-white shadow transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40"
-          style={{ background: '#003580' }}
+          style={{ background: '#5F3DFC' }}
         >
           {submitting ? 'Šaljemo recenziju...' : allFilled ? 'Pošalji recenziju' : `Ocijenite još ${6 - filledCount} kategorij${6 - filledCount === 1 ? 'u' : 6 - filledCount < 5 ? 'e' : 'a'}`}
         </button>
