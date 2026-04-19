@@ -16,6 +16,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'invalid_type' }, { status: 400 });
     }
 
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const safeLocationId = (typeof location_id === 'string' && UUID_RE.test(location_id))
+      ? location_id : null;
+
     const client = supabaseAdmin;
     if (!client) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
 
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
       .from('service_requests')
       .insert({
         type,
-        location_id: location_id ?? null,
+        location_id: safeLocationId,
         session_id: session_id ?? null,
         ticket_no: ticket_no ?? null,
         guest_name: guest_name ?? null,
