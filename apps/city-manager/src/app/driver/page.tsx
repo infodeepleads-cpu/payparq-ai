@@ -60,6 +60,7 @@ export default function DriverPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState('');
   const [etaInput, setEtaInput] = useState('5');
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -221,7 +222,11 @@ export default function DriverPage() {
   const advanceStatus = async (req: ServiceRequest) => {
     const next = STATUS_NEXT[req.status];
     if (!next) return;
+    if (next === 'done') setCompletingId(req.id);
     await supabase.from('service_requests').update({ status: next }).eq('id', req.id);
+    if (next === 'done') {
+      setTimeout(() => setCompletingId(null), 2500);
+    }
     fetchRequests();
   };
 
@@ -345,7 +350,12 @@ export default function DriverPage() {
 
               {/* Action buttons */}
               <div className="px-4 pb-3 flex gap-2">
-                {isPending && !req.driver_id && (
+                {completingId === req.id && (
+                  <div className="flex-1 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 text-[13px] font-bold text-center">
+                    ✓ Završeno
+                  </div>
+                )}
+                {completingId !== req.id && isPending && !req.driver_id && (
                   <button
                     onClick={() => acceptRequest(req)}
                     className="flex-1 py-2.5 rounded-xl bg-white text-black text-[13px] font-bold"
@@ -353,10 +363,14 @@ export default function DriverPage() {
                     ✓ Prihvati
                   </button>
                 )}
-                {canAdvance && STATUS_NEXT_LABEL[req.status] && (
+                {completingId !== req.id && canAdvance && STATUS_NEXT_LABEL[req.status] && (
                   <button
                     onClick={() => advanceStatus(req)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-[13px] font-semibold"
+                    className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold ${
+                      req.status === 'arrived'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white/10 border border-white/20 text-white font-semibold'
+                    }`}
                   >
                     {STATUS_NEXT_LABEL[req.status]}
                   </button>
