@@ -174,6 +174,7 @@ export default function DriverPage() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
+        if (!effectiveUser) return;
         const { latitude, longitude } = pos.coords;
         await supabase.from('drivers').upsert({
           id: effectiveUser.id,

@@ -707,7 +707,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Is customer support available?`, a: `24/7 WhatsApp and in‑app support. Contact the City Manager directly from your confirmation.` },
     { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
-    { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we’ll help update your reservation.` },
+    { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we'll help update your reservation.` },
     { q: `Je li cijena transparentna?`, a: `Da. Jasne satnice bez skrivenih naknada. Ukupno se prikazuje prije nego što potvrdite, uz dodani Stripeov trošak obrade transakcije.` },
     { q: `Mogu li naručiti prijevoz ili kupiti osiguranje s vaše stranice?`, a: `Da. Nakon što je vaša rezervacija potvrđena, bit ćete preusmjereni na uspješnu stranicu na kojoj možete dogovoriti Parq vožnju, kupiti osiguranje i preuzeti potvrdu o rezervaciji. Osiguranje je moguće aplicirati samo za verificirane korisnike, ovisno o lokaciji. <a href="/success" class="underline text-blue-600" target="_blank">Pogledajte demonstraciju stranice uspjeha</a>` },
   ];
@@ -1637,18 +1637,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
                         {hasRealReviews ? (
                           <>
-                            <div className=”rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex items-center gap-6”>
+                            <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex items-center gap-6">
                               <div>
-                                <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Prosječna ocjena</p>
-                                <p className=”text-lg font-semibold text-black”>{averageRating} / 10</p>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
+                                <p className="text-lg font-semibold text-black">{averageRating} / 10</p>
                               </div>
                               <div>
-                                <p className=”text-[11px] uppercase tracking-[0.14em] text-black/60”>Ukupno recenzija</p>
-                                <p className=”text-lg font-semibold text-black”>{totalReviews}</p>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
+                                <p className="text-lg font-semibold text-black">{totalReviews}</p>
                               </div>
                             </div>
                             {hub.review_scores && (
-                              <div className=”grid grid-cols-2 md:grid-cols-3 gap-2”>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                 {[
                                   ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
                                   ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
@@ -1658,9 +1658,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                                   const v = scores[key] ?? 0;
                                   const color = v >= 9 ? '#16a34a' : v >= 7 ? '#5F3DFC' : v >= 5 ? '#f59e0b' : '#dc2626';
                                   return (
-                                    <div key={key} className=”rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between”>
-                                      <span className=”text-[11px] text-black/60”>{label}</span>
-                                      <span className=”text-[14px] font-black” style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
+                                    <div key={key} className="rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between">
+                                      <span className="text-[11px] text-black/60">{label}</span>
+                                      <span className="text-[14px] font-black" style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
                                     </div>
                                   );
                                 })}
@@ -1668,9 +1668,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                             )}
                           </>
                         ) : (
-                          <div className=”rounded-2xl border border-black/10 bg-[#FBFAFF] p-4 md:p-5 text-center”>
-                            <p className=”text-sm font-semibold text-black/70”>New Object</p>
-                            <p className=”text-xs text-black/40 mt-1”>Ova lokacija još nema recenzija. Budite prvi koji će ocijeniti iskustvo.</p>
+                          <div className="rounded-2xl border border-black/10 bg-[#FBFAFF] p-4 md:p-5 text-center">
+                            <p className="text-sm font-semibold text-black/70">New Object</p>
+                            <p className="text-xs text-black/40 mt-1">Ova lokacija još nema recenzija. Budite prvi koji će ocijeniti iskustvo.</p>
                           </div>
                         )}
                         <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
