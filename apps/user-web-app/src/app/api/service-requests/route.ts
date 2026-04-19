@@ -5,33 +5,45 @@ export const dynamic = 'force-dynamic';
 
 // POST /api/service-requests — guest creates a request
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  try {
+    const body = await req.json().catch(() => null);
+    if (!body) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
-  const { type, location_id, session_id, ticket_no, guest_name, pickup_label,
-          pickup_lat, pickup_lng, plate, parking_zone } = body as Record<string, string | number>;
+    const { type, location_id, session_id, ticket_no, guest_name, pickup_label,
+            pickup_lat, pickup_lng, plate, parking_zone } = body as Record<string, unknown>;
 
-  if (!type || !['shuttle', 'valet'].includes(type as string)) {
-    return NextResponse.json({ error: 'invalid_type' }, { status: 400 });
+    if (!type || !['shuttle', 'valet'].includes(type as string)) {
+      return NextResponse.json({ error: 'invalid_type' }, { status: 400 });
+    }
+
+    const client = supabaseAdmin;
+    if (!client) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
+
+    const { data, error } = await client
+      .from('service_requests')
+      .insert({
+        type,
+        location_id: location_id ?? null,
+        session_id: session_id ?? null,
+        ticket_no: ticket_no ?? null,
+        guest_name: guest_name ?? null,
+        pickup_label: pickup_label ?? null,
+        pickup_lat: pickup_lat ?? null,
+        pickup_lng: pickup_lng ?? null,
+        plate: plate ?? null,
+        parking_zone: parking_zone ?? null,
+        status: 'pending',
+      })
+      .select('id,type,status,eta_minutes,driver_id')
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message, code: error.code }, { status: 500 });
+    return NextResponse.json({ request: data });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[service-requests POST]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-
-  const client = supabaseAdmin;
-  if (!client) return NextResponse.json({ error: 'db_unavailable' }, { status: 500 });
-
-  const { data, error } = await client
-    .from('service_requests')
-    .insert({
-      type, location_id, session_id, ticket_no, guest_name,
-      pickup_label, pickup_lat, pickup_lng,
-      plate: plate ?? null,
-      parking_zone: parking_zone ?? null,
-      status: 'pending',
-    })
-    .select('id,type,status,eta_minutes,driver_id')
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ request: data });
 }
 
 // GET /api/service-requests?id=xxx — poll request + driver info

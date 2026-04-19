@@ -570,11 +570,17 @@ function SuccessContent() {
           pickup_label: pickup?.label ?? summary?.location_name ?? null,
           pickup_lat: pickup?.lat ?? null,
           pickup_lng: pickup?.lng ?? null,
-          plate: null, // populated by driver from session lookup
+          plate: null,
           parking_zone: type === 'car' ? ((cfg.valet as { lot_zone?: string } | undefined)?.lot_zone ?? null) : null,
         }),
       });
-      const { request } = await res.json();
+      const json = await res.json();
+      if (!res.ok) {
+        setSummonStatus(`Greška: ${json?.error ?? res.status}`);
+        setTimeout(() => setSummonStatus(null), 6000);
+        return;
+      }
+      const { request } = json;
       if (request?.id) {
         if (type === 'car') {
           if (valetCredits !== '∞') setValetCredits((v) => (v as number) - 1);
@@ -584,11 +590,11 @@ function SuccessContent() {
         window.location.href = `/track?id=${request.id}&type=${requestType}`;
         return;
       }
-    } catch {
-      // fallback below
+      setSummonStatus(`Greška: nema ID u odgovoru`);
+    } catch (err) {
+      setSummonStatus(`Greška: ${err instanceof Error ? err.message : 'mreža'}`);
     }
-    setSummonStatus('Greška pri slanju zahtjeva.');
-    setTimeout(() => setSummonStatus(null), 4000);
+    setTimeout(() => setSummonStatus(null), 30000);
   };
 
   // Addon config derived values

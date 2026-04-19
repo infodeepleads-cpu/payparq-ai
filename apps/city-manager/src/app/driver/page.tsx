@@ -64,6 +64,8 @@ export default function DriverPage() {
   const watchIdRef = useRef<number | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Auth
   useEffect(() => {
@@ -72,14 +74,62 @@ export default function DriverPage() {
     });
   }, [supabase]);
 
+  const playBeep = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {
+      // AudioContext not available
+    }
+  }, []);
+
   const fetchRequests = useCallback(async () => {
     const { data } = await supabase
       .from('service_requests')
       .select('*')
       .in('status', ['pending', 'accepted', 'en_route', 'arrived'])
       .order('created_at', { ascending: false });
-    setRequests((data as ServiceRequest[]) ?? []);
-  }, [supabase]);
+    const rows = (data as ServiceRequest[]) ?? [];
+    setRequests(rows);
+
+    // Detect new pending requests for notifications
+    const newPending = rows.filter(
+      (r) => r.status === 'pending' && !knownIdsRef.current.has(r.id)
+    );
+    if (newPending.length > 0 && knownIdsRef.current.size > 0) {
+      // Only notify after initial load (size > 0 means we already have a baseline)
+      newPending.forEach((r) => {
+        const label = r.type === 'shuttle' ? '🚌 Shuttle' : '🚗 Valet';
+        const detail = r.guest_name ?? r.pickup_label ?? r.ticket_no ?? '';
+        if (Notification.permission === 'granted') {
+          new Notification(`Novi ${r.type} zahtjev`, {
+            body: detail ? `${label} · ${detail}` : label,
+            icon: '/icon-192.png',
+            tag: r.id,
+          });
+        }
+        playBeep();
+      });
+    }
+    // Always update known IDs baseline
+    rows.forEach((r) => knownIdsRef.current.add(r.id));
+
+    // Update tab title with pending count
+    const pendingCount = rows.filter((r) => r.status === 'pending').length;
+    document.title = pendingCount > 0 ? `(${pendingCount}) PayParq Driver` : 'PayParq Driver';
+  }, [supabase, playBeep]);
 
   const fetchMessages = useCallback(async (requestId: string) => {
     const { data } = await supabase
@@ -108,10 +158,18 @@ export default function DriverPage() {
   }, [messages]);
 
   // GPS broadcasting
+  const requestNotificationPermission = useCallback(async () => {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+  }, []);
+
   const startGps = useCallback(() => {
     if (!user) return;
     if (!navigator.geolocation) { setGpsError('GPS nije dostupan'); return; }
     setGpsError(null);
+    requestNotificationPermission();
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
@@ -135,6 +193,8 @@ export default function DriverPage() {
     if (user) {
       await supabase.from('drivers').upsert({ id: user.id, is_online: false }, { onConflict: 'id' });
     }
+    knownIdsRef.current.clear();
+    document.title = 'PayParq Driver';
   }, [user, supabase]);
 
   const toggleOnline = () => {
