@@ -158,6 +158,9 @@ export default function DriverPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const isDev = process.env.NODE_ENV === 'development';
+  const effectiveUser = user ?? (isDev ? { id: 'dev-driver', email: 'dev@local.test' } : null);
+
   // GPS broadcasting
   const requestNotificationPermission = useCallback(async () => {
     if (typeof Notification === 'undefined') return;
@@ -167,7 +170,7 @@ export default function DriverPage() {
   }, []);
 
   const startGps = useCallback(() => {
-    if (!user) return;
+    if (!effectiveUser) return;
     if (!navigator.geolocation) { setGpsError('GPS nije dostupan'); return; }
     setGpsError(null);
     requestNotificationPermission();
@@ -241,9 +244,6 @@ export default function DriverPage() {
 
   const visible = requests.filter((r) => r.type === activeTab);
   const selected = requests.find((r) => r.id === selectedId) ?? null;
-
-  const isDev = process.env.NODE_ENV === 'development';
-  const effectiveUser = user ?? (isDev ? { id: 'dev-driver', email: 'dev@local.test' } : null);
 
   if (!effectiveUser) {
     return (
