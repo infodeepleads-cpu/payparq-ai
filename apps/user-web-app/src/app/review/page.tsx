@@ -14,17 +14,17 @@ const CATEGORIES = [
 
 type ScoreKey = typeof CATEGORIES[number]['key'];
 
-function scoreLabel(v: number) {
-  if (v >= 9) return 'Izvrsno';
-  if (v >= 8) return 'Odlično';
-  if (v >= 7) return 'Dobro';
-  if (v >= 6) return 'Zadovoljava';
-  return 'Loše';
-}
+const SMILEYS = [
+  { value: 2.5,  emoji: '😞', label: 'Loše' },
+  { value: 5,    emoji: '😐', label: 'Zadovoljava' },
+  { value: 7.5,  emoji: '🙂', label: 'Dobro' },
+  { value: 10,   emoji: '😄', label: 'Izvrsno' },
+];
 
 function scoreColor(v: number) {
   if (v >= 9) return '#003580';
   if (v >= 7) return '#5F3DFC';
+  if (v >= 4) return '#f59e0b';
   return '#dc2626';
 }
 
@@ -70,10 +70,14 @@ function ReviewInner() {
   const submit = async () => {
     if (!allFilled || !token) return;
     setSubmitting(true);
+    // Round to nearest integer for DB (scores are smallint 1–10)
+    const intScores = Object.fromEntries(
+      Object.entries(scores).map(([k, v]) => [k, Math.round(v)])
+    );
     const res = await fetch('/api/reviews/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, ...scores, comment }),
+      body: JSON.stringify({ token, ...intScores, comment }),
     });
     if (res.ok) setDone(true);
     else setLoadError('Greška pri slanju. Pokušajte ponovo.');
@@ -126,7 +130,7 @@ function ReviewInner() {
             <span className="text-[13px] font-bold text-black/50 uppercase tracking-wider">Ukupna ocjena</span>
             <div className="flex items-center gap-2">
               <span className="text-[32px] font-black leading-none" style={{ color: scoreColor(overall) }}>{overall.toFixed(1)}</span>
-              <span className="text-[13px] font-bold text-black/40">{scoreLabel(overall)}</span>
+              <span className="text-[13px] font-bold text-black/40">/ 10</span>
             </div>
           </div>
         )}
@@ -135,32 +139,38 @@ function ReviewInner() {
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-black/5 mb-4">
           {CATEGORIES.map((cat, i) => {
             const v = scores[cat.key];
+            const selected = SMILEYS.find((s) => s.value === v);
             return (
               <div key={cat.key} className={`px-5 py-4 ${i < CATEGORIES.length - 1 ? 'border-b border-black/5' : ''}`}>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-[14px] font-black text-black">{cat.hr}</p>
                     <p className="text-[11px] text-black/40">{cat.desc}</p>
                   </div>
-                  {v > 0 && (
+                  {selected && (
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[22px] font-black leading-none" style={{ color: scoreColor(v) }}>{v}</span>
-                      <span className="text-[11px] font-bold text-black/30">{scoreLabel(v)}</span>
+                      <span className="text-[22px] leading-none">{selected.emoji}</span>
+                      <span className="text-[11px] font-bold text-black/40">{selected.label}</span>
                     </div>
                   )}
                 </div>
-                {/* Score buttons 1–10 */}
-                <div className="flex gap-1">
-                  {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                {/* Smiley buttons */}
+                <div className="flex gap-2">
+                  {SMILEYS.map((s) => (
                     <button
-                      key={n}
-                      onClick={() => setScores((s) => ({ ...s, [cat.key]: n }))}
-                      className="flex-1 py-2 rounded-lg text-[11px] font-black transition-all"
+                      key={s.value}
+                      onClick={() => setScores((prev) => ({ ...prev, [cat.key]: s.value }))}
+                      className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all"
                       style={{
-                        background: v >= n ? scoreColor(v) : '#F3F4F6',
-                        color: v >= n ? '#fff' : '#9ca3af',
+                        background: v === s.value ? scoreColor(s.value) : '#F3F4F6',
                       }}
-                    >{n}</button>
+                    >
+                      <span className="text-[22px] leading-none">{s.emoji}</span>
+                      <span
+                        className="text-[10px] font-black"
+                        style={{ color: v === s.value ? '#fff' : '#9ca3af' }}
+                      >{s.value}</span>
+                    </button>
                   ))}
                 </div>
               </div>
