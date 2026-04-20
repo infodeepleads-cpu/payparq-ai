@@ -10,7 +10,7 @@ const CANONICAL = `${SITE_URL}/news/blog/${SLUG}`;
 export const metadata: Metadata = {
   title: "Parking Aerodrom Split – Jeftino i Sigurno Parkiranje uz SPU | PayParq",
   description:
-    "Trebate parking blizu Aerodroma Split (SPU)? PayParq nudi sigurno parkiranje od €0.50/sat uz shuttle do terminala. Bez papira, bez čekanja — registracija tablice kamerom.",
+    "Trebate parking blizu Aerodroma Split (SPU)? PayParq nudi sigurno parkiranje od €0.50/sat. Park & Taxi opcija uključuje shuttle do terminala. Bez papira, bez čekanja — registracija tablice kamerom.",
   keywords: [
     "parking aerodrom Split",
     "parking Split airport",
@@ -22,22 +22,22 @@ export const metadata: Metadata = {
     "dugo parkiranje Split aerodrom",
     "PayParq Split",
     "parking Hrvatska aerodrom",
-    "shuttle parking aerodrom Split",
+    "park and taxi aerodrom Split",
     "cheap parking Split airport Croatia",
     "long stay parking Split airport",
   ],
   alternates: { canonical: CANONICAL },
   openGraph: {
     type: "article",
-    title: "Parking Aerodrom Split – od €0.50/sat uz shuttle do terminala | PayParq",
+    title: "Parking Aerodrom Split – od €0.50/sat, Park & Taxi opcija | PayParq",
     description:
-      "Sigurno i jeftino parkiranje uz Split Airport (SPU) — €0.50/sat, AI kamera registracija tablice, shuttle do terminala. Rezervirajte online bez aplikacije.",
+      "Sigurno i jeftino parkiranje uz Split Airport (SPU) — od €0.50/sat, AI kamera registracija tablice. Park & Taxi opcija uključuje shuttle do terminala. Rezervirajte online bez aplikacije.",
     url: CANONICAL,
     siteName: "PayParq",
     locale: "hr_HR",
     images: [{ url: `${SITE_URL}/og-split-airport.jpg`, width: 1200, height: 630, alt: "PayParq parking Split aerodrom" }],
   },
-  twitter: { card: "summary_large_image", title: "Parking Aerodrom Split od €0.50/sat | PayParq", description: "Sigurno parkiranje uz SPU s besplatnim shuttleom. Bez tiketa, bez aplikacije." },
+  twitter: { card: "summary_large_image", title: "Parking Aerodrom Split od €0.50/sat | PayParq", description: "Sigurno parkiranje uz SPU. Park & Taxi opcija sa shuttleom dostupna. Bez tiketa, bez aplikacije." },
 };
 
 const jsonLd = {
@@ -47,7 +47,7 @@ const jsonLd = {
       "@type": "Article",
       "@id": `${CANONICAL}#article`,
       "headline": "Parking Aerodrom Split – Jeftino i Sigurno Parkiranje uz SPU",
-      "description": "Vodič za parkiranje uz Split Airport (SPU): cijene, lokacije, PayParq shuttle servis i savjeti za ljetnu sezonu.",
+      "description": "Vodič za parkiranje uz Split Airport (SPU): cijene, lokacije, PayParq Park & Taxi servis i savjeti za ljetnu sezonu.",
       "datePublished": "2025-06-01",
       "dateModified": "2026-04-01",
       "author": { "@type": "Organization", "name": "PayParq", "url": SITE_URL },
@@ -79,7 +79,7 @@ const jsonLd = {
         {
           "@type": "Question",
           "name": "Ima li shuttle do terminala Aerodroma Split?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Da. PayParq nudi shuttle servis od parkinga do terminala SPU. Vožnja traje 3–5 minuta. Vozač dolazi odmah nakon rezervacije — bez čekanja." },
+          "acceptedAnswer": { "@type": "Answer", "text": "PayParq standardno parkiranje ne uključuje shuttle. Park & Taxi opcija uključuje shuttle servis od parkinga do terminala SPU — vožnja traje 3–5 minuta." },
         },
         {
           "@type": "Question",
@@ -94,7 +94,7 @@ const jsonLd = {
         {
           "@type": "Question",
           "name": "Koliko je daleko PayParq parking od terminala SPU?",
-          "acceptedAnswer": { "@type": "Answer", "text": "PayParq parking se nalazi 2–3 km od terminala Aerodroma Split. Shuttle servis prevozi putnike do terminala za 3–5 minuta, 24/7." },
+          "acceptedAnswer": { "@type": "Answer", "text": "PayParq parking se nalazi 2–3 km od terminala Aerodroma Split. Park & Taxi opcija uključuje shuttle do terminala za 3–5 minuta." },
         },
       ],
     },
@@ -133,7 +133,7 @@ export default function ParkingAerodromSplit() {
             Split Airport (SPU) primi više od 4 milijuna putnika godišnje — a pitanje parkinga vrijedi rješiti unaprijed. Ovaj vodič objašnjava gdje parkirati, koliko košta i zašto PayParq nudi najpovoljniju opciju uz aerodrom.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
-            {["parking aerodrom Split","parking SPU","shuttle Split airport","jeftino parkiranje Split"].map(tag => (
+            {["parking aerodrom Split","parking SPU","park & taxi Split airport","jeftino parkiranje Split"].map(tag => (
               <span key={tag} className="px-3 py-1 rounded-full bg-[#F5F2FF] text-[#5F3DFC] text-[11px] font-semibold">{tag}</span>
             ))}
           </div>
@@ -145,7 +145,7 @@ export default function ParkingAerodromSplit() {
             {[
               { label: "Cijena", value: "od €0.50/sat" },
               { label: "Udaljenost od SPU", value: "2–3 km" },
-              { label: "Shuttle", value: "3–5 min" },
+              { label: "Park & Taxi", value: "shuttle uključen" },
               { label: "Rezervacija", value: "bez aplikacije" },
             ].map(item => (
               <div key={item.label} className="bg-white rounded-2xl border border-black/8 p-4 text-center">
@@ -165,10 +165,10 @@ export default function ParkingAerodromSplit() {
               Aerodrom Split (IATA: SPU) smješten je u Kaštelima, između Splita i Trogira, uz obalu Kaštelanskog zaljeva. U ljetnoj sezoni — lipanj do rujan — prometna opterećenost na D8 jadranskoj magistrali i pristupnim cestama dostiže kritične razine. Dolazak automobilom bez rezerviranog parkinga znači kruženje, izgubljeno vrijeme i nervozu upravo onda kada vam to najmanje treba.
             </p>
             <p className="text-black/75 leading-relaxed mb-4">
-              Službeni airport parking (<em>P1, P2, P3</em>) nudi praktičnost, ali po cijeni: kratkoročno parkiranje kreće od €3/sat, a tjednac može koštati i do €70. Za porodice ili dulja putovanja, to je značajan trošak koji se može izbjeći.
+              Službeni airport parking (<em>P1, P2, P3</em>) nudi praktičnost, ali po cijeni: kratkoročno parkiranje kreće od €0.50 do €5/sat, a tjednac može koštati i do €70. Za porodice ili dulja putovanja, to je značajan trošak koji se može izbjeći.
             </p>
             <p className="text-black/75 leading-relaxed">
-              PayParq parking uz Split Airport nudi alternativu — iste pogodnosti (sigurnost, shuttle, online rezervacija) po cijeni koja počinje od <strong>€0.50/sat</strong>. Lokacija se nalazi 2–3 km od terminala, a shuttle servis dovozi vas do vrata za ukrcaj za svega 3–5 minuta.
+              PayParq parking uz Split Airport nudi alternativu — sigurnost, online rezervacija i AI kamera sustav po cijeni koja počinje od <strong>€0.50/sat</strong>. Lokacija se nalazi 2–3 km od terminala. Za putnike koji trebaju prijevoz do terminala dostupna je <strong>Park & Taxi opcija koja uključuje shuttle</strong> (3–5 minuta do vrata za ukrcaj).
             </p>
           </div>
 
@@ -179,8 +179,8 @@ export default function ParkingAerodromSplit() {
             </p>
             <ul className="space-y-3 text-black/75">
               <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Ulaz:</strong> Vozite do rampe — kamera čita tablicu, rampa se automatski otvara.</span></li>
-              <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Shuttle:</strong> Nazovite ili tapnite u aplikaciji — vozač stiže za &lt;5 minuta i odvozi vas do terminala.</span></li>
-              <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Povratak:</strong> Dogovorite povratak shuttleom čim preuzmete prtljagu — vozač čeka pred terminalom.</span></li>
+              <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Park & Taxi (opcija):</strong> Odaberite Park & Taxi pri rezervaciji — vozač stiže za &lt;5 minuta i odvozi vas do terminala. Shuttle je uključen u ovu opciju.</span></li>
+              <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Povratak:</strong> Dogovorite povratak Park & Taxi shuttleom čim preuzmete prtljagu — vozač čeka pred terminalom.</span></li>
               <li className="flex items-start gap-3"><span className="mt-1 w-2 h-2 rounded-full bg-[#5F3DFC] shrink-0" /><span><strong>Izlaz:</strong> Kamera bilježi izlaz, naplaćuje se točno trajanje, potvrda ide na email.</span></li>
             </ul>
           </div>
@@ -202,13 +202,13 @@ export default function ParkingAerodromSplit() {
                   <tr className="bg-[#F5F2FF]">
                     <td className="px-4 py-3 font-semibold text-[#5F3DFC]">PayParq (preporučeno)</td>
                     <td className="px-4 py-3 font-bold">€0.50</td>
-                    <td className="px-4 py-3">✓ Uključen</td>
+                    <td className="px-4 py-3">Park & Taxi opcija</td>
                     <td className="px-4 py-3">Online</td>
                     <td className="px-4 py-3">AI kamere 24/7</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3">Airport P1/P2</td>
-                    <td className="px-4 py-3">€3–5</td>
+                    <td className="px-4 py-3">€0.50–5</td>
                     <td className="px-4 py-3">✓ Pješice</td>
                     <td className="px-4 py-3">Na licu mjesta</td>
                     <td className="px-4 py-3">Čuvano</td>
@@ -231,7 +231,7 @@ export default function ParkingAerodromSplit() {
               {[
                 { title: "Rezervirajte unaprijed", body: "U srpnju i kolovozu kapaciteti se pune brzo. Rezervacija dan-dva ranije osigurava vam mjesto i fiksnu cijenu." },
                 { title: "Izbjegavajte jutarnje špice", body: "Prijevozi prema SPU najgušći su između 5–8h i 16–19h. Dovedite auto večer prije ako letite rano ujutro." },
-                { title: "Provjerite terminal", body: "SPU ima jedan putnički terminal. Shuttle vas vozi direktno pred ulaz — nema zabune s terminalima." },
+                { title: "Provjerite terminal", body: "SPU ima jedan putnički terminal. Park & Taxi shuttle vas vozi direktno pred ulaz — nema zabune s terminalima." },
                 { title: "Dugotrajno parkiranje", body: "Za putovanja dulja od 3 dana PayParq dnevna tarifa značajno štedi u usporedbi s airportskim opcijama." },
               ].map(tip => (
                 <div key={tip.title} className="rounded-2xl border border-black/8 bg-[#F9FAFB] p-5">
@@ -247,8 +247,8 @@ export default function ParkingAerodromSplit() {
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-6 text-black">Česta pitanja — Parking Aerodrom Split</h2>
             <div className="space-y-4">
               {[
-                { q: "Koliko košta parking blizu Aerodroma Split?", a: "PayParq parkiranje uz Split Airport (SPU) košta od €0.50 po satu. Za usporedbu, službeni airport parking košta €3–8/sat. Dostupne su i dnevne i tjedne karte za dugotrajno parkiranje." },
-                { q: "Ima li shuttle do terminala Aerodroma Split?", a: "Da. PayParq nudi shuttle servis od parkinga do terminala SPU. Vožnja traje 3–5 minuta. Vozač dolazi odmah nakon poziva ili tapkanja u sustavu." },
+                { q: "Koliko košta parking blizu Aerodroma Split?", a: "PayParq parkiranje uz Split Airport (SPU) košta od €0.50 po satu. Za usporedbu, službeni airport parking košta €0.50–5/sat. Dostupne su i dnevne i tjedne karte za dugotrajno parkiranje." },
+                { q: "Ima li shuttle do terminala Aerodroma Split?", a: "PayParq standardno parkiranje ne uključuje shuttle. Park & Taxi opcija uključuje shuttle servis od parkinga do terminala SPU — vožnja traje 3–5 minuta. Vozač dolazi odmah nakon rezervacije." },
                 { q: "Trebam li aplikaciju za PayParq parking?", a: "Ne. PayParq koristi AI kamera tehnologiju koja automatski prepoznaje registarsku tablicu. Nema tiketa, nema aplikacije, nema čekanja na ulaz/izlaz." },
                 { q: "Je li parking uz aerodrom Split siguran?", a: "Da. PayParq lokacije opremljene su AI kamerama koje rade 24/7, imaju ograđen perimetar i online nadzor. Vaše vozilo je sigurno dok ste vi na putu." },
                 { q: "Mogu li rezervirati parking za dulje od tjedan dana?", a: "Da. PayParq podržava dugotrajne rezervacije. Za putovanja dulja od 7 dana kontaktirajte podršku za posebne tarife." },
@@ -265,7 +265,7 @@ export default function ParkingAerodromSplit() {
           <div className="rounded-3xl bg-[#5F3DFC] p-8 text-white text-center">
             <p className="text-[11px] uppercase tracking-[0.28em] text-white/60 mb-2">PayParq Split Airport</p>
             <h2 className="text-2xl md:text-3xl font-bold mb-3">Rezervirajte parking uz SPU od €0.50/sat</h2>
-            <p className="text-white/75 mb-6 max-w-md mx-auto">Sigurno, jeftino, bez tiketa. Shuttle do terminala za 5 minuta.</p>
+            <p className="text-white/75 mb-6 max-w-md mx-auto">Sigurno, jeftino, bez tiketa. Park & Taxi opcija s shuttleom do terminala dostupna.</p>
             <Link href="/locations/parking-trogir-40058" className="inline-flex items-center gap-2 px-8 py-3 bg-white text-[#5F3DFC] font-bold rounded-full text-sm hover:bg-white/90 transition-colors">
               Rezerviraj parking →
             </Link>

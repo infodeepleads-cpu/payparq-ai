@@ -45,7 +45,7 @@ const jsonLd = {
       "@type": "Article",
       "@id": `${CANONICAL}#article`,
       "headline": "Smart Parking Croatia 2025 – How PayParq Works",
-      "description": "A deep dive into PayParq's software-only parking platform deployed across Croatia: AI LPR cameras, instant booking, shuttle integration and real-time occupancy.",
+      "description": "A deep dive into PayParq's software-only parking platform deployed across Croatia: AI LPR cameras, instant booking, Park & Taxi option and real-time occupancy.",
       "datePublished": "2025-04-01",
       "dateModified": "2026-04-01",
       "author": { "@type": "Organization", "name": "PayParq", "url": SITE_URL },
@@ -60,7 +60,7 @@ const jsonLd = {
         { "@type": "Question", "name": "What is PayParq?", "acceptedAnswer": { "@type": "Answer", "text": "PayParq is Croatia's first software-only parking platform. It uses AI license plate recognition cameras to manage parking without tickets, barriers, or apps. Drivers enter, park, and leave — the system bills them automatically." } },
         { "@type": "Question", "name": "Where does PayParq operate in Croatia?", "acceptedAnswer": { "@type": "Answer", "text": "PayParq currently operates at three locations: Split Airport/Trogir area (€0.50/hr), Park&Ride Trogir (€0.90/hr), and Baška Voda/Punta Rata on the Makarska Riviera (€1.00/hr). More locations are being added." } },
         { "@type": "Question", "name": "Do I need an app to use PayParq?", "acceptedAnswer": { "@type": "Answer", "text": "No. PayParq identifies your vehicle by license plate automatically. You can optionally book online for guaranteed entry, but walk-up use is supported at all locations." } },
-        { "@type": "Question", "name": "Is PayParq available at Split Airport?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PayParq operates a parking lot near Split Airport (SPU) in the Trogir/Kaštela area, offering parking from €0.50/hr with a shuttle service to the terminal." } },
+        { "@type": "Question", "name": "Is PayParq available at Split Airport?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PayParq operates a parking lot near Split Airport (SPU) in the Trogir/Kaštela area, offering parking from €0.50/hr. The Park & Taxi option includes a shuttle service to the terminal." } },
       ],
     },
     {
@@ -138,7 +138,7 @@ export default function SmartParkingHrvatska2025() {
               {[
                 { step: "1", title: "Book online (optional)", body: "Visit payparq.com, select your location, enter dates and plate number. Pay by card. You receive a confirmation email. Walk-in use without booking is also supported." },
                 { step: "2", title: "Arrive — camera reads your plate", body: "Drive to the entry point. The AI camera reads your license plate in under 500ms. If you have a reservation, the system confirms it instantly. No ticket issued, no barrier delay." },
-                { step: "3", title: "Park and go", body: "Park normally. If you need a shuttle (airport locations), request it via SMS or the web interface. The driver arrives in minutes." },
+                { step: "3", title: "Park and go", body: "Park normally. If you need transport to the terminal, select the Park & Taxi option — it includes a shuttle. The driver arrives in minutes." },
                 { step: "4", title: "Leave — automatic billing", body: "Drive to the exit. The camera reads your plate, calculates your duration, and charges the card on file. A receipt lands in your inbox within 30 seconds." },
               ].map(item => (
                 <div key={item.step} className="flex gap-5 rounded-2xl border border-black/8 bg-[#F9FAFB] p-5">
@@ -156,7 +156,7 @@ export default function SmartParkingHrvatska2025() {
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-4 text-black">Where PayParq operates in Croatia</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {[
-                { name: "Split Airport / Trogir", id: "40058", price: "€0.50/hr", detail: "2–3 km from SPU terminal. Shuttle included.", href: "/locations/parking-trogir-40058", geo: "43.5426°N 16.3115°E" },
+                { name: "Split Airport / Trogir", id: "40058", price: "€0.50/hr", detail: "2–3 km from SPU terminal. Park & Taxi option with shuttle.", href: "/locations/parking-trogir-40058", geo: "43.5426°N 16.3115°E" },
                 { name: "Park&Ride Trogir", id: "61440", price: "€0.90/hr", detail: "800m from UNESCO old town. 10-min walk.", href: "/locations/safe-parkride-by-payparq-trogir-61440", geo: "43.5446°N 16.2799°E" },
                 { name: "Baška Voda / Punta Rata", id: "23025", price: "€1.00/hr", detail: "Near Punta Rata beach, Makarska Riviera.", href: "/locations/parking-izmi-baka-voda-23025", geo: "43.3559°N 16.9565°E" },
               ].map(loc => (
@@ -178,7 +178,7 @@ export default function SmartParkingHrvatska2025() {
                 { q: "What is PayParq?", a: "PayParq is Croatia's first software-only parking platform. AI license plate cameras manage parking without tickets, barriers, or apps. Drivers enter, park, and leave — the system bills automatically." },
                 { q: "Where does PayParq operate in Croatia?", a: "Currently at Split Airport/Trogir (€0.50/hr), Park&Ride Trogir (€0.90/hr), and Baška Voda/Punta Rata on the Makarska Riviera (€1.00/hr). More locations launching in 2025." },
                 { q: "Do I need an app to use PayParq?", a: "No. PayParq identifies your vehicle by license plate automatically. Optional online booking guarantees your spot, but walk-up use is supported at all locations." },
-                { q: "Is PayParq available at Split Airport?", a: "Yes. PayParq operates near Split Airport (SPU) from €0.50/hr with shuttle service. Book at payparq.com/locations/parking-trogir-40058." },
+                { q: "Is PayParq available at Split Airport?", a: "Yes. PayParq operates near Split Airport (SPU) from €0.50/hr. The Park & Taxi option includes a shuttle to the terminal. Book at payparq.com/locations/parking-trogir-40058." },
               ].map(item => (
                 <div key={item.q} className="rounded-2xl border border-black/8 bg-white p-5">
                   <p className="font-bold text-black mb-2">{item.q}</p>

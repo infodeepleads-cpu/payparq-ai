@@ -58,7 +58,7 @@ const jsonLd = {
       "mainEntity": [
         { "@type": "Question", "name": "Gdje parkirati u Dalmaciji ljeto 2025?", "acceptedAnswer": { "@type": "Answer", "text": "PayParq nudi tri lokacije uz dalmatinsku obalu: Split Airport/Trogir (€0.50/sat), Park&Ride Trogir (€0.90/sat) i Baška Voda/Punta Rata (€1.00/sat). Sve lokacije imaju AI kamera nadzor 24/7 i online rezervaciju." } },
         { "@type": "Question", "name": "Kada je najgušće parkiranje u Dalmaciji?", "acceptedAnswer": { "@type": "Answer", "text": "Najgušće je u srpnju i kolovozu, posebno vikendom između 9h i 15h. Savjet: dolazite do 8:30h ili rezervirajte online dan ranije. PayParq omogućuje unaprijednu rezervaciju bez dodatne naknade." } },
-        { "@type": "Question", "name": "Koliko košta parkiranje u Splitu?", "acceptedAnswer": { "@type": "Answer", "text": "Parkiranje u centru Splita kreće se od €1.50–3/sat. PayParq lokacije uz Split Airport u Trogiru/Kaštelima nude parkiranje od €0.50/sat s besplatnim shuttle servisom." } },
+        { "@type": "Question", "name": "Koliko košta parkiranje u Splitu?", "acceptedAnswer": { "@type": "Answer", "text": "Parkiranje u centru Splita kreće se od €1.50–3/sat. Službeni airport parking košta €0.50–5/sat. PayParq lokacije uz Split Airport u Trogiru/Kaštelima nude parkiranje od €0.50/sat — Park & Taxi opcija uključuje shuttle do terminala." } },
         { "@type": "Question", "name": "Postoji li jeftino parkiranje uz dalmatinsku obalu?", "acceptedAnswer": { "@type": "Answer", "text": "Da. PayParq nudi najpovoljnije čuvano parkiranje uz obalu: od €0.50/sat blizu aerodroma Split, €0.90/sat u Trogiru i €1.00/sat na Makarskoj Rivieri. Sve lokacije su osigurane AI kamerama." } },
       ],
     },
@@ -107,7 +107,7 @@ export default function ParkingDalmacijaLjeto2025() {
             <h2 className="text-xl font-bold text-black mb-6">PayParq lokacije uz dalmatinsku obalu</h2>
             <div className="grid md:grid-cols-3 gap-4">
               {[
-                { name: "Split Aerodrom / Trogir", price: "€0.50/sat", detail: "Shuttle do terminala SPU · 2–3 km", href: "/locations/parking-trogir-40058", tag: "Aerodrom" },
+                { name: "Split Aerodrom / Trogir", price: "€0.50/sat", detail: "Park & Taxi opcija s shuttleom · 2–3 km od SPU", href: "/locations/parking-trogir-40058", tag: "Aerodrom" },
                 { name: "Park&Ride Trogir", price: "€0.90/sat", detail: "10 min hoda do UNESCO starog grada", href: "/locations/safe-parkride-by-payparq-trogir-61440", tag: "Stari grad" },
                 { name: "Baška Voda / Punta Rata", price: "€1.00/sat", detail: "Uz Makarsku Rivieru · plaža Punta Rata", href: "/locations/parking-izmi-baka-voda-23025", tag: "Plaža" },
               ].map(loc => (
@@ -146,7 +146,7 @@ export default function ParkingDalmacijaLjeto2025() {
                   Split je gravitacijski centar Dalmacije. Trajektna luka, aerodrom, autocesta — sve ceste vode prema Splitu. Centar grada nema dovoljno parkinga za lokalne stanovnike, a kamoli za 2–3 milijuna turista godišnje. Podzemna garaža Gripe i gradski parkovi pune se do kapaciteta do 9h u sezoni.
                 </p>
                 <p className="text-black/70 text-sm leading-relaxed">
-                  <strong>PayParq preporuka:</strong> Za dolaske avionom, PayParq uz aerodrom (€0.50/sat) znatno je povoljniji od airportskih opcija. Shuttle do terminala za 5 minuta — bez stresa, bez kruženja.
+                  <strong>PayParq preporuka:</strong> Za dolaske avionom, PayParq uz aerodrom (€0.50/sat) znatno je povoljniji od airportskih opcija (€0.50–5/sat). Park & Taxi opcija uključuje shuttle do terminala za 5 minuta — bez stresa, bez kruženja.
                 </p>
               </div>
 
@@ -204,7 +204,7 @@ export default function ParkingDalmacijaLjeto2025() {
               {[
                 { q: "Gdje parkirati u Dalmaciji ljeto 2025?", a: "PayParq nudi tri lokacije uz dalmatinsku obalu: Split Airport/Trogir (€0.50/sat), Park&Ride Trogir (€0.90/sat) i Baška Voda/Punta Rata (€1.00/sat). Sve imaju AI nadzor i online rezervaciju." },
                 { q: "Kada je najgušće parkiranje u Dalmaciji?", a: "Srpanj i kolovoz, posebno vikendom između 9h i 15h. Savjet: dolazite do 8:30h ili rezervirajte dan ranije." },
-                { q: "Koliko košta parkiranje u Splitu?", a: "Centar Splita: €1.50–3/sat. PayParq lokacija uz Split Airport u Trogiru: od €0.50/sat sa shuttleom." },
+                { q: "Koliko košta parkiranje u Splitu?", a: "Centar Splita: €1.50–3/sat. Službeni airport parking: €0.50–5/sat. PayParq lokacija uz Split Airport u Trogiru: od €0.50/sat — Park & Taxi opcija uključuje shuttle." },
                 { q: "Postoji li jeftino čuvano parkiranje uz dalmatinsku obalu?", a: "Da — PayParq nudi najpovoljnije sigurno parkiranje uz obalu: od €0.50/sat kod aerodroma, €0.90/sat u Trogiru, €1.00/sat na Makarskoj Rivieri." },
               ].map(item => (
                 <div key={item.q} className="rounded-2xl border border-black/8 bg-white p-5">
