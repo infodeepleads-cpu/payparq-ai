@@ -40,7 +40,7 @@ const blogRoutes = [
 function resolveSiteUrl() {
   const value = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (value) return value.replace(/\/+$/, "");
-  return "https://payparq.ai";
+  return "https://www.payparq.com";
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
