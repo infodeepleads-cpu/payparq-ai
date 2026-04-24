@@ -362,8 +362,8 @@ export default function Contact() {
               <p className="font-semibold mb-1">Q: How do I pay or dispute a parking notice?</p>
               <p>
                 A: Go to{" "}
-                <Link href="/cases" className="underline">
-                  PayParq Cases
+                <Link href="/payments" className="underline">
+                  PayParq Payments
                 </Link>{" "}
                 to complete payments or submit disputes.
               </p>
@@ -405,9 +405,14 @@ export default function Contact() {
                   From mixed-use garages to open-air lots, payparq turns any space into a seamless, app-free arrival
                   experience while unlocking new revenue.
                 </p>
-                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors">
-                  <span className="text-xs">Download on the App Store</span>
-                </button>
+                <a
+                  href="https://www.admin.payparq.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-[11px] font-semibold shadow hover:bg-gray-100 transition-colors"
+                >
+                  <span className="text-xs">Manage Smarter, Earn More</span>
+                </a>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
                 <div className="space-y-3">

@@ -17,6 +17,7 @@ export async function GET() {
       .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
+      .not('canonical_slug', 'is', null)
       .limit(200);
 
     if (error) {

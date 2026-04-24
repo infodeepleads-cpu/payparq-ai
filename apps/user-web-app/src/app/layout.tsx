@@ -11,6 +11,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.payparq.com"),
   title: "Payparq | Frictionless Parking and Urban Mobility",
   description:
     "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",

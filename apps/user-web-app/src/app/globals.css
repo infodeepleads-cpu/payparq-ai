@@ -26,6 +26,11 @@ body {
   min-height: 100vh;
 }
 
+/* Remove black browser focus ring on mouse click; keep it for keyboard navigation */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .font-apple-ui {
   font-family: -apple-system, BlinkMacSystemFont, system-ui, -system-ui, "SF Pro Text", "SF Pro Display", sans-serif;
 }

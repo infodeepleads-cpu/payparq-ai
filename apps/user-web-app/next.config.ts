@@ -21,6 +21,21 @@ const nextConfig: NextConfig = {
         ]
       : [],
   },
+  async redirects() {
+    return [
+      {
+        source: "/refund-policy",
+        destination: "/privacy",
+        permanent: true,
+      },
+      {
+        source: "/terms-and-conditions",
+        destination: "/terms",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

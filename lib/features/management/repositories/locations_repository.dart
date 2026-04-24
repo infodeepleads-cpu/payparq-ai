@@ -38,6 +38,45 @@ class LocationsRepository {
     }).eq('id', id);
   }
 
+  Future<void> relocateVerifiedLocation({
+    required String id,
+    required String name,
+    required String? address,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+    required Map<String, dynamic> currentMetadata,
+    required String? movedBy,
+    required double oldLat,
+    required double oldLng,
+    required String? reason,
+  }) async {
+    final newMeta = Map<String, dynamic>.from(currentMetadata);
+    newMeta['hub_enabled'] = false;
+    await _client.from('locations').update({
+      'name': name.trim(),
+      'address': (address ?? '').trim(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'capacity': capacity,
+      'total_spots': capacity,
+      'verification_status': 'pending',
+      'verification_metadata': newMeta,
+    }).eq('id', id);
+    try {
+      await _client.from('location_move_log').insert({
+        'location_id': id,
+        if (movedBy != null) 'moved_by': movedBy,
+        'old_lat': oldLat,
+        'old_lng': oldLng,
+        'new_lat': latitude,
+        'new_lng': longitude,
+        'reason': reason,
+        'affected_sessions': <dynamic>[],
+      });
+    } catch (_) {}
+  }
+
   Future<void> updateVerificationPhotos(
       String id, List<String> photoUrls) async {
     await _client
@@ -59,6 +98,18 @@ class LocationsRepository {
 
   String getVerificationPublicUrl(String fileName) {
     return _client.storage.from('location-verification').getPublicUrl(fileName);
+  }
+
+  Future<void> updateServiceFlags(
+      String id, {required bool valetEnabled, required bool shuttleEnabled}) async {
+    await _client.from('locations').update({
+      'valet_enabled': valetEnabled,
+      'shuttle_enabled': shuttleEnabled,
+    }).eq('id', id);
+  }
+
+  Future<void> updateAddonsConfig(String id, Map<String, dynamic> config) async {
+    await _client.from('locations').update({'addons_config': config}).eq('id', id);
   }
 
   Future<Map<String, dynamic>> createLocation({

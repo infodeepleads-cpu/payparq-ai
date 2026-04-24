@@ -166,6 +166,21 @@ class LocationsController {
     _ref.invalidate(locationsStreamProvider);
   }
 
+  Future<void> updateServiceFlags(
+      String id, {required bool valetEnabled, required bool shuttleEnabled}) async {
+    await _repo.updateServiceFlags(id, valetEnabled: valetEnabled, shuttleEnabled: shuttleEnabled);
+    _ref.invalidate(locationsStreamProvider);
+  }
+
+  Future<void> updateAddonsConfig(String id, Map<String, dynamic> config) async {
+    try {
+      await _repo.updateAddonsConfig(id, config);
+      _ref.invalidate(locationsStreamProvider);
+    } catch (e) {
+      throw AppError('Update addons config failed: $e', cause: e);
+    }
+  }
+
   Future<void> updateCapacity(String id, int capacity) async {
     try {
       await _repo.updateCapacity(id, capacity);
@@ -198,6 +213,42 @@ class LocationsController {
       }
     } catch (e) {
       throw AppError('Update failed: $e', cause: e);
+    }
+  }
+
+  Future<void> relocateVerifiedLocation({
+    required String id,
+    required String name,
+    required String? address,
+    required double latitude,
+    required double longitude,
+    required int capacity,
+    required Map<String, dynamic> currentMetadata,
+    required double oldLat,
+    required double oldLng,
+    required String? reason,
+    bool invalidateStream = true,
+  }) async {
+    try {
+      final movedBy = Supabase.instance.client.auth.currentUser?.id;
+      await _repo.relocateVerifiedLocation(
+        id: id,
+        name: name,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        capacity: capacity,
+        currentMetadata: currentMetadata,
+        movedBy: movedBy,
+        oldLat: oldLat,
+        oldLng: oldLng,
+        reason: reason,
+      );
+      if (invalidateStream) {
+        _ref.invalidate(locationsStreamProvider);
+      }
+    } catch (e) {
+      throw AppError('Relocation failed: $e', cause: e);
     }
   }
 
@@ -254,6 +305,7 @@ class LocationsController {
     required double longitude,
     required int capacity,
     required String? ownerId,
+    Map<String, dynamic>? addonsConfig,
   }) async {
     final response = await _repo.createLocation(
       name: name,
@@ -272,6 +324,11 @@ class LocationsController {
           'location_id': newLocId,
           'assigned_by': currentUserId,
         });
+      } catch (_) {}
+    }
+    if (newLocId != null && addonsConfig != null && addonsConfig.isNotEmpty) {
+      try {
+        await _repo.updateAddonsConfig(newLocId, addonsConfig);
       } catch (_) {}
     }
     final newDisplayId = response['display_id']?.toString();

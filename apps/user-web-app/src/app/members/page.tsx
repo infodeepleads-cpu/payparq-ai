@@ -16,6 +16,7 @@ type NavItemId =
   | "vehicles"
   | "promotions"
   | "rewards"
+  | "reviews"
   | "help";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
@@ -69,6 +70,11 @@ type MembersHomeContext = {
   rideUrl: string | null;
   invoiceAvailable: boolean;
   parkTaxiIncluded: boolean;
+  valetEnabled: boolean;
+  shuttleEnabled: boolean;
+  valetCode?: string | null;
+  purchasedAddons?: string[];
+  addonsConfig?: Record<string, unknown> | null;
 };
 type WalletSummary = {
   balanceCents: number;
@@ -105,6 +111,39 @@ type PaymentMethodRow = {
   expYear: number | null;
   isDefault: boolean;
 };
+function deriveValetCode(sessionId: string | null | undefined): string {
+  const id = (sessionId ?? '').trim();
+  if (!id) return 'VLT-0000';
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
+  }
+  return `VLT-${1000 + (Math.abs(hash) % 9000)}`;
+}
+
+function deriveShuttleCode(sessionId: string | null | undefined): string {
+  const id = (sessionId ?? '').trim();
+  if (!id) return 'SHT-0000';
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 37 + id.charCodeAt(i)) & 0xffffffff;
+  }
+  return `SH-${1000 + (Math.abs(hash) % 9000)}`;
+}
+
+function parseActivityAddons(row: ActivityRow): string[] {
+  const meta = typeof row.stripe_metadata === 'object' && row.stripe_metadata
+    ? row.stripe_metadata as Record<string, unknown>
+    : {};
+  const raw = (meta['purchased_addons'] ?? '').toString().trim();
+  if (!raw) return [];
+  return raw.split(',').map((s) => s.split(':')[0].trim()).filter(Boolean);
+}
+
+function formatCents(cents: number, currency = 'EUR') {
+  return new Intl.NumberFormat('hr-HR', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 2 }).format(cents / 100);
+}
+
 function normalizeRole(value: unknown) {
   const normalized = (value ?? "")
     .toString()
@@ -232,6 +271,14 @@ export default function MembersPage() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
   const [permitsRows, setPermitsRows] = useState<PermitRow[]>([]);
+  const [reviewsRows, setReviewsRows] = useState<Array<{
+    id: string; location_id: string | null; overall_score: number | null;
+    score_security: number; score_accessibility: number; score_cleanliness: number;
+    score_staff: number; score_value: number; score_location: number;
+    comment: string | null; submitted_at: string | null; email_sent_at: string;
+    location_name?: string | null;
+  }>>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [permitsLoading, setPermitsLoading] = useState(false);
 
   const [devSignedIn, setDevSignedIn] = useState(false);
@@ -253,6 +300,19 @@ export default function MembersPage() {
   >({});
   const [extendMinutes, setExtendMinutes] = useState("120");
   const [extendSyncActive, setExtendSyncActive] = useState(false);
+  const [valetToggled, setValetToggled] = useState(false);
+  const [shuttleToggled, setShuttleToggled] = useState(true);
+  const [summonStatus, setSummonStatus] = useState<string | null>(null);
+  const [buyAddonValetOn, setBuyAddonValetOn] = useState(false);
+  const [buyAddonValetDays, setBuyAddonValetDays] = useState(1);
+  const [buyAddonShuttleOn, setBuyAddonShuttleOn] = useState(false);
+  const [buyAddonEvOn, setBuyAddonEvOn] = useState(false);
+  const [buyAddonWashOn, setBuyAddonWashOn] = useState(false);
+  const [buyAddonWashTier, setBuyAddonWashTier] = useState<'basic' | 'premium'>('basic');
+  const [buyAddonFuelOn, setBuyAddonFuelOn] = useState(false);
+  const [buyAddonFuelType, setBuyAddonFuelType] = useState<'diesel' | 'benzin'>('diesel');
+  const [addonsBuyLoading, setAddonsBuyLoading] = useState(false);
+  const [addonsBuyError, setAddonsBuyError] = useState('');
 
   const isSignedIn = !!user || devSignedIn;
   const normalizedMemberEmail = (user?.email ?? email).trim().toLowerCase();
@@ -576,7 +636,15 @@ export default function MembersPage() {
     if (activeItem === "activity") {
       void refreshActivity();
     }
-  }, [activeItem, refreshActivity]);
+    if (activeItem === "reviews" && normalizedMemberEmail && !reviewsLoading && reviewsRows.length === 0) {
+      setReviewsLoading(true);
+      fetch(`/api/members/reviews?email=${encodeURIComponent(normalizedMemberEmail)}`)
+        .then((r) => r.json())
+        .then((j) => { setReviewsRows(j.reviews ?? []); })
+        .catch(() => {})
+        .finally(() => setReviewsLoading(false));
+    }
+  }, [activeItem, refreshActivity, normalizedMemberEmail]);
   useEffect(() => {
     if (!hasMemberIdentity) {
       setActivityRows([]);
@@ -1209,6 +1277,61 @@ export default function MembersPage() {
     }
   }
 
+  async function handleAddonsBuyCheckout() {
+    if (!homeContext) return;
+    const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+    const purchased = homeContext.purchasedAddons ?? [];
+    type AddonItem = { id: string; label: string; price_cents: number; quantity?: number };
+    const items: AddonItem[] = [];
+    if (buyAddonValetOn && (cfg.valet as Record<string,unknown>)?.enabled && !homeContext.valetEnabled) {
+      const priceCents = Number((cfg.valet as Record<string,unknown>)?.price_cents ?? 500);
+      items.push({ id: 'valet', label: `Valet parking (${buyAddonValetDays} dan/a)`, price_cents: priceCents, quantity: buyAddonValetDays });
+    }
+    if (buyAddonShuttleOn && (cfg.shuttle as Record<string,unknown>)?.enabled && !homeContext.shuttleEnabled) {
+      items.push({ id: 'shuttle', label: 'Shuttle (1 smjer)', price_cents: Number((cfg.shuttle as Record<string,unknown>)?.price_cents ?? 200) });
+    }
+    if (buyAddonEvOn && (cfg.ev_charging as Record<string,unknown>)?.enabled && !purchased.includes('ev_charging')) {
+      items.push({ id: 'ev_charging', label: 'EV punjenje', price_cents: Number((cfg.ev_charging as Record<string,unknown>)?.price_cents ?? 2000) });
+    }
+    if (buyAddonWashOn && (cfg.car_wash as Record<string,unknown>)?.enabled && !purchased.some(p => p.startsWith('car_wash'))) {
+      const opts = (cfg.car_wash as Record<string,unknown>)?.options as Array<{id:string;price_cents:number}> | undefined;
+      const opt = opts?.find(o => o.id === buyAddonWashTier);
+      items.push({ id: `car_wash_${buyAddonWashTier}`, label: `Pranje vozila (${buyAddonWashTier === 'premium' ? 'Premium' : 'Basic'})`, price_cents: opt?.price_cents ?? (buyAddonWashTier === 'premium' ? 3000 : 1500) });
+    }
+    if (buyAddonFuelOn && (cfg.fuel as Record<string,unknown>)?.enabled && !purchased.some(p => p.startsWith('fuel'))) {
+      const opts = (cfg.fuel as Record<string,unknown>)?.options as Array<{id:string;price_cents:number}> | undefined;
+      const opt = opts?.find(o => o.id === buyAddonFuelType);
+      items.push({ id: `fuel_${buyAddonFuelType}`, label: `Punjenje gorivom (${buyAddonFuelType === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? (buyAddonFuelType === 'diesel' ? 6000 : 5500) });
+    }
+    if (items.length === 0) return;
+    setAddonsBuyLoading(true);
+    setAddonsBuyError('');
+    try {
+      const res = await fetch('/api/stripe/addons-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: homeContext.stripeSessionId ?? homeContext.sessionId ?? '',
+          location_id: homeContext.locationId ?? '',
+          location_display_id: homeContext.locationDisplayId ?? '',
+          location_name: homeContext.locationName ?? '',
+          email: normalizedMemberEmail,
+          addons: items,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !data?.url) {
+        setAddonsBuyError(data?.error || 'Greška pri kreiranju plaćanja.');
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setAddonsBuyError('Greška pri kreiranju plaćanja.');
+    } finally {
+      setAddonsBuyLoading(false);
+    }
+  }
+
   async function handleSendVerificationEmail() {
     const targetEmail = user?.email || email.trim().toLowerCase();
     if (!targetEmail) {
@@ -1380,6 +1503,84 @@ export default function MembersPage() {
               )}
             </div>
           </div>
+          {/* Shuttle confirmation card — shown when shuttle is included in price */}
+          {homeContext?.shuttleEnabled && (() => {
+            const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+            const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+            const pickup = (cfg.pickup_point as { lat?: number; lng?: number; label?: string } | undefined) ?? null;
+            const shtCode = deriveShuttleCode(homeContext.stripeSessionId);
+            const mapHref = pickup?.lat && pickup?.lng
+              ? `https://www.google.com/maps?q=${pickup.lat},${pickup.lng}`
+              : pickup?.label
+                ? `https://www.google.com/maps/search/${encodeURIComponent(pickup.label)}`
+                : null;
+            return (
+              <div className="rounded-xl border border-[#0F6E56]/20 overflow-hidden">
+                {/* Header */}
+                <div className="bg-[#0F6E56] px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <rect x="1" y="8" width="22" height="10" rx="2"/><path d="M5 18v2M19 18v2"/><path d="M1 12h22"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    <span className="text-white text-[11px] font-semibold uppercase tracking-widest">Shuttle potvrda</span>
+                  </div>
+                  <span className="text-white/80 text-[11px] font-mono font-bold">{shtCode}</span>
+                </div>
+                {/* Steps */}
+                <div className="bg-[#E1F5EE] px-4 py-3 space-y-3 text-[12px]">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">1</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Dođite na ukrcajnu točku</p>
+                      {pickup?.label && <p className="text-black/60 mt-0.5">{pickup.label}</p>}
+                      {mapHref && (
+                        <a href={mapHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-0.5 text-[#0F6E56] font-semibold underline underline-offset-2">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          Prikaži pick-up / drop-off zonu
+                        </a>
+                      )}
+                      <p className="text-black/60 mt-0.5">Po dolasku pritisnite &ldquo;Pozovi shuttle&rdquo; · <strong className="text-black">ETA 3–8 min</strong></p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">2</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Ukrcaj i vožnja</p>
+                      <p className="text-black/60 mt-0.5">Vozač skenira kod <span className="font-mono font-bold text-[#0F6E56]">{shtCode}</span>. Shuttle vozi izravno — bez zaustavljanja.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-5 h-5 rounded-full bg-[#0F6E56] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-white">3</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-black">Povratak</p>
+                      <p className="text-black/60 mt-0.5">Pozovite shuttle putem gumba &ldquo;Pozovi shuttle&rdquo; ispod.</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Footer */}
+                <div className="bg-white border-t border-[#0F6E56]/10 px-4 py-2.5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-black/50">Hitni kontakt · 24/7</p>
+                    <a href={`tel:+${phoneSms}`} className="text-[12px] font-bold text-[#0F6E56]">+{phoneSms}</a>
+                  </div>
+                  <a
+                    href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext.locationName ?? homeContext.locationDisplayId ?? ''} · ${shtCode}`)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#0F6E56] underline underline-offset-2"
+                  >
+                    Chat s vozačem
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex gap-3 overflow-x-auto pb-1">
             <div className="min-w-[210px] rounded-xl border border-black/10 bg-white p-3 space-y-2">
               <p className="text-sm font-semibold text-black">Produženje boravka</p>
@@ -1462,7 +1663,296 @@ export default function MembersPage() {
                 </p>
               )}
             </div>
+            {homeContext?.valetEnabled && (() => {
+              const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+              const valetCfg = cfg.valet as Record<string, unknown> | undefined;
+              const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+              const valetCode = homeContext.valetCode ?? deriveValetCode(homeContext.stripeSessionId);
+              const priceCents = Number(valetCfg?.price_cents ?? 500);
+              return (
+                <div className="min-w-[210px] rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 space-y-2">
+                  <p className="text-sm font-semibold text-[#5F3DFC]">Valet parking</p>
+                  <p className="text-[11px] text-[#5F3DFC]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
+                  <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
+                  <button type="button" onClick={() => setValetToggled(v => !v)} className="flex items-center gap-2">
+                    <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: valetToggled ? '#5F3DFC' : '#f3f4f6', borderColor: valetToggled ? '#5F3DFC' : '#e5e7eb' }}>
+                      <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: valetToggled ? '18px' : '2px' }} />
+                    </div>
+                    <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
+                  </button>
+                  {valetToggled && (
+                    <a
+                      href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`${valetCode} - Poziv vozila`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={() => { setSummonStatus('Vaš automobil je na putu · ETA ~6 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
+                    >
+                      Pozovi auto
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
+            {homeContext?.shuttleEnabled && (() => {
+              const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+              const shuttleCfg = cfg.shuttle as Record<string, unknown> | undefined;
+              const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+              const shtCode = deriveShuttleCode(homeContext.stripeSessionId);
+              const priceCents = Number(shuttleCfg?.price_cents ?? 200);
+              return (
+                <div className="min-w-[210px] rounded-xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-3 space-y-2">
+                  <p className="text-sm font-semibold text-[#0F6E56]">Shuttle prijevoz</p>
+                  <p className="text-[11px] text-[#0F6E56]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{shtCode}</span></p>
+                  <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
+                  <button type="button" onClick={() => setShuttleToggled(s => !s)} className="flex items-center gap-2">
+                    <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: shuttleToggled ? '#1D9E75' : '#f3f4f6', borderColor: shuttleToggled ? '#0F6E56' : '#e5e7eb' }}>
+                      <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: shuttleToggled ? '18px' : '2px' }} />
+                    </div>
+                    <span className="text-xs font-medium text-black">{shuttleToggled ? 'Uključeno' : 'Isključeno'}</span>
+                  </button>
+                  {shuttleToggled && (
+                    <a
+                      href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext.locationName ?? homeContext.locationDisplayId ?? ''} · ${shtCode}`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      onClick={() => { setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#1D9E75] text-white text-xs font-semibold hover:bg-[#0F6E56] transition-colors"
+                    >
+                      Pozovi shuttle
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
           </div>
+          {summonStatus && (
+            <div className="mt-2 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
+              {summonStatus}
+            </div>
+          )}
+
+          {/* Purchased addon tracker */}
+          {homeContext && (homeContext.purchasedAddons ?? []).length > 0 && (() => {
+            const purchased = homeContext.purchasedAddons ?? [];
+            const sid = homeContext.stripeSessionId ?? homeContext.sessionId ?? '';
+            const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+            const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+            const badgeMap: Record<string, { label: string; color: string; bg: string }> = {
+              valet: { label: 'VLT', color: '#5F3DFC', bg: '#F5F2FF' },
+              shuttle: { label: 'SHT', color: '#0F6E56', bg: '#E1F5EE' },
+              ev_charging: { label: 'EV', color: '#2E7D32', bg: '#E8F5E9' },
+              car_wash_basic: { label: 'WASH', color: '#1565C0', bg: '#E3F2FD' },
+              car_wash_premium: { label: 'WASH+', color: '#1565C0', bg: '#E3F2FD' },
+              fuel_diesel: { label: 'FUEL', color: '#F57F17', bg: '#FFF8E1' },
+              fuel_benzin: { label: 'FUEL', color: '#F57F17', bg: '#FFF8E1' },
+            };
+            return (
+              <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-black/50">Kupljene usluge</p>
+                <div className="flex flex-wrap gap-2">
+                  {purchased.map((addonId) => {
+                    const badge = badgeMap[addonId] ?? { label: addonId.toUpperCase(), color: '#333', bg: '#f3f4f6' };
+                    return (
+                      <span key={addonId} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: badge.bg, color: badge.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: badge.color }} />
+                        {badge.label}
+                      </span>
+                    );
+                  })}
+                </div>
+                {(purchased.includes('valet') || purchased.includes('shuttle')) && (
+                  <div className="pt-1 space-y-1 text-[12px]">
+                    {purchased.includes('valet') && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-black/50">Valet kod</span>
+                        <a
+                          href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`${deriveValetCode(sid)} - Poziv vozila`)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="font-mono font-bold text-[#5F3DFC]"
+                        >
+                          {deriveValetCode(sid)}
+                        </a>
+                      </div>
+                    )}
+                    {purchased.includes('shuttle') && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-black/50">Shuttle kod</span>
+                        <a
+                          href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext.locationName ?? ''} · ${deriveShuttleCode(sid)}`)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="font-mono font-bold text-[#0F6E56]"
+                        >
+                          {deriveShuttleCode(sid)}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Purchasable addons section */}
+          {homeContext && (() => {
+            const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
+            const purchased = homeContext.purchasedAddons ?? [];
+            const valetCfg = cfg.valet as Record<string, unknown> | undefined;
+            const shuttleCfg = cfg.shuttle as Record<string, unknown> | undefined;
+            const evCfg = cfg.ev_charging as Record<string, unknown> | undefined;
+            const washCfg = cfg.car_wash as Record<string, unknown> | undefined;
+            const fuelCfg = cfg.fuel as Record<string, unknown> | undefined;
+            const showBuyValet = Boolean(valetCfg?.enabled && !homeContext.valetEnabled);
+            const showBuyShuttle = Boolean(shuttleCfg?.enabled && !homeContext.shuttleEnabled);
+            const showBuyEv = Boolean(evCfg?.enabled && !purchased.includes('ev_charging'));
+            const showBuyWash = Boolean(washCfg?.enabled && !purchased.some(p => p.startsWith('car_wash')));
+            const showBuyFuel = Boolean(fuelCfg?.enabled && !purchased.some(p => p.startsWith('fuel')));
+            if (!showBuyValet && !showBuyShuttle && !showBuyEv && !showBuyWash && !showBuyFuel) return null;
+            const valetPriceCents = Number(valetCfg?.price_cents ?? 500) * buyAddonValetDays;
+            const shuttlePriceCents = Number(shuttleCfg?.price_cents ?? 200);
+            const evPriceCents = Number(evCfg?.price_cents ?? 2000);
+            const washOpts = washCfg?.options as Array<{id:string;price_cents:number}> | undefined;
+            const washPriceCents = washOpts?.find(o => o.id === buyAddonWashTier)?.price_cents ?? (buyAddonWashTier === 'premium' ? 3000 : 1500);
+            const fuelOpts = fuelCfg?.options as Array<{id:string;price_cents:number}> | undefined;
+            const fuelPriceCents = fuelOpts?.find(o => o.id === buyAddonFuelType)?.price_cents ?? (buyAddonFuelType === 'diesel' ? 6000 : 5500);
+            const totalCents =
+              (buyAddonValetOn && showBuyValet ? valetPriceCents : 0) +
+              (buyAddonShuttleOn && showBuyShuttle ? shuttlePriceCents : 0) +
+              (buyAddonEvOn && showBuyEv ? evPriceCents : 0) +
+              (buyAddonWashOn && showBuyWash ? washPriceCents : 0) +
+              (buyAddonFuelOn && showBuyFuel ? fuelPriceCents : 0);
+            const anySelected = (buyAddonValetOn && showBuyValet) || (buyAddonShuttleOn && showBuyShuttle) || (buyAddonEvOn && showBuyEv) || (buyAddonWashOn && showBuyWash) || (buyAddonFuelOn && showBuyFuel);
+            return (
+              <div className="rounded-xl border border-black/10 bg-white p-4 space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-black/50">Dodaj usluge</p>
+                <div className="space-y-2">
+                  {showBuyValet && (
+                    <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><path d="M13 16v-1a2 2 0 1 1 4 0v1"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Valet parking</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <select value={buyAddonValetDays} onChange={e => setBuyAddonValetDays(Number(e.target.value))} className="text-[11px] border border-black/10 rounded px-1 py-0.5 bg-white text-black outline-none">
+                              {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{d} dan{d > 1 ? 'a' : ''}</option>)}
+                            </select>
+                            <span className="text-[11px] text-black/50">{formatCents(valetPriceCents)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setBuyAddonValetOn(v => !v)} className="shrink-0">
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonValetOn ? '#5F3DFC' : '#f3f4f6', borderColor: buyAddonValetOn ? '#5F3DFC' : '#e5e7eb' }}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonValetOn ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  {showBuyShuttle && (
+                    <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2"><rect x="1" y="8" width="22" height="10" rx="2"/><path d="M5 18v2M19 18v2"/><path d="M1 12h22"/><path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Shuttle prijevoz</p>
+                          <p className="text-[11px] text-black/50">{formatCents(shuttlePriceCents)} / smjer</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setBuyAddonShuttleOn(v => !v)} className="shrink-0">
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonShuttleOn ? '#0F6E56' : '#f3f4f6', borderColor: buyAddonShuttleOn ? '#0F6E56' : '#e5e7eb' }}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonShuttleOn ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  {showBuyEv && (
+                    <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#E8F5E9] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">EV punjenje</p>
+                          <p className="text-[11px] text-black/50">{formatCents(evPriceCents)}</p>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setBuyAddonEvOn(v => !v)} className="shrink-0">
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonEvOn ? '#2E7D32' : '#f3f4f6', borderColor: buyAddonEvOn ? '#2E7D32' : '#e5e7eb' }}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonEvOn ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  {showBuyWash && (
+                    <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#E3F2FD] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1565C0" strokeWidth="2"><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 6a6 6 0 0 1 6 6"/><path d="M12 10a2 2 0 0 1 2 2"/><path d="M5 12H2"/><path d="M5.5 15.5L3 18"/><path d="M5.5 8.5L3 6"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Pranje vozila</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <select value={buyAddonWashTier} onChange={e => setBuyAddonWashTier(e.target.value as 'basic'|'premium')} className="text-[11px] border border-black/10 rounded px-1 py-0.5 bg-white text-black outline-none">
+                              <option value="basic">Basic</option>
+                              <option value="premium">Premium</option>
+                            </select>
+                            <span className="text-[11px] text-black/50">{formatCents(washPriceCents)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setBuyAddonWashOn(v => !v)} className="shrink-0">
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonWashOn ? '#1565C0' : '#f3f4f6', borderColor: buyAddonWashOn ? '#1565C0' : '#e5e7eb' }}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonWashOn ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                  {showBuyFuel && (
+                    <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#FFF8E1] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F57F17" strokeWidth="2"><path d="M3 22V8l7-6 7 6v14"/><path d="M10 22V12h4v10"/><path d="M18 10h1a2 2 0 0 1 2 2v3a1 1 0 0 0 1 1 1 1 0 0 1-1 1v3a2 2 0 0 1-2 2h-1"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <select value={buyAddonFuelType} onChange={e => setBuyAddonFuelType(e.target.value as 'diesel'|'benzin')} className="text-[11px] border border-black/10 rounded px-1 py-0.5 bg-white text-black outline-none">
+                              <option value="diesel">Diesel</option>
+                              <option value="benzin">Benzin</option>
+                            </select>
+                            <span className="text-[11px] text-black/50">{formatCents(fuelPriceCents)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setBuyAddonFuelOn(v => !v)} className="shrink-0">
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonFuelOn ? '#F57F17' : '#f3f4f6', borderColor: buyAddonFuelOn ? '#F57F17' : '#e5e7eb' }}>
+                          <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonFuelOn ? '18px' : '2px' }} />
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {anySelected && (
+                  <div className="pt-1 space-y-2">
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="text-black/50">Ukupno</span>
+                      <span className="font-semibold text-black">{formatCents(totalCents)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddonsBuyCheckout}
+                      disabled={addonsBuyLoading}
+                      className="w-full py-3 rounded-xl bg-black text-white text-[14px] font-semibold text-center hover:bg-gray-900 disabled:opacity-50 transition-colors"
+                    >
+                      {addonsBuyLoading ? 'Preusmjeravanje...' : 'Plati usluge'}
+                    </button>
+                    {addonsBuyError && <p className="text-[11px] text-red-600">{addonsBuyError}</p>}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {actionError && (
             <p className="text-[11px] text-red-600">{actionError}</p>
           )}
@@ -1557,61 +2047,85 @@ export default function MembersPage() {
             <div className="rounded-xl border border-black/10 bg-white p-3 space-y-2">
               <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">Active ({activeRows.length})</p>
               {activeRows.length === 0 && <p className="text-[11px] text-black/50">No active reservations.</p>}
-              {activeRows.map((row) => (
-                <div key={`active-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-black">
-                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
-                    </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+              {activeRows.map((row) => {
+                const addons = parseActivityAddons(row);
+                return (
+                  <div key={`active-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-black">
+                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                      </p>
+                      <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                      <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
+                      <span>ACTIVE</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-black/70">
+                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                    </div>
+                    {addons.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {addons.map(a => <span key={a} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-black/5 text-black/60">{a.replace(/_/g,' ').toUpperCase()}</span>)}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
-                    <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                    <span>ACTIVE</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-black/70">
-                    Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">NADOLAZEĆI ({upcomingRows.length})</p>
               {upcomingRows.length === 0 && <p className="text-[11px] text-black/50">No upcoming reservations.</p>}
-              {upcomingRows.map((row) => (
-                <div key={`upcoming-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-black">
-                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
-                    </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+              {upcomingRows.map((row) => {
+                const addons = parseActivityAddons(row);
+                return (
+                  <div key={`upcoming-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-black">
+                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                      </p>
+                      <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                      <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
+                      <span>{resolveActivityLifecycleForView(row) === "pending" ? "NA ČEKANJU · NADOLAZEĆI" : "NADOLAZEĆI"}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-black/70">
+                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                    </div>
+                    {addons.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {addons.map(a => <span key={a} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-black/5 text-black/60">{a.replace(/_/g,' ').toUpperCase()}</span>)}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
-                    <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                    <span>{resolveActivityLifecycleForView(row) === "pending" ? "NA ČEKANJU · NADOLAZEĆI" : "NADOLAZEĆI"}</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-black/70">
-                    Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <p className="pt-2 text-[11px] font-semibold uppercase tracking-wide text-black/60">Expired ({expiredRows.length})</p>
               {expiredRows.length === 0 && <p className="text-[11px] text-black/50">No expired reservations.</p>}
-              {expiredRows.map((row) => (
-                <div key={`expired-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-black">
-                      {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
-                    </p>
-                    <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+              {expiredRows.map((row) => {
+                const addons = parseActivityAddons(row);
+                return (
+                  <div key={`expired-${row.id}`} className="rounded-lg border border-black/10 px-3 py-2 opacity-70">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-black">
+                        {row.plate || "Unknown plate"} · {row.location_display_id || row.location_id || "Unknown location"}
+                      </p>
+                      <p className="text-[11px] text-black/60">{formatActivityDate(row.ui_check_in || row.entry_time || row.created_at)}</p>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
+                      <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
+                      <span>EXPIRED</span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-black/70">
+                      Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
+                    </div>
+                    {addons.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {addons.map(a => <span key={a} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-black/5 text-black/60">{a.replace(/_/g,' ').toUpperCase()}</span>)}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-black/70">
-                    <span>{Number(row.price ?? 0).toFixed(2)} {parseCurrency(row.currency)}</span>
-                    <span>EXPIRED</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-black/70">
-                    Vrijedi: {formatCroatianDateTime(row.ui_check_in || row.entry_time || row.created_at)} — {formatCroatianDateTime(row.ui_check_out || row.exit_time)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1894,6 +2408,70 @@ export default function MembersPage() {
       );
     }
 
+    if (activeItem === "reviews") {
+      const CATEGORY_LABELS: Record<string, string> = {
+        score_security: 'Sigurnost', score_accessibility: 'Pristupačnost',
+        score_cleanliness: 'Čistoća', score_staff: 'Osoblje',
+        score_value: 'Vrijednost', score_location: 'Lokacija',
+      };
+      function scoreLabel(v: number) {
+        if (v >= 9) return 'Izvrsno'; if (v >= 8) return 'Odlično';
+        if (v >= 7) return 'Dobro'; if (v >= 6) return 'Zadovoljava'; return 'Loše';
+      }
+      function scoreColor(v: number) {
+        if (v >= 9) return '#003580'; if (v >= 7) return '#5F3DFC'; return '#dc2626';
+      }
+      return (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight text-black">Moje recenzije</h2>
+          <p className="text-sm text-black/70">Recenzije koje ste dali za parkiranje na PayParq lokacijama.</p>
+          {reviewsLoading && (
+            <div className="flex items-center gap-2 text-sm text-black/50">
+              <div className="w-4 h-4 border-2 border-[#5F3DFC] border-t-transparent rounded-full animate-spin" />
+              Učitavanje...
+            </div>
+          )}
+          {!reviewsLoading && reviewsRows.length === 0 && (
+            <div className="rounded-xl border border-black/10 bg-[#FBFAFF] p-4 text-sm text-black/60">
+              Još niste dali nijednu recenziju. Nakon završetka parkinga dobit ćete e-mail s linkom za recenziju.
+            </div>
+          )}
+          {!reviewsLoading && reviewsRows.map((row) => (
+            <div key={row.id} className="rounded-2xl border border-black/10 bg-white shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+                <div>
+                  <p className="text-sm font-semibold text-black">{row.location_name ?? 'PayParq'}</p>
+                  <p className="text-[11px] text-black/40">
+                    {row.submitted_at ? new Date(row.submitted_at).toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[22px] font-black leading-none" style={{ color: scoreColor(row.overall_score ?? 0) }}>{row.overall_score?.toFixed(1) ?? '—'}</p>
+                  <p className="text-[11px] text-black/40">{row.overall_score ? scoreLabel(row.overall_score) : ''}</p>
+                </div>
+              </div>
+              <div className="px-4 py-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+                {(['score_security','score_accessibility','score_cleanliness','score_staff','score_value','score_location'] as const).map((key) => {
+                  const v = row[key] ?? 0;
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-lg bg-[#F9FAFB] px-2 py-1.5">
+                      <span className="text-[11px] text-black/60">{CATEGORY_LABELS[key]}</span>
+                      <span className="text-[13px] font-black" style={{ color: v > 0 ? scoreColor(v) : '#9ca3af' }}>{v > 0 ? v : '—'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {row.comment && (
+                <div className="px-4 pb-3">
+                  <p className="text-[12px] text-black/60 italic">"{row.comment}"</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2125,6 +2703,17 @@ export default function MembersPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setActiveItem("reviews")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "reviews"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>Recenzije</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveItem("help")}
                     className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
                       activeItem === "help"
@@ -2248,6 +2837,20 @@ export default function MembersPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => setActiveItem("reviews")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "reviews"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        ★
+                      </span>
+                      <span>Recenzije</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setActiveItem("help")}
                       className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
                         activeItem === "help"
@@ -2321,6 +2924,8 @@ export default function MembersPage() {
                         ? "Promotions"
                         : activeItem === "rewards"
                         ? "Rewards"
+                        : activeItem === "reviews"
+                        ? "Recenzije"
                         : "Help"}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">

@@ -4,12 +4,76 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
 import { normalizeLocationName } from '@/lib/locationPricing';
 
+function isNaiveDatetime(value: string): boolean {
+  const trimmed = value.trim();
+  if (/(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed)) return false;
+  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(trimmed);
+}
+
+function parseNaiveDateParts(value: string) {
+  const match = value.trim().match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/,
+  );
+  if (!match) return null;
+  return {
+    year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
+    hour: Number(match[4]), minute: Number(match[5]), second: Number(match[6] ?? '0'),
+  };
+}
+
+function resolveZagrebOffsetMinutes(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zagreb',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const zonedAsUtc = Date.UTC(get('year'), Math.max(0, get('month') - 1), get('day'), get('hour'), get('minute'), get('second'));
+  return Math.round((zonedAsUtc - date.getTime()) / 60000);
+}
+
+function parseMetadataDatetime(value: string | null | undefined): string | null {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  if (!isNaiveDatetime(raw)) {
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  const naive = parseNaiveDateParts(raw);
+  if (!naive) return null;
+  let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const offsetMinutes = resolveZagrebOffsetMinutes(new Date(utcMillis));
+    utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second)
+      - offsetMinutes * 60000;
+  }
+  return new Date(utcMillis).toISOString();
+}
+
 function resolveStripeSecretKey(): string | null {
   const secret = (process.env.STRIPE_SECRET_KEY ?? '').trim();
   if (!secret) return null;
   if (!/^sk_(test|live)_/i.test(secret)) return null;
   if (/your_stripe|replace_me|changeme|example/i.test(secret)) return null;
   return secret;
+}
+
+async function resolveValetAttendant(locationId: string): Promise<string | null> {
+  const dbClient = supabaseAdmin;
+  if (!dbClient || !locationId) return null;
+  try {
+    const { data: assignments } = await dbClient
+      .from('officer_assignments')
+      .select('officer_id')
+      .eq('location_id', locationId)
+      .limit(1);
+    const officerId = (assignments as { officer_id?: string }[] | null)?.[0]?.officer_id ?? null;
+    if (!officerId) return null;
+    const { data: { user } } = await dbClient.auth.admin.getUserById(officerId);
+    return (user?.user_metadata?.full_name as string | null) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function buildFallbackSummaryFromParkingSession(sessionId: string) {
@@ -60,7 +124,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   if (locationCandidate) {
     const byId = await dbClient
       .from('locations')
-      .select('id,display_id,name')
+      .select('id,display_id,name,valet_enabled,shuttle_enabled')
       .eq('id', locationCandidate)
       .maybeSingle();
     let locationRow = byId.data as
@@ -69,7 +133,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     if (!locationRow) {
       const byDisplayId = await dbClient
         .from('locations')
-        .select('id,display_id,name')
+        .select('id,display_id,name,valet_enabled,shuttle_enabled')
         .eq('display_id', locationCandidate)
         .maybeSingle();
       locationRow = byDisplayId.data as
@@ -234,6 +298,10 @@ export async function GET(req: NextRequest) {
       (sessionMetadata.display_id ?? sessionMetadata.location_id ?? '').toString().trim() || null;
     let activityLocationName: string | null = null;
     let activityLocationDisplayId: string | null = null;
+    let valetEnabled = false;
+    let shuttleEnabled = false;
+    let addonsConfig: Record<string, unknown> = {};
+    let valetAttendant: string | null = null;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -283,10 +351,10 @@ export async function GET(req: NextRequest) {
         loyaltyBonusCreditCents = Number(row.stripe_metadata?.loyalty_bonus_credit_cents ?? loyaltyBonusCreditCents) || 0;
       }
       if (!entryTime && metadataCheckIn) {
-        entryTime = metadataCheckIn;
+        entryTime = parseMetadataDatetime(metadataCheckIn);
       }
       if (!exitTime && metadataCheckOut) {
-        exitTime = metadataCheckOut;
+        exitTime = parseMetadataDatetime(metadataCheckOut);
       }
       if (!foundDbSessionWindow && entryTime && stripeLineItemQuantity > 1) {
         const typeRaw = (sessionMetadata.type ?? 'hourly').toString().trim().toLowerCase();
@@ -328,6 +396,20 @@ export async function GET(req: NextRequest) {
             activityLocationId = String(locationRow.id);
           }
         }
+        // Separate query for service flags — gracefully handles missing columns
+        const resolvedId = locationRow?.id ?? locationCandidate;
+        try {
+          const { data: flagsRow } = await dbClient
+            .from('locations')
+            .select('valet_enabled,shuttle_enabled,addons_config')
+            .eq('id', resolvedId)
+            .maybeSingle();
+          valetEnabled = (flagsRow as { valet_enabled?: boolean | null } | null)?.valet_enabled ?? false;
+          shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
+          addonsConfig = (flagsRow as { addons_config?: Record<string, unknown> | null } | null)?.addons_config ?? {};
+        } catch {}
+        // Query city manager (officer assignment) for valet attendant name
+        valetAttendant = await resolveValetAttendant(resolvedId);
       }
     } else {
       entryTime = metadataCheckIn || null;
@@ -343,6 +425,10 @@ export async function GET(req: NextRequest) {
       location_id: activityLocationId,
       location_name: activityLocationName,
       location_display_id: activityLocationDisplayId,
+      valet_enabled: valetEnabled,
+      shuttle_enabled: shuttleEnabled,
+      addons_config: addonsConfig,
+      valet_attendant: valetAttendant,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,
@@ -369,7 +455,7 @@ export async function GET(req: NextRequest) {
       for (const candidate of locationHintCandidates) {
         const byId = await dbClient
           .from('locations')
-          .select('id,display_id,name')
+          .select('id,display_id,name,valet_enabled,shuttle_enabled')
           .eq('id', candidate)
           .maybeSingle();
         let locationRow = byId.data as
@@ -378,7 +464,7 @@ export async function GET(req: NextRequest) {
         if (!locationRow) {
           const byDisplayId = await dbClient
             .from('locations')
-            .select('id,display_id,name')
+            .select('id,display_id,name,valet_enabled,shuttle_enabled')
             .eq('display_id', candidate)
             .maybeSingle();
           locationRow = byDisplayId.data as

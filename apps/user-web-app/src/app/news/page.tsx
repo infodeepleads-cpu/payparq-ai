@@ -44,6 +44,106 @@ export default function News() {
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <Link
+                href="/news/blog/parking-aerodrom-split"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Vodič — Aerodrom Split, Hrvatska
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Parking Aerodrom Split: Gdje Parkirati kod SPU od €0.50/sat
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Kompletni vodič za parkiranje kod splitskog aerodroma — PayParq parking 2–3 km od terminala s shuttle uslugom i rezervacijom online.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Pročitaj →
+                </div>
+              </Link>
+
+              <Link
+                href="/news/blog/parking-trogir"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Vodič — Trogir, Hrvatska
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Parking Trogir: Gdje Parkirati uz UNESCO Stari Grad
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Park&Ride rješenje za posjetitelje Trogira — 800m od ulaza u stari grad, od €0.90/sat, bez tiketa, AI kamere 24/7.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Pročitaj →
+                </div>
+              </Link>
+
+              <Link
+                href="/news/blog/parking-baska-voda-punta-rata"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Vodič — Makarska Riviera, Hrvatska
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Parking Baška Voda i Plaža Punta Rata — Sezonski Vodič
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Gdje parkirati uz jednu od najljepših plaža Europe — savjeti, cijene i PayParq lokacija kod Punta Rate na Makarskoj Rivieri.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Pročitaj →
+                </div>
+              </Link>
+
+              <Link
+                href="/news/blog/smart-parking-hrvatska-2025"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Technology — Croatia
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Smart Parking Croatia 2025: No Tickets, No Apps, No Barriers
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    How PayParq's AI camera platform is transforming parking across Croatia — from Split Airport to Trogir and the Makarska Riviera.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Read post →
+                </div>
+              </Link>
+
+              <Link
+                href="/news/blog/parking-dalmacija-ljeto-2025"
+                className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-black/50 mb-1">
+                    Vodič — Dalmacija, Hrvatska
+                  </p>
+                  <h3 className="text-sm md:text-base font-semibold text-black mb-2">
+                    Parking u Dalmaciji — Ljeto 2025: Potpuni Vodič
+                  </h3>
+                  <p className="text-xs md:text-sm text-black/70">
+                    Split, Trogir, Makarska, Dubrovnik — sve što trebate znati o parkiranju na Jadranu ove sezone. 10 savjeta i pregled PayParq lokacija.
+                  </p>
+                </div>
+                <div className="mt-4 text-[11px] text-black/60 group-hover:text-black/80">
+                  Pročitaj →
+                </div>
+              </Link>
+
+              <Link
                 href="/news/blog/park-taxi-brela"
                 className="group rounded-2xl border border-black/5 bg-[#F5F5F7] p-5 flex flex-col justify-between transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
               >

@@ -1773,6 +1773,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status });
   }
   const finalCheckOut = effectiveCheckOut;
+  const isAdjustableHourly = pricing_type === "hourly" && flow_type === "reserve";
   if (effectiveCheckIn && effectiveCheckOut) {
     if (isParkTaxiFlow) {
       const locationTitle = resolvedLocationName ||
@@ -1801,12 +1802,26 @@ export async function GET(req: NextRequest) {
         reservationDescription += dailyFooterLine;
       }
     }
+  } else if (isAdjustableHourly && effectiveCheckIn) {
+    const idLabel = resolvedDisplayId || display_id || resolvedLocationId || location_id;
+    const startLine = isCroatian
+      ? `Vrijeme početka: ${formatIso(effectiveCheckIn)}`
+      : `Start Time: ${formatIso(effectiveCheckIn)}`;
+    const idLine = idLabel
+      ? (isCroatian ? `ID lokacije: ${idLabel}` : `Location ID: ${idLabel}`)
+      : "";
+    const endHint = isCroatian
+      ? "(Vrijeme završetka ovisi o odabranom broju sati)"
+      : "(End time depends on selected hours)";
+    reservationDescription = [startLine, idLine, endHint].filter(Boolean).join("\n");
+    if (dailyFooterLine) {
+      reservationDescription += dailyFooterLine;
+    }
   }
   const sessionAmountCents = toCents(unitAmount * quantity);
-  const walletDebitPlannedCents = await resolvePlannedWalletDebitCents(
-    normalizedCustomerEmail,
-    sessionAmountCents,
-  );
+  const walletDebitPlannedCents = isAdjustableHourly
+    ? 0
+    : await resolvePlannedWalletDebitCents(normalizedCustomerEmail, sessionAmountCents);
   const stripeShortfallCents = toCents(
     sessionAmountCents - walletDebitPlannedCents,
   );
@@ -1937,7 +1952,9 @@ export async function GET(req: NextRequest) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: isParkTaxiFlow
+              name: isAdjustableHourly
+                ? (isCroatian ? "Parking sesija (Prilagodite broj sati)" : "Parking Session (Adjust Hours)")
+                : isParkTaxiFlow
                 ? quantity > 1
                   ? `Park & Taxi Package (${quantity} Days)`
                   : "Park & Taxi Package (1 Day)"
@@ -1952,11 +1969,13 @@ export async function GET(req: NextRequest) {
                 : "Parking Session (1 Hour)",
               description: reservationDescription || undefined,
             },
-            unit_amount: chargedAmountCents,
+            unit_amount: isAdjustableHourly ? unitAmount : chargedAmountCents,
           },
           quantity: 1,
           adjustable_quantity: {
-            enabled: false,
+            enabled: isAdjustableHourly,
+            minimum: isAdjustableHourly ? 1 : undefined,
+            maximum: isAdjustableHourly ? 24 : undefined,
           },
         },
       ],

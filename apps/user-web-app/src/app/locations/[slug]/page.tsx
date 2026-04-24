@@ -19,6 +19,7 @@ type HubData = {
   longitude?: number;
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
+  addons_config?: Record<string, unknown> | null;
 };
 
 async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }>; travelTime: string } | null> {
@@ -32,9 +33,11 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
   
+  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config,review_score,review_count,review_scores";
+
   const { data: locationData, error } = await client
     .from("locations")
-    .select("id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling")
+    .select(selectCols)
     .eq("canonical_slug", hyphenDisplay)
     .limit(1);
 
@@ -42,7 +45,30 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     console.error('[locations/[slug]] Error:', error);
   }
 
-  const hub = locationData?.[0];
+  let hub = locationData?.[0];
+
+  // Fallback 1: try hub_slug in metadata (older locations before canonical_slug was added)
+  if (!hub) {
+    const { data: fallback } = await client
+      .from("locations")
+      .select(selectCols)
+      .contains("verification_metadata", { hub_slug: hyphenDisplay })
+      .limit(1);
+    hub = fallback?.[0];
+  }
+
+  // Fallback 2: extract display_id from slug suffix (e.g. "parking-trogir-61440" → "61440")
+  if (!hub) {
+    const displayIdMatch = hyphenDisplay.match(/-(\d{4,6})$/);
+    if (displayIdMatch) {
+      const { data: fallback } = await client
+        .from("locations")
+        .select(selectCols)
+        .eq("display_id", displayIdMatch[1])
+        .limit(1);
+      hub = fallback?.[0];
+    }
+  }
 
   if (!hub) {
     return null;
@@ -189,7 +215,50 @@ export default async function LocationPage(props: { params: Promise<{ slug: stri
     );
   }
   
-  return <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />;
+  const { hub, priceLabel } = data;
+  const hubUrl = `https://www.payparq.com/locations/${hub.canonical_slug ?? params.slug}`;
+  const localBusinessLd = {
+    "@context": "https://schema.org",
+    "@type": "ParkingFacility",
+    "@id": `${hubUrl}#parking`,
+    "name": hub.name,
+    "url": hubUrl,
+    "description": `Secure parking at ${hub.name}. From ${priceLabel}/hr — AI camera monitoring, no ticket needed, instant booking on PayParq.`,
+    "priceRange": priceLabel,
+    "openingHours": "Mo-Su 00:00-24:00",
+    "paymentAccepted": "Credit Card, Debit Card",
+    "currenciesAccepted": "EUR",
+    ...(hub.address ? {
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": hub.address.split(",")[0]?.trim() ?? hub.address,
+        "addressCountry": "HR",
+      },
+    } : {}),
+    ...(hub.latitude && hub.longitude ? {
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": hub.latitude,
+        "longitude": hub.longitude,
+      },
+    } : {}),
+    "image": Array.isArray(hub.verification_photos) && hub.verification_photos[0]
+      ? hub.verification_photos[0]
+      : undefined,
+    "brand": { "@type": "Brand", "name": "PayParq" },
+    "amenityFeature": [
+      { "@type": "LocationFeatureSpecification", "name": "AI License Plate Recognition", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "24/7 Surveillance", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Online Booking", "value": true },
+    ],
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }} />
+      <LocationClient hub={data.hub} priceLabel={data.priceLabel} hero={data.hero} faqItems={data.faqItems} travelTime={data.travelTime} />
+    </>
+  );
 }
 
 export const revalidate = 300;
@@ -204,10 +273,18 @@ export async function generateStaticParams() {
     }
     const { data: locations } = await client
       .from("locations")
-      .select("canonical_slug")
+      .select("canonical_slug,display_id,name,verification_metadata")
       .contains("verification_metadata", { hub_enabled: true })
       .limit(500);
-    const slugs = (locations || []).map((loc: { canonical_slug: string }) => loc.canonical_slug.trim().toLowerCase());
+    const slugs = (locations || []).flatMap((loc: { canonical_slug?: string | null; display_id?: string; name?: string }) => {
+      if (loc.canonical_slug?.trim()) return [loc.canonical_slug.trim().toLowerCase()];
+      // For locations without canonical_slug, build slug from name + display_id
+      if (loc.display_id) {
+        const namePart = (loc.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        return [namePart ? `${namePart}-${loc.display_id}` : loc.display_id];
+      }
+      return [];
+    });
     return slugs.map((slug) => ({ slug }));
   } catch {
     return [];

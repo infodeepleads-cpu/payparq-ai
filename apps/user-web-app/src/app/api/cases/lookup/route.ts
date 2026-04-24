@@ -50,20 +50,22 @@ function resolveOwnerCaseProcessFeeCents() {
   let lookupLocationId = location_id;
   let lookupLocationUuid = "";
 
+  let allViolations: Record<string, unknown>[] = [];
+
   if (hasCaseNumberLookup) {
     const { data, error } = await client
       .from("violations")
       .select("*")
       .eq("case_number", Number(case_number))
       .order("issued_at", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(20);
 
     if (error) {
       console.error("Case number lookup error:", error);
       return NextResponse.json({ found: false, error: "Case lookup failed" });
     }
-    violation = (data as Record<string, unknown> | null) ?? null;
+    allViolations = (data as Record<string, unknown>[] | null) ?? [];
+    violation = allViolations[0] ?? null;
     const violationLocationId = typeof violation?.location_id === "string" ? violation.location_id : "";
     lookupLocationUuid = violationLocationId;
   } else {
@@ -91,13 +93,13 @@ function resolveOwnerCaseProcessFeeCents() {
       .eq("location_id", lookupLocationUuid)
       .ilike("plate", plate)
       .order("issued_at", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(20);
 
     if (violationError) {
       console.error("Violation lookup error:", violationError);
     }
-    violation = (data as Record<string, unknown> | null) ?? null;
+    allViolations = (data as Record<string, unknown>[] | null) ?? [];
+    violation = allViolations[0] ?? null;
   }
 
   if (!violation) {
@@ -111,46 +113,53 @@ function resolveOwnerCaseProcessFeeCents() {
     .eq("id", locationUuidForQuery)
     .maybeSingle();
 
-  const caseNumberValue = typeof violation.case_number === "number" ? violation.case_number : Number(case_number);
-  const caseNumberText = toCaseNumberString(caseNumberValue);
-  const fallbackNotice = typeof violation.id === "string" ? violation.id.slice(0, 8).toUpperCase() : "";
-  const primaryPhotoUrl = toPublicEvidenceUrl(client, typeof violation.evidence_r2_url === "string" ? violation.evidence_r2_url : null);
-  const secondaryEvidencePath =
-    (typeof violation.evidence_r2_url_secondary === "string" && violation.evidence_r2_url_secondary) ||
-    (typeof violation.evidence_r2_url_2 === "string" && violation.evidence_r2_url_2) ||
-    (typeof violation.secondary_evidence_r2_url === "string" && violation.secondary_evidence_r2_url) ||
-    null;
-  const secondaryPhotoUrl = toPublicEvidenceUrl(client, secondaryEvidencePath);
-  const locationPhoto =
-    Array.isArray(locationData?.verification_photos) && typeof locationData.verification_photos[0] === "string"
-      ? locationData.verification_photos[0]
-      : null;
-  const evidencePhotos = [primaryPhotoUrl, secondaryPhotoUrl || locationPhoto].filter((value): value is string => Boolean(value));
   const ownerCaseProcessFeeCents = resolveOwnerCaseProcessFeeCents();
+
+  function mapViolation(v: Record<string, unknown>) {
+    const caseNum = typeof v.case_number === "number" ? v.case_number : NaN;
+    const caseNumText = toCaseNumberString(Number.isNaN(caseNum) ? Number(case_number) : caseNum);
+    const fallbackNotice = typeof v.id === "string" ? v.id.slice(0, 8).toUpperCase() : "";
+    const primaryPhotoUrl = toPublicEvidenceUrl(client!, typeof v.evidence_r2_url === "string" ? v.evidence_r2_url : null);
+    const secondaryEvidencePath =
+      (typeof v.evidence_r2_url_secondary === "string" && v.evidence_r2_url_secondary) ||
+      (typeof v.evidence_r2_url_2 === "string" && v.evidence_r2_url_2) ||
+      (typeof v.secondary_evidence_r2_url === "string" && v.secondary_evidence_r2_url) ||
+      null;
+    const secondaryPhotoUrl = toPublicEvidenceUrl(client!, secondaryEvidencePath);
+    const evidencePhotos = [primaryPhotoUrl, secondaryPhotoUrl].filter((value): value is string => Boolean(value));
+    const violationTypeRaw = (typeof v.violation_type === "string" && v.violation_type) || "Parking Violation";
+    const isWarning = violationTypeRaw.toLowerCase().includes("warning");
+    return {
+      id: typeof v.id === "string" ? v.id : null,
+      case_number: caseNumText || null,
+      notice_number: caseNumText || fallbackNotice || null,
+      plate: typeof v.plate === "string" ? v.plate : plate || null,
+      location_id: (locationData?.display_id as string | null | undefined) ?? lookupLocationId ?? null,
+      violation_time:
+        (typeof v.issued_at === "string" && v.issued_at) ||
+        (typeof v.created_at === "string" && v.created_at) ||
+        null,
+      violation_type: violationTypeRaw,
+      is_warning: isWarning,
+      amount_due:
+        typeof v.fine_amount === "number"
+          ? v.fine_amount
+          : typeof v.fine_amount === "string"
+            ? Number(v.fine_amount)
+            : null,
+      status: (typeof v.status === "string" && v.status) || "Issued",
+      photo_url: evidencePhotos[0] ?? null,
+      evidence_photos: evidencePhotos.slice(0, 2),
+    };
+  }
+
+  const primaryCase = mapViolation(violation);
+  const cases = allViolations.map(mapViolation);
 
   return NextResponse.json({
     found: true,
-    case: {
-      id: typeof violation.id === "string" ? violation.id : null,
-      case_number: caseNumberText || null,
-      notice_number: caseNumberText || fallbackNotice || null,
-      plate: typeof violation.plate === "string" ? violation.plate : plate || null,
-      location_id: (locationData?.display_id as string | null | undefined) ?? lookupLocationId ?? null,
-      violation_time:
-        (typeof violation.issued_at === "string" && violation.issued_at) ||
-        (typeof violation.created_at === "string" && violation.created_at) ||
-        null,
-      violation_type: (typeof violation.violation_type === "string" && violation.violation_type) || "Parking Violation",
-      amount_due:
-        typeof violation.fine_amount === "number"
-          ? violation.fine_amount
-          : typeof violation.fine_amount === "string"
-            ? Number(violation.fine_amount)
-            : null,
-      status: (typeof violation.status === "string" && violation.status) || "Issued",
-      photo_url: evidencePhotos[0] ?? null,
-      evidence_photos: evidencePhotos.slice(0, 2),
-    },
+    case: primaryCase,
+    cases,
     location: {
       name: (locationData?.name as string | null | undefined) ?? null,
       slug: (locationData?.canonical_slug as string | null | undefined) ?? null,

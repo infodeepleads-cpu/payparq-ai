@@ -19,6 +19,7 @@ type HubData = {
   longitude?: number;
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
+  addons_config?: Record<string, unknown> | null;
   rate_per_hour?: number;
   base_price_hourly?: number;
   base_price_daily?: number;
@@ -29,6 +30,12 @@ type HubData = {
   base_price_daily_ceiling?: number;
   base_price_monthly_floor?: number;
   base_price_monthly_ceiling?: number;
+  review_score?: number | null;
+  review_count?: number | null;
+  review_scores?: {
+    security?: number; accessibility?: number; cleanliness?: number;
+    staff?: number; value?: number; location?: number;
+  } | null;
 };
 
 type SectionKey =
@@ -57,7 +64,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [companyOpen, setCompanyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'reserve' | 'park_now'>('reserve');
   const [openFaq, setOpenFaq] = useState<number[]>([]);
-  const [openAllReviews, setOpenAllReviews] = useState(false);
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
     howItWorks: true,
     map: true,
@@ -297,8 +303,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         body: JSON.stringify({
           location_id: locationId,
           display_id: hub.display_id,
-          check_in: checkIn || undefined,
-          check_out: checkOut || undefined,
+          check_in: checkIn ? new Date(checkIn).toISOString() : undefined,
+          check_out: checkOut ? new Date(checkOut).toISOString() : undefined,
           flow_type: activeTab,
           customer_email: customerEmail,
           type: activeTab === 'park_now' || (activeTab === 'reserve' && reserveUsesDailyPricing) ? 'daily' : undefined,
@@ -398,45 +404,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const cityManagerMessageHref = cityManagerWhatsapp
     ? `https://wa.me/${cityManagerWhatsapp}?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}` 
     : `https://wa.me/?text=${encodeURIComponent(`Pozdrav ${cityManagerName}, zanima me ${locationName}.`)}`;
-  const defaultReviewItems = [
-    { quote: "Čisto, brzo i bez čekanja. Ušli smo i izašli bez papira.", author: "Ana M.", rating: "5.0" },
-    { quote: "Podrška je odmah odgovorila i pomogla oko promjene termina.", author: "Marko R.", rating: "4.9" },
-    { quote: "Lokacija je jednostavna, cijena jasna i sve je prošlo bez stresa.", author: "Ivana K.", rating: "4.8" },
-    { quote: "Prijava je bila jednostavna, sve jasno u aplikaciji.", author: "Petra L.", rating: "4.9" },
-    { quote: "Odlična lokacija i brz transfer.", author: "Nikola B.", rating: "4.8" },
-    { quote: "Preporučujem za putovanja, bez stresa.", author: "Maja T.", rating: "4.9" },
-    { quote: "Sve je prošlo točno kako je napisano.", author: "Luka S.", rating: "5.0" },
-    { quote: "Podrška na WhatsAppu je stvarno brza.", author: "Karlo D.", rating: "4.8" },
-    { quote: "Parking čist i pregledan, lako za pronaći.", author: "Nina P.", rating: "4.9" },
-    { quote: "Vrlo korektna cijena i usluga.", author: "Iva K.", rating: "4.8" },
-    { quote: "Bez čekanja i komplikacija kod ulaza.", author: "Dario V.", rating: "4.9" },
-    { quote: "Idealno za aerodrom, sve radi kako treba.", author: "Sara J.", rating: "5.0" },
-    { quote: "Produženje parkinga u aplikaciji radi odlično.", author: "Tomislav N.", rating: "4.8" },
-    { quote: "Jasne upute i odlična komunikacija.", author: "Marina C.", rating: "4.9" },
-    { quote: "Brza potvrda i uredno iskustvo.", author: "Ivan G.", rating: "4.8" },
-    { quote: "Vožnja je stigla odmah nakon poziva.", author: "Antonela Z.", rating: "4.9" },
-    { quote: "Najjednostavniji parking koji sam koristio.", author: "Filip H.", rating: "5.0" },
-    { quote: "Sve preporuke za ovu lokaciju.", author: "Jelena R.", rating: "4.8" },
-    { quote: "Sigurno, osvijetljeno i praktično.", author: "Bruno E.", rating: "4.9" },
-    { quote: "Točno vrijeme i odlična organizacija.", author: "Lea M.", rating: "4.8" },
-    { quote: "Aplikacija i plaćanje prošli bez problema.", author: "Matej U.", rating: "4.9" },
-    { quote: "Jako ljubazna korisnička podrška.", author: "Katarina O.", rating: "4.8" },
-    { quote: "Lokacija blizu svega bitnog.", author: "Stipe A.", rating: "4.9" },
-    { quote: "Povratak po auto također bez čekanja.", author: "Ena F.", rating: "4.8" },
-    { quote: "Jednostavno i pouzdano od početka do kraja.", author: "Dominik I.", rating: "4.9" },
-    { quote: "Sve preporuke, opet koristim.", author: "Marta Š.", rating: "5.0" },
-    { quote: "Transparentno i profesionalno.", author: "Roko P.", rating: "4.8" },
-  ];
-  const allReviewItems = isBaskaVodaPuntaRataLocation
-    ? []
-    : (isInsigniaLocation ? defaultReviewItems : defaultReviewItems);
-  const totalReviews = allReviewItems.length;
-  const averageRatingNumeric = totalReviews > 0
-    ? allReviewItems.reduce((sum, item) => sum + Number.parseFloat(item.rating), 0) / totalReviews
-    : 0;
-  const averageRating = totalReviews > 0 ? averageRatingNumeric.toFixed(1) : "—";
-  const reviewsLabel = totalReviews > 0 ? `${averageRating} (${totalReviews}) reviews` : "New Object";
-  const reviewItems = allReviewItems.slice(0, 3);
+  const hasRealReviews = (hub.review_count ?? 0) > 0 && hub.review_score != null;
+  const totalReviews = hasRealReviews ? (hub.review_count ?? 0) : 0;
+  const averageRatingNumeric = hasRealReviews ? (hub.review_score ?? 0) : 0;
+  const averageRating = hasRealReviews ? averageRatingNumeric.toFixed(1) : "—";
+  const reviewsLabel = hasRealReviews ? `${averageRating} / 10 (${totalReviews})` : "New Object";
 
   const handlePrevPhoto = () => {
     setCurrentPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
@@ -632,20 +604,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
         "@type": "AggregateRating",
         ratingValue: averageRatingNumeric.toFixed(1),
         reviewCount: totalReviews,
-        bestRating: "5",
+        bestRating: "10",
         worstRating: "1",
       },
-      review: allReviewItems.slice(0, 5).map((r) => ({
-        "@type": "Review",
-        reviewRating: {
-          "@type": "Rating",
-          ratingValue: r.rating,
-          bestRating: "5",
-          worstRating: "1",
-        },
-        author: { "@type": "Person", name: r.author },
-        reviewBody: r.quote,
-      })),
     } : {}),
     amenityFeature: [
       { "@type": "LocationFeatureSpecification", name: "On‑demand Parq vožnja", value: true },
@@ -735,7 +696,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     { q: `Is customer support available?`, a: `24/7 WhatsApp and in‑app support. Contact the City Manager directly from your confirmation.` },
     { q: `Which languages are supported?`, a: `English is supported universally; local languages are available depending on location.` },
     { q: `Can I get an invoice for business travel?`, a: `Yes. Stripe issues a detailed receipt, and VAT invoicing is available upon request.` },
-    { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we’ll help update your reservation.` },
+    { q: `What happens if my flight is delayed?`, a: `For airport lots only: adjust your end time in the app or contact support — we'll help update your reservation.` },
     { q: `Je li cijena transparentna?`, a: `Da. Jasne satnice bez skrivenih naknada. Ukupno se prikazuje prije nego što potvrdite, uz dodani Stripeov trošak obrade transakcije.` },
     { q: `Mogu li naručiti prijevoz ili kupiti osiguranje s vaše stranice?`, a: `Da. Nakon što je vaša rezervacija potvrđena, bit ćete preusmjereni na uspješnu stranicu na kojoj možete dogovoriti Parq vožnju, kupiti osiguranje i preuzeti potvrdu o rezervaciji. Osiguranje je moguće aplicirati samo za verificirane korisnike, ovisno o lokaciji. <a href="/success" class="underline text-blue-600" target="_blank">Pogledajte demonstraciju stranice uspjeha</a>` },
   ];
@@ -1473,19 +1434,84 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       )}
                     </button>
                     {openSections.map ? (
-                      <div className="px-4 md:px-6 pb-4 md:pb-6">
-                        <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
-                          <iframe
-                            className="absolute inset-0 w-full h-full"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            src={
-                              hub.latitude && hub.longitude
-                                ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
-                                : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
-                            }
-                          />
-                        </div>
+                      <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-6">
+                        {(() => {
+                          const pickup = hub.addons_config?.pickup_point as { lat?: number; lng?: number; label?: string } | null | undefined;
+                          const hasPickup = !!(pickup?.lat && pickup?.lng);
+                          const hasHub = !!(hub.latitude && hub.longitude);
+                          return (
+                            <>
+                              {/* Map 1 — Hub / parking lot */}
+                              <div className="space-y-2">
+                                <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] px-4 py-3 flex items-center gap-2">
+                                  <MapPin className="w-4 h-4 text-[#5F3DFC] shrink-0" />
+                                  <span className="text-sm font-semibold text-[#5F3DFC]">Parking lokacija</span>
+                                </div>
+                                <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
+                                  <iframe
+                                    className="absolute inset-0 w-full h-full"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    src={
+                                      hasHub
+                                        ? `https://www.google.com/maps?q=${hub.latitude},${hub.longitude}&output=embed`
+                                        : `https://www.google.com/maps?q=${encodeURIComponent(locationName)}&output=embed`
+                                    }
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Map 2 — Pick-Up / Drop-Off zone */}
+                              {hasPickup && (
+                                <div className="space-y-2">
+                                  <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] px-4 py-3 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Car className="w-4 h-4 text-[#5F3DFC] shrink-0" />
+                                      <span className="text-sm font-semibold text-[#5F3DFC]">Pick-Up / Drop Off Zone</span>
+                                      {pickup!.label && (
+                                        <span className="text-xs text-[#5F3DFC]/70 truncate">· {pickup!.label}</span>
+                                      )}
+                                    </div>
+                                    <a
+                                      href={`https://www.google.com/maps?q=${pickup!.lat},${pickup!.lng}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[11px] font-semibold text-[#5F3DFC] underline shrink-0"
+                                    >
+                                      Navigacija
+                                    </a>
+                                  </div>
+                                  <div className="relative w-full h-[200px] rounded-2xl border border-black/10 bg-white overflow-hidden">
+                                    <iframe
+                                      className="absolute inset-0 w-full h-full"
+                                      loading="lazy"
+                                      referrerPolicy="no-referrer-when-downgrade"
+                                      src={`https://www.google.com/maps?q=${pickup!.lat},${pickup!.lng}&output=embed`}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Map 3 — Combined route (both pins) */}
+                              {hasHub && hasPickup && (
+                                <div className="space-y-2">
+                                  <div className="rounded-2xl border border-[#5F3DFC]/20 bg-[#F5F2FF] px-4 py-3 flex items-center gap-2">
+                                    <Route className="w-4 h-4 text-[#5F3DFC] shrink-0" />
+                                    <span className="text-sm font-semibold text-[#5F3DFC]">Ruta: parking → preuzimanje</span>
+                                  </div>
+                                  <div className="relative w-full h-[240px] md:h-[360px] rounded-2xl border border-black/10 bg-white overflow-hidden">
+                                    <iframe
+                                      className="absolute inset-0 w-full h-full"
+                                      loading="lazy"
+                                      referrerPolicy="no-referrer-when-downgrade"
+                                      src={`https://www.google.com/maps?saddr=${hub.latitude},${hub.longitude}&daddr=${pickup!.lat},${pickup!.lng}&output=embed`}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : null}
                   </div>
@@ -1598,55 +1624,44 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </button>
                     {openSections.reviews ? (
                       <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-4">
-                        <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                          <div className="flex items-center gap-6">
-                            <div>
-                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
-                              <p className="text-lg font-semibold text-black">{averageRating} / 5</p>
+                        {hasRealReviews ? (
+                          <>
+                            <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4 flex items-center gap-6">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Prosječna ocjena</p>
+                                <p className="text-lg font-semibold text-black">{averageRating} / 10</p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
+                                <p className="text-lg font-semibold text-black">{totalReviews}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-[11px] uppercase tracking-[0.14em] text-black/60">Ukupno recenzija</p>
-                              <p className="text-lg font-semibold text-black">{totalReviews}</p>
-                            </div>
+                            {hub.review_scores && (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {[
+                                  ['security', 'Sigurnost'], ['accessibility', 'Pristupačnost'],
+                                  ['cleanliness', 'Čistoća'], ['staff', 'Osoblje'],
+                                  ['value', 'Vrijednost'], ['location', 'Lokacija'],
+                                ].map(([key, label]) => {
+                                  const scores = hub.review_scores as Record<string, number>;
+                                  const v = scores[key] ?? 0;
+                                  const color = v >= 9 ? '#16a34a' : v >= 7 ? '#5F3DFC' : v >= 5 ? '#f59e0b' : '#dc2626';
+                                  return (
+                                    <div key={key} className="rounded-xl border border-black/10 bg-[#FBFAFF] px-3 py-2 flex items-center justify-between">
+                                      <span className="text-[11px] text-black/60">{label}</span>
+                                      <span className="text-[14px] font-black" style={{ color }}>{v > 0 ? v.toFixed(1) : '—'}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="rounded-2xl border border-black/10 bg-[#FBFAFF] p-4 md:p-5 text-center">
+                            <p className="text-sm font-semibold text-black/70">New Object</p>
+                            <p className="text-xs text-black/40 mt-1">Ova lokacija još nema recenzija. Budite prvi koji će ocijeniti iskustvo.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setOpenAllReviews((prev) => !prev)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#5F3DFC]/25 px-4 py-2 text-sm font-semibold text-[#5F3DFC] hover:bg-[#F5F2FF] transition-colors"
-                          >
-                            {openAllReviews ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                            <span>{openAllReviews ? "Sakrij sve recenzije" : "Pregledaj sve recenzije"}</span>
-                          </button>
-                        </div>
-                        <div className="grid gap-3 md:grid-cols-3">
-                          {reviewItems.length > 0 ? reviewItems.map((item) => (
-                            <div key={item.author} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                              <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
-                              <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
-                              <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
-                            </div>
-                          )) : (
-                            <div className="md:col-span-3 rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                              <p className="text-xs leading-relaxed text-black/80">
-                                Recenzije su premještene na lokaciju New Object PayParq Insignia.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        {openAllReviews ? (
-                          <div className="rounded-2xl border border-black/10 bg-white p-3 md:p-4">
-                            <p className="text-sm font-semibold text-black">Sve recenzije za ovu lokaciju</p>
-                            <div className="mt-3 grid gap-3 md:grid-cols-2">
-                              {allReviewItems.map((item, idx) => (
-                                <div key={`${item.author}-${idx}`} className="rounded-xl border border-black/10 bg-[#FBFAFF] p-3">
-                                  <p className="text-[11px] font-semibold text-[#5F3DFC]">{item.rating} / 5</p>
-                                  <p className="mt-1 text-xs leading-relaxed text-black/80">“{item.quote}”</p>
-                                  <p className="mt-2 text-[11px] font-semibold text-black">{item.author}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
+                        )}
                         <div className="rounded-2xl border border-[#5F3DFC]/25 bg-white p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             {cityManagerPhoto ? (

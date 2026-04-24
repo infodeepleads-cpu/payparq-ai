@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +11,7 @@ import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,6 +25,7 @@ import '../../../utils/async_action_handler.dart';
 import '../../../widgets/confirm_delete_dialog.dart';
 import '../providers/locations_controller.dart';
 import '../../../services/error_mapper.dart';
+import '../../../config/app_config.dart';
 
 class LocationsScreen extends ConsumerStatefulWidget {
   const LocationsScreen({super.key});
@@ -39,6 +43,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   final ScrollController _scrollController = ScrollController();
   int _visibleCount = 20;
   final Map<String, Map<String, dynamic>> _locOverrides = {};
+  String _pendingMoveReason = '';
 
   @override
   void initState() {
@@ -493,6 +498,71 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     );
   }
 
+  Widget _buildAddonRow({
+    required String label,
+    required bool enabled,
+    required TextEditingController priceCtrl,
+    required void Function(bool) onToggle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Switch(value: enabled, activeThumbColor: Colors.black, onChanged: onToggle),
+            Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87))),
+          ],
+        ),
+        if (enabled)
+          TextField(
+            controller: priceCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Cijena',
+              suffixText: '€',
+              filled: true,
+              fillColor: AppTheme.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Map<String, dynamic> _buildAddonsConfig({
+    required bool valetOn, required String valetPrice,
+    required bool evOn, required String evPrice,
+    required bool washOn, required String washBasic, required String washPremium,
+    required bool fuelOn, required String fuelDiesel, required String fuelBenzin,
+    required bool shuttleOn, required String shuttlePrice,
+    required double pickupLat, required double pickupLng, required String pickupLabel,
+    required String phoneSms, required String lotZone,
+  }) {
+    return {
+      if (valetOn) 'valet': {
+        'enabled': true,
+        'price_cents': ((double.tryParse(valetPrice) ?? 5.0) * 100).round(),
+        if (lotZone.trim().isNotEmpty) 'lot_zone': lotZone.trim(),
+      },
+      if (evOn) 'ev_charging': {'enabled': true, 'price_cents': ((double.tryParse(evPrice) ?? 20.0) * 100).round()},
+      if (washOn) 'car_wash': {'enabled': true, 'options': [
+        {'id': 'basic', 'label': 'Basic', 'price_cents': ((double.tryParse(washBasic) ?? 15.0) * 100).round()},
+        {'id': 'premium', 'label': 'Premium', 'price_cents': ((double.tryParse(washPremium) ?? 30.0) * 100).round()},
+      ]},
+      if (fuelOn) 'fuel': {'enabled': true, 'options': [
+        {'id': 'diesel', 'label': 'Diesel', 'price_cents': ((double.tryParse(fuelDiesel) ?? 60.0) * 100).round()},
+        {'id': 'benzin', 'label': 'Benzin', 'price_cents': ((double.tryParse(fuelBenzin) ?? 55.0) * 100).round()},
+      ]},
+      if (shuttleOn) 'shuttle': {'enabled': true, 'price_cents': ((double.tryParse(shuttlePrice) ?? 2.0) * 100).round()},
+      if (pickupLat != 0.0 || pickupLng != 0.0) 'pickup_point': {
+        'lat': pickupLat,
+        'lng': pickupLng,
+        if (pickupLabel.trim().isNotEmpty) 'label': pickupLabel.trim(),
+      },
+      if (phoneSms.trim().isNotEmpty) 'phone_sms': phoneSms.trim(),
+    };
+  }
+
   void _confirmDelete(String id, String displayId) {
     final isHr = ref.read(localeIsCroatianProvider);
     AsyncActionHandler.run<void>(
@@ -527,14 +597,19 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   }
 
   String _buildHubLocationUrl(Map<String, dynamic> loc) {
+    final String? canonicalSlug = loc['canonical_slug']?.toString();
+    if (canonicalSlug != null && canonicalSlug.trim().isNotEmpty) {
+      return 'https://www.payparq.com/locations/${canonicalSlug.trim()}';
+    }
+    // Fallback: build from name + display_id (mirrors DB canonical_slug format)
     final String displayId = (loc['display_id'] ?? '').toString();
     final String name = (loc['name'] ?? '')
         .toString()
         .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\\s-]'), '')
-        .replaceAll(RegExp(r'\\s+'), '-');
-    final String slug = name.isNotEmpty ? name : displayId.toLowerCase();
-    return 'https://payparq.com/locations/$slug';
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-');
+    final String slug = name.isNotEmpty ? '$name-$displayId' : displayId.toLowerCase();
+    return 'https://www.payparq.com/locations/$slug';
   }
 
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
@@ -543,11 +618,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
     final bool previous = meta['hub_enabled'] == true;
     try {
-      final slug = await ref
+      await ref
           .read(locationsControllerProvider)
           .updateHubDesignation(loc, enabled);
       if (enabled) {
-        final url = 'https://payparq.com/locations/$slug';
+        final url = _buildHubLocationUrl(loc);
         try {
           await launchUrl(Uri.parse(url));
         } catch (_) {}
@@ -787,6 +862,48 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final bool isHub = meta['hub_enabled'] == true;
         final bool isAgenticSettlement =
             _resolveSettlementModel(meta) == 'agentic';
+        bool valetEnabled = effectiveLoc['valet_enabled'] == true;
+        bool shuttleEnabled = effectiveLoc['shuttle_enabled'] == true;
+        final Map<String, dynamic> addonsRaw =
+            (effectiveLoc['addons_config'] ?? {}) as Map<String, dynamic>;
+        final Map<String, dynamic> addonsConfig = Map<String, dynamic>.from(addonsRaw);
+        // Price controllers for add-ons
+        num _centsToEur(num? cents, num fallbackCents) =>
+            ((cents ?? fallbackCents) / 100);
+        final valetPriceCtrl = TextEditingController(
+            text: _centsToEur((addonsConfig['valet'] as Map?)?['price_cents'] as num?, 500).toStringAsFixed(2));
+        final evPriceCtrl = TextEditingController(
+            text: _centsToEur((addonsConfig['ev_charging'] as Map?)?['price_cents'] as num?, 2000).toStringAsFixed(2));
+        final washBasicCtrl = TextEditingController(
+            text: _centsToEur((((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'basic', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents'] as num?, 1500).toStringAsFixed(2));
+        final washPremiumCtrl = TextEditingController(
+            text: _centsToEur((((addonsConfig['car_wash'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'premium', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents'] as num?, 3000).toStringAsFixed(2));
+        final fuelDieselCtrl = TextEditingController(
+            text: _centsToEur((((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'diesel', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents'] as num?, 6000).toStringAsFixed(2));
+        final fuelBenzinCtrl = TextEditingController(
+            text: _centsToEur((((addonsConfig['fuel'] as Map?)?['options'] as List?)?.firstWhere(
+                (o) => (o as Map)['id'] == 'benzin', orElse: () => <String, dynamic>{})
+                as Map?)?['price_cents'] as num?, 5500).toStringAsFixed(2));
+        final shuttlePriceCtrl = TextEditingController(
+            text: _centsToEur((addonsConfig['shuttle'] as Map?)?['price_cents'] as num?, 200).toStringAsFixed(2));
+        double pickupLat = ((addonsConfig['pickup_point'] as Map?)?['lat'] as num?)?.toDouble() ?? 0.0;
+        double pickupLng = ((addonsConfig['pickup_point'] as Map?)?['lng'] as num?)?.toDouble() ?? 0.0;
+        String pickupLabel = ((addonsConfig['pickup_point'] as Map?)?['label'] as String?) ?? '';
+        final phoneSmsCtrl = TextEditingController(
+            text: (addonsConfig['phone_sms'] as String?) ?? '+385 91 5963139');
+        final lotZoneCtrl = TextEditingController(
+            text: ((addonsConfig['valet'] as Map?)?['lot_zone'] as String?) ?? '');
+        bool addonValetOn = (addonsConfig['valet'] as Map?)?['enabled'] == true;
+        bool addonEvOn = (addonsConfig['ev_charging'] as Map?)?['enabled'] == true;
+        bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
+        bool addonFuelOn = (addonsConfig['fuel'] as Map?)?['enabled'] == true;
+        bool addonShuttleOn = (addonsConfig['shuttle'] as Map?)?['enabled'] == true;
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -795,13 +912,14 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             : double.tryParse('${effectiveLoc['longitude'] ?? 0.0}') ?? 0.0;
         final bool canEdit = isSuperAdmin || isAdmin;
 
-        return AlertDialog(
-          title: Text(
-              Lang.sel(ref.watch(localeIsCroatianProvider), 'Location Details',
-                  'Detalji lokacije'),
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          content: SizedBox(
-            width: 420,
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 660,
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.92,
+            ),
             child: StatefulBuilder(
               builder: (context, setState) {
                 final messenger = ScaffoldMessenger.of(dialogContext);
@@ -842,6 +960,113 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   return MemoryImage(bytes);
                 }
 
+                Future<void> _notifyLocationMove({
+                  required String locationId,
+                  required String locationName,
+                  required String newAddress,
+                  required double oldLat,
+                  required double oldLng,
+                  required double newLat,
+                  required double newLng,
+                  required String? reason,
+                }) async {
+                  try {
+                    final webBase = AppConfig.webAppBaseUrl.replaceAll(RegExp(r'/$'), '');
+                    final movedBy = Supabase.instance.client.auth.currentUser?.id ?? '';
+                    await http.post(
+                      Uri.parse('$webBase/api/admin/notify-location-move'),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-moved-by': movedBy,
+                      },
+                      body: jsonEncode({
+                        'location_id': locationId,
+                        'location_name': locationName,
+                        'new_address': newAddress,
+                        'reason': reason,
+                        'old_lat': oldLat,
+                        'old_lng': oldLng,
+                        'new_lat': newLat,
+                        'new_lng': newLng,
+                      }),
+                    ).timeout(const Duration(seconds: 15));
+                  } catch (_) {}
+                }
+
+                Future<bool> _showRelocationConfirmDialog({
+                  required String? reason,
+                }) async {
+                  final reasonCtrl = TextEditingController(text: reason ?? '');
+                  final confirmed = await showDialog<bool>(
+                    context: dialogContext,
+                    barrierDismissible: false,
+                    builder: (ctx) => StatefulBuilder(
+                      builder: (ctx, setLocalState) => AlertDialog(
+                        title: Row(children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(
+                            Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Relocate Verified Hub',
+                              'Premještanje verificirane lokacije'),
+                            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                          )),
+                        ]),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              Lang.sel(ref.watch(localeIsCroatianProvider),
+                                'Changing the coordinates of a verified hub will:\n\n• Suspend the hub (status → pending)\n• Disable hub access until re-verified\n• Notify users with upcoming reservations\n\nThis action is logged.',
+                                'Promjena koordinata verificirane lokacije će:\n\n• Suspendirati hub (status → na čekanju)\n• Onemogućiti pristup hubu do ponovne verifikacije\n• Obavijestiti korisnike s budućim rezervacijama\n\nOva radnja se bilježi.'),
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: reasonCtrl,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Reason (required)', 'Razlog (obavezno)'),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Cancel', 'Odustani')),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                            onPressed: () {
+                              if (reasonCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                  content: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Reason is required', 'Razlog je obavezan')),
+                                ));
+                                return;
+                              }
+                              Navigator.of(ctx).pop(true);
+                            },
+                            child: Text(
+                              Lang.sel(ref.watch(localeIsCroatianProvider), 'Confirm Relocation', 'Potvrdi premještanje'),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                  if (confirmed == true) {
+                    // expose reason back via side-channel
+                    _pendingMoveReason = reasonCtrl.text.trim();
+                  }
+                  return confirmed == true;
+                }
+
                 Future<void> saveChanges() async {
                   if (!canEdit) return;
                   final newName = nameCtrl.text.trim();
@@ -856,6 +1081,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     );
                     return;
                   }
+                  // Detect whether hub coordinates changed
+                  final origLat = (loc['latitude'] is num)
+                      ? (loc['latitude'] as num).toDouble()
+                      : double.tryParse('${loc['latitude'] ?? 0}') ?? 0.0;
+                  final origLng = (loc['longitude'] is num)
+                      ? (loc['longitude'] as num).toDouble()
+                      : double.tryParse('${loc['longitude'] ?? 0}') ?? 0.0;
+                  final coordsChanged = (pendingLatitude - origLat).abs() > 0.000001 ||
+                      (pendingLongitude - origLng).abs() > 0.000001;
+                  final currentStatus = (loc['verification_status'] ?? 'unverified') as String;
+                  final isVerified = currentStatus == 'verified';
+
+                  if (coordsChanged && isVerified) {
+                    // Must confirm before proceeding
+                    _pendingMoveReason = '';
+                    final confirmed = await _showRelocationConfirmDialog(reason: null);
+                    if (!confirmed) return;
+                  }
+
                   setState(() => saving = true);
                   try {
                     final newCapacity =
@@ -881,16 +1125,69 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         };
                       });
                     }
+                    if (coordsChanged && isVerified) {
+                      await ref
+                          .read(locationsControllerProvider)
+                          .relocateVerifiedLocation(
+                            id: loc['id'].toString(),
+                            name: newName,
+                            address: newAddress,
+                            latitude: pendingLatitude,
+                            longitude: pendingLongitude,
+                            capacity: newCapacity,
+                            currentMetadata: meta,
+                            oldLat: origLat,
+                            oldLng: origLng,
+                            reason: _pendingMoveReason,
+                            invalidateStream: false,
+                          );
+                      // Fire-and-forget notification (don't block UI)
+                      unawaited(_notifyLocationMove(
+                        locationId: loc['id'].toString(),
+                        locationName: newName,
+                        newAddress: newAddress,
+                        oldLat: origLat,
+                        oldLng: origLng,
+                        newLat: pendingLatitude,
+                        newLng: pendingLongitude,
+                        reason: _pendingMoveReason,
+                      ));
+                    } else {
+                      await ref
+                          .read(locationsControllerProvider)
+                          .updateLocationDetails(
+                            id: loc['id'].toString(),
+                            name: newName,
+                            address: newAddress,
+                            latitude: pendingLatitude,
+                            longitude: pendingLongitude,
+                            capacity: newCapacity,
+                            invalidateStream: false,
+                          );
+                    }
                     await ref
                         .read(locationsControllerProvider)
-                        .updateLocationDetails(
-                          id: loc['id'].toString(),
-                          name: newName,
-                          address: newAddress,
-                          latitude: pendingLatitude,
-                          longitude: pendingLongitude,
-                          capacity: newCapacity,
-                          invalidateStream: false,
+                        .updateAddonsConfig(
+                          loc['id'].toString(),
+                          _buildAddonsConfig(
+                            valetOn: addonValetOn,
+                            valetPrice: valetPriceCtrl.text,
+                            evOn: addonEvOn,
+                            evPrice: evPriceCtrl.text,
+                            washOn: addonWashOn,
+                            washBasic: washBasicCtrl.text,
+                            washPremium: washPremiumCtrl.text,
+                            fuelOn: addonFuelOn,
+                            fuelDiesel: fuelDieselCtrl.text,
+                            fuelBenzin: fuelBenzinCtrl.text,
+                            shuttleOn: addonShuttleOn,
+                            shuttlePrice: shuttlePriceCtrl.text,
+                            pickupLat: pickupLat,
+                            pickupLng: pickupLng,
+                            pickupLabel: pickupLabel,
+                            phoneSms: phoneSmsCtrl.text,
+                            lotZone: lotZoneCtrl.text,
+                          ),
                         );
                     if (photosChanged) {
                       setState(() {
@@ -962,15 +1259,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         _locOverrides.remove(loc['id'].toString());
                       });
                     }
+                    if (coordsChanged && isVerified) {
+                      loc['verification_status'] = 'pending';
+                      if (loc['verification_metadata'] is Map) {
+                        (loc['verification_metadata'] as Map<String, dynamic>)['hub_enabled'] = false;
+                      }
+                    }
                     ref.invalidate(locationsStreamProvider);
                     if (dialogContext.mounted) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                            content: Text(Lang.sel(
-                                ref.watch(localeIsCroatianProvider),
-                                'Location updated',
-                                'Lokacija ažurirana'))),
-                      );
+                      final msg = (coordsChanged && isVerified)
+                          ? Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Location moved — hub suspended, re-verification required',
+                              'Lokacija premještena — hub suspendiran, potrebna re-verifikacija')
+                          : Lang.sel(ref.watch(localeIsCroatianProvider),
+                              'Location updated', 'Lokacija ažurirana');
+                      messenger.showSnackBar(SnackBar(
+                        content: Text(msg),
+                        duration: Duration(seconds: coordsChanged && isVerified ? 5 : 3),
+                        backgroundColor: coordsChanged && isVerified ? Colors.orange[800] : null,
+                      ));
                       navigator.pop();
                     }
                   } catch (e) {
@@ -1002,745 +1309,427 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                   }
                 }
 
-                return ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(dialogContext).size.height * 0.78,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                Widget statusChip(String label, Color bg, Color fg) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                  child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: fg)));
+                final verStatus = (loc['verification_status'] ?? 'unverified').toString();
+                final verBg = verStatus == 'verified'
+                    ? Colors.green[400]!.withValues(alpha: 0.15)
+                    : verStatus == 'pending'
+                        ? Colors.orange.withValues(alpha: 0.15)
+                        : Colors.grey[200]!;
+                final verFg = verStatus == 'verified'
+                    ? Colors.green[700]!
+                    : verStatus == 'pending'
+                        ? Colors.orange[800]!
+                        : Colors.grey[600]!;
+                final verLabel = verStatus == 'verified' ? 'VERIFIED' : verStatus == 'pending' ? 'PENDING' : 'UNVERIFIED';
+
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+
+                    // ────────────── HEADER ──────────────
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 8, 16),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(currentName, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                          const SizedBox(height: 6),
+                          Wrap(spacing: 6, runSpacing: 4, children: [
+                            statusChip(verLabel, verBg, verFg),
+                            statusChip('ID $displayId', Colors.grey[100]!, Colors.black45),
+                            if (isHub) statusChip('HUB', Colors.black, Colors.white),
+                            if (valetEnabled) statusChip('VALET', const Color(0xFF5F3DFC).withValues(alpha: 0.12), const Color(0xFF5F3DFC)),
+                            if (shuttleEnabled) statusChip('SHUTTLE', const Color(0xFF0F6E56).withValues(alpha: 0.12), const Color(0xFF0F6E56)),
+                          ]),
+                        ])),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          icon: const Icon(Icons.close, size: 20, color: Colors.black45),
+                          padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                      ]),
+                    ),
+                    const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                    // ────────────── SCROLLABLE BODY ──────────────
+                    Flexible(child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                        // Basic info
+                        if (!canEdit)
+                          Row(children: [
+                            Icon(Icons.edit_location_alt_outlined, size: 15, color: Colors.grey[400]),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('$currentName · $displayId',
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w500))),
+                          ])
+                        else
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Location Name', 'Naziv lokacije'),
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                            const SizedBox(height: 5),
+                            TextField(controller: nameCtrl, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: 'e.g. Parking Trogir', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            const SizedBox(height: 10),
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Address', 'Adresa'),
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                            const SizedBox(height: 5),
+                            TextField(controller: addressCtrl, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: 'e.g. City center', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                          ]),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Icon(Icons.local_parking, size: 15, color: Colors.grey[400]),
+                          const SizedBox(width: 8),
+                          if (!canEdit)
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Capacity: $currentCapacity', 'Kapacitet: $currentCapacity'),
+                              style: GoogleFonts.inter(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w500))
+                          else ...[
+                            Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Capacity', 'Kapacitet'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
+                            const SizedBox(width: 10),
+                            SizedBox(width: 90, child: TextField(controller: capacityCtrl,
+                              keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
+                              decoration: InputDecoration(hintText: '150', filled: true, fillColor: AppTheme.background,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                          ],
+                        ]),
+
+                        const SizedBox(height: 16),
+                        const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                        // Section 1: Maps
+                        ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          childrenPadding: const EdgeInsets.only(bottom: 12),
+                          leading: const Icon(Icons.map_outlined, size: 17, color: Colors.black54),
+                          title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Maps', 'Mape'),
+                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                          iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                          children: [
+                            Text('${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                            const SizedBox(height: 8),
+                            if (pendingLatitude != 0.0 && pendingLongitude != 0.0) ...[
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Parking Location', 'Parking lokacija'),
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45)),
+                              const SizedBox(height: 4),
+                              ClipRRect(borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(height: 150, child: FlutterMap(
+                                  options: MapOptions(initialCenter: LatLng(pendingLatitude, pendingLongitude), initialZoom: 15,
+                                    interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                                  children: [
+                                    TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                    MarkerLayer(markers: [Marker(point: LatLng(pendingLatitude, pendingLongitude), width: 34, height: 34,
+                                      child: const Icon(Icons.location_on, color: Colors.red, size: 34))]),
+                                  ]))),
+                            ],
+                            Builder(builder: (_) {
+                              final pm = addonsConfig['pickup_point'] as Map?;
+                              final pLat = (pm?['lat'] as num?)?.toDouble() ?? 0.0;
+                              final pLng = (pm?['lng'] as num?)?.toDouble() ?? 0.0;
+                              final pLabel = (pm?['label'] as String?) ?? '';
+                              if (pLat == 0.0 && pLng == 0.0) return const SizedBox.shrink();
+                              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  const Icon(Icons.directions_car, size: 13, color: Colors.black38),
+                                  const SizedBox(width: 5),
+                                  Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Pick-Up / Drop Off', 'Zona preuzimanja'),
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black45)),
+                                  if (pLabel.isNotEmpty) Text(' · $pLabel', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38)),
+                                ]),
+                                const SizedBox(height: 4),
+                                ClipRRect(borderRadius: BorderRadius.circular(10),
+                                  child: SizedBox(height: 150, child: FlutterMap(
+                                    options: MapOptions(initialCenter: LatLng(pLat, pLng), initialZoom: 16,
+                                      interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                                    children: [
+                                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                      MarkerLayer(markers: [Marker(point: LatLng(pLat, pLng), width: 34, height: 34,
+                                        child: const Icon(Icons.location_on, color: Colors.red, size: 34))]),
+                                    ]))),
+                              ]);
+                            }),
+                          ],
+                        ),
+                        const Divider(height: 1, thickness: 1, color: AppTheme.border),
+
+                        // Section 2: Photos
+                        if (canEdit || editablePhotoUrls.isNotEmpty) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.photo_library_outlined, size: 17, color: Colors.black54),
+                            title: Text(
+                              '${Lang.sel(ref.watch(localeIsCroatianProvider), "Photos", "Fotografije")} (${editablePhotoUrls.length + newlySelectedPhotos.length})',
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
                             children: [
-                              Text(
-                                '$currentName • $displayId',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (!canEdit)
-                                Row(
-                                  children: [
-                                    Icon(Icons.edit_location_alt_outlined,
-                                        size: 18, color: Colors.grey[600]),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'Location Name: $currentName',
-                                            'Naziv lokacije: $currentName'),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Location Name',
-                                          'Naziv lokacije'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      controller: nameCtrl,
-                                      decoration: InputDecoration(
-                                        hintText: Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'e.g. Parking Trogir',
-                                            'npr. Parking Trogir'),
-                                        filled: true,
-                                        fillColor: AppTheme.surface,
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Address',
-                                          'Adresa'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextField(
-                                      controller: addressCtrl,
-                                      decoration: InputDecoration(
-                                        hintText: Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'e.g. City center',
-                                            'npr. Centar grada'),
-                                        filled: true,
-                                        fillColor: AppTheme.surface,
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Icon(Icons.local_parking,
-                                      size: 18, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  if (!canEdit)
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Capacity: $currentCapacity',
-                                          'Kapacitet: $currentCapacity'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    )
-                                  else ...[
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Capacity',
-                                          'Kapacitet'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 120,
-                                      child: TextField(
-                                        controller: capacityCtrl,
-                                        keyboardType: TextInputType.number,
-                                        decoration: InputDecoration(
-                                          hintText: 'e.g. 150',
-                                          filled: true,
-                                          fillColor: AppTheme.surface,
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            borderSide: BorderSide.none,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on_outlined,
-                                      size: 18, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Coordinates: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}',
-                                          'Koordinate: ${pendingLatitude.toStringAsFixed(6)}, ${pendingLongitude.toStringAsFixed(6)}'),
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                Lang.sel(
-                                    ref.watch(localeIsCroatianProvider),
-                                    'Location Photos (${editablePhotoUrls.length + newlySelectedPhotos.length})',
-                                    'Fotografije lokacije (${editablePhotoUrls.length + newlySelectedPhotos.length})'),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Builder(builder: (_) {
-                                const int maxPreviewPhotos = 24;
-                                final existingHidden =
-                                    editablePhotoUrls.length > maxPreviewPhotos
-                                        ? editablePhotoUrls.length -
-                                            maxPreviewPhotos
-                                        : 0;
-                                final selectedHidden =
-                                    newlySelectedPhotos.length >
-                                            maxPreviewPhotos
-                                        ? newlySelectedPhotos.length -
-                                            maxPreviewPhotos
-                                        : 0;
-                                if (existingHidden == 0 &&
-                                    selectedHidden == 0) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Text(
-                                    Lang.sel(
-                                      ref.watch(localeIsCroatianProvider),
-                                      'Showing first 24 previews for smooth performance. Hidden: ${existingHidden + selectedHidden}',
-                                      'Prikazujemo prvih 24 pregleda radi glatkog rada. Skriveno: ${existingHidden + selectedHidden}',
-                                    ),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: AppTheme.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }),
                               if (editablePhotoUrls.isNotEmpty)
                                 GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                  ),
-                                  itemCount: editablePhotoUrls.length > 24
-                                      ? 24
-                                      : editablePhotoUrls.length,
+                                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 6, mainAxisSpacing: 6),
+                                  itemCount: editablePhotoUrls.length > 24 ? 24 : editablePhotoUrls.length,
                                   itemBuilder: (context, index) {
-                                    final photoUrl = editablePhotoUrls[index];
-                                    return InkWell(
-                                      onTap: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => Dialog.fullscreen(
-                                            backgroundColor: Colors.black,
-                                            child: Stack(
-                                              children: [
-                                                Center(
-                                                  child:
-                                                      Image.network(photoUrl),
-                                                ),
-                                                Positioned(
-                                                  top: 40,
-                                                  right: 20,
-                                                  child: IconButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(context),
-                                                    icon: const Icon(
-                                                      Icons.close,
-                                                      color: Colors.white,
-                                                      size: 30,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Stack(
-                                        children: [
-                                          ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            child: Image.network(
-                                              photoUrl,
-                                              fit: BoxFit.cover,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
-                                                return Container(
-                                                  color: AppTheme.surface,
-                                                  child: const Icon(
-                                                      Icons.broken_image),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                          if (canEdit)
-                                            Positioned(
-                                              top: 4,
-                                              right: 4,
-                                              child: InkWell(
-                                                onTap: () {
-                                                  setState(() {
-                                                    editablePhotoUrls
-                                                        .removeAt(index);
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(4),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.black54,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.close,
-                                                    size: 14,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                    final url = editablePhotoUrls[index];
+                                    return Stack(fit: StackFit.expand, children: [
+                                      ClipRRect(borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(url, fit: BoxFit.cover,
+                                          errorBuilder: (c, e, s) => Container(color: AppTheme.background, child: const Icon(Icons.broken_image, size: 14)))),
+                                      if (canEdit) Positioned(top: 2, right: 2,
+                                        child: InkWell(
+                                          onTap: () => setState(() => editablePhotoUrls.removeAt(index)),
+                                          child: Container(padding: const EdgeInsets.all(3),
+                                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                            child: const Icon(Icons.close, size: 9, color: Colors.white)))),
+                                    ]);
+                                  }),
                               if (newlySelectedPhotos.isNotEmpty) ...[
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                  ),
-                                  itemCount: newlySelectedPhotos.length > 24
-                                      ? 24
-                                      : newlySelectedPhotos.length,
+                                  shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 6, mainAxisSpacing: 6),
+                                  itemCount: newlySelectedPhotos.length > 24 ? 24 : newlySelectedPhotos.length,
                                   itemBuilder: (context, index) {
-                                    final localFile =
-                                        newlySelectedPhotos[index];
-                                    return FutureBuilder<ImageProvider>(
-                                      future: previewProvider(localFile),
-                                      builder: (context, snapshot) {
-                                        if (!snapshot.hasData) {
-                                          return Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              color: AppTheme.surface,
-                                            ),
-                                            child: const Center(
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
-                                            ),
-                                          );
-                                        }
-                                        return Stack(
-                                          children: [
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                image: DecorationImage(
-                                                  image: snapshot.data!,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                            Positioned(
-                                              top: 4,
-                                              right: 4,
-                                              child: InkWell(
-                                                onTap: () {
-                                                  setState(() {
-                                                    localPhotoPreviewBytes
-                                                        .remove(localFile.path);
-                                                    newlySelectedPhotos
-                                                        .removeAt(index);
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(4),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.black54,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.close,
-                                                    size: 14,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
+                                    final xf = newlySelectedPhotos[index];
+                                    return FutureBuilder<Uint8List>(
+                                      future: localPhotoPreviewBytes[xf.path] != null
+                                        ? Future.value(localPhotoPreviewBytes[xf.path]!)
+                                        : xf.readAsBytes().then((b) { localPhotoPreviewBytes[xf.path] = b; return b; }),
+                                      builder: (c, snap) => ClipRRect(borderRadius: BorderRadius.circular(6),
+                                        child: snap.hasData ? Image.memory(snap.data!, fit: BoxFit.cover) : Container(color: AppTheme.background)));
+                                  }),
                               ],
                               if (canEdit) ...[
                                 const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    OutlinedButton.icon(
-                                      onPressed: () => pickLocationPhotos(
-                                          ImageSource.camera),
-                                      icon: const Icon(Icons.camera_alt,
-                                          color: Colors.black, size: 18),
-                                      label: Text(
-                                        Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'Take photo',
-                                            'Snimi fotografiju'),
-                                        style: GoogleFonts.inter(
-                                            color: Colors.black),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side:
-                                            BorderSide(color: AppTheme.border),
-                                      ),
-                                    ),
-                                    OutlinedButton.icon(
-                                      onPressed: () => pickLocationPhotos(
-                                          ImageSource.gallery),
-                                      icon: const Icon(Icons.photo_library,
-                                          color: Colors.black, size: 18),
-                                      label: Text(
-                                        Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'Choose gallery',
-                                            'Odaberi iz galerije'),
-                                        style: GoogleFonts.inter(
-                                            color: Colors.black),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        side:
-                                            BorderSide(color: AppTheme.border),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (canEdit) ...[
-                                const SizedBox(height: 12),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      setState(() {
-                                        showLocationPicker =
-                                            !showLocationPicker;
-                                      });
-                                    },
-                                    icon: Icon(
-                                      showLocationPicker
-                                          ? Icons.expand_less
-                                          : Icons.map_outlined,
-                                      color: Colors.black,
-                                    ),
-                                    label: Text(
-                                      showLocationPicker
-                                          ? Lang.sel(
-                                              ref.watch(
-                                                  localeIsCroatianProvider),
-                                              'Hide map',
-                                              'Sakrij mapu')
-                                          : Lang.sel(
-                                              ref.watch(
-                                                  localeIsCroatianProvider),
-                                              'Change location',
-                                              'Promijeni lokaciju'),
-                                      style: GoogleFonts.inter(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: AppTheme.border),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
-                                    ),
-                                  ),
-                                ),
-                                if (showLocationPicker) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border:
-                                          Border.all(color: AppTheme.border),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          Lang.sel(
-                                              ref.watch(
-                                                  localeIsCroatianProvider),
-                                              'Map image: tap to move pin and save',
-                                              'Slika mape: klikni za promjenu pina i spremi'),
-                                          style: GoogleFonts.inter(
-                                            fontSize: 13,
-                                            color: Colors.black87,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        LotLocationPicker(
-                                          initialLocation: LatLng(
-                                              pendingLatitude,
-                                              pendingLongitude),
-                                          onLocationSelected:
-                                              (latLng, address) {
-                                            setState(() {
-                                              pendingLatitude = latLng.latitude;
-                                              pendingLongitude =
-                                                  latLng.longitude;
-                                              if (address.trim().isNotEmpty) {
-                                                addressCtrl.text =
-                                                    address.trim();
-                                              }
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                              const SizedBox(height: 12),
-                              if (isSuperAdmin)
-                                Row(
-                                  children: [
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Hub Enabled',
-                                          'Hub omogućen'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Switch(
-                                      value: isHub,
-                                      activeThumbColor: Colors.black,
-                                      onChanged: (v) async {
-                                        setState(() {
-                                          final Map<String, dynamic> meta =
-                                              (loc['verification_metadata'] ??
-                                                  {}) as Map<String, dynamic>;
-                                          meta['hub_enabled'] = v;
-                                        });
-                                        await _toggleHub(loc, v);
-                                        if (v == true) {
-                                          final String url =
-                                              _buildHubLocationUrl(loc);
-                                          try {
-                                            await launchUrl(Uri.parse(url));
-                                          } catch (_) {}
-                                        }
-                                        if (!dialogContext.mounted) return;
-                                        Navigator.pop(dialogContext);
-                                        _showLocationDetail(
-                                            loc, isSuperAdmin, isAdmin);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              if (isSuperAdmin) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Text(
-                                      Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Settlement Model',
-                                          'Model poravnanja'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Company',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: Colors.black54,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Switch(
-                                      value: isAgenticSettlement,
-                                      activeThumbColor: Colors.black,
-                                      onChanged: (v) async {
-                                        setState(() {
-                                          final Map<String, dynamic> meta =
-                                              (loc['verification_metadata'] ??
-                                                  {}) as Map<String, dynamic>;
-                                          meta['settlement_model'] =
-                                              v ? 'agentic' : 'company';
-                                        });
-                                        await _toggleSettlementModel(
-                                            loc, v ? 'agentic' : 'company');
-                                        if (!dialogContext.mounted) return;
-                                        Navigator.pop(dialogContext);
-                                        _showLocationDetail(
-                                            loc, isSuperAdmin, isAdmin);
-                                      },
-                                    ),
-                                    Text(
-                                      'Agentic',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: Colors.black54,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              if (isSuperAdmin && isHub) ...[
-                                const SizedBox(height: 8),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.link,
-                                        size: 18, color: Colors.black),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: SelectableText(
-                                        _buildHubLocationUrl(loc),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          color: Colors.blue[800],
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        final String url =
-                                            _buildHubLocationUrl(loc);
-                                        await launchUrl(Uri.parse(url));
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.black,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 10),
-                                      ),
-                                      child: Text(Lang.sel(
-                                          ref.watch(localeIsCroatianProvider),
-                                          'Open Hub Page',
-                                          'Otvori Hub stranicu')),
-                                    )
-                                  ],
-                                ),
-                              ],
-                              if (canEdit) ...[
-                                const SizedBox(height: 16),
-                                if (saving && uploadStatusText != null) ...[
-                                  Text(
-                                    uploadStatusText!,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: Colors.black54,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                ],
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: saving ? null : saveChanges,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 24, vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8)),
-                                    ),
-                                    child: saving
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 2),
-                                          )
-                                        : Text(Lang.sel(
-                                            ref.watch(localeIsCroatianProvider),
-                                            'Save Changes',
-                                            'Spremi promjene')),
-                                  ),
-                                ),
+                                Wrap(spacing: 8, children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => pickLocationPhotos(ImageSource.camera),
+                                    icon: const Icon(Icons.camera_alt, size: 14, color: Colors.black),
+                                    label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Camera', 'Kamera'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black)),
+                                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7))),
+                                  OutlinedButton.icon(
+                                    onPressed: () => pickLocationPhotos(ImageSource.gallery),
+                                    icon: const Icon(Icons.photo_library, size: 14, color: Colors.black),
+                                    label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Gallery', 'Galerija'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black)),
+                                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7))),
+                                ]),
                               ],
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 3: Services & Add-ons
+                        if (canEdit) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.extension_outlined, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Services & Add-ons', 'Usluge i dodaci'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              Row(children: [
+                                Switch(value: valetEnabled, activeThumbColor: Colors.black,
+                                  onChanged: (v) async { setState(() => valetEnabled = v); await ref.read(locationsControllerProvider).updateServiceFlags(idStr, valetEnabled: v, shuttleEnabled: shuttleEnabled); }),
+                                Text('Valet', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                                const SizedBox(width: 16),
+                                Switch(value: shuttleEnabled, activeThumbColor: Colors.black,
+                                  onChanged: (v) async { setState(() => shuttleEnabled = v); await ref.read(locationsControllerProvider).updateServiceFlags(idStr, valetEnabled: valetEnabled, shuttleEnabled: v); }),
+                                Text('Shuttle', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              const SizedBox(height: 6),
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'ADD-ON PRICES', 'CIJENE DODATAKA'),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.8)),
+                              const SizedBox(height: 8),
+                              _buildAddonRow(label: 'Valet', enabled: addonValetOn, priceCtrl: valetPriceCtrl, onToggle: (v) => setState(() => addonValetOn = v)),
+                              const SizedBox(height: 6),
+                              _buildAddonRow(label: Lang.sel(ref.watch(localeIsCroatianProvider), 'EV Charging', 'EV punjenje'), enabled: addonEvOn, priceCtrl: evPriceCtrl, onToggle: (v) => setState(() => addonEvOn = v)),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                Switch(value: addonWashOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonWashOn = v)),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Car Wash', 'Pranje auta'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              if (addonWashOn) Padding(padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  Expanded(child: TextField(controller: washBasicCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Basic', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: TextField(controller: washPremiumCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Premium', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                ])),
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                Switch(value: addonFuelOn, activeThumbColor: Colors.black, onChanged: (v) => setState(() => addonFuelOn = v)),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Fuel', 'Gorivo'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
+                              ]),
+                              if (addonFuelOn) Padding(padding: const EdgeInsets.only(top: 4),
+                                child: Row(children: [
+                                  Expanded(child: TextField(controller: fuelDieselCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Diesel', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: TextField(controller: fuelBenzinCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(labelText: 'Benzin', suffixText: '€', filled: true, fillColor: AppTheme.background,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+                                ])),
+                              const SizedBox(height: 6),
+                              _buildAddonRow(label: Lang.sel(ref.watch(localeIsCroatianProvider), 'Shuttle (paid)', 'Shuttle (plaćeni)'), enabled: addonShuttleOn, priceCtrl: shuttlePriceCtrl, onToggle: (v) => setState(() => addonShuttleOn = v)),
+                              const SizedBox(height: 10),
+                              Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'PICK-UP / DROP OFF ZONE', 'ZONA PREUZIMANJA'),
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.8)),
+                              const SizedBox(height: 6),
+                              LotLocationPicker(
+                                initialLocation: LatLng(pickupLat != 0.0 ? pickupLat : pendingLatitude, pickupLng != 0.0 ? pickupLng : pendingLongitude),
+                                onLocationSelected: (latLng, address) { setState(() { pickupLat = latLng.latitude; pickupLng = latLng.longitude; if (address.trim().isNotEmpty) pickupLabel = address.trim(); }); }),
+                              const SizedBox(height: 6),
+                              TextField(controller: phoneSmsCtrl, keyboardType: TextInputType.phone, style: GoogleFonts.inter(fontSize: 13),
+                                decoration: InputDecoration(labelText: 'Telefon (SMS/WhatsApp)', filled: true, fillColor: AppTheme.background,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                              if (addonValetOn) ...[
+                                const SizedBox(height: 6),
+                                TextField(controller: lotZoneCtrl, style: GoogleFonts.inter(fontSize: 13),
+                                  decoration: InputDecoration(
+                                    labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Lot zone (valet)', 'Lot zona (valet)'),
+                                    filled: true, fillColor: AppTheme.background,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                              ],
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 4: Admin (super_admin only)
+                        if (isSuperAdmin) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.admin_panel_settings_outlined, size: 17, color: Colors.black54),
+                            title: Text('Admin', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              Row(children: [
+                                Switch(value: isHub, activeThumbColor: Colors.black,
+                                  onChanged: (v) async {
+                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['hub_enabled'] = v; });
+                                    await _toggleHub(loc, v);
+                                    if (v == true) { try { await launchUrl(Uri.parse(_buildHubLocationUrl(loc))); } catch (_) {} }
+                                    if (!dialogContext.mounted) return;
+                                    Navigator.pop(dialogContext);
+                                    _showLocationDetail(loc, isSuperAdmin, isAdmin);
+                                  }),
+                                Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Hub Enabled', 'Hub omogućen'),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500)),
+                              ]),
+                              const SizedBox(height: 4),
+                              Row(children: [
+                                Text('Company', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+                                Switch(value: isAgenticSettlement, activeThumbColor: Colors.black,
+                                  onChanged: (v) async {
+                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['settlement_model'] = v ? 'agentic' : 'company'; });
+                                    await ref.read(locationsControllerProvider).updateSettlementModel(loc, v ? 'agentic' : 'company');
+                                  }),
+                                Text('Agentic', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+                              ]),
+                              if (isHub) ...[
+                                const SizedBox(height: 8),
+                                Row(children: [
+                                  const Icon(Icons.link, size: 14, color: Colors.black38),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: SelectableText(_buildHubLocationUrl(loc),
+                                    style: GoogleFonts.inter(fontSize: 11, color: Colors.blue[700], decoration: TextDecoration.underline))),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () async { await launchUrl(Uri.parse(_buildHubLocationUrl(loc))); },
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                    child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Open Hub', 'Otvori Hub'), style: GoogleFonts.inter(fontSize: 12))),
+                                ]),
+                              ],
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: () => setState(() => showLocationPicker = !showLocationPicker),
+                                icon: Icon(showLocationPicker ? Icons.expand_less : Icons.map_outlined, size: 14, color: Colors.black),
+                                label: Text(showLocationPicker
+                                  ? Lang.sel(ref.watch(localeIsCroatianProvider), 'Hide map', 'Sakrij mapu')
+                                  : Lang.sel(ref.watch(localeIsCroatianProvider), 'Change location', 'Promijeni lokaciju'),
+                                  style: GoogleFonts.inter(fontSize: 12, color: Colors.black, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8))),
+                              if (showLocationPicker) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppTheme.border)),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Tap to move pin', 'Klikni za promjenu pina'),
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 8),
+                                    LotLocationPicker(
+                                      initialLocation: LatLng(pendingLatitude, pendingLongitude),
+                                      onLocationSelected: (latLng, address) {
+                                        setState(() { pendingLatitude = latLng.latitude; pendingLongitude = latLng.longitude; if (address.trim().isNotEmpty) addressCtrl.text = address.trim(); });
+                                      }),
+                                  ])),
+                              ],
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+                      ]),
+                    )),
+
+                    // ────────────── FOOTER ──────────────
+                    if (canEdit) ...[
+                      const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                      Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (saving && uploadStatusText != null) ...[
+                            Text(uploadStatusText!, style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 6),
+                          ],
+                          SizedBox(width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: saving ? null : saveChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black, foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                              child: saving
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Save Changes', 'Spremi promjene'),
+                                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)))),
+                        ])),
+                    ],
+                  ]),
                 );
               },
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(Lang.sel(
-                  ref.watch(localeIsCroatianProvider), 'Close', 'Zatvori')),
-            ),
-          ],
         );
       },
     );
@@ -1767,6 +1756,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
     bool isProcessing = false;
     LatLng? selectedLatLng;
     String selectedAddress = '';
+    LatLng? selectedPickupLatLng;
+    String selectedPickupLabel = '';
     String? selectedManagerId;
 
     showDialog(
@@ -1867,6 +1858,30 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     const SizedBox(height: 24),
                     Text(
                       Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Pick-Up / Drop Off Zone', 'Zona preuzimanja / predaje'),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
+                          'Optional — where drivers hand over / collect their car',
+                          'Neobavezno — gdje vozači predaju / preuzimaju auto'),
+                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 8),
+                    LotLocationPicker(
+                      onLocationSelected: (latLng, address) {
+                        selectedPickupLatLng = latLng;
+                        if (address.trim().isNotEmpty) selectedPickupLabel = address.trim();
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      Lang.sel(ref.watch(localeIsCroatianProvider),
                           'Lot Partner (receives payments)', 'Lot Partner (prima uplate)'),
                       style: GoogleFonts.inter(
                         fontSize: 14,
@@ -1943,6 +1958,15 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 longitude: selectedLatLng!.longitude,
                                 capacity: int.tryParse(capacityCtrl.text) ?? 0,
                                 ownerId: selectedManagerId ?? fallbackOwnerId,
+                                addonsConfig: selectedPickupLatLng != null
+                                    ? {
+                                        'pickup_point': {
+                                          'lat': selectedPickupLatLng!.latitude,
+                                          'lng': selectedPickupLatLng!.longitude,
+                                          if (selectedPickupLabel.isNotEmpty) 'label': selectedPickupLabel,
+                                        },
+                                      }
+                                    : null,
                               );
                           if (context.mounted) {
                             Navigator.pop(context);
