@@ -510,6 +510,80 @@ function buildBookingConfirmationEmail(params: {
 </html>`;
 }
 
+async function sendBookingConfirmation(
+  session: Stripe.Checkout.Session,
+  client: SupabaseClient,
+): Promise<void> {
+  const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;
+  const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
+  const meta = session.metadata ?? {};
+  const email = [
+    session.customer_details?.email,
+    session.customer_email,
+    meta.customer_email,
+    meta.email,
+  ].map((v) => (v ?? '').toString().trim().toLowerCase()).find((v) => v.length > 0) ?? '';
+
+  console.log(`📧 sendBookingConfirmation: email="${email}" key=${resendKey ? 'set' : 'MISSING'}`);
+  if (!email || !resendKey) return;
+
+  const reservationCode = deriveReservationCode(session.id);
+  const locationId = (meta.location_id ?? '').toString().trim();
+  const entryIso = meta.check_in
+    ? new Date(meta.check_in as string).toISOString()
+    : new Date(session.created * 1000).toISOString();
+  const exitIso = meta.check_out
+    ? new Date(meta.check_out as string).toISOString()
+    : new Date(new Date(entryIso).getTime() + 3_600_000).toISOString();
+
+  let locationName: string | null = null;
+  let locationDisplayId: string | null = (meta.display_id as string | null) ?? null;
+  let valetEnabled = false;
+  let shuttleEnabled = false;
+  try {
+    if (locationId) {
+      const { data: locRow } = await client
+        .from('locations')
+        .select('name,display_id,valet_enabled,shuttle_enabled')
+        .eq('id', locationId)
+        .maybeSingle();
+      if (locRow) {
+        locationName = (locRow as { name?: string | null }).name ?? null;
+        locationDisplayId = (locRow as { display_id?: string | null }).display_id ?? locationDisplayId;
+        valetEnabled = Boolean((locRow as { valet_enabled?: boolean | null }).valet_enabled);
+        shuttleEnabled = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
+      }
+    }
+  } catch { /* best effort */ }
+
+  const html = buildBookingConfirmationEmail({
+    sessionId: session.id,
+    reservationCode,
+    email,
+    locationName,
+    locationDisplayId,
+    entryTime: entryIso,
+    exitTime: exitIso,
+    amountCents: Number(session.amount_total ?? 0),
+    currency: session.currency || 'EUR',
+    valetEnabled,
+    shuttleEnabled,
+    membersUrl: `https://www.payparq.com/members?email=${encodeURIComponent(email)}`,
+  });
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromAddress, to: email, subject: `Rezervacija potvrđena · ${reservationCode}`, html }),
+    });
+    const resBody = await res.text().catch(() => '');
+    console.log(`📧 Resend: ${res.status} to ${email} (${reservationCode}) — ${resBody}`);
+  } catch (e) {
+    console.error('📧 Email error:', e);
+  }
+}
+
 export async function POST(req: Request) {
   const stripeSecret = resolveStripeSecretKey();
   if (!stripeSecret) {
@@ -635,16 +709,27 @@ export async function POST(req: Request) {
     // 2. CHECK IDEMPOTENCY
     const { data: existingSession, error: fetchError } = await client
       .from('parking_sessions')
-      .select('id')
+      .select('id, payment_status')
       .eq('stripe_session_id', session.id)
-      .maybeSingle(); // maybeSingle avoids error if not found
+      .maybeSingle();
 
     if (fetchError) {
       console.error('❌ Error checking existing session:', fetchError);
     }
 
     if (existingSession) {
-      console.log(`🔄 Session ${session.id} already processed. Skipping.`);
+      const existingPayStatus = ((existingSession as { id: string; payment_status?: string | null }).payment_status ?? '').toLowerCase();
+      if (existingPayStatus === 'paid') {
+        console.log(`🔄 Session ${session.id} already paid. Skipping.`);
+        return NextResponse.json({ received: true });
+      }
+      // Pre-seeded pending row — mark as paid and send confirmation
+      console.log(`🔄 Session ${session.id} was pending, marking paid and sending confirmation.`);
+      await client
+        .from('parking_sessions')
+        .update({ payment_status: 'paid', status: 'active', updated_at: new Date().toISOString() })
+        .eq('stripe_session_id', session.id);
+      await sendBookingConfirmation(session, client);
       return NextResponse.json({ received: true });
     }
 
@@ -1076,33 +1161,8 @@ export async function POST(req: Request) {
 
     console.log('✨ Successfully inserted parking session!');
 
-    // 4. SEND BOOKING CONFIRMATION EMAIL (best effort)
-    if (email) {
-      const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;
-      const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
-      console.log(`📧 Attempting confirmation email to ${email} — resendKey=${resendKey ? 'set' : 'MISSING'}`);
-      if (resendKey) {
-        const reservationCode = deriveReservationCode(session.id);
-        try {
-          const res = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              from: fromAddress,
-              to: email,
-              subject: `Rezervacija potvrđena · ${reservationCode}`,
-              text: `Hvala na rezervaciji!\n\nRezervacijski kod: ${reservationCode}\nLokacija: ${location_id}\n\npayparq.com`,
-            }),
-          });
-          const resBody = await res.text().catch(() => '');
-          console.log(`📧 Resend result: ${res.status} ${resBody}`);
-        } catch (emailError) {
-          console.error('📧 Email fetch error:', emailError);
-        }
-      }
-    } else {
-      console.warn('📧 No customer email — skipping confirmation');
-    }
+    // 4. SEND BOOKING CONFIRMATION EMAIL
+    await sendBookingConfirmation(session, client);
 
     // 5. UPDATE OCCUPANCY (Optional, best effort)
     try {
