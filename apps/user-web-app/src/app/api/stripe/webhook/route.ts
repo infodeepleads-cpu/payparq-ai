@@ -1077,60 +1077,31 @@ export async function POST(req: Request) {
     console.log('✨ Successfully inserted parking session!');
 
     // 4. SEND BOOKING CONFIRMATION EMAIL (best effort)
-    try {
-      const resendKey = process.env.RESEND_API_KEY;
-      if (resendKey && email) {
-        const resend = new Resend(resendKey);
-
-        // Query location details for the email
-        let locationNameForEmail: string | null = null;
-        let locationDisplayIdForEmail: string | null = null;
-        let valetEnabledForEmail = false;
-        let shuttleEnabledForEmail = false;
-        if (location_id && location_id !== 'DEFAULT_LOC') {
-          const { data: locRow } = await client
-            .from('locations')
-            .select('name,display_id,valet_enabled,shuttle_enabled')
-            .eq('id', location_id)
-            .maybeSingle();
-          if (locRow) {
-            locationNameForEmail = (locRow as { name?: string | null }).name ?? null;
-            locationDisplayIdForEmail = (locRow as { display_id?: string | null }).display_id ?? null;
-            valetEnabledForEmail = Boolean((locRow as { valet_enabled?: boolean | null }).valet_enabled);
-            shuttleEnabledForEmail = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
-          }
-        }
-
+    if (email) {
+      const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;
+      const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
+      console.log(`📧 Attempting confirmation email to ${email} — resendKey=${resendKey ? 'set' : 'MISSING'}`);
+      if (resendKey) {
         const reservationCode = deriveReservationCode(session.id);
-        const membersUrl = `https://www.payparq.com/members?email=${encodeURIComponent(email)}`;
-        const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
-
-        const html = buildBookingConfirmationEmail({
-          sessionId: session.id,
-          reservationCode,
-          email,
-          locationName: locationNameForEmail,
-          locationDisplayId: locationDisplayIdForEmail || (location_id !== 'DEFAULT_LOC' ? location_id : null),
-          entryTime,
-          exitTime,
-          amountCents: sessionAmountCents,
-          currency: session.currency || 'EUR',
-          valetEnabled: valetEnabledForEmail,
-          shuttleEnabled: shuttleEnabledForEmail,
-          membersUrl,
-        });
-
-        await resend.emails.send({
-          from: fromAddress,
-          to: email,
-          subject: `Rezervacija potvrđena · ${reservationCode}`,
-          html,
-        });
-
-        console.log(`📧 Booking confirmation email sent to ${email} (${reservationCode})`);
+        try {
+          const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: fromAddress,
+              to: email,
+              subject: `Rezervacija potvrđena · ${reservationCode}`,
+              text: `Hvala na rezervaciji!\n\nRezervacijski kod: ${reservationCode}\nLokacija: ${location_id}\n\npayparq.com`,
+            }),
+          });
+          const resBody = await res.text().catch(() => '');
+          console.log(`📧 Resend result: ${res.status} ${resBody}`);
+        } catch (emailError) {
+          console.error('📧 Email fetch error:', emailError);
+        }
       }
-    } catch (emailError) {
-      console.error('⚠️ Failed to send booking confirmation email:', emailError);
+    } else {
+      console.warn('📧 No customer email — skipping confirmation');
     }
 
     // 5. UPDATE OCCUPANCY (Optional, best effort)

@@ -172,11 +172,14 @@ function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString("hr-HR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Zagreb" });
+  const pad = (n: number) => String(n).padStart(2, "0");
+  // Approximate Zagreb time UTC+1 (avoids Deno edge locale/tz data dependency)
+  const local = new Date(d.getTime() + 60 * 60 * 1000);
+  return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
 }
 
 function fmtEur(cents: number): string {
-  return new Intl.NumberFormat("hr-HR", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(cents / 100);
+  return (cents / 100).toFixed(2).replace(".", ",") + " €";
 }
 
 function buildCustomerEmail(params: {
@@ -520,47 +523,27 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") ?? "team@info.payparq.com";
 
   const sendCustomerConfirmation = async () => {
-    if (!resendApiKey || !email) return;
+    console.log(`[EMAIL] sendCustomerConfirmation called. email="${email}" resendApiKey=${resendApiKey ? "set" : "MISSING"}`);
+    if (!resendApiKey || !email) {
+      console.warn(`[EMAIL] Aborting: missing resendApiKey or email`);
+      return;
+    }
+    const reservationCode = deriveReservationCode(session.id);
     try {
-      // Fetch valet/shuttle flags for the location
-      let valetEnabled = false;
-      let shuttleEnabled = false;
-      try {
-        const { data: locFlags } = await admin
-          .from("locations")
-          .select("valet_enabled,shuttle_enabled")
-          .eq("id", resolvedLocation!.id)
-          .maybeSingle();
-        valetEnabled = Boolean(locFlags?.valet_enabled);
-        shuttleEnabled = Boolean(locFlags?.shuttle_enabled);
-      } catch (_) { /* best effort */ }
-
-      const reservationCode = deriveReservationCode(session.id);
-      const html = buildCustomerEmail({
-        sessionId: session.id,
-        customerEmail: email,
-        locationName: locationDisplay,
-        locationDisplayId: resolvedLocation!.display_id ?? resolvedLocation!.id,
-        entryTime: entryTime.toISOString(),
-        exitTime: exitTime.toISOString(),
-        amountCents: Number(session.amount_total ?? 0),
-        valetEnabled,
-        shuttleEnabled,
-      });
-
-      await fetch("https://api.resend.com/emails", {
+      const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: fromEmail,
           to: [email],
           subject: `Rezervacija potvrđena · ${reservationCode}`,
-          html,
+          text: `Hvala na rezervaciji!\n\nRezervacijski kod: ${reservationCode}\nLokacija: ${locationDisplay}\n\npayparq.com`,
         }),
       });
-      console.log(`[EMAIL] Confirmation sent to ${email} (${reservationCode})`);
+      const resBody = await res.text().catch(() => "");
+      console.log(`[EMAIL] Resend result: ${res.status} ${resBody}`);
     } catch (e) {
-      console.warn(`[EMAIL] Failed to send customer confirmation: ${e}`);
+      console.error(`[EMAIL] Fetch error: ${e}`);
     }
   };
 
@@ -569,6 +552,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     const updated = await updateSessionWithSchemaFallback(session.id, insertData);
     if (updated.ok) {
       await sendPaymentNotification(session, locationDisplay);
+      await sendCustomerConfirmation();
       return { ok: true };
     }
     console.error(`[V19] Update failed: ${updated.message}`);
