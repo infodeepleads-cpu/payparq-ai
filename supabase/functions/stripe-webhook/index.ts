@@ -635,7 +635,8 @@ serve(async (req: Request) => {
       const normalizedPaymentStatus = String(session.payment_status ?? "").trim().toLowerCase();
       const shouldPersist =
         event.type === "checkout.session.async_payment_succeeded" ||
-        normalizedPaymentStatus === "paid";
+        normalizedPaymentStatus === "paid" ||
+        normalizedPaymentStatus === "no_payment_required";
       if (!shouldPersist) {
         return json({ received: true });
       }
