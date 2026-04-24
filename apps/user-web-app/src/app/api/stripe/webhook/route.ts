@@ -343,6 +343,7 @@ function formatAmountEmail(cents: number, currency: string): string {
 function buildBookingConfirmationEmail(params: {
   sessionId: string;
   reservationCode: string;
+  email: string;
   locationName: string | null;
   locationDisplayId: string | null;
   entryTime: string | null;
@@ -354,11 +355,21 @@ function buildBookingConfirmationEmail(params: {
   membersUrl: string;
 }): string {
   const {
-    sessionId, reservationCode, locationName, locationDisplayId,
+    sessionId, reservationCode, email, locationName, locationDisplayId,
     entryTime, exitTime, amountCents, currency, valetEnabled, shuttleEnabled, membersUrl,
   } = params;
 
+  const BASE = 'https://www.payparq.com';
   const locationLabel = locationName || locationDisplayId || 'Safe Parking by PayParq';
+  const successUrl = `${BASE}/success?session_id=${encodeURIComponent(sessionId)}`;
+  const insuranceUrl = `${BASE}/insurance/apply?email=${encodeURIComponent(email)}`;
+  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}`;
+
+  const card = (bg: string, border: string, content: string) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="background:${bg};border-radius:16px;border:1px solid ${border};margin-top:12px;"><tr><td style="padding:16px;">${content}</td></tr></table>`;
+
+  const sectionLabel = (text: string) =>
+    `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">${text}</div>`;
 
   const valetTicket = valetEnabled ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">
@@ -392,6 +403,46 @@ function buildBookingConfirmationEmail(params: {
       <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
     </table>` : '';
 
+  // Produži boravak — 4 link-buttons pointing to success page
+  const extendCard = card('#fff', 'rgba(0,0,0,0.08)', `
+    ${sectionLabel('Produži boravak')}
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${['+1h', '+2h', '+1d', '+2d'].map(label => `
+        <td width="25%" style="padding:0 3px;">
+          <a href="${successUrl}" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">${label}</a>
+        </td>`).join('')}
+    </tr></table>
+    <div style="margin-top:8px;font-size:10px;color:#bbb;text-align:center;">Kliknite za produženje na stranici rezervacije</div>
+  `);
+
+  // Summon section — only if valet or shuttle included
+  const summonCard = (valetEnabled || shuttleEnabled) ? card('#fff', 'rgba(0,0,0,0.08)', `
+    ${sectionLabel('Pozovi vozilo')}
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${valetEnabled ? `<td width="${shuttleEnabled ? '50%' : '100%'}" style="padding:0 3px;">
+        <a href="${successUrl}" style="display:block;text-align:center;padding:14px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">
+          🚗 Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span>
+        </a>
+      </td>` : ''}
+      ${shuttleEnabled ? `<td width="${valetEnabled ? '50%' : '100%'}" style="padding:0 3px;">
+        <a href="${successUrl}" style="display:block;text-align:center;padding:14px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">
+          🚌 Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span>
+        </a>
+      </td>` : ''}
+    </tr></table>
+  `) : '';
+
+  // Quick actions
+  const actionBtn = (href: string, label: string) =>
+    `<a href="${href}" style="display:block;text-align:center;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:13px;font-weight:500;color:#111;text-decoration:none;margin-bottom:8px;">${label}</a>`;
+
+  const actionsCard = card('#fff', 'rgba(0,0,0,0.08)', `
+    ${sectionLabel('Brze akcije')}
+    ${actionBtn('https://m.uber.com/', 'Naruči Uber')}
+    ${actionBtn(insuranceUrl, 'Osiguranje vozila')}
+    ${actionBtn(invoiceUrl, 'Preuzmi potvrdu')}
+  `);
+
   return `<!DOCTYPE html>
 <html lang="hr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -400,64 +451,56 @@ function buildBookingConfirmationEmail(params: {
   <tr><td align="center">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;">
 
-      <!-- Logo / brand -->
+      <!-- Brand -->
       <tr><td style="padding-bottom:20px;text-align:center;">
-        <span style="font-size:18px;font-weight:700;color:#111;">Payparq</span>
+        <span style="font-size:20px;font-weight:700;color:#111;">Payparq</span>
       </td></tr>
 
-      <!-- Rezervacija potvrđena card -->
+      <!-- 1. Rezervacija potvrđena card -->
       <tr><td style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:20px;">
-
-        <!-- Header -->
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
           <tr>
-            <td width="40" valign="top">
-              <div style="width:36px;height:36px;border-radius:50%;background:#E1F5EE;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:36px;font-size:18px;">✓</div>
+            <td width="40" valign="top" style="padding-top:2px;">
+              <table cellpadding="0" cellspacing="0"><tr><td style="width:36px;height:36px;border-radius:50%;background:#E1F5EE;text-align:center;vertical-align:middle;font-size:16px;font-weight:700;color:#0F6E56;">✓</td></tr></table>
             </td>
             <td style="padding-left:12px;">
-              <div style="font-size:12px;color:#888;">Rezervacija potvrđena &nbsp;<span style="font-family:monospace;color:#444;">${reservationCode}</span></div>
-              <div style="font-size:15px;font-weight:700;color:#111;margin-top:2px;">${locationLabel}</div>
+              <div style="font-size:11px;color:#999;">Rezervacija potvrđena &nbsp;<span style="font-family:monospace;color:#333;font-weight:700;">${reservationCode}</span></div>
+              <div style="font-size:15px;font-weight:700;color:#111;margin-top:3px;">${locationLabel}</div>
             </td>
           </tr>
         </table>
-
-        <!-- Details grid -->
         <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
           <tr>
-            <td width="50%" style="padding-bottom:10px;">
-              <div style="color:#888;">Lokacija ID</div>
-              <div style="font-weight:700;font-family:monospace;">${locationDisplayId || '—'}</div>
-            </td>
-            <td width="50%" style="padding-bottom:10px;">
-              <div style="color:#888;">Cijena</div>
-              <div style="font-weight:700;">${formatAmountEmail(amountCents, currency)}</div>
-            </td>
+            <td width="50%" style="padding-bottom:10px;"><div style="color:#999;margin-bottom:2px;">Lokacija ID</div><div style="font-weight:700;font-family:monospace;color:#111;">${locationDisplayId || '—'}</div></td>
+            <td width="50%" style="padding-bottom:10px;"><div style="color:#999;margin-bottom:2px;">Cijena</div><div style="font-weight:700;color:#111;">${formatAmountEmail(amountCents, currency)}</div></td>
           </tr>
           <tr>
-            <td>
-              <div style="color:#888;">Od</div>
-              <div style="font-weight:700;">${formatDateTimeHr(entryTime)}</div>
-            </td>
-            <td>
-              <div style="color:#888;">Kraj</div>
-              <div style="font-weight:700;">${formatDateTimeHr(exitTime)}</div>
-            </td>
+            <td><div style="color:#999;margin-bottom:2px;">Od</div><div style="font-weight:700;color:#111;">${formatDateTimeHr(entryTime)}</div></td>
+            <td><div style="color:#999;margin-bottom:2px;">Kraj</div><div style="font-weight:700;color:#111;">${formatDateTimeHr(exitTime)}</div></td>
           </tr>
         </table>
-
         ${valetTicket}
         ${shuttleTicket}
-
       </td></tr>
 
-      <!-- Members zone CTA -->
+      <!-- 2. Produži boravak -->
+      <tr><td>${extendCard}</td></tr>
+
+      <!-- 3. Pozovi vozilo (conditional) -->
+      ${summonCard ? `<tr><td>${summonCard}</td></tr>` : ''}
+
+      <!-- 4. Brze akcije -->
+      <tr><td>${actionsCard}</td></tr>
+
+      <!-- 5. Members zona CTA -->
       <tr><td style="padding-top:16px;text-align:center;">
-        <a href="${membersUrl}" style="display:inline-block;padding:12px 28px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
+        <a href="${membersUrl}" style="display:inline-block;padding:13px 32px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
       </td></tr>
 
       <!-- Footer -->
-      <tr><td style="padding-top:20px;text-align:center;font-size:11px;color:#aaa;">
-        Payparq · payparq.com<br>Ova poruka šalje se automatski. Molimo ne odgovarajte na nju.
+      <tr><td style="padding-top:24px;text-align:center;font-size:11px;color:#bbb;line-height:1.6;">
+        Payparq &middot; <a href="https://www.payparq.com" style="color:#bbb;">payparq.com</a><br>
+        Ova poruka šalje se automatski. Molimo ne odgovarajte na nju.
       </td></tr>
 
     </table>
@@ -1065,6 +1108,7 @@ export async function POST(req: Request) {
         const html = buildBookingConfirmationEmail({
           sessionId: session.id,
           reservationCode,
+          email,
           locationName: locationNameForEmail,
           locationDisplayId: locationDisplayIdForEmail || (location_id !== 'DEFAULT_LOC' ? location_id : null),
           entryTime,
