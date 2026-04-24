@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
 
@@ -294,6 +295,176 @@ async function updateMemberStripeDefaults(params: {
         null,
     },
   });
+}
+
+function deriveReservationCode(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 41 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  const num = 1000 + (Math.abs(hash) % 9000);
+  return `RZ-${num}`;
+}
+
+function deriveValetCode(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 31 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  return `VLT-${1000 + (Math.abs(hash) % 9000)}`;
+}
+
+function deriveShuttleCodeEmail(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 37 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  return `SH-${1000 + (Math.abs(hash) % 9000)}`;
+}
+
+function formatDateTimeHr(value: string | null | undefined): string {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  const date = parsed.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  const time = parsed.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  return `${date} ${time}`;
+}
+
+function formatAmountEmail(cents: number, currency: string): string {
+  return new Intl.NumberFormat('hr-HR', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function buildBookingConfirmationEmail(params: {
+  sessionId: string;
+  reservationCode: string;
+  locationName: string | null;
+  locationDisplayId: string | null;
+  entryTime: string | null;
+  exitTime: string | null;
+  amountCents: number;
+  currency: string;
+  valetEnabled: boolean;
+  shuttleEnabled: boolean;
+  membersUrl: string;
+}): string {
+  const {
+    sessionId, reservationCode, locationName, locationDisplayId,
+    entryTime, exitTime, amountCents, currency, valetEnabled, shuttleEnabled, membersUrl,
+  } = params;
+
+  const locationLabel = locationName || locationDisplayId || 'Safe Parking by PayParq';
+
+  const valetTicket = valetEnabled ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">
+      <tr><td style="background:#5F3DFC;padding:10px 14px;">
+        <span style="color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Valet potvrda</span>
+        <span style="float:right;color:rgba(255,255,255,0.75);font-size:11px;font-family:monospace;">${deriveValetCode(sessionId)}</span>
+      </td></tr>
+      <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;color:#111;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="background:rgba(95,61,252,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
+    </table>` : '';
+
+  const shuttleTicket = shuttleEnabled ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #a7d8c9;margin-top:12px;">
+      <tr><td style="background:#0F6E56;padding:10px 14px;">
+        <span style="color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Shuttle potvrda</span>
+        <span style="float:right;color:rgba(255,255,255,0.75);font-size:11px;font-family:monospace;">${deriveShuttleCodeEmail(sessionId)}</span>
+      </td></tr>
+      <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;color:#111;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
+    </table>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="hr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;">
+
+      <!-- Logo / brand -->
+      <tr><td style="padding-bottom:20px;text-align:center;">
+        <span style="font-size:18px;font-weight:700;color:#111;">Payparq</span>
+      </td></tr>
+
+      <!-- Rezervacija potvrđena card -->
+      <tr><td style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:20px;">
+
+        <!-- Header -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+          <tr>
+            <td width="40" valign="top">
+              <div style="width:36px;height:36px;border-radius:50%;background:#E1F5EE;display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:36px;font-size:18px;">✓</div>
+            </td>
+            <td style="padding-left:12px;">
+              <div style="font-size:12px;color:#888;">Rezervacija potvrđena &nbsp;<span style="font-family:monospace;color:#444;">${reservationCode}</span></div>
+              <div style="font-size:15px;font-weight:700;color:#111;margin-top:2px;">${locationLabel}</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Details grid -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+          <tr>
+            <td width="50%" style="padding-bottom:10px;">
+              <div style="color:#888;">Lokacija ID</div>
+              <div style="font-weight:700;font-family:monospace;">${locationDisplayId || '—'}</div>
+            </td>
+            <td width="50%" style="padding-bottom:10px;">
+              <div style="color:#888;">Cijena</div>
+              <div style="font-weight:700;">${formatAmountEmail(amountCents, currency)}</div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div style="color:#888;">Od</div>
+              <div style="font-weight:700;">${formatDateTimeHr(entryTime)}</div>
+            </td>
+            <td>
+              <div style="color:#888;">Kraj</div>
+              <div style="font-weight:700;">${formatDateTimeHr(exitTime)}</div>
+            </td>
+          </tr>
+        </table>
+
+        ${valetTicket}
+        ${shuttleTicket}
+
+      </td></tr>
+
+      <!-- Members zone CTA -->
+      <tr><td style="padding-top:16px;text-align:center;">
+        <a href="${membersUrl}" style="display:inline-block;padding:12px 28px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding-top:20px;text-align:center;font-size:11px;color:#aaa;">
+        Payparq · payparq.com<br>Ova poruka šalje se automatski. Molimo ne odgovarajte na nju.
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
 }
 
 export async function POST(req: Request) {
@@ -862,7 +1033,63 @@ export async function POST(req: Request) {
 
     console.log('✨ Successfully inserted parking session!');
 
-    // 4. UPDATE OCCUPANCY (Optional, best effort)
+    // 4. SEND BOOKING CONFIRMATION EMAIL (best effort)
+    try {
+      const resendKey = process.env.RESEND_API_KEY;
+      if (resendKey && email) {
+        const resend = new Resend(resendKey);
+
+        // Query location details for the email
+        let locationNameForEmail: string | null = null;
+        let locationDisplayIdForEmail: string | null = null;
+        let valetEnabledForEmail = false;
+        let shuttleEnabledForEmail = false;
+        if (location_id && location_id !== 'DEFAULT_LOC') {
+          const { data: locRow } = await client
+            .from('locations')
+            .select('name,display_id,valet_enabled,shuttle_enabled')
+            .eq('id', location_id)
+            .maybeSingle();
+          if (locRow) {
+            locationNameForEmail = (locRow as { name?: string | null }).name ?? null;
+            locationDisplayIdForEmail = (locRow as { display_id?: string | null }).display_id ?? null;
+            valetEnabledForEmail = Boolean((locRow as { valet_enabled?: boolean | null }).valet_enabled);
+            shuttleEnabledForEmail = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
+          }
+        }
+
+        const reservationCode = deriveReservationCode(session.id);
+        const membersUrl = `https://www.payparq.com/members?email=${encodeURIComponent(email)}`;
+        const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
+
+        const html = buildBookingConfirmationEmail({
+          sessionId: session.id,
+          reservationCode,
+          locationName: locationNameForEmail,
+          locationDisplayId: locationDisplayIdForEmail || (location_id !== 'DEFAULT_LOC' ? location_id : null),
+          entryTime,
+          exitTime,
+          amountCents: sessionAmountCents,
+          currency: session.currency || 'EUR',
+          valetEnabled: valetEnabledForEmail,
+          shuttleEnabled: shuttleEnabledForEmail,
+          membersUrl,
+        });
+
+        await resend.emails.send({
+          from: fromAddress,
+          to: email,
+          subject: `Rezervacija potvrđena · ${reservationCode}`,
+          html,
+        });
+
+        console.log(`📧 Booking confirmation email sent to ${email} (${reservationCode})`);
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send booking confirmation email:', emailError);
+    }
+
+    // 5. UPDATE OCCUPANCY (Optional, best effort)
     try {
         // First check if location exists, if not create a dummy one to avoid error
         const { data: loc } = await client.from('locations').select('occupancy').eq('id', location_id).maybeSingle();

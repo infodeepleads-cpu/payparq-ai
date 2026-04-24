@@ -69,6 +69,15 @@ function deriveTicketNumber(sessionId: string): string {
   return `VLT-${num}`;
 }
 
+function deriveReservationCode(sessionId: string): string {
+  let hash = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    hash = (hash * 41 + sessionId.charCodeAt(i)) & 0xffffffff;
+  }
+  const num = 1000 + (Math.abs(hash) % 9000);
+  return `RZ-${num}`;
+}
+
 function deriveShuttleCode(sessionId: string): string {
   let hash = 0;
   for (let i = 0; i < sessionId.length; i++) {
@@ -738,7 +747,12 @@ function SuccessContent() {
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] text-black/50">Rezervacija potvrđena</p>
+                <p className="text-[12px] text-black/50">
+                  Rezervacija potvrđena
+                  {summary?.session_id && (
+                    <span className="ml-2 font-mono text-black/70">{deriveReservationCode(summary.session_id)}</span>
+                  )}
+                </p>
                 <p className="text-[15px] font-semibold text-black leading-tight">
                   {checkoutLocationName || checkoutLocationIdLabel || 'Safe Parking by PayParq'}
                 </p>
@@ -758,7 +772,7 @@ function SuccessContent() {
                 <p className="font-semibold text-black">{formatDateTime(checkoutStart)}</p>
               </div>
               <div>
-                <p className="text-black/50">Do</p>
+                <p className="text-black/50">Kraj</p>
                 <p className="font-semibold text-black">{formatDateTime(checkoutEnd)}</p>
               </div>
             </div>
