@@ -198,7 +198,7 @@ function buildCustomerEmail(params: {
   const reservationCode = deriveReservationCode(sessionId);
   const successUrl = `${BASE}/success?session_id=${encodeURIComponent(sessionId)}`;
   const insuranceUrl = `${BASE}/insurance/apply?email=${encodeURIComponent(customerEmail)}`;
-  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}`;
+  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}&fallback_email=${encodeURIComponent(customerEmail)}`;
   const membersUrl = `${BASE}/members?email=${encodeURIComponent(customerEmail)}`;
 
   const valetTicket = valetEnabled ? `
@@ -238,10 +238,10 @@ function buildCustomerEmail(params: {
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">Pozovi vozilo</div>
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         ${valetEnabled ? `<td width="${shuttleEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">🚗 Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
+          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
         </td>` : ""}
         ${shuttleEnabled ? `<td width="${valetEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">🚌 Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
+          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
         </td>` : ""}
       </tr></table>
     </td></tr>` : "";
