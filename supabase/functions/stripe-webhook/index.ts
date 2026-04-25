@@ -224,7 +224,7 @@ function fmtDate(iso: string | null): string {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Europe/Zagreb',
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
     }).formatToParts(d);
     const getValue = (type: string) => {
       const part = parts.find((p) => p.type === type);
