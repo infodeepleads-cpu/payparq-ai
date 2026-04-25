@@ -1266,13 +1266,12 @@ export async function POST(req: NextRequest) {
         resolvedLocationId || location_id || "—";
       const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${
+      const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
+      reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${
-        quantity === 1 ? "dan" : "dana"
-      } parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • 2 vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
@@ -1782,13 +1781,12 @@ export async function GET(req: NextRequest) {
         resolvedLocationId || location_id || "—";
       const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${
+      const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
+      reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${
-        quantity === 1 ? "dan" : "dana"
-      } parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • 2 vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
