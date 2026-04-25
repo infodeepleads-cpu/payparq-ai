@@ -478,8 +478,8 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const extendTargetSessionId = String(metadata.extend_target_session_id ?? "").trim();
   const metadataCheckIn = String(metadata.check_in ?? "").trim();
   const metadataCheckOut = String(metadata.check_out ?? "").trim();
-  const metadataCheckInDate = metadataCheckIn ? parseMetadataDatetime(metadataCheckIn) : null;
-  const metadataCheckOutDate = metadataCheckOut ? parseMetadataDatetime(metadataCheckOut) : null;
+  const metadataCheckInDate = metadataCheckIn ? new Date(metadataCheckIn) : null;
+  const metadataCheckOutDate = metadataCheckOut ? new Date(metadataCheckOut) : null;
   const hasValidMetadataCheckIn = Boolean(
     metadataCheckInDate && !Number.isNaN(metadataCheckInDate.getTime()),
   );
