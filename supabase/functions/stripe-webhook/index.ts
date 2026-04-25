@@ -507,7 +507,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const durationUnit =
     type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
   let entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
-  if (isReserveFlow && hasValidMetadataCheckIn && metadataCheckInDate) {
+  if (hasValidMetadataCheckIn && metadataCheckInDate) {
     entryTime = metadataCheckInDate;
   }
   const durationMinutes =
@@ -517,10 +517,10 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
       ? checkoutQuantity * 24 * 60
       : checkoutQuantity * 60;
   let exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
-  if (isReserveFlow && hasValidMetadataCheckOut && metadataCheckOutDate) {
+  if (hasValidMetadataCheckOut && metadataCheckOutDate) {
     exitTime = metadataCheckOutDate;
   }
-  const statusValue = isReserveFlow && entryTime.getTime() > Date.now() ? "scheduled" : "active";
+  const statusValue = entryTime.getTime() > Date.now() ? "scheduled" : "active";
   
   let plateNumber = "";
   if (session.custom_fields) {
