@@ -585,10 +585,12 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     }
     const reservationCode = deriveReservationCode(session.id);
     let valetEnabled = false, shuttleEnabled = false;
+    let locationName = locationDisplay;
     if (resolvedLocation?.id) {
       try {
-        const { data: locData } = await admin.from('locations').select('valet_enabled,shuttle_enabled').eq('id', resolvedLocation.id).maybeSingle();
+        const { data: locData } = await admin.from('locations').select('name,valet_enabled,shuttle_enabled').eq('id', resolvedLocation.id).maybeSingle();
         if (locData) {
+          locationName = (locData as any).name || locationDisplay;
           valetEnabled = Boolean((locData as any).valet_enabled);
           shuttleEnabled = Boolean((locData as any).shuttle_enabled);
         }
@@ -599,7 +601,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     const htmlContent = buildCustomerEmail({
       sessionId: session.id,
       customerEmail: email,
-      locationName: resolvedLocation?.display_id ? `Lot ${resolvedLocation.display_id}` : locationDisplay,
+      locationName: locationName,
       locationDisplayId: resolvedLocation?.display_id ?? locationDisplay,
       entryTime: entryTime.toISOString(),
       exitTime: exitTime.toISOString(),
