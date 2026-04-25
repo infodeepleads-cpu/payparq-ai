@@ -1427,7 +1427,7 @@ export async function POST(req: NextRequest) {
       flow_type,
       pricing_type,
       check_in: effectiveCheckIn,
-      check_out: params.checkOut,
+      check_out: finalCheckOut,
       extend_target_session_id: extendTargetSessionId,
       extend_minutes: String(extendMinutes),
       session_amount_cents: String(params.sessionAmountCents),
