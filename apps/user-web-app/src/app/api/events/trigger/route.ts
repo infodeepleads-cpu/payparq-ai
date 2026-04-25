@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getMessaging } from '@/lib/firebaseAdmin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -121,8 +122,14 @@ async function sendFCMNotifications(
   event_id: string
 ) {
   try {
-    const messages = tokens.map((token) => ({
-      token,
+    const messaging = getMessaging();
+
+    if (!messaging) {
+      console.warn('Firebase not configured, skipping FCM notifications');
+      return;
+    }
+
+    const message = {
       notification: {
         title: getNotificationTitle(type),
         body: getNotificationBody(type, data),
@@ -130,30 +137,35 @@ async function sendFCMNotifications(
       data: {
         event_type: type,
         event_id,
-        ...data,
+        lot_id: data.lot_id || '',
+        url: getNotificationLink(type, data),
       },
-      webpush: {
-        fcmOptions: {
-          link: getNotificationLink(type, data),
-        },
+      android: {
+        priority: 'high',
       },
-    }));
-
-    // Send via Firebase Cloud Messaging
-    // Requires Firebase Admin SDK setup
-    const response = await fetch(
-      'https://fcm.googleapis.com/batch',
-      {
-        method: 'POST',
+      apns: {
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `key=${process.env.FIREBASE_SERVER_KEY}`,
+          'apns-priority': '10',
         },
-        body: JSON.stringify({ messages }),
-      }
+      },
+    };
+
+    const response = await messaging.sendMulticast({
+      ...message,
+      tokens,
+    });
+
+    console.log(
+      `FCM sent: ${response.successCount} succeeded, ${response.failureCount} failed`
     );
 
-    console.log(`FCM response: ${response.status}`);
+    // Handle failed tokens
+    if (response.failureCount > 0) {
+      const failedTokens = response.responses
+        .map((resp, idx) => (!resp.success ? tokens[idx] : null))
+        .filter(Boolean);
+      console.warn('Failed FCM tokens:', failedTokens);
+    }
   } catch (error) {
     console.error('FCM error:', error);
   }
@@ -206,11 +218,15 @@ async function sendWebPush(
   subscription: any,
   notification: any
 ) {
-  // This requires 'web-push' npm package
-  // Implementation depends on your backend setup
-  const webpush = require('web-push');
+  const webpush = await import('web-push');
 
-  await webpush.sendNotification(subscription, JSON.stringify(notification));
+  webpush.default.setVapidDetails(
+    'mailto:admin@payparq.ai',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+
+  await webpush.default.sendNotification(subscription, JSON.stringify(notification));
 }
 
 function getNotificationTitle(type: string): string {
