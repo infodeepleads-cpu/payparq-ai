@@ -415,6 +415,10 @@ export async function GET(req: NextRequest) {
       entryTime = metadataCheckIn || null;
       exitTime = metadataCheckOut || null;
     }
+    // Park & Taxi always includes shuttle with 2 credits
+    if (sessionMetadata.flow_type === 'park_now') {
+      shuttleEnabled = true;
+    }
     return NextResponse.json({
       session_id: session.id,
       ref_id: session.id.slice(-8),
