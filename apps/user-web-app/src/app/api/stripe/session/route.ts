@@ -41,12 +41,10 @@ function parseMetadataDatetime(value: string | null | undefined): string | null 
   }
   const naive = parseNaiveDateParts(raw);
   if (!naive) return null;
+  // Naive datetime is interpreted as Zagreb local time, convert to UTC
   let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const offsetMinutes = resolveZagrebOffsetMinutes(new Date(utcMillis));
-    utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second)
-      - offsetMinutes * 60000;
-  }
+  const offsetMinutes = resolveZagrebOffsetMinutes(new Date(utcMillis));
+  utcMillis -= offsetMinutes * 60000;
   return new Date(utcMillis).toISOString();
 }
 
