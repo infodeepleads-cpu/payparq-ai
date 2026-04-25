@@ -299,7 +299,12 @@ function buildCustomerEmail(params: {
     <a href="${invoiceUrl}" style="display:block;text-align:center;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:13px;font-weight:500;color:#111;text-decoration:none;">Preuzmi potvrdu</a>
   </td></tr>
 
-  <!-- 5. Members CTA -->
+  <!-- 5. Add Extras (if addons available) -->
+  ${(valetEnabled || shuttleEnabled) ? `<tr><td style="padding-top:12px;text-align:center;">
+    <a href="${successUrl}" style="display:inline-block;padding:11px 28px;border-radius:8px;background:#f0f0f0;color:#111;text-decoration:none;font-weight:600;font-size:13px;">Dodaj dodatke</a>
+  </td></tr>` : ""}
+
+  <!-- 6. Members CTA -->
   <tr><td style="padding-top:16px;text-align:center;">
     <a href="${membersUrl}" style="display:inline-block;padding:13px 32px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
   </td></tr>

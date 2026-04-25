@@ -439,9 +439,13 @@ function SuccessContent() {
         }
         const s = payload as SessionSummary;
         setSummary(s);
-        // Derive credits: ∞ when included in price
+        // Derive credits: Park & Taxi gets 2 shuttle credits, others get ∞ when included
         setValetCredits(s.valet_enabled ? '∞' : 0);
-        setShuttleCredits(s.shuttle_enabled ? '∞' : 0);
+        if (s.flow_type === 'park_now' && s.shuttle_enabled) {
+          setShuttleCredits(2);
+        } else {
+          setShuttleCredits(s.shuttle_enabled ? '∞' : 0);
+        }
         // Auto-toggle included services on
         if (s.valet_enabled) setValetToggled(true);
         if (s.shuttle_enabled) setShuttleToggled(true);
