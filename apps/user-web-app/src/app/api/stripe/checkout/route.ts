@@ -977,6 +977,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   console.log("[Stripe Checkout] Request body:", body);
   const url = new URL(req.url);
+  console.log("[Stripe Checkout] Request URL searchParams:", url.searchParams.toString());
   const location_id =
     (typeof body.location_id === "string" && body.location_id) ||
     url.searchParams.get("loc") ||
@@ -988,20 +989,21 @@ export async function POST(req: NextRequest) {
     (typeof body.plate_number === "string" && body.plate_number) || "";
   const flow_type = (typeof body.flow_type === "string" && body.flow_type) ||
     url.searchParams.get("flow") || "park_now";
-  const check_in = (typeof body.check_in === "string" && body.check_in) ||
+  const check_in = ((typeof body.check_in === "string" && body.check_in) ||
     (typeof (body as { checkIn?: unknown }).checkIn === "string" &&
       (body as { checkIn?: string }).checkIn) ||
     url.searchParams.get("check_in") ||
     url.searchParams.get("checkIn") ||
     url.searchParams.get("in") ||
-    "";
-  const check_out = (typeof body.check_out === "string" && body.check_out) ||
+    "").trim();
+  const check_out = ((typeof body.check_out === "string" && body.check_out) ||
     (typeof (body as { checkOut?: unknown }).checkOut === "string" &&
       (body as { checkOut?: string }).checkOut) ||
     url.searchParams.get("check_out") ||
     url.searchParams.get("checkOut") ||
     url.searchParams.get("out") ||
-    "";
+    "").trim();
+  console.log("[Stripe Checkout] Extracted times - check_in:", check_in, "check_out:", check_out);
   const rawPricingType = (typeof body.type === "string" && body.type) ||
     url.searchParams.get("type") || null;
   const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
@@ -1029,6 +1031,7 @@ export async function POST(req: NextRequest) {
     : shouldAutoFillHourlyWindow
     ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
     : check_out;
+  console.log("[Stripe Checkout POST] shouldAutoFillParkTaxiWindow:", shouldAutoFillParkTaxiWindow, "effectiveCheckIn:", effectiveCheckIn, "effectiveCheckOut:", effectiveCheckOut);
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
     url.searchParams.get("allow_promotion_codes"),
