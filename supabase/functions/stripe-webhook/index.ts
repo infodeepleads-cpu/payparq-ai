@@ -220,10 +220,27 @@ function fmtDate(iso: string | null): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
   const pad = (n: number) => String(n).padStart(2, "0");
-  // Convert UTC to Zagreb time (UTC+2 in summer, UTC+1 in winter)
-  const offsetMinutes = resolveZagrebOffsetMinutes(d);
-  const local = new Date(d.getTime() + offsetMinutes * 60 * 1000);
-  return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Zagreb',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    }).formatToParts(d);
+    const getValue = (type: string) => {
+      const part = parts.find((p) => p.type === type);
+      return part ? part.value : '00';
+    };
+    const year = getValue('year');
+    const month = getValue('month');
+    const day = getValue('day');
+    const hour = getValue('hour');
+    const minute = getValue('minute');
+    return `${day}.${month}.${year} ${hour}:${minute}`;
+  } catch {
+    const offsetMs = 2 * 60 * 60 * 1000;
+    const local = new Date(d.getTime() + offsetMs);
+    return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+  }
 }
 
 function fmtEur(cents: number): string {
