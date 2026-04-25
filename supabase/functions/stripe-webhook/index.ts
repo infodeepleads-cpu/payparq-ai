@@ -218,29 +218,10 @@ function parseMetadataDatetime(value: string | null | undefined): Date | null {
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Zagreb',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-    }).formatToParts(d);
-    const getValue = (type: string) => {
-      const part = parts.find((p) => p.type === type);
-      return part ? part.value : '00';
-    };
-    const year = getValue('year');
-    const month = getValue('month');
-    const day = getValue('day');
-    const hour = getValue('hour');
-    const minute = getValue('minute');
-    return `${day}.${month}.${year} ${hour}:${minute}`;
-  } catch {
-    const offsetMs = 2 * 60 * 60 * 1000;
-    const local = new Date(d.getTime() + offsetMs);
-    return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
-  }
+  if (Number.isNaN(d.getTime())) return "—";
+  const date = d.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  const time = d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  return `${date} ${time}`;
 }
 
 function fmtEur(cents: number): string {
