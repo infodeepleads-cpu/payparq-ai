@@ -1264,7 +1264,10 @@ export async function POST(req: NextRequest) {
         "Safe Parking by PayParq Split Airport/Trogir";
       const locationIdLabel = resolvedDisplayId || display_id ||
         resolvedLocationId || location_id || "—";
-      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const parkTaxiCents = unitAmount;
+      const extraDays = Math.max(0, quantity - 1);
+      const totalCents = parkTaxiCents + (extraDays * dailyTicketUnitAmountCents);
+      const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
       const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
       reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
@@ -1283,7 +1286,11 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  const sessionAmountCents = toCents(unitAmount * quantity);
+  const parkTaxiCents = unitAmount;
+  const extraDaysForCalc = Math.max(0, quantity - 1);
+  const sessionAmountCents = isParkTaxiFlow
+    ? toCents(parkTaxiCents + (extraDaysForCalc * dailyTicketUnitAmountCents))
+    : toCents(unitAmount * quantity);
   const walletDebitPlannedCents = await resolvePlannedWalletDebitCents(
     normalizedCustomerEmail,
     sessionAmountCents,
@@ -1779,7 +1786,10 @@ export async function GET(req: NextRequest) {
         "Safe Parking by PayParq Split Airport/Trogir";
       const locationIdLabel = resolvedDisplayId || display_id ||
         resolvedLocationId || location_id || "—";
-      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const parkTaxiCents = unitAmount;
+      const extraDays = Math.max(0, quantity - 1);
+      const totalCents = parkTaxiCents + (extraDays * dailyTicketUnitAmountCents);
+      const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
       const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
       reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
@@ -1816,7 +1826,11 @@ export async function GET(req: NextRequest) {
       reservationDescription += dailyFooterLine;
     }
   }
-  const sessionAmountCents = toCents(unitAmount * quantity);
+  const parkTaxiCents2 = unitAmount;
+  const extraDaysForCalc2 = Math.max(0, quantity - 1);
+  const sessionAmountCents = isParkTaxiFlow
+    ? toCents(parkTaxiCents2 + (extraDaysForCalc2 * dailyTicketUnitAmountCents))
+    : toCents(unitAmount * quantity);
   const walletDebitPlannedCents = isAdjustableHourly
     ? 0
     : await resolvePlannedWalletDebitCents(normalizedCustomerEmail, sessionAmountCents);

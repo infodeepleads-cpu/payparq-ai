@@ -1750,16 +1750,22 @@ serve(async (req: Request) => {
       return json({ error: "location_id must resolve for park_taxi" }, 400);
     }
     let amountCents = explicitCents;
+    let parkTaxiBaseCents: number | null = null;
+    let dailyRateCents: number | null = null;
     if (parkTaxiRequested && locationUuid) {
       const parkTaxi = await hubParkTaxiPriceCents(locationUuid);
-      amountCents = parkTaxi.isHub
-        ? parkTaxi.cents
-        : await locationPriceCents(locationUuid, "daily");
+      parkTaxiBaseCents = parkTaxi.isHub ? parkTaxi.cents : await locationPriceCents(locationUuid, "daily");
+      amountCents = parkTaxiBaseCents;
+      dailyRateCents = await locationPriceCents(locationUuid, "daily");
     } else if (amountCents == null) {
       amountCents = await locationPriceCents(locationUuid, type);
     }
     if (isReservationFlow && explicitCents == null && quantity > 1) {
-      amountCents = amountCents * quantity;
+      if (parkTaxiRequested && parkTaxiBaseCents != null && dailyRateCents != null) {
+        amountCents = parkTaxiBaseCents + ((quantity - 1) * dailyRateCents);
+      } else {
+        amountCents = amountCents * quantity;
+      }
     }
     if (amountCents < 50) amountCents = 50;
     let unitAmountCents = amountCents;
