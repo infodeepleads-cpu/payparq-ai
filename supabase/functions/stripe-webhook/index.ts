@@ -174,7 +174,10 @@ function resolveZagrebOffsetMinutes(date: Date): number {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }).formatToParts(date);
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const get = (type: string) => {
+    const part = parts.find((p) => p.type === type);
+    return Number(part ? part.value : '0');
+  };
   const zonedAsUtc = Date.UTC(get('year'), Math.max(0, get('month') - 1), get('day'), get('hour'), get('minute'), get('second'));
   return Math.round((zonedAsUtc - date.getTime()) / 60000);
 }
@@ -192,7 +195,7 @@ function parseNaiveDateParts(value: string) {
   if (!match) return null;
   return {
     year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
-    hour: Number(match[4]), minute: Number(match[5]), second: Number(match[6] ?? '0'),
+    hour: Number(match[4]), minute: Number(match[5]), second: Number(match[6] || '0'),
   };
 }
 
