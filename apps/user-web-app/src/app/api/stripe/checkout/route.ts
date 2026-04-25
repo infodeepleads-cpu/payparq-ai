@@ -1270,7 +1270,7 @@ export async function POST(req: NextRequest) {
       const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
       const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
-      reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
+      reservationDescription = `${quantity} Day Parking, 2 Rides Included\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
@@ -1464,7 +1464,7 @@ export async function POST(req: NextRequest) {
             currency: "eur",
             product_data: {
               name: isParkTaxiFlow
-                ? "Park & Taxi Package"
+                ? `${params.sessionQuantity} Day Parking, 2 Rides Included`
                 : pricing_type === "daily"
                 ? params.sessionQuantity > 1
                   ? `Parking Session (${params.sessionQuantity} Days)`
@@ -1790,7 +1790,7 @@ export async function GET(req: NextRequest) {
       const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
       const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
-      reservationDescription = `Park & Taxi Package (1 Day)\n${locationTitle} • ID ${locationIdLabel} • Od ${
+      reservationDescription = `${quantity} Day Parking, 2 Rides Included\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
