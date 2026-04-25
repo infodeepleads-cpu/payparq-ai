@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   // If no session and trying to access protected routes, redirect to login
-  if (!session && req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers')) {
+  if (!session && (req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers') || req.nextUrl.pathname.startsWith('/driver'))) {
     const redirectUrl = new URL('/auth/login', req.url);
     return NextResponse.redirect(redirectUrl);
   }
@@ -43,11 +43,15 @@ export async function middleware(req: NextRequest) {
     if (req.nextUrl.pathname.startsWith('/managers') && profile?.role !== 'city_manager') {
       return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
+
+    if (req.nextUrl.pathname.startsWith('/driver') && profile?.role !== 'driver') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ['/officers/:path*', '/managers/:path*', '/dashboard'],
+  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/dashboard'],
 };
