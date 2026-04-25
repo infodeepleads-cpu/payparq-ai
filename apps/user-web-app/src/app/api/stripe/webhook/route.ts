@@ -723,13 +723,12 @@ export async function POST(req: Request) {
         console.log(`🔄 Session ${session.id} already paid. Skipping.`);
         return NextResponse.json({ received: true });
       }
-      // Pre-seeded pending row — mark as paid and send confirmation
-      console.log(`🔄 Session ${session.id} was pending, marking paid and sending confirmation.`);
+      // Pre-seeded pending row — mark as paid
+      console.log(`🔄 Session ${session.id} was pending, marking paid.`);
       await client
         .from('parking_sessions')
         .update({ payment_status: 'paid', status: 'active', updated_at: new Date().toISOString() })
         .eq('stripe_session_id', session.id);
-      await sendBookingConfirmation(session, client);
       return NextResponse.json({ received: true });
     }
 
@@ -1161,10 +1160,7 @@ export async function POST(req: Request) {
 
     console.log('✨ Successfully inserted parking session!');
 
-    // 4. SEND BOOKING CONFIRMATION EMAIL
-    await sendBookingConfirmation(session, client);
-
-    // 5. UPDATE OCCUPANCY (Optional, best effort)
+    // 4. UPDATE OCCUPANCY (Optional, best effort)
     try {
         // First check if location exists, if not create a dummy one to avoid error
         const { data: loc } = await client.from('locations').select('occupancy').eq('id', location_id).maybeSingle();

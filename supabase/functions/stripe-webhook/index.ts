@@ -529,6 +529,29 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
       return;
     }
     const reservationCode = deriveReservationCode(session.id);
+    let valetEnabled = false, shuttleEnabled = false;
+    if (resolvedLocation?.id) {
+      try {
+        const { data: locData } = await admin.from('locations').select('valet_enabled,shuttle_enabled').eq('id', resolvedLocation.id).maybeSingle();
+        if (locData) {
+          valetEnabled = Boolean((locData as any).valet_enabled);
+          shuttleEnabled = Boolean((locData as any).shuttle_enabled);
+        }
+      } catch (e) {
+        console.warn(`[EMAIL] Location lookup failed: ${e}`);
+      }
+    }
+    const htmlContent = buildCustomerEmail({
+      sessionId: session.id,
+      customerEmail: email,
+      locationName: resolvedLocation?.display_id ? `Lot ${resolvedLocation.display_id}` : locationDisplay,
+      locationDisplayId: resolvedLocation?.display_id ?? locationDisplay,
+      entryTime: entryTime.toISOString(),
+      exitTime: exitTime.toISOString(),
+      amountCents: Number(session.amount_total ?? 0),
+      valetEnabled,
+      shuttleEnabled,
+    });
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -537,7 +560,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
           from: fromEmail,
           to: [email],
           subject: `Rezervacija potvrđena · ${reservationCode}`,
-          text: `Hvala na rezervaciji!\n\nRezervacijski kod: ${reservationCode}\nLokacija: ${locationDisplay}\n\npayparq.com`,
+          html: htmlContent,
         }),
       });
       const resBody = await res.text().catch(() => "");
@@ -551,7 +574,6 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     console.log(`[V19] Updating existing session: ${existing.id}`);
     const updated = await updateSessionWithSchemaFallback(session.id, insertData);
     if (updated.ok) {
-      await sendPaymentNotification(session, locationDisplay);
       await sendCustomerConfirmation();
       return { ok: true };
     }
@@ -563,7 +585,6 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const inserted = await insertSessionWithSchemaFallback(insertData);
   if (inserted.ok) {
     console.log(`[V19] Insert successful`);
-    await sendPaymentNotification(session, locationDisplay);
     await sendCustomerConfirmation();
     return { ok: true };
   }
