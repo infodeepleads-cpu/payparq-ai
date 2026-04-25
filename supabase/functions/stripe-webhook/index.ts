@@ -210,8 +210,8 @@ function buildCustomerEmail(params: {
       <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${locationName}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Prva vožnja</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Povratna vožnja</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(95,61,252,0.08);padding:8px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
@@ -226,8 +226,8 @@ function buildCustomerEmail(params: {
       <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${locationName}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Prva vožnja</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Povratna vožnja</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(15,110,86,0.08);padding:8px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
@@ -299,10 +299,10 @@ function buildCustomerEmail(params: {
     <a href="${invoiceUrl}" style="display:block;text-align:center;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:13px;font-weight:500;color:#111;text-decoration:none;">Preuzmi potvrdu</a>
   </td></tr>
 
-  <!-- 5. Add Extras (if addons available) -->
-  ${(valetEnabled || shuttleEnabled) ? `<tr><td style="padding-top:12px;text-align:center;">
+  <!-- 5. Add Extras -->
+  <tr><td style="padding-top:12px;text-align:center;">
     <a href="${successUrl}" style="display:inline-block;padding:11px 28px;border-radius:8px;background:#f0f0f0;color:#111;text-decoration:none;font-weight:600;font-size:13px;">Dodaj dodatke</a>
-  </td></tr>` : ""}
+  </td></tr>
 
   <!-- 6. Members CTA -->
   <tr><td style="padding-top:16px;text-align:center;">

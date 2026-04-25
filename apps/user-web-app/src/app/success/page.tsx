@@ -647,7 +647,14 @@ function SuccessContent() {
   // "Paid addon" sub-section: valet/shuttle only when NOT already included
   const showValetPaidAddon = Boolean(addonValetCfg && !summary?.valet_enabled);
   const showShuttlePaidAddon = Boolean(addonShuttleCfg && !summary?.shuttle_enabled);
-  const showPaidSection = Boolean(showValetPaidAddon || showShuttlePaidAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
+  const showPaidSection = Boolean(
+    showValetPaidAddon ||
+    showShuttlePaidAddon ||
+    addonEvCfg ||
+    addonWashCfg ||
+    addonFuelCfg ||
+    (summary?.flow_type === 'park_now' && (addonValetCfg || addonShuttleCfg)) // Park & Taxi shows addon section if any addon config exists
+  );
 
   const hasAnyAddonWidget = showIncludedSection || showPaidSection;
   const showSummonSection = showIncludedValet || showIncludedShuttle;
