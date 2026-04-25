@@ -691,7 +691,7 @@ function SuccessContent() {
       items.push({ id: `fuel_${addonFuelType}`, label: `Punjenje gorivom (${addonFuelType === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
     }
     if (addonShuttleOn && addonShuttleCfg) {
-      items.push({ id: 'shuttle', label: 'Shuttle (1 smjer)', price_cents: addonShuttleCfg.price_cents ?? 200 });
+      items.push({ id: 'shuttle', label: 'Prijevoz (1 smjer)', price_cents: addonShuttleCfg.price_cents ?? 200 });
     }
     try {
       const res = await fetch('/api/stripe/addons-checkout', {
@@ -964,7 +964,7 @@ function SuccessContent() {
                           {addonShuttleOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Shuttle</p>
+                          <p className="text-[13px] font-medium text-black">Prijevoz</p>
                           <p className="text-[11px] text-black/40">1 smjer · do/od destinacije</p>
                         </div>
                       </div>
