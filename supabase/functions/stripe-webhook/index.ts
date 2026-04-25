@@ -470,7 +470,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const { data: existing, error: existingError } = await admin.from("parking_sessions").select("id").eq("stripe_session_id", session.id).maybeSingle();
   if (existingError) console.error(`[V19] Error checking existing: ${existingError.message}`);
 
-  const email = session.customer_details?.email || metadata.email || "";
+  const email = session.customer_details?.email || metadata.customer_email || metadata.email || "";
   const phone = session.customer_details?.phone || metadata.mobile || "";
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
