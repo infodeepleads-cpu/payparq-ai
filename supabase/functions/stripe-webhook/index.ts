@@ -173,8 +173,9 @@ function fmtDate(iso: string | null): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "—";
   const pad = (n: number) => String(n).padStart(2, "0");
-  // Approximate Zagreb time UTC+1 (avoids Deno edge locale/tz data dependency)
-  const local = new Date(d.getTime() + 60 * 60 * 1000);
+  // Convert UTC to Zagreb time (UTC+2 in summer, UTC+1 in winter)
+  const offsetMinutes = resolveZagrebOffsetMinutes(d);
+  const local = new Date(d.getTime() + offsetMinutes * 60 * 1000);
   return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
 }
 
