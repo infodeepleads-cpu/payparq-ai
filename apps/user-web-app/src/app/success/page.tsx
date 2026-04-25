@@ -529,7 +529,8 @@ function SuccessContent() {
       params.set('stripe_session_id', stripeSessionId);
       params.set('fallback_stripe_session_id', stripeSessionId);
     }
-    if (summary?.email) params.set('fallback_location_name', summary.location_name ?? '');
+    if (summary?.email) params.set('fallback_email', summary.email);
+    if (summary?.location_name) params.set('fallback_location_name', summary.location_name);
     if (summary?.check_in) params.set('fallback_check_in', summary.check_in);
     if (summary?.check_out) params.set('fallback_check_out', summary.check_out);
     if (summary?.amount_total) params.set('fallback_amount', (summary.amount_total / 100).toFixed(2));
@@ -1176,7 +1177,8 @@ function SuccessContent() {
             <button
               type="button"
               onClick={handleDownloadReceipt}
-              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
+              disabled={lookupLoading}
+              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Preuzmi potvrdu
             </button>

@@ -298,7 +298,7 @@ function resolveInvoiceAmount(row: InvoiceSessionRow | null, metadata: Record<st
 
 export async function GET(req: NextRequest) {
   const identity = await resolveMemberIdentity(req);
-  const email = identity.email || (await resolveMemberEmail(req));
+  const email = identity.email || (await resolveMemberEmail(req)) || normalizeEmail(req.nextUrl.searchParams.get("fallback_email"));
   const resolvedIdentity: MemberIdentity = { ...identity, email };
   if (!resolvedIdentity.email && resolvedIdentity.phones.length === 0 && resolvedIdentity.plates.length === 0 && resolvedIdentity.stripeCustomerIds.length === 0) {
     return NextResponse.json({ ok: false, error: "unauthorized_member" }, { status: 401 });
