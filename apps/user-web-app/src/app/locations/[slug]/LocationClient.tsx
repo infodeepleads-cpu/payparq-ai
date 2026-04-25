@@ -52,10 +52,10 @@ type SectionKey =
   | "cancellation"
   | "report";
 
-export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: { 
-  hub: HubData; 
-  priceLabel: string; 
-  hero: string; 
+export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: {
+  hub: HubData;
+  priceLabel: string;
+  hero: string;
   faqItems: Array<{ q: string; a: string }>;
   travelTime: string;
 }) {
@@ -222,9 +222,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
-  const parkTaxiTotalPriceLabel = `€${(totalDays * parkTaxiUnitPrice).toFixed(2)}`;
+  const parkTaxiTotalPriceLabel = `€${(parkTaxiUnitPrice + (totalDays - 1) * dailyPrice).toFixed(2)}`;
   const reserveTotalAmountCents = Math.max(0, Math.round(reserveTotalAmount * 100));
-  const parkTaxiTotalAmountCents = Math.max(0, Math.round(totalDays * parkTaxiUnitPrice * 100));
+  const parkTaxiTotalAmountCents = Math.max(0, Math.round((parkTaxiUnitPrice + (totalDays - 1) * dailyPrice) * 100));
   const activeFlowAmountCents = activeTab === "park_now" ? parkTaxiTotalAmountCents : reserveTotalAmountCents;
   const showMinChargeWalletExplainer = activeFlowAmountCents > 0 && activeFlowAmountCents < 50;
   const minChargeWalletExplainerText = "Card min €0.50. Extra is added to wallet.";

@@ -409,8 +409,8 @@ function SuccessContent() {
   const checkoutLocationDisplayId = summary?.location_display_id ?? null;
   const checkoutLocation = summary?.location_id ?? fallbackLocationId;
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
-  const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
+  const checkoutStart = summary?.check_in || fallbackCheckIn || null;
+  const checkoutEnd = summary?.check_out || fallbackCheckOut || null;
 
   useEffect(() => {
     let active = true;
