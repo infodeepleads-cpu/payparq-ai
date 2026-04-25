@@ -1464,9 +1464,7 @@ export async function POST(req: NextRequest) {
             currency: "eur",
             product_data: {
               name: isParkTaxiFlow
-                ? params.sessionQuantity > 1
-                  ? `Park & Taxi Package (${params.sessionQuantity} Days)`
-                  : "Park & Taxi Package (1 Day)"
+                ? "Park & Taxi Package"
                 : pricing_type === "daily"
                 ? params.sessionQuantity > 1
                   ? `Parking Session (${params.sessionQuantity} Days)`
