@@ -238,10 +238,10 @@ function buildCustomerEmail(params: {
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">Pozovi vozilo</div>
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         ${valetEnabled ? `<td width="${shuttleEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
+          <a href="${BASE}/api/parking/summon?session_id=${encodeURIComponent(sessionId)}&type=valet" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
         </td>` : ""}
         ${shuttleEnabled ? `<td width="${valetEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
+          <a href="${BASE}/api/parking/summon?session_id=${encodeURIComponent(sessionId)}&type=shuttle" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
         </td>` : ""}
       </tr></table>
     </td></tr>` : "";
@@ -281,7 +281,10 @@ function buildCustomerEmail(params: {
   <tr><td style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:16px;margin-top:12px;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">Produži boravak</div>
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${["+1h","+2h","+1d","+2d"].map(l => `<td width="25%" style="padding:0 3px;"><a href="${successUrl}" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">${l}</a></td>`).join("")}
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=60" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+1h</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=120" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+2h</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=1440" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+1d</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=2880" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+2d</a></td>
     </tr></table>
   </td></tr>
 
