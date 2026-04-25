@@ -1271,7 +1271,7 @@ export async function POST(req: NextRequest) {
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • 2 vožnja ${secondRideTime}`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • Druga vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
@@ -1786,7 +1786,7 @@ export async function GET(req: NextRequest) {
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • 2 vožnja ${secondRideTime}`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • Druga vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
