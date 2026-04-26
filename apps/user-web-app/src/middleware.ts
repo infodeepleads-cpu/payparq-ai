@@ -55,11 +55,15 @@ export async function middleware(req: NextRequest) {
     if (req.nextUrl.pathname.startsWith('/resources') && !['city_manager', 'superadmin'].includes(profile?.role)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
+
+    if (req.nextUrl.pathname.startsWith('/admin') && profile?.role !== 'superadmin') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/resources/:path*', '/dashboard'],
+  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/resources/:path*', '/admin/:path*', '/dashboard'],
 };
