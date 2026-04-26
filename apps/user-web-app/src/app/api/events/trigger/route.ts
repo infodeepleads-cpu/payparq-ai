@@ -54,6 +54,11 @@ async function broadcastNotification(
   event_id: string
 ) {
   try {
+    if (!supabaseAdmin) {
+      console.log('Supabase admin not available for broadcast');
+      return;
+    }
+
     // Determine who should receive notifications based on event type
     let recipients: any[] = [];
 
