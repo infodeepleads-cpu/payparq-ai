@@ -44,7 +44,15 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
 
-    if (req.nextUrl.pathname.startsWith('/driver') && profile?.role !== 'driver') {
+    if (req.nextUrl.pathname.startsWith('/driver') && profile?.role !== 'driver' && profile?.role !== 'officer') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
+
+    if (req.nextUrl.pathname.startsWith('/officers') && profile?.role !== 'officer') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
+    }
+
+    if (req.nextUrl.pathname.startsWith('/resources') && !['city_manager', 'superadmin'].includes(profile?.role)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
   }
@@ -53,5 +61,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/dashboard'],
+  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/resources/:path*', '/dashboard'],
 };
