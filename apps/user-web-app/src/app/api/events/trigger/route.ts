@@ -141,7 +141,7 @@ async function sendFCMNotifications(
       return;
     }
 
-    const baseMessage = {
+    const message = {
       notification: {
         title: getNotificationTitle(type),
         body: getNotificationBody(type, data),
@@ -152,33 +152,32 @@ async function sendFCMNotifications(
         lot_id: data.lot_id || '',
         url: getNotificationLink(type, data),
       },
-      android: {
-        priority: 'high' as const,
-      },
-      apns: {
-        headers: {
-          'apns-priority': '10',
-        },
-      },
     };
 
-    const response = await messaging.sendMulticast({
-      tokens,
-      notification: baseMessage.notification,
-      data: baseMessage.data,
-      android: baseMessage.android,
-      apns: baseMessage.apns,
-    });
+    // Send to each token individually
+    let successCount = 0;
+    let failureCount = 0;
+    const failedTokens: string[] = [];
+
+    for (const token of tokens) {
+      try {
+        await messaging.send({
+          ...message,
+          token,
+        });
+        successCount++;
+      } catch (err) {
+        failureCount++;
+        failedTokens.push(token);
+      }
+    }
 
     console.log(
-      `FCM sent: ${response.successCount} succeeded, ${response.failureCount} failed`
+      `FCM sent: ${successCount} succeeded, ${failureCount} failed`
     );
 
     // Handle failed tokens
-    if (response.failureCount > 0) {
-      const failedTokens = response.responses
-        .map((resp, idx) => (!resp.success ? tokens[idx] : null))
-        .filter(Boolean);
+    if (failedTokens.length > 0) {
       console.warn('Failed FCM tokens:', failedTokens);
     }
   } catch (error) {
