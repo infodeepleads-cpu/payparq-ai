@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-const SUPERADMIN_EMAIL = 'payparq@outlook.com';
-
 export async function POST(req: NextRequest) {
   try {
-    const { user_id, email } = await req.json();
+    const { user_id } = await req.json();
 
     if (!user_id) {
       return NextResponse.json(
@@ -14,43 +12,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if this is the hardcoded superadmin
-    if (email === SUPERADMIN_EMAIL) {
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .upsert({
-          id: user_id,
-          role: 'superadmin',
-        }, {
-          onConflict: 'id',
-        });
-
-      if (updateError) throw updateError;
-
-      return NextResponse.json({
-        user_id,
-        role: 'superadmin',
-        synced: true,
-      });
-    }
-
     // Get user's role from mobile scanner (profiles table)
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user_id)
       .single();
 
     // If user has a role set by mobile scanner, return it
-    if (profile?.role && profile.role !== 'superadmin') {
+    if (profile?.role) {
       return NextResponse.json({
         user_id,
         role: profile.role,
-        synced: false,
       });
     }
 
-    // If no role set, default to 'member'
+    // Always default to 'member' if not found
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -79,7 +56,6 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get('user_id');
-    const email = req.nextUrl.searchParams.get('email');
 
     if (!userId) {
       return NextResponse.json(
@@ -88,31 +64,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check if this is the hardcoded superadmin
-    if (email === SUPERADMIN_EMAIL) {
-      return NextResponse.json({
-        role: 'superadmin',
-      });
-    }
-
-    const { data: profile, error } = await supabaseAdmin
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', userId)
       .single();
-
-    if (error) {
-      return NextResponse.json({
-        role: 'member', // default if not found
-      });
-    }
 
     return NextResponse.json({
       role: profile?.role || 'member',
     });
   } catch (error) {
     return NextResponse.json(
-      { role: 'member' }, // default on error
+      { role: 'member' },
       { status: 200 }
     );
   }

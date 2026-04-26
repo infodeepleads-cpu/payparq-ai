@@ -21,12 +21,8 @@ export function useUserRole() {
         return;
       }
 
-      // Try to get role from API (pass email for superadmin check)
-      const params = new URLSearchParams({
-        user_id: user.id,
-        email: user.email || '',
-      });
-      const response = await fetch(`/api/auth/sync-role?${params}`);
+      // Fetch role from mobile scanner (defaults to 'member' if not found)
+      const response = await fetch(`/api/auth/sync-role?user_id=${user.id}`);
       const data = await response.json();
 
       setRole((data.role as UserRole) || 'member');
