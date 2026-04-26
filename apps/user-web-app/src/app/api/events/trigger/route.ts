@@ -13,6 +13,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     // Log the event
     const { data: event, error: eventError } = await supabaseAdmin
       .from('notification_events')

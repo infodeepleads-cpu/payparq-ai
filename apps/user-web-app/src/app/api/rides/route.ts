@@ -13,6 +13,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     let query = supabaseAdmin
       .from('ride_requests')
       .select('*')
@@ -47,6 +54,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
       );
     }
 
