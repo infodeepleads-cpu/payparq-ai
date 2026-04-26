@@ -10,6 +10,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+
     // Create enforcement checkout
     const { data, error } = await supabaseAdmin
       .from('enforcement_checkouts')
@@ -40,6 +44,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+
     let query = supabaseAdmin
       .from('enforcement_checkouts')
       .select('*')
@@ -67,6 +75,10 @@ export async function PATCH(req: NextRequest) {
 
     if (!id || !user) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
 
     // Verify officer owns this checkout
