@@ -18,6 +18,8 @@ const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   Deno.env.get("SERVICE_ROLE_KEY") ?? "";
+const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+const fromEmail = "PayParq <team@info.payparq.com>";
 const cancelUrl = "https://www.payparq.com/success";
 
 const corsHeaders = {
@@ -1145,6 +1147,155 @@ async function cleanupStalePendingGuestSessions(): Promise<void> {
   }
 }
 
+function deriveReservationCode(sessionId: string): string {
+  let h = 0;
+  for (let i = 0; i < sessionId.length; i++) {
+    h = (Math.imul(31, h) + sessionId.charCodeAt(i)) | 0;
+  }
+  const num = Math.abs(h) % 10000;
+  return `RZ-${String(num).padStart(4, "0")}`;
+}
+
+function fmtDateLocal(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const local = new Date(d.getTime() + 60 * 60 * 1000);
+  return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+}
+
+function fmtEur(cents: number): string {
+  return (cents / 100).toFixed(2).replace(".", ",") + " €";
+}
+
+async function sendBookingConfirmationEmail(session: Stripe.Checkout.Session): Promise<void> {
+  const meta = session.metadata ?? {};
+  const email = [
+    session.customer_details?.email,
+    session.customer_email,
+    meta.customer_email,
+    meta.email,
+  ].map((v) => String(v ?? "").trim().toLowerCase()).find((v) => v.length > 0) ?? "";
+
+  console.log(`[EMAIL] sendBookingConfirmationEmail called. email="${email}" resendApiKey=${resendApiKey ? "set" : "MISSING"}`);
+  if (!email || !resendApiKey) {
+    console.warn("[EMAIL] Aborting: missing email or API key");
+    return;
+  }
+
+  const reservationCode = deriveReservationCode(session.id);
+  const locationId = String(meta.location_id ?? "").trim();
+  const entryIso = meta.check_in
+    ? new Date(meta.check_in as string).toISOString()
+    : new Date((session.created ?? 0) * 1000).toISOString();
+  const exitIso = meta.check_out
+    ? new Date(meta.check_out as string).toISOString()
+    : new Date(new Date(entryIso).getTime() + 3_600_000).toISOString();
+
+  let locationName = "";
+  let locationDisplayId = String(meta.display_id ?? "").trim();
+  let valetEnabled = false;
+  let shuttleEnabled = false;
+
+  if (locationId) {
+    try {
+      const { data: locRow } = await admin
+        .from("locations")
+        .select("name,display_id,valet_enabled,shuttle_enabled")
+        .eq("id", locationId)
+        .maybeSingle();
+      if (locRow) {
+        locationName = (locRow as any).name ?? "";
+        locationDisplayId = (locRow as any).display_id ?? locationDisplayId;
+        valetEnabled = Boolean((locRow as any).valet_enabled);
+        shuttleEnabled = Boolean((locRow as any).shuttle_enabled);
+      }
+    } catch (e) {
+      console.warn("[EMAIL] Location lookup failed:", e);
+    }
+  }
+
+  const locationDisplay = locationName
+    ? `${locationName} (${locationDisplayId})`
+    : locationDisplayId || "—";
+
+  const amountEur = fmtEur(Number(session.amount_total ?? 0));
+  const entryFmt = fmtDateLocal(entryIso);
+  const exitFmt = fmtDateLocal(exitIso);
+  const membersUrl = `https://www.payparq.com/members?email=${encodeURIComponent(email)}`;
+
+  const valetSection = valetEnabled
+    ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Valet</td><td style="padding:8px 0;font-size:13px;text-align:right;">Uključeno</td></tr>`
+    : "";
+  const shuttleSection = shuttleEnabled
+    ? `<tr><td style="padding:8px 0;font-size:13px;color:#6b7280;">Shuttle</td><td style="padding:8px 0;font-size:13px;text-align:right;">Uključeno</td></tr>`
+    : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="hr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rezervacija potvrđena</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+      <tr><td style="background:#1a1a2e;padding:28px 32px;text-align:center;">
+        <span style="color:#ffffff;font-size:24px;font-weight:700;letter-spacing:1px;">PayParq</span>
+      </td></tr>
+      <tr><td style="padding:32px;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:20px;text-align:center;margin-bottom:24px;">
+          <div style="font-size:28px;margin-bottom:8px;">✅</div>
+          <div style="font-size:20px;font-weight:700;color:#166534;">Rezervacija potvrđena</div>
+          <div style="font-size:32px;font-weight:800;color:#15803d;letter-spacing:2px;margin-top:8px;">${reservationCode}</div>
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;padding:0;margin-bottom:24px;">
+          <tr style="background:#f9fafb;"><td colspan="2" style="padding:12px 16px;font-weight:600;font-size:13px;color:#374151;border-bottom:1px solid #e5e7eb;">Detalji rezervacije</td></tr>
+          <tr><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Lokacija</td><td style="padding:10px 16px;font-size:13px;text-align:right;font-weight:600;">${locationDisplay}</td></tr>
+          <tr style="background:#f9fafb;"><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Ulazak</td><td style="padding:10px 16px;font-size:13px;text-align:right;">${entryFmt}</td></tr>
+          <tr><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Izlazak</td><td style="padding:10px 16px;font-size:13px;text-align:right;">${exitFmt}</td></tr>
+          ${valetSection}
+          ${shuttleSection}
+          <tr style="background:#f0fdf4;"><td style="padding:10px 16px;font-size:14px;font-weight:700;color:#166534;">Ukupno</td><td style="padding:10px 16px;font-size:14px;font-weight:700;text-align:right;color:#166534;">${amountEur}</td></tr>
+        </table>
+        <div style="margin-bottom:24px;">
+          <a href="https://www.payparq.com/success?session_id=${session.id}" style="display:block;background:#1a1a2e;color:#ffffff;text-align:center;padding:14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Preuzmi potvrdu rezervacije</a>
+        </div>
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:20px;margin-bottom:24px;">
+          <div style="font-weight:700;color:#7c3aed;margin-bottom:8px;">PayParq Members</div>
+          <div style="font-size:13px;color:#6b7280;margin-bottom:12px;">Pristupite svojoj Members zoni za buduće rezervacije i ekskluzivne pogodnosti.</div>
+          <a href="${membersUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;padding:10px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">Moja Members zona</a>
+        </div>
+        <div style="text-align:center;font-size:12px;color:#9ca3af;margin-top:16px;">
+          PayParq · Automatska poruka · Molimo ne odgovarajte na ovaj email
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [email],
+        subject: `Rezervacija potvrđena · ${reservationCode}`,
+        html,
+      }),
+    });
+    const resBody = await res.text().catch(() => "");
+    console.log(`[EMAIL] Resend result: ${res.status} to ${email} (${reservationCode}) — ${resBody}`);
+  } catch (e) {
+    console.error("[EMAIL] Fetch error:", e);
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -1175,7 +1326,8 @@ serve(async (req: Request) => {
           .trim().toLowerCase();
         const shouldPersist =
           event.type === "checkout.session.async_payment_succeeded" ||
-          normalizedPaymentStatus === "paid";
+          normalizedPaymentStatus === "paid" ||
+          normalizedPaymentStatus === "no_payment_required";
         if (!shouldPersist) {
           return json({ received: true });
         }
@@ -1185,6 +1337,7 @@ serve(async (req: Request) => {
             error: persisted.message ?? "Failed to persist parking session",
           }, persisted.status ?? 500);
         }
+        await sendBookingConfirmationEmail(session);
       } else if (event.type === "checkout.session.expired") {
         const session = event.data.object as Stripe.Checkout.Session;
         await cleanupExpiredCheckoutSession(session);
@@ -1597,16 +1750,22 @@ serve(async (req: Request) => {
       return json({ error: "location_id must resolve for park_taxi" }, 400);
     }
     let amountCents = explicitCents;
+    let parkTaxiBaseCents: number | null = null;
+    let dailyRateCents: number | null = null;
     if (parkTaxiRequested && locationUuid) {
       const parkTaxi = await hubParkTaxiPriceCents(locationUuid);
-      amountCents = parkTaxi.isHub
-        ? parkTaxi.cents
-        : await locationPriceCents(locationUuid, "daily");
+      parkTaxiBaseCents = parkTaxi.isHub ? parkTaxi.cents : await locationPriceCents(locationUuid, "daily");
+      amountCents = parkTaxiBaseCents;
+      dailyRateCents = await locationPriceCents(locationUuid, "daily");
     } else if (amountCents == null) {
       amountCents = await locationPriceCents(locationUuid, type);
     }
     if (isReservationFlow && explicitCents == null && quantity > 1) {
-      amountCents = amountCents * quantity;
+      if (parkTaxiRequested && parkTaxiBaseCents != null && dailyRateCents != null) {
+        amountCents = parkTaxiBaseCents + ((quantity - 1) * dailyRateCents);
+      } else {
+        amountCents = amountCents * quantity;
+      }
     }
     if (amountCents < 50) amountCents = 50;
     let unitAmountCents = amountCents;

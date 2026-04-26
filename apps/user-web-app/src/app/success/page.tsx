@@ -409,8 +409,8 @@ function SuccessContent() {
   const checkoutLocationDisplayId = summary?.location_display_id ?? null;
   const checkoutLocation = summary?.location_id ?? fallbackLocationId;
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in ?? (hasRealSessionId ? null : fallbackCheckIn);
-  const checkoutEnd = summary?.check_out ?? (hasRealSessionId ? null : fallbackCheckOut);
+  const checkoutStart = summary?.check_in || fallbackCheckIn || null;
+  const checkoutEnd = summary?.check_out || fallbackCheckOut || null;
 
   useEffect(() => {
     let active = true;
@@ -439,9 +439,13 @@ function SuccessContent() {
         }
         const s = payload as SessionSummary;
         setSummary(s);
-        // Derive credits: ∞ when included in price
+        // Derive credits: Park & Taxi gets 2 shuttle credits, others get ∞ when included
         setValetCredits(s.valet_enabled ? '∞' : 0);
-        setShuttleCredits(s.shuttle_enabled ? '∞' : 0);
+        if (s.flow_type === 'park_now' && s.shuttle_enabled) {
+          setShuttleCredits(2);
+        } else {
+          setShuttleCredits(s.shuttle_enabled ? '∞' : 0);
+        }
         // Auto-toggle included services on
         if (s.valet_enabled) setValetToggled(true);
         if (s.shuttle_enabled) setShuttleToggled(true);
@@ -529,7 +533,8 @@ function SuccessContent() {
       params.set('stripe_session_id', stripeSessionId);
       params.set('fallback_stripe_session_id', stripeSessionId);
     }
-    if (summary?.email) params.set('fallback_location_name', summary.location_name ?? '');
+    if (summary?.email) params.set('fallback_email', summary.email);
+    if (summary?.location_name) params.set('fallback_location_name', summary.location_name);
     if (summary?.check_in) params.set('fallback_check_in', summary.check_in);
     if (summary?.check_out) params.set('fallback_check_out', summary.check_out);
     if (summary?.amount_total) params.set('fallback_amount', (summary.amount_total / 100).toFixed(2));
@@ -642,7 +647,14 @@ function SuccessContent() {
   // "Paid addon" sub-section: valet/shuttle only when NOT already included
   const showValetPaidAddon = Boolean(addonValetCfg && !summary?.valet_enabled);
   const showShuttlePaidAddon = Boolean(addonShuttleCfg && !summary?.shuttle_enabled);
-  const showPaidSection = Boolean(showValetPaidAddon || showShuttlePaidAddon || addonEvCfg || addonWashCfg || addonFuelCfg);
+  const showPaidSection = Boolean(
+    showValetPaidAddon ||
+    showShuttlePaidAddon ||
+    addonEvCfg ||
+    addonWashCfg ||
+    addonFuelCfg ||
+    (summary?.flow_type === 'park_now' && (addonValetCfg || addonShuttleCfg)) // Park & Taxi shows addon section if any addon config exists
+  );
 
   const hasAnyAddonWidget = showIncludedSection || showPaidSection;
   const showSummonSection = showIncludedValet || showIncludedShuttle;
@@ -690,7 +702,7 @@ function SuccessContent() {
       items.push({ id: `fuel_${addonFuelType}`, label: `Punjenje gorivom (${addonFuelType === 'diesel' ? 'Diesel' : 'Benzin'})`, price_cents: opt?.price_cents ?? addonFuelPriceCents });
     }
     if (addonShuttleOn && addonShuttleCfg) {
-      items.push({ id: 'shuttle', label: 'Shuttle (1 smjer)', price_cents: addonShuttleCfg.price_cents ?? 200 });
+      items.push({ id: 'shuttle', label: 'Prijevoz (1 smjer)', price_cents: addonShuttleCfg.price_cents ?? 200 });
     }
     try {
       const res = await fetch('/api/stripe/addons-checkout', {
@@ -963,7 +975,7 @@ function SuccessContent() {
                           {addonShuttleOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Shuttle</p>
+                          <p className="text-[13px] font-medium text-black">Prijevoz</p>
                           <p className="text-[11px] text-black/40">1 smjer · do/od destinacije</p>
                         </div>
                       </div>
@@ -1176,7 +1188,8 @@ function SuccessContent() {
             <button
               type="button"
               onClick={handleDownloadReceipt}
-              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
+              disabled={lookupLoading}
+              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Preuzmi potvrdu
             </button>

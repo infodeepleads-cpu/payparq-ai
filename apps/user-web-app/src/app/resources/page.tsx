@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { normalizeLocationName, resolvePricingModeFromSource, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
 
 type LocationRow = {
@@ -671,9 +672,11 @@ export default function ResourcesPage() {
         const canManageResources =
           resolvedRole === "admin" ||
           resolvedRole === "super_admin" ||
-          resolvedRole === "manager";
+          resolvedRole === "manager" ||
+          resolvedRole === "superadmin" ||
+          resolvedRole === "city_manager";
         setRoleState(
-          resolvedRole === "manager"
+          (resolvedRole === "manager" || resolvedRole === "city_manager")
             ? "manager"
             : canManageResources
             ? "admin"

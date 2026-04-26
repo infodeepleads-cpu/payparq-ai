@@ -168,14 +168,60 @@ function deriveShuttleCode(sessionId: string): string {
   return `SH-${1000 + (Math.abs(hash) % 9000)}`;
 }
 
+function resolveZagrebOffsetMinutes(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zagreb',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => {
+    const part = parts.find((p) => p.type === type);
+    return Number(part ? part.value : '0');
+  };
+  const zonedAsUtc = Date.UTC(get('year'), Math.max(0, get('month') - 1), get('day'), get('hour'), get('minute'), get('second'));
+  return Math.round((zonedAsUtc - date.getTime()) / 60000);
+}
+
+function isNaiveDatetime(value: string): boolean {
+  const trimmed = value.trim();
+  if (/(?:Z|[+\-]\d{2}:\d{2})$/i.test(trimmed)) return false;
+  return /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/.test(trimmed);
+}
+
+function parseNaiveDateParts(value: string) {
+  const match = value.trim().match(
+    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/,
+  );
+  if (!match) return null;
+  return {
+    year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
+    hour: Number(match[4]), minute: Number(match[5]), second: Number(match[6] || '0'),
+  };
+}
+
+function parseMetadataDatetime(value: string | null | undefined): Date | null {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  if (!isNaiveDatetime(raw)) {
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const naive = parseNaiveDateParts(raw);
+  if (!naive) return null;
+  // Naive datetime is interpreted as Zagreb local time, convert to UTC
+  let utcMillis = Date.UTC(naive.year, naive.month - 1, naive.day, naive.hour, naive.minute, naive.second);
+  const offsetMinutes = resolveZagrebOffsetMinutes(new Date(utcMillis));
+  utcMillis -= offsetMinutes * 60000;
+  return new Date(utcMillis);
+}
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  // Approximate Zagreb time UTC+1 (avoids Deno edge locale/tz data dependency)
-  const local = new Date(d.getTime() + 60 * 60 * 1000);
-  return `${pad(local.getUTCDate())}.${pad(local.getUTCMonth() + 1)}.${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;
+  if (Number.isNaN(d.getTime())) return "—";
+  const date = d.toLocaleDateString('hr-HR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  const time = d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  return `${date} ${time}`;
 }
 
 function fmtEur(cents: number): string {
@@ -198,7 +244,7 @@ function buildCustomerEmail(params: {
   const reservationCode = deriveReservationCode(sessionId);
   const successUrl = `${BASE}/success?session_id=${encodeURIComponent(sessionId)}`;
   const insuranceUrl = `${BASE}/insurance/apply?email=${encodeURIComponent(customerEmail)}`;
-  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}`;
+  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}&fallback_email=${encodeURIComponent(customerEmail)}`;
   const membersUrl = `${BASE}/members?email=${encodeURIComponent(customerEmail)}`;
 
   const valetTicket = valetEnabled ? `
@@ -210,8 +256,8 @@ function buildCustomerEmail(params: {
       <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${locationName}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Prva vožnja</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Povratna vožnja</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(95,61,252,0.08);padding:8px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
@@ -226,8 +272,8 @@ function buildCustomerEmail(params: {
       <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${locationName}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">Prva vožnja</td><td style="font-weight:700;text-align:right;padding-bottom:6px;">${fmtDate(entryTime)}</td></tr>
+          <tr><td style="color:#888;">Povratna vožnja</td><td style="font-weight:700;text-align:right;">${fmtDate(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(15,110,86,0.08);padding:8px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
@@ -238,10 +284,10 @@ function buildCustomerEmail(params: {
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">Pozovi vozilo</div>
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         ${valetEnabled ? `<td width="${shuttleEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">🚗 Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
+          <a href="${BASE}/api/parking/summon?session_id=${encodeURIComponent(sessionId)}&type=valet" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span></a>
         </td>` : ""}
         ${shuttleEnabled ? `<td width="${valetEnabled ? "50%" : "100%"}" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">🚌 Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
+          <a href="${BASE}/api/parking/summon?session_id=${encodeURIComponent(sessionId)}&type=shuttle" style="display:block;text-align:center;padding:12px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:12px;font-weight:600;color:#111;text-decoration:none;">Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span></a>
         </td>` : ""}
       </tr></table>
     </td></tr>` : "";
@@ -281,7 +327,10 @@ function buildCustomerEmail(params: {
   <tr><td style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:16px;margin-top:12px;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">Produži boravak</div>
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${["+1h","+2h","+1d","+2d"].map(l => `<td width="25%" style="padding:0 3px;"><a href="${successUrl}" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">${l}</a></td>`).join("")}
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=60" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+1h</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=120" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+2h</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=1440" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+1d</a></td>
+      <td width="25%" style="padding:0 3px;"><a href="${BASE}/api/parking/extend?session_id=${encodeURIComponent(sessionId)}&minutes=2880" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">+2d</a></td>
     </tr></table>
   </td></tr>
 
@@ -296,7 +345,12 @@ function buildCustomerEmail(params: {
     <a href="${invoiceUrl}" style="display:block;text-align:center;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:13px;font-weight:500;color:#111;text-decoration:none;">Preuzmi potvrdu</a>
   </td></tr>
 
-  <!-- 5. Members CTA -->
+  <!-- 5. Add Extras -->
+  <tr><td style="padding-top:12px;text-align:center;">
+    <a href="${successUrl}" style="display:inline-block;padding:11px 28px;border-radius:8px;background:#f0f0f0;color:#111;text-decoration:none;font-weight:600;font-size:13px;">Dodaj dodatke</a>
+  </td></tr>
+
+  <!-- 6. Members CTA -->
   <tr><td style="padding-top:16px;text-align:center;">
     <a href="${membersUrl}" style="display:inline-block;padding:13px 32px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
   </td></tr>
@@ -397,7 +451,8 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const { data: existing, error: existingError } = await admin.from("parking_sessions").select("id").eq("stripe_session_id", session.id).maybeSingle();
   if (existingError) console.error(`[V19] Error checking existing: ${existingError.message}`);
 
-  const email = session.customer_details?.email || metadata.email || "";
+  const email = session.customer_details?.email || metadata.customer_email || metadata.email || "";
+  console.log(`[V19] Email extraction: customer_details.email="${session.customer_details?.email}" metadata.customer_email="${metadata.customer_email}" final email="${email}"`);
   const phone = session.customer_details?.phone || metadata.mobile || "";
   const name = session.customer_details?.name || "";
   const type = (metadata.type || "hourly").toString();
@@ -454,7 +509,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const durationUnit =
     type === "monthly" ? "month" : type === "daily" ? "day" : "hour";
   let entryTime = new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000);
-  if (isReserveFlow && hasValidMetadataCheckIn && metadataCheckInDate) {
+  if (hasValidMetadataCheckIn && metadataCheckInDate) {
     entryTime = metadataCheckInDate;
   }
   const durationMinutes =
@@ -464,10 +519,10 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
       ? checkoutQuantity * 24 * 60
       : checkoutQuantity * 60;
   let exitTime = new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
-  if (isReserveFlow && hasValidMetadataCheckOut && metadataCheckOutDate) {
+  if (hasValidMetadataCheckOut && metadataCheckOutDate) {
     exitTime = metadataCheckOutDate;
   }
-  const statusValue = isReserveFlow && entryTime.getTime() > Date.now() ? "scheduled" : "active";
+  const statusValue = entryTime.getTime() > Date.now() ? "scheduled" : "active";
   
   let plateNumber = "";
   if (session.custom_fields) {
@@ -529,6 +584,31 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
       return;
     }
     const reservationCode = deriveReservationCode(session.id);
+    let valetEnabled = false, shuttleEnabled = false;
+    let locationName = locationDisplay;
+    if (resolvedLocation?.id) {
+      try {
+        const { data: locData } = await admin.from('locations').select('name,valet_enabled,shuttle_enabled').eq('id', resolvedLocation.id).maybeSingle();
+        if (locData) {
+          locationName = (locData as any).name || locationDisplay;
+          valetEnabled = Boolean((locData as any).valet_enabled);
+          shuttleEnabled = Boolean((locData as any).shuttle_enabled);
+        }
+      } catch (e) {
+        console.warn(`[EMAIL] Location lookup failed: ${e}`);
+      }
+    }
+    const htmlContent = buildCustomerEmail({
+      sessionId: session.id,
+      customerEmail: email,
+      locationName: locationName,
+      locationDisplayId: resolvedLocation?.display_id ?? locationDisplay,
+      entryTime: entryTime.toISOString(),
+      exitTime: exitTime.toISOString(),
+      amountCents: Number(session.amount_total ?? 0),
+      valetEnabled,
+      shuttleEnabled,
+    });
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -537,7 +617,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
           from: fromEmail,
           to: [email],
           subject: `Rezervacija potvrđena · ${reservationCode}`,
-          text: `Hvala na rezervaciji!\n\nRezervacijski kod: ${reservationCode}\nLokacija: ${locationDisplay}\n\npayparq.com`,
+          html: htmlContent,
         }),
       });
       const resBody = await res.text().catch(() => "");
@@ -551,7 +631,6 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     console.log(`[V19] Updating existing session: ${existing.id}`);
     const updated = await updateSessionWithSchemaFallback(session.id, insertData);
     if (updated.ok) {
-      await sendPaymentNotification(session, locationDisplay);
       await sendCustomerConfirmation();
       return { ok: true };
     }
@@ -563,7 +642,6 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   const inserted = await insertSessionWithSchemaFallback(insertData);
   if (inserted.ok) {
     console.log(`[V19] Insert successful`);
-    await sendPaymentNotification(session, locationDisplay);
     await sendCustomerConfirmation();
     return { ok: true };
   }
@@ -635,7 +713,8 @@ serve(async (req: Request) => {
       const normalizedPaymentStatus = String(session.payment_status ?? "").trim().toLowerCase();
       const shouldPersist =
         event.type === "checkout.session.async_payment_succeeded" ||
-        normalizedPaymentStatus === "paid";
+        normalizedPaymentStatus === "paid" ||
+        normalizedPaymentStatus === "no_payment_required";
       if (!shouldPersist) {
         return json({ received: true });
       }

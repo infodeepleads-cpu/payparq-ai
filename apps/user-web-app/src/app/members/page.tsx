@@ -4,6 +4,9 @@ import { useEffect, useState, FormEvent, useCallback } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
+import { OperationsPanel } from "@/components/OperationsPanel";
+import { ManagementPanel } from "@/components/ManagementPanel";
+import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -17,7 +20,9 @@ type NavItemId =
   | "promotions"
   | "rewards"
   | "reviews"
-  | "help";
+  | "help"
+  | "operations"
+  | "management";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
 type ActionProcessing = FlowType | HomeWidgetId;
@@ -252,6 +257,7 @@ export default function MembersPage() {
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [email, setEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -394,6 +400,7 @@ export default function MembersPage() {
   async function resolveIsAdmin(currentUser: User | null) {
     if (!currentUser || !supabase) {
       setIsAdmin(false);
+      setIsManager(false);
       return;
     }
     try {
@@ -407,12 +414,14 @@ export default function MembersPage() {
           currentUser.user_metadata?.role ??
           currentUser.app_metadata?.role
       );
-      setIsAdmin(role === "admin" || role === "super_admin");
+      setIsAdmin(role === "admin" || role === "super_admin" || role === "officer");
+      setIsManager(role === "admin" || role === "super_admin");
     } catch {
       const fallbackRole = normalizeRole(
         currentUser.user_metadata?.role ?? currentUser.app_metadata?.role
       );
-      setIsAdmin(fallbackRole === "admin" || fallbackRole === "super_admin");
+      setIsAdmin(fallbackRole === "admin" || fallbackRole === "super_admin" || fallbackRole === "officer");
+      setIsManager(fallbackRole === "admin" || fallbackRole === "super_admin");
     }
   }
 
@@ -420,6 +429,7 @@ export default function MembersPage() {
     if (!supabase || !isSupabaseConfigured) {
       setUser(null);
       setIsAdmin(false);
+      setIsManager(false);
       return;
     }
 
@@ -435,12 +445,14 @@ export default function MembersPage() {
         } else {
           setUser(null);
           setIsAdmin(false);
+          setIsManager(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setUser(null);
           setIsAdmin(false);
+          setIsManager(false);
         }
       });
 
@@ -451,6 +463,7 @@ export default function MembersPage() {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setIsAdmin(false);
+        setIsManager(false);
       } else {
         void resolveIsAdmin(session.user);
       }
@@ -729,6 +742,32 @@ export default function MembersPage() {
       }
     } finally {
       setAuthLoading(false);
+    }
+  }
+
+  async function callService(type: 'valet' | 'shuttle', ticketNo: string, plate?: string | null) {
+    try {
+      const body: Record<string, unknown> = {
+        type,
+        location_id: homeContext?.locationId ?? null,
+        session_id: homeContext?.sessionId ?? null,
+        ticket_no: ticketNo,
+        guest_name: displayEmail || null,
+        pickup_label: homeContext?.locationName ?? homeContext?.locationDisplayId ?? null,
+        plate: plate ?? null,
+      };
+      const res = await fetch('/api/service-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (json.request) {
+        setSummonStatus(type === 'valet' ? 'Vaš automobil je na putu · ETA ~6 min' : 'Shuttle je pozvan · Dolazi za ~4 min');
+        setTimeout(() => setSummonStatus(null), 6000);
+      } else {
+        setSummonStatus('Zahtjev nije uspio · Pokušajte ponovo');
+        setTimeout(() => setSummonStatus(null), 4000);
+      }
+    } catch {
+      setSummonStatus('Greška · Pokušajte ponovo');
+      setTimeout(() => setSummonStatus(null), 4000);
     }
   }
 
@@ -1703,14 +1742,13 @@ export default function MembersPage() {
                     <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
                   </button>
                   {valetToggled && (
-                    <a
-                      href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`${valetCode} - Poziv vozila`)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={() => { setSummonStatus('Vaš automobil je na putu · ETA ~6 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                    <button
+                      type="button"
+                      onClick={() => callService('valet', valetCode, homeContext.plate ?? null)}
                       className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
                     >
                       Pozovi auto
-                    </a>
+                    </button>
                   )}
                 </div>
               );
@@ -1718,9 +1756,15 @@ export default function MembersPage() {
             {homeContext?.shuttleEnabled && (() => {
               const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
               const shuttleCfg = cfg.shuttle as Record<string, unknown> | undefined;
-              const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
+              const isReserved = (shuttleCfg?.reservation_required as boolean) ?? false;
               const shtCode = deriveShuttleCode(homeContext.stripeSessionId);
               const priceCents = Number(shuttleCfg?.price_cents ?? 200);
+
+              // If reserved shuttle, show reservation card instead of on-demand button
+              if (isReserved) {
+                return <ShuttleReservationCard sessionId={homeContext.sessionId} locationId={homeContext.locationId} />;
+              }
+
               return (
                 <div className="min-w-[210px] rounded-xl border border-[#0F6E56]/20 bg-[#E1F5EE] p-3 space-y-2">
                   <p className="text-sm font-semibold text-[#0F6E56]">Shuttle prijevoz</p>
@@ -1733,14 +1777,13 @@ export default function MembersPage() {
                     <span className="text-xs font-medium text-black">{shuttleToggled ? 'Uključeno' : 'Isključeno'}</span>
                   </button>
                   {shuttleToggled && (
-                    <a
-                      href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`Shuttle zahtjev · ${homeContext.locationName ?? homeContext.locationDisplayId ?? ''} · ${shtCode}`)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      onClick={() => { setSummonStatus('Shuttle je pozvan · Dolazi za ~4 min'); setTimeout(() => setSummonStatus(null), 5000); }}
+                    <button
+                      type="button"
+                      onClick={() => callService('shuttle', shtCode, null)}
                       className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#1D9E75] text-white text-xs font-semibold hover:bg-[#0F6E56] transition-colors"
                     >
                       Pozovi shuttle
-                    </a>
+                    </button>
                   )}
                 </div>
               );
@@ -2494,6 +2537,14 @@ export default function MembersPage() {
       );
     }
 
+    if (activeItem === "operations") {
+      return <OperationsPanel />;
+    }
+
+    if (activeItem === "management") {
+      return <ManagementPanel />;
+    }
+
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2753,6 +2804,32 @@ export default function MembersPage() {
                       <span>Resources</span>
                     </Link>
                   )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("operations")}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                        activeItem === "operations"
+                          ? "bg-white text-black border-white"
+                          : "border-white/20 text-white/80"
+                      }`}
+                    >
+                      <span>Operations</span>
+                    </button>
+                  )}
+                  {isManager && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("management")}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                        activeItem === "management"
+                          ? "bg-white text-black border-white"
+                          : "border-white/20 text-white/80"
+                      }`}
+                    >
+                      <span>Management</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2895,6 +2972,38 @@ export default function MembersPage() {
                         </span>
                         <span>Resources</span>
                       </Link>
+                    )}
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("operations")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "operations"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          O
+                        </span>
+                        <span>Operations</span>
+                      </button>
+                    )}
+                    {isManager && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("management")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "management"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          M
+                        </span>
+                        <span>Management</span>
+                      </button>
                     )}
                   </nav>
                   <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">

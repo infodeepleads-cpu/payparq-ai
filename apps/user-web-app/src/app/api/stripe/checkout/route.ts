@@ -977,6 +977,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   console.log("[Stripe Checkout] Request body:", body);
   const url = new URL(req.url);
+  console.log("[Stripe Checkout] Request URL searchParams:", url.searchParams.toString());
   const location_id =
     (typeof body.location_id === "string" && body.location_id) ||
     url.searchParams.get("loc") ||
@@ -988,20 +989,21 @@ export async function POST(req: NextRequest) {
     (typeof body.plate_number === "string" && body.plate_number) || "";
   const flow_type = (typeof body.flow_type === "string" && body.flow_type) ||
     url.searchParams.get("flow") || "park_now";
-  const check_in = (typeof body.check_in === "string" && body.check_in) ||
+  const check_in = ((typeof body.check_in === "string" && body.check_in) ||
     (typeof (body as { checkIn?: unknown }).checkIn === "string" &&
       (body as { checkIn?: string }).checkIn) ||
     url.searchParams.get("check_in") ||
     url.searchParams.get("checkIn") ||
     url.searchParams.get("in") ||
-    "";
-  const check_out = (typeof body.check_out === "string" && body.check_out) ||
+    "").trim();
+  const check_out = ((typeof body.check_out === "string" && body.check_out) ||
     (typeof (body as { checkOut?: unknown }).checkOut === "string" &&
       (body as { checkOut?: string }).checkOut) ||
     url.searchParams.get("check_out") ||
     url.searchParams.get("checkOut") ||
     url.searchParams.get("out") ||
-    "";
+    "").trim();
+  console.log("[Stripe Checkout] Extracted times - check_in:", check_in, "check_out:", check_out);
   const rawPricingType = (typeof body.type === "string" && body.type) ||
     url.searchParams.get("type") || null;
   const normalizedPricingType = normalizePricingType(rawPricingType, flow_type);
@@ -1029,6 +1031,7 @@ export async function POST(req: NextRequest) {
     : shouldAutoFillHourlyWindow
     ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
     : check_out;
+  console.log("[Stripe Checkout POST] shouldAutoFillParkTaxiWindow:", shouldAutoFillParkTaxiWindow, "effectiveCheckIn:", effectiveCheckIn, "effectiveCheckOut:", effectiveCheckOut);
   const allowPromotionCodes = resolveAllowPromotionCodesDefaultOn(
     (body as { allow_promotion_codes?: unknown }).allow_promotion_codes,
     url.searchParams.get("allow_promotion_codes"),
@@ -1264,15 +1267,17 @@ export async function POST(req: NextRequest) {
         "Safe Parking by PayParq Split Airport/Trogir";
       const locationIdLabel = resolvedDisplayId || display_id ||
         resolvedLocationId || location_id || "—";
-      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const parkTaxiCents = unitAmount;
+      const extraDays = Math.max(0, quantity - 1);
+      const totalCents = parkTaxiCents + (extraDays * dailyTicketUnitAmountCents);
+      const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${
+      const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
+      reservationDescription = `${quantity} Day Parking, 2 Rides Included\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${
-        quantity === 1 ? "dan" : "dana"
-      } parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • Druga vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
@@ -1284,7 +1289,11 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  const sessionAmountCents = toCents(unitAmount * quantity);
+  const parkTaxiCents = unitAmount;
+  const extraDaysForCalc = Math.max(0, quantity - 1);
+  const sessionAmountCents = isParkTaxiFlow
+    ? toCents(parkTaxiCents + (extraDaysForCalc * dailyTicketUnitAmountCents))
+    : toCents(unitAmount * quantity);
   const walletDebitPlannedCents = await resolvePlannedWalletDebitCents(
     normalizedCustomerEmail,
     sessionAmountCents,
@@ -1421,7 +1430,7 @@ export async function POST(req: NextRequest) {
       flow_type,
       pricing_type,
       check_in: effectiveCheckIn,
-      check_out: params.checkOut,
+      check_out: finalCheckOut,
       extend_target_session_id: extendTargetSessionId,
       extend_minutes: String(extendMinutes),
       session_amount_cents: String(params.sessionAmountCents),
@@ -1458,9 +1467,7 @@ export async function POST(req: NextRequest) {
             currency: "eur",
             product_data: {
               name: isParkTaxiFlow
-                ? params.sessionQuantity > 1
-                  ? `Park & Taxi Package (${params.sessionQuantity} Days)`
-                  : "Park & Taxi Package (1 Day)"
+                ? `${params.sessionQuantity} Day Parking, 2 Rides Included`
                 : pricing_type === "daily"
                 ? params.sessionQuantity > 1
                   ? `Parking Session (${params.sessionQuantity} Days)`
@@ -1780,15 +1787,17 @@ export async function GET(req: NextRequest) {
         "Safe Parking by PayParq Split Airport/Trogir";
       const locationIdLabel = resolvedDisplayId || display_id ||
         resolvedLocationId || location_id || "—";
-      const totalAmountEuro = ((unitAmount * quantity) / 100).toFixed(2);
+      const parkTaxiCents = unitAmount;
+      const extraDays = Math.max(0, quantity - 1);
+      const totalCents = parkTaxiCents + (extraDays * dailyTicketUnitAmountCents);
+      const totalAmountEuro = (totalCents / 100).toFixed(2);
       const firstRideTime = formatTimeShort(effectiveCheckIn) || "--:--";
-      reservationDescription = `${locationTitle} • ID ${locationIdLabel} • Od ${
+      const secondRideTime = formatTimeShort(finalCheckOut) || "--:--";
+      reservationDescription = `${quantity} Day Parking, 2 Rides Included\n${locationTitle} • ID ${locationIdLabel} • Od ${
         formatIsoNoSeconds(effectiveCheckIn)
       } • Do ${
         formatIsoNoSeconds(finalCheckOut)
-      } • Ukupno €${totalAmountEuro} • Prva vožnja ${firstRideTime} • Uključeno ${quantity} ${
-        quantity === 1 ? "dan" : "dana"
-      } parkinga + 2 vožnje dnevno • Povratak aktiviraj 15 min prije.`;
+      } • Ukupno €${totalAmountEuro} • Uključen parking • Prva vožnja ${firstRideTime} • Druga vožnja ${secondRideTime}`;
     } else {
       reservationDescription = `From: ${formatIso(effectiveCheckIn)} To: ${
         formatIso(finalCheckOut)
@@ -1818,7 +1827,11 @@ export async function GET(req: NextRequest) {
       reservationDescription += dailyFooterLine;
     }
   }
-  const sessionAmountCents = toCents(unitAmount * quantity);
+  const parkTaxiCents2 = unitAmount;
+  const extraDaysForCalc2 = Math.max(0, quantity - 1);
+  const sessionAmountCents = isParkTaxiFlow
+    ? toCents(parkTaxiCents2 + (extraDaysForCalc2 * dailyTicketUnitAmountCents))
+    : toCents(unitAmount * quantity);
   const walletDebitPlannedCents = isAdjustableHourly
     ? 0
     : await resolvePlannedWalletDebitCents(normalizedCustomerEmail, sessionAmountCents);

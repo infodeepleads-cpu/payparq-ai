@@ -52,10 +52,10 @@ type SectionKey =
   | "cancellation"
   | "report";
 
-export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: { 
-  hub: HubData; 
-  priceLabel: string; 
-  hero: string; 
+export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: {
+  hub: HubData;
+  priceLabel: string;
+  hero: string;
   faqItems: Array<{ q: string; a: string }>;
   travelTime: string;
 }) {
@@ -222,9 +222,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
-  const parkTaxiTotalPriceLabel = `€${(totalDays * parkTaxiUnitPrice).toFixed(2)}`;
+  const parkTaxiTotalPriceLabel = `€${(parkTaxiUnitPrice + (totalDays - 1) * dailyPrice).toFixed(2)}`;
   const reserveTotalAmountCents = Math.max(0, Math.round(reserveTotalAmount * 100));
-  const parkTaxiTotalAmountCents = Math.max(0, Math.round(totalDays * parkTaxiUnitPrice * 100));
+  const parkTaxiTotalAmountCents = Math.max(0, Math.round((parkTaxiUnitPrice + (totalDays - 1) * dailyPrice) * 100));
   const activeFlowAmountCents = activeTab === "park_now" ? parkTaxiTotalAmountCents : reserveTotalAmountCents;
   const showMinChargeWalletExplainer = activeFlowAmountCents > 0 && activeFlowAmountCents < 50;
   const minChargeWalletExplainerText = "Card min €0.50. Extra is added to wallet.";
@@ -1196,7 +1196,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="mb-3">
                     <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
                       <strong className="notranslate" translate="no">Park & Taxi</strong>
-                      <p className="mt-1 opacity-90">Dnevna karta + 2 vožnje su uključene. Početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 minuta prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.</p>
+                      <p className="mt-1 opacity-90">Parking + 2 vožnje su uključene. Početna vožnja počinje u vrijeme dolaska dok je povratna vožnja rezervirana u vrijeme odlaska. U aplikaciji možete pratiti dolazak vozača uživo. Potrebno je rezervirati min. 60 min unaprijed (samo tada je garantiran polazak).</p>
                     </div>
                     <div className="space-y-3 mb-3">
                       <div>
@@ -1813,7 +1813,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="bg-gray-100 text-gray-800 p-3 rounded-xl text-xs mb-3">
                     <strong className="notranslate" translate="no">Park & Taxi</strong>
                     <p className="mt-1 opacity-90">
-                      Dnevna karta + 2 vožnje su uključene. Početna vožnja min. 60 min unaprijed (samo tada je garantirana). Povratnu vožnju najavite 15 minuta prije u aplikaciji, gdje možete pratiti dolazak vozača uživo. Cijene su dinamične.
+                      Parking + 2 vožnje su uključene. Početna vožnja počinje u vrijeme dolaska dok je povratna vožnja rezervirana u vrijeme odlaska. U aplikaciji možete pratiti dolazak vozača uživo. Potrebno je rezervirati min. 60 min unaprijed (samo tada je garantiran polazak).
                     </p>
                   </div>
                   <div className="space-y-3 mb-4">
