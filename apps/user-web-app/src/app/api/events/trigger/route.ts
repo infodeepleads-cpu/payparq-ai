@@ -141,7 +141,7 @@ async function sendFCMNotifications(
       return;
     }
 
-    const message = {
+    const baseMessage = {
       notification: {
         title: getNotificationTitle(type),
         body: getNotificationBody(type, data),
@@ -153,7 +153,7 @@ async function sendFCMNotifications(
         url: getNotificationLink(type, data),
       },
       android: {
-        priority: 'high',
+        priority: 'high' as const,
       },
       apns: {
         headers: {
@@ -163,8 +163,11 @@ async function sendFCMNotifications(
     };
 
     const response = await messaging.sendMulticast({
-      ...message,
       tokens,
+      notification: baseMessage.notification,
+      data: baseMessage.data,
+      android: baseMessage.android,
+      apns: baseMessage.apns,
     });
 
     console.log(
