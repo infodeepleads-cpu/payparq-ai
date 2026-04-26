@@ -1250,9 +1250,20 @@ export default function MembersPage() {
     setActionProcessing("park_now");
     setActionError("");
     try {
+      let authToken: string | undefined = undefined;
+      if (supabase && isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        authToken = data.session?.access_token || undefined;
+      }
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           flow_type: "setup",
           customer_email: user.email,
@@ -1307,9 +1318,20 @@ export default function MembersPage() {
     setAddonsBuyLoading(true);
     setAddonsBuyError('');
     try {
+      let authToken: string | undefined = undefined;
+      if (supabase && isSupabaseConfigured) {
+        const { data } = await supabase.auth.getSession();
+        authToken = data.session?.access_token || undefined;
+      }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
       const res = await fetch('/api/stripe/addons-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           session_id: homeContext.stripeSessionId ?? homeContext.sessionId ?? '',
           location_id: homeContext.locationId ?? '',
