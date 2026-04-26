@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   // If no session and trying to access protected routes, redirect to login
-  if (!session && (req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers') || req.nextUrl.pathname.startsWith('/driver') || req.nextUrl.pathname.startsWith('/members'))) {
+  if (!session && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/officer') || req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers') || req.nextUrl.pathname.startsWith('/driver') || req.nextUrl.pathname.startsWith('/members'))) {
     const redirectUrl = new URL('/auth/login', req.url);
     return NextResponse.redirect(redirectUrl);
   }
@@ -19,5 +19,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/officers/:path*', '/managers/:path*', '/driver/:path*', '/members/:path*'],
+  matcher: ['/dashboard/:path*', '/dashboard', '/officer/:path*', '/officers/:path*', '/managers/:path*', '/driver/:path*', '/members/:path*'],
 };

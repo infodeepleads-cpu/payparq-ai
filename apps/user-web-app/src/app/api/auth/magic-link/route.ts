@@ -66,7 +66,7 @@ function resolveRedirectTo(req: NextRequest, requestedRedirectTo: string) {
   const baseOrigin = configuredOrigin || requestOrigin;
 
   if (!requestedRedirectTo) {
-    return { redirectTo: `${baseOrigin}/members`, internalOrigin: baseOrigin };
+    return { redirectTo: `${baseOrigin}/dashboard`, internalOrigin: baseOrigin };
   }
 
   if (requestedRedirectTo.startsWith("/")) {
@@ -82,7 +82,7 @@ function resolveRedirectTo(req: NextRequest, requestedRedirectTo: string) {
     }
     return { redirectTo: parsed.toString(), internalOrigin: parsed.origin };
   } catch {
-    return { redirectTo: `${baseOrigin}/members`, internalOrigin: baseOrigin };
+    return { redirectTo: `${baseOrigin}/dashboard`, internalOrigin: baseOrigin };
   }
 }
 
