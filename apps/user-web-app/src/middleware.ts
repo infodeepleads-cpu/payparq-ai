@@ -10,14 +10,14 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         getAll() {
-          return req.cookies.getSetCookie().map(cookie => {
-            const [name, ...rest] = cookie.split('=');
-            return { name, value: rest.join('=') };
-          });
+          return Object.entries(req.cookies.getAll()).map(([name, cookie]) => ({
+            name,
+            value: cookie.value,
+          }));
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => {
-            res.cookies.set(name, value);
+          cookiesToSet.forEach(({ name, value, options }) => {
+            res.cookies.set(name, value, options);
           });
         },
       },
