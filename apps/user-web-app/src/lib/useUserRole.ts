@@ -13,6 +13,12 @@ export function useUserRole() {
 
   const fetchUserRole = async () => {
     try {
+      if (!supabase) {
+        setRole('member');
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {

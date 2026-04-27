@@ -1762,7 +1762,7 @@ export default function MembersPage() {
 
               // If reserved shuttle, show reservation card instead of on-demand button
               if (isReserved) {
-                return <ShuttleReservationCard sessionId={homeContext.sessionId} locationId={homeContext.locationId} />;
+                return <ShuttleReservationCard sessionId={homeContext.sessionId ?? undefined} locationId={homeContext.locationId ?? undefined} />;
               }
 
               return (

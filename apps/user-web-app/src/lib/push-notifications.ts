@@ -43,6 +43,8 @@ export async function subscribeToPushNotifications() {
     }
 
     // Save subscription to database
+    if (!supabase) return subscription;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (user && subscription) {
       const subscriptionData = {
@@ -69,6 +71,8 @@ export async function subscribeToPushNotifications() {
 
 export async function unsubscribeFromPushNotifications() {
   try {
+    if (!supabase) return;
+
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
 

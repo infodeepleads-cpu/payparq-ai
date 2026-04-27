@@ -192,6 +192,11 @@ async function sendWebPushNotifications(
   event_id: string
 ) {
   try {
+    if (!supabaseAdmin) {
+      console.log('Supabase admin not available for web push notifications');
+      return;
+    }
+
     // Get user subscriptions
     const { data: subscriptions } = await supabaseAdmin
       .from('push_subscriptions')

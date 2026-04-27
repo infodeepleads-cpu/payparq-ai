@@ -164,6 +164,11 @@ export async function PATCH(req: NextRequest) {
 
 async function updatePerformance(driverId: string, action: 'accepted' | 'declined') {
   try {
+    if (!supabaseAdmin) {
+      console.log('Supabase admin not available for performance update');
+      return;
+    }
+
     const { data: current } = await supabaseAdmin
       .from('driver_performance')
       .select('*')

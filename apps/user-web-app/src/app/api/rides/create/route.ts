@@ -12,6 +12,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     // Get lot details
     const { data: lot } = await supabaseAdmin
       .from('locations')

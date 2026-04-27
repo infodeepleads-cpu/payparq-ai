@@ -501,7 +501,7 @@ function isTemplateLockedForIndex(widgetIndex: number) {
   return !UNLOCKED_WIDGET_INDICES.includes(widgetIndex);
 }
 
-function normalizeRole(value: string | null | undefined) {
+function normalizeRole(value: string | null | undefined): "super_admin" | "admin" | "manager" | "officer" {
   const normalized = (value ?? "")
     .toString()
     .trim()
@@ -515,7 +515,7 @@ function normalizeRole(value: string | null | undefined) {
   if (normalized.startsWith("admin")) {
     return "admin";
   }
-  if (normalized.startsWith("manager")) {
+  if (normalized.includes("manager")) {
     return "manager";
   }
   if (normalized.startsWith("officer")) {
@@ -672,11 +672,9 @@ export default function ResourcesPage() {
         const canManageResources =
           resolvedRole === "admin" ||
           resolvedRole === "super_admin" ||
-          resolvedRole === "manager" ||
-          resolvedRole === "superadmin" ||
-          resolvedRole === "city_manager";
+          resolvedRole === "manager";
         setRoleState(
-          (resolvedRole === "manager" || resolvedRole === "city_manager")
+          resolvedRole === "manager"
             ? "manager"
             : canManageResources
             ? "admin"

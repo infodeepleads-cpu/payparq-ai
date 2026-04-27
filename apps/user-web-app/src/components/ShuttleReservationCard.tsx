@@ -52,6 +52,8 @@ export function ShuttleReservationCard({ sessionId, locationId }: { sessionId?: 
     }
 
     const fetchReservation = async () => {
+      if (!supabase) return;
+
       const { data } = await supabase
         .from('service_requests')
         .select('id, type, status, driver_id, created_at')
