@@ -28,8 +28,8 @@ export async function middleware(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // If no user and trying to access protected routes, redirect to members page (login happens there)
-  if (!user && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/officer') || req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers') || req.nextUrl.pathname.startsWith('/driver') || req.nextUrl.pathname.startsWith('/members'))) {
+  // If no user and trying to access protected routes (except /members which is the login page), redirect to members
+  if (!user && (req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/officer') || req.nextUrl.pathname.startsWith('/officers') || req.nextUrl.pathname.startsWith('/managers') || req.nextUrl.pathname.startsWith('/driver'))) {
     const redirectUrl = new URL('/members', req.url);
     return NextResponse.redirect(redirectUrl);
   }
