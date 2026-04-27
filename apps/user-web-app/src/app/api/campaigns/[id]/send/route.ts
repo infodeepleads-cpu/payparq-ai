@@ -7,8 +7,9 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
@@ -49,7 +50,7 @@ export async function POST(
     const { data: campaign, error: fetchError } = await supabaseAdmin
       .from('email_campaigns')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .maybeSingle();
 
     if (fetchError || !campaign) {
@@ -112,7 +113,7 @@ export async function POST(
         sent_at: new Date().toISOString(),
         recipient_count: sentCount,
       })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
