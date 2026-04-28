@@ -90,7 +90,8 @@ export async function POST(
     for (const email of recipientEmails) {
       try {
         const { error: sendError } = await resend.emails.send({
-          from: 'Payparq <campaigns@payparq.com>',
+          from: 'Payparq <team@info.payparq.com>',
+          reply_to: 'payparq@outlook.com',
           to: email,
           subject: campaign.subject,
           html: campaign.html_content,

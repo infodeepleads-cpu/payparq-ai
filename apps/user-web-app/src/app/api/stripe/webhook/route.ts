@@ -556,6 +556,8 @@ async function sendBookingConfirmation(
     }
   } catch { /* best effort */ }
 
+  if (flowType === 'park_now') shuttleEnabled = true;
+
   const html = buildBookingConfirmationEmail({
     sessionId: session.id,
     reservationCode,

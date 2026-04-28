@@ -223,6 +223,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
   const parkTaxiTotalPriceLabel = `€${(parkTaxiUnitPrice + (totalDays - 1) * dailyPrice).toFixed(2)}`;
+  const parkTaxiBreakdownLabel = totalDays > 1
+    ? `P&T ${formatEur(parkTaxiUnitPrice)} + ${totalDays - 1} dan${totalDays > 2 ? 'a' : ''} (${formatEur(dailyPrice)}/dan)`
+    : `Park & Taxi (${formatEur(parkTaxiUnitPrice)})`;
   const reserveTotalAmountCents = Math.max(0, Math.round(reserveTotalAmount * 100));
   const parkTaxiTotalAmountCents = Math.max(0, Math.round((parkTaxiUnitPrice + (totalDays - 1) * dailyPrice) * 100));
   const activeFlowAmountCents = activeTab === "park_now" ? parkTaxiTotalAmountCents : reserveTotalAmountCents;
@@ -1187,7 +1190,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="flex items-center justify-between py-2 border-t border-gray-100">
                       <span className="text-gray-500 font-medium text-xs">Total</span>
                       <div className="text-right">
-                        <div className="text-lg font-bold">{reserveTotalPriceLabel}</div>
+                        <div className="flex items-baseline justify-end gap-0.5">
+                            <span className="text-2xl font-bold text-black tabular-nums tracking-tight">{reserveTotalPriceLabel.slice(1)} €</span>
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
                       </div>
                     </div>
                   </>
@@ -1236,7 +1242,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     <div className="flex items-center justify-between py-2 border-t border-gray-100">
                       <span className="text-gray-500 font-medium text-xs">Total</span>
                       <div className="text-right">
-                        <div className="text-lg font-bold">{parkTaxiTotalPriceLabel}</div>
+                        <div className="flex items-baseline justify-end">
+                          <span className="text-2xl font-bold text-black tabular-nums tracking-tight">{parkTaxiTotalPriceLabel.slice(1)} €</span>
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-medium">{parkTaxiBreakdownLabel}</div>
                       </div>
                     </div>
                   </div>
@@ -1801,7 +1810,9 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
                     <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-xl font-bold">{reserveTotalPriceLabel}</div>
+                      <div className="flex items-baseline justify-end gap-0.5">
+                        <span className="text-3xl font-bold text-black tabular-nums tracking-tight">{reserveTotalPriceLabel.slice(1)} €</span>
+                      </div>
                       <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
                     </div>
                   </div>
@@ -1843,8 +1854,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
                     <span className="text-gray-500 font-medium text-sm">Total</span>
                     <div className="text-right">
-                      <div className="text-xl font-bold">{parkTaxiTotalPriceLabel}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">{totalDays} days ({formatEur(parkTaxiUnitPrice)}/day)</div>
+                      <div className="flex items-baseline justify-end">
+                        <span className="text-3xl font-bold text-black tabular-nums tracking-tight">{parkTaxiTotalPriceLabel.slice(1)} €</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 font-medium">{parkTaxiBreakdownLabel}</div>
                     </div>
                   </div>
                 </div>
