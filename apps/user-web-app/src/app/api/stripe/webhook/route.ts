@@ -540,6 +540,7 @@ async function sendBookingConfirmation(
   let locationDisplayId: string | null = (meta.display_id as string | null) ?? null;
   let valetEnabled = false;
   let shuttleEnabled = false;
+  let flowType = '';
   try {
     if (locationId) {
       const { data: locRow } = await client
