@@ -371,6 +371,8 @@ function buildBookingConfirmationEmail(params: {
   const sectionLabel = (text: string) =>
     `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">${text}</div>`;
 
+  const trackingUrl = `https://www.payparq.com/members/mapa?session=${encodeURIComponent(sessionId)}`;
+
   const valetTicket = valetEnabled ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">
       <tr><td style="background:#5F3DFC;padding:10px 14px;">
@@ -380,11 +382,15 @@ function buildBookingConfirmationEmail(params: {
       <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;color:#111;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(95,61,252,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
+      <tr><td style="padding:10px 14px;text-align:center;">
+        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#5F3DFC;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
+        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
+      </td></tr>
     </table>` : '';
 
   const shuttleTicket = shuttleEnabled ? `
@@ -396,11 +402,15 @@ function buildBookingConfirmationEmail(params: {
       <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;color:#111;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
+      <tr><td style="padding:10px 14px;text-align:center;">
+        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#0F6E56;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
+        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
+      </td></tr>
     </table>` : '';
 
   // Produži boravak — 4 link-buttons pointing to success page
