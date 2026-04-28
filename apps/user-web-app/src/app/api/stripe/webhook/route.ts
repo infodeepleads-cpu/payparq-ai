@@ -536,11 +536,11 @@ async function sendBookingConfirmation(
     ? new Date(meta.check_out as string).toISOString()
     : new Date(new Date(entryIso).getTime() + 3_600_000).toISOString();
 
+  const metaFlowType = (meta.flow_type ?? '').toString().trim().toLowerCase();
   let locationName: string | null = null;
   let locationDisplayId: string | null = (meta.display_id as string | null) ?? null;
   let valetEnabled = false;
-  let shuttleEnabled = false;
-  let flowType = '';
+  let shuttleEnabled = metaFlowType === 'park_now';
   try {
     if (locationId) {
       const { data: locRow } = await client
@@ -552,12 +552,10 @@ async function sendBookingConfirmation(
         locationName = (locRow as { name?: string | null }).name ?? null;
         locationDisplayId = (locRow as { display_id?: string | null }).display_id ?? locationDisplayId;
         valetEnabled = Boolean((locRow as { valet_enabled?: boolean | null }).valet_enabled);
-        shuttleEnabled = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
+        if (!shuttleEnabled) shuttleEnabled = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
       }
     }
   } catch { /* best effort */ }
-
-  if (flowType === 'park_now') shuttleEnabled = true;
 
   const html = buildBookingConfirmationEmail({
     sessionId: session.id,
