@@ -1188,7 +1188,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <span className="text-gray-500 font-medium text-xs">Total</span>
                       <div className="text-right">
                         <div className="text-lg font-bold">{reserveTotalPriceLabel}</div>
-                        <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
                       </div>
                     </div>
                   </>
@@ -1238,7 +1237,6 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       <span className="text-gray-500 font-medium text-xs">Total</span>
                       <div className="text-right">
                         <div className="text-lg font-bold">{parkTaxiTotalPriceLabel}</div>
-                        <div className="text-[10px] text-gray-400 font-medium">{totalDays} days ({formatEur(parkTaxiUnitPrice)}/day)</div>
                       </div>
                     </div>
                   </div>
