@@ -91,7 +91,7 @@ export async function POST(
       try {
         const { error: sendError } = await resend.emails.send({
           from: 'Payparq <team@info.payparq.com>',
-          reply_to: 'payparq@outlook.com',
+          replyTo: 'payparq@outlook.com',
           to: email,
           subject: campaign.subject,
           html: campaign.html_content,
