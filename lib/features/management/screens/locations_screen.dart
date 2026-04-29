@@ -1620,7 +1620,143 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           const Divider(height: 1, thickness: 1, color: AppTheme.border),
                         ],
 
-                        // Section 4: Admin (super_admin only)
+                        // Section 4: Spots (superadmin + admin)
+                        if (isSuperAdmin || isAdmin) ...[
+                          Builder(builder: (ctx) {
+                            List<Map<String, dynamic>> spotsData = [];
+                            bool spotsLoaded = false;
+                            bool generatingSpots = false;
+                            final rowsCtrl = TextEditingController(text: '4');
+                            final colsCtrl = TextEditingController(text: '5');
+                            final locationIdStr = loc['id']?.toString() ?? '';
+
+                            Future<void> fetchSpots(StateSetter setSt) async {
+                              if (locationIdStr.isEmpty) return;
+                              final client = Supabase.instance.client;
+                              final res = await client.from('spots').select('id,label,row_num,col_num,price_modifier_cents').eq('location_id', locationIdStr).order('row_num').order('col_num');
+                              final rows = (res as List).cast<Map<String, dynamic>>();
+                              final assignRes = await client.from('spot_assignments').select('spot_id').eq('status', 'active').inFilter('spot_id', rows.map((r) => r['id']).toList());
+                              final takenIds = Set<String>.from((assignRes as List).map((a) => a['spot_id']?.toString() ?? ''));
+                              setSt(() {
+                                spotsData = rows.map((r) => {...r, 'taken': takenIds.contains(r['id']?.toString())}).toList();
+                                spotsLoaded = true;
+                              });
+                            }
+
+                            Future<void> generateSpots(StateSetter setSt) async {
+                              final rows = int.tryParse(rowsCtrl.text.trim()) ?? 0;
+                              final cols = int.tryParse(colsCtrl.text.trim()) ?? 0;
+                              if (rows <= 0 || cols <= 0 || locationIdStr.isEmpty) return;
+                              setSt(() => generatingSpots = true);
+                              final client = Supabase.instance.client;
+                              await client.from('spots').delete().eq('location_id', locationIdStr);
+                              final newSpots = <Map<String, dynamic>>[];
+                              for (int r = 0; r < rows; r++) {
+                                for (int c = 0; c < cols; c++) {
+                                  final rowLetter = String.fromCharCode(65 + r); // A, B, C...
+                                  newSpots.add({'location_id': locationIdStr, 'label': '$rowLetter${c + 1}', 'row_num': r, 'col_num': c, 'active': true});
+                                }
+                              }
+                              await client.from('spots').insert(newSpots);
+                              await fetchSpots(setSt);
+                              setSt(() => generatingSpots = false);
+                            }
+
+                            return StatefulBuilder(builder: (_, setSt) {
+                              return ExpansionTile(
+                                tilePadding: EdgeInsets.zero,
+                                childrenPadding: const EdgeInsets.only(bottom: 12),
+                                leading: const Icon(Icons.grid_view_outlined, size: 17, color: Colors.black54),
+                                title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Spots', 'Spotovi'),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                                iconColor: Colors.black45,
+                                collapsedIconColor: Colors.black45,
+                                onExpansionChanged: (expanded) { if (expanded && !spotsLoaded) fetchSpots(setSt); },
+                                children: [
+                                  // Grid generator
+                                  Row(children: [
+                                    Expanded(child: TextField(
+                                      controller: rowsCtrl,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.inter(fontSize: 13),
+                                      decoration: InputDecoration(
+                                        labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Rows', 'Redovi'),
+                                        filled: true, fillColor: AppTheme.background,
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)),
+                                    )),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: TextField(
+                                      controller: colsCtrl,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.inter(fontSize: 13),
+                                      decoration: InputDecoration(
+                                        labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Cols', 'Stupci'),
+                                        filled: true, fillColor: AppTheme.background,
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)),
+                                    )),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      onPressed: generatingSpots ? null : () => generateSpots(setSt),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.black, foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                        minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                      child: generatingSpots
+                                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                        : Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Generate', 'Generiraj'),
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ),
+                                  ]),
+                                  if (spotsData.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    Text('${spotsData.length} ${Lang.sel(ref.watch(localeIsCroatianProvider), 'spots', 'spotova')}',
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 4, mainAxisSpacing: 4, childAspectRatio: 1.6),
+                                      itemCount: spotsData.length,
+                                      itemBuilder: (_, i) {
+                                        final spot = spotsData[i];
+                                        final taken = spot['taken'] == true;
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            color: taken ? Colors.black12 : Colors.green.shade100,
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: taken ? Colors.black26 : Colors.green.shade300, width: 1)),
+                                          alignment: Alignment.center,
+                                          child: Text(spot['label']?.toString() ?? '',
+                                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700,
+                                              color: taken ? Colors.black38 : Colors.green.shade800)),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(children: [
+                                      Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.green.shade300))),
+                                      const SizedBox(width: 4),
+                                      Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Free', 'Slobodno'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+                                      const SizedBox(width: 12),
+                                      Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.black26))),
+                                      const SizedBox(width: 4),
+                                      Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Taken', 'Zauzeto'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+                                    ]),
+                                  ],
+                                  if (spotsLoaded && spotsData.isEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'No spots yet. Generate a grid above.', 'Nema spotova. Generirajte mrežu gore.'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+                                  ],
+                                ],
+                              );
+                            });
+                          }),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 5: Admin (super_admin only)
                         if (isSuperAdmin) ...[
                           ExpansionTile(
                             tilePadding: EdgeInsets.zero,
