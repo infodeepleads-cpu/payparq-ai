@@ -1610,7 +1610,27 @@ export async function GET(req: NextRequest) {
       })
       : null;
     if (fallbackUrl) {
-      return NextResponse.redirect(fallbackUrl, { status: 303 });
+      try {
+        // Proxy the Supabase function request with proper headers
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+        const proxyResponse = await fetch(fallbackUrl, {
+          method: "GET",
+          headers: {
+            "Authorization": supabaseAnonKey ? `Bearer ${supabaseAnonKey}` : "",
+            "apikey": supabaseAnonKey,
+          },
+        });
+        const proxyData = await proxyResponse.text();
+        return new NextResponse(proxyData, {
+          status: proxyResponse.status,
+          headers: {
+            "Content-Type": proxyResponse.headers.get("Content-Type") || "text/html",
+          },
+        });
+      } catch (proxyError) {
+        console.error("Proxy error:", proxyError);
+        return NextResponse.redirect(fallbackUrl, { status: 303 });
+      }
     }
     return NextResponse.json({ error: "missing_or_invalid_stripe_secret" }, {
       status: 500,

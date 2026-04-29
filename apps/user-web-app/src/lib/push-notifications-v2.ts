@@ -28,6 +28,8 @@ export async function registerServiceWorker() {
  * Handles both browser and mobile subscriptions
  */
 export async function subscribeToNotifications() {
+  if (!supabase) return null;
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
@@ -60,11 +62,16 @@ async function subscribeToWebPush(userId: string) {
 
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as Uint8Array<ArrayBuffer>,
       });
     }
 
     // Save subscription to database
+    if (!supabase) {
+      console.error('Supabase not configured');
+      return subscription;
+    }
+
     const subscriptionData = {
       user_id: userId,
       endpoint: subscription.endpoint,
@@ -95,6 +102,8 @@ async function subscribeToWebPush(userId: string) {
  * Called by mobile app after getting FCM token
  */
 export async function saveFCMToken(fcmToken: string, deviceType: 'android' | 'ios') {
+  if (!supabase) return null;
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !fcmToken) return null;
 
@@ -145,10 +154,12 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  * Listen for push messages from Service Worker
  * Updates UI in real-time when notifications arrive
  */
-export function setupRealtimeListeners(
+export async function setupRealtimeListeners(
   onNotification: (data: any) => void
 ) {
-  const { data: { user } } = supabase.auth.getUser();
+  if (!supabase) return;
+
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
   // Listen for ride requests in real-time
@@ -227,6 +238,8 @@ export async function triggerNotificationEvent(
   data: any
 ) {
   try {
+    if (!supabase) return null;
+
     const { data: { user } } = await supabase.auth.getUser();
 
     const response = await fetch('/api/events/trigger', {

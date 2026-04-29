@@ -11,6 +11,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+
     // City manager gets their officers
     if (role === 'city_manager') {
       const { data, error } = await supabaseAdmin
@@ -46,6 +50,10 @@ export async function POST(req: NextRequest) {
 
     if (!manager_id || !officer_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
 
     // Only city_manager role can assign officers
@@ -86,6 +94,10 @@ export async function DELETE(req: NextRequest) {
 
     if (!manager_id || !assignment_id) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
     }
 
     // Verify manager owns this assignment

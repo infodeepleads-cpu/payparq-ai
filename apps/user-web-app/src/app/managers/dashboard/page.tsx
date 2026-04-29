@@ -24,6 +24,11 @@ export default function ManagerDashboard() {
 
   const fetchOfficers = async () => {
     try {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -44,6 +49,8 @@ export default function ManagerDashboard() {
     e.preventDefault();
 
     try {
+      if (!supabase) return;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -72,6 +79,8 @@ export default function ManagerDashboard() {
 
   const removeOfficer = async (assignment_id: string) => {
     try {
+      if (!supabase) return;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 

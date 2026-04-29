@@ -28,6 +28,11 @@ export default function OfficerDashboard() {
 
   const fetchCheckouts = async () => {
     try {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -46,6 +51,8 @@ export default function OfficerDashboard() {
 
   const startShift = async (lot_id: string) => {
     try {
+      if (!supabase) return;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -73,6 +80,7 @@ export default function OfficerDashboard() {
 
   const endShift = async () => {
     if (!currentCheckout) return;
+    if (!supabase) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();

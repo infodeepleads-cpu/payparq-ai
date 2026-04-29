@@ -45,6 +45,12 @@ export default function DriverDashboard() {
 
   const initializeDashboard = async () => {
     try {
+      if (!supabase) {
+        console.error('Supabase is not configured');
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -103,6 +109,8 @@ export default function DriverDashboard() {
 
   const fetchPendingRides = async (driverId: string) => {
     try {
+      if (!supabase) return;
+
       const { data } = await supabase
         .from('ride_requests')
         .select('*')
@@ -124,6 +132,8 @@ export default function DriverDashboard() {
 
   const fetchAcceptedRides = async (driverId: string) => {
     try {
+      if (!supabase) return;
+
       const { data } = await supabase
         .from('ride_requests')
         .select('*')
@@ -146,6 +156,8 @@ export default function DriverDashboard() {
 
   const fetchPerformance = async (driverId: string) => {
     try {
+      if (!supabase) return;
+
       const { data } = await supabase
         .from('driver_performance')
         .select('*')

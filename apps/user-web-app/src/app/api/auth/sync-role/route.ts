@@ -12,6 +12,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Supabase admin is not configured' },
+        { status: 500 }
+      );
+    }
+
     // Get user's role from mobile scanner (profiles table)
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -61,6 +68,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: 'Missing user_id' },
         { status: 400 }
+      );
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { role: 'member' },
+        { status: 200 }
       );
     }
 

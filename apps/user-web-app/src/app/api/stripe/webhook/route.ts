@@ -371,6 +371,8 @@ function buildBookingConfirmationEmail(params: {
   const sectionLabel = (text: string) =>
     `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">${text}</div>`;
 
+  const trackingUrl = `https://www.payparq.com/api/track?session=${encodeURIComponent(sessionId)}`;
+
   const valetTicket = valetEnabled ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">
       <tr><td style="background:#5F3DFC;padding:10px 14px;">
@@ -380,11 +382,15 @@ function buildBookingConfirmationEmail(params: {
       <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;color:#111;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
         </table>
       </td></tr>
       <tr><td style="background:rgba(95,61,252,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
+      <tr><td style="padding:10px 14px;text-align:center;">
+        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#5F3DFC;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
+        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
+      </td></tr>
     </table>` : '';
 
   const shuttleTicket = shuttleEnabled ? `
@@ -396,11 +402,15 @@ function buildBookingConfirmationEmail(params: {
       <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;color:#111;">
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">Check-in</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">Check-out</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
+          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
+          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
         </table>
       </td></tr>
-      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
+      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju</td></tr>
+      <tr><td style="padding:10px 14px;text-align:center;">
+        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#0F6E56;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
+        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
+      </td></tr>
     </table>` : '';
 
   // Produži boravak — 4 link-buttons pointing to success page
@@ -536,10 +546,11 @@ async function sendBookingConfirmation(
     ? new Date(meta.check_out as string).toISOString()
     : new Date(new Date(entryIso).getTime() + 3_600_000).toISOString();
 
+  const metaFlowType = (meta.flow_type ?? '').toString().trim().toLowerCase();
   let locationName: string | null = null;
   let locationDisplayId: string | null = (meta.display_id as string | null) ?? null;
   let valetEnabled = false;
-  let shuttleEnabled = false;
+  let shuttleEnabled = metaFlowType === 'park_now';
   try {
     if (locationId) {
       const { data: locRow } = await client
@@ -551,7 +562,7 @@ async function sendBookingConfirmation(
         locationName = (locRow as { name?: string | null }).name ?? null;
         locationDisplayId = (locRow as { display_id?: string | null }).display_id ?? locationDisplayId;
         valetEnabled = Boolean((locRow as { valet_enabled?: boolean | null }).valet_enabled);
-        shuttleEnabled = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
+        if (!shuttleEnabled) shuttleEnabled = Boolean((locRow as { shuttle_enabled?: boolean | null }).shuttle_enabled);
       }
     }
   } catch { /* best effort */ }
@@ -1116,6 +1127,30 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ received: true });
     }
+
+    // 2b. SPOT UPGRADE
+    if (sessionMetadata.flow_type === 'spot_upgrade') {
+      const newSpotId = (sessionMetadata.new_spot_id ?? '').toString().trim();
+      const currentSpotId = (sessionMetadata.current_spot_id ?? '').toString().trim();
+      const originalSessionId = (sessionMetadata.original_session_id ?? '').toString().trim();
+      if (newSpotId && originalSessionId) {
+        try {
+          if (currentSpotId) {
+            await client.from('spot_assignments').update({ status: 'released' }).eq('spot_id', currentSpotId).eq('parking_session_id', originalSessionId);
+          }
+          await client.from('spot_assignments').upsert({
+            spot_id: newSpotId,
+            parking_session_id: originalSessionId,
+            status: 'active',
+          }, { onConflict: 'parking_session_id' });
+          console.log(`🅿️ Spot upgraded to ${newSpotId} for session ${originalSessionId}`);
+        } catch (e) {
+          console.error('⚠️ Spot upgrade assignment failed:', e);
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
     // 3. INSERT INTO SUPABASE
     const insertData = {
       location_id,
@@ -1159,8 +1194,46 @@ export async function POST(req: Request) {
     }
 
     console.log('✨ Successfully inserted parking session!');
+    await sendBookingConfirmation(session, client);
 
-    // 4. UPDATE OCCUPANCY (Optional, best effort)
+    // 4. AUTO-ASSIGN SPOT (best effort)
+    try {
+      if (location_id) {
+        const { data: availableSpots } = await client
+          .from('spots')
+          .select('id')
+          .eq('location_id', location_id)
+          .eq('active', true);
+
+        if (availableSpots && availableSpots.length > 0) {
+          const spotIds = (availableSpots as { id: string }[]).map((s) => s.id);
+          const { data: takenAssignments } = await client
+            .from('spot_assignments')
+            .select('spot_id')
+            .in('spot_id', spotIds)
+            .eq('status', 'active');
+
+          const takenIds = new Set(
+            (takenAssignments as { spot_id: string }[] | null)?.map((a) => a.spot_id) ?? []
+          );
+          const freeSpots = spotIds.filter((id) => !takenIds.has(id));
+
+          if (freeSpots.length > 0) {
+            const pickedId = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+            await client.from('spot_assignments').insert({
+              spot_id: pickedId,
+              parking_session_id: session.id,
+              status: 'active',
+            });
+            console.log(`🅿️ Spot assigned: ${pickedId}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('⚠️ Spot assignment failed:', e);
+    }
+
+    // 5. UPDATE OCCUPANCY (Optional, best effort)
     try {
         // First check if location exists, if not create a dummy one to avoid error
         const { data: loc } = await client.from('locations').select('occupancy').eq('id', location_id).maybeSingle();

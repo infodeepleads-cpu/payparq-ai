@@ -40,6 +40,8 @@ type SessionSummary = {
   shuttle_enabled?: boolean | null;
   addons_config?: AddonsConfig | null;
   valet_attendant?: string | null;
+  lot_point?: { lat: number; lng: number } | null;
+  assigned_spot?: { label: string } | null;
 };
 
 type Credits = number | '∞';
@@ -94,7 +96,9 @@ function ShuttleTicket({
   checkOut,
   attendant,
   pickupPoint,
+  lotPoint,
   phoneSms,
+  trackUrl,
   formatDateTime,
   onSummon,
 }: {
@@ -104,7 +108,9 @@ function ShuttleTicket({
   checkOut: string | null;
   attendant: string | null;
   pickupPoint: { lat?: number; lng?: number; label?: string } | null;
+  lotPoint?: { lat: number; lng: number } | null;
   phoneSms: string | null;
+  trackUrl?: string | null;
   formatDateTime: (v: string | null | undefined) => string;
   onSummon?: (() => void) | null;
 }) {
@@ -134,37 +140,44 @@ function ShuttleTicket({
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
-        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (() => {
-          const mapsHref = pickupPoint?.lat && pickupPoint?.lng
-            ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
-            : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`;
-          return (
-            <>
-              {pickupPoint?.label && (
-                <div className="flex justify-between">
-                  <span className="text-black/50">Pick-up / Drop-off</span>
-                  <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-black/50">Navigacija</span>
-                <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0F6E56] underline text-[12px]">
-                  Otvori kartu
-                </a>
-              </div>
-            </>
-          );
-        })()}
         {checkIn && (
           <div className="flex justify-between">
-            <span className="text-black/50">Check-in</span>
+            <span className="text-black/50">1. vožnja</span>
             <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
+          </div>
+        )}
+        {lotPoint && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Pick-up point</span>
+            <a
+              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#0F6E56] underline text-[12px]"
+            >
+              {locationName ?? 'Parking'}
+            </a>
           </div>
         )}
         {checkOut && (
           <div className="flex justify-between">
-            <span className="text-black/50">Check-out</span>
+            <span className="text-black/50">2. vožnja</span>
             <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
+          </div>
+        )}
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Pick-up point</span>
+            <a
+              href={pickupPoint?.lat && pickupPoint?.lng
+                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#0F6E56] underline text-[12px]"
+            >
+              {pickupPoint?.label ?? 'Otvori kartu'}
+            </a>
           </div>
         )}
         {attendant && (
@@ -189,8 +202,18 @@ function ShuttleTicket({
       </div>
       {/* Bottom strip */}
       <div className="bg-[#0F6E56]/10 px-4 py-3 space-y-2">
-        <p className="text-[10px] text-[#0F6E56]/70 font-medium text-center">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</p>
-        {onSummon && (
+        <p className="text-[10px] text-[#0F6E56]/70 font-medium text-center">Pokažite kod vozaču shuttlea pri ukrcaju</p>
+        {trackUrl ? (
+          <a
+            href={trackUrl}
+            className="w-full py-2.5 rounded-xl bg-[#0F6E56] text-white text-[13px] font-semibold hover:bg-[#0a5241] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+            </svg>
+            Prati vozača uživo →
+          </a>
+        ) : onSummon ? (
           <button
             type="button"
             onClick={onSummon}
@@ -201,7 +224,7 @@ function ShuttleTicket({
             </svg>
             Pozovi shuttle
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -214,8 +237,10 @@ function ValetTicket({
   checkOut,
   attendant,
   pickupPoint,
+  lotPoint,
   phoneSms,
   lotZone,
+  trackUrl,
   formatDateTime,
   onSummon,
 }: {
@@ -225,8 +250,10 @@ function ValetTicket({
   checkOut: string | null;
   attendant: string | null;
   pickupPoint: { lat?: number; lng?: number; label?: string } | null;
+  lotPoint?: { lat: number; lng: number } | null;
   phoneSms: string | null;
   lotZone: string | null;
+  trackUrl?: string | null;
   formatDateTime: (v: string | null | undefined) => string;
   onSummon?: (() => void) | null;
 }) {
@@ -255,27 +282,6 @@ function ValetTicket({
             <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{locationName}</span>
           </div>
         )}
-        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (() => {
-          const mapsHref = pickupPoint?.lat && pickupPoint?.lng
-            ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
-            : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`;
-          return (
-            <>
-              {pickupPoint?.label && (
-                <div className="flex justify-between">
-                  <span className="text-black/50">Drop-off / Pick-up</span>
-                  <span className="font-semibold text-black text-right max-w-[55%] leading-tight">{pickupPoint.label}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-black/50">Navigacija</span>
-                <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#5F3DFC] underline text-[12px]">
-                  Otvori kartu
-                </a>
-              </div>
-            </>
-          );
-        })()}
         {lotZone && (
           <div className="flex justify-between">
             <span className="text-black/50">Lot zona</span>
@@ -284,14 +290,42 @@ function ValetTicket({
         )}
         {checkIn && (
           <div className="flex justify-between">
-            <span className="text-black/50">Check-in</span>
+            <span className="text-black/50">1. vožnja</span>
             <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
+          </div>
+        )}
+        {lotPoint && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Pick-up point</span>
+            <a
+              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#5F3DFC] underline text-[12px]"
+            >
+              {locationName ?? 'Parking'}
+            </a>
           </div>
         )}
         {checkOut && (
           <div className="flex justify-between">
-            <span className="text-black/50">Check-out</span>
+            <span className="text-black/50">2. vožnja</span>
             <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
+          </div>
+        )}
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
+          <div className="flex justify-between items-center">
+            <span className="text-black/50">Pick-up point</span>
+            <a
+              href={pickupPoint?.lat && pickupPoint?.lng
+                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#5F3DFC] underline text-[12px]"
+            >
+              {pickupPoint?.label ?? 'Otvori kartu'}
+            </a>
           </div>
         )}
         {attendant && (
@@ -317,7 +351,17 @@ function ValetTicket({
       {/* Bottom strip */}
       <div className="bg-[#5F3DFC]/10 px-4 py-3 space-y-2">
         <p className="text-[10px] text-[#5F3DFC]/70 font-medium text-center">Pokažite kod valet agentu pri predaji ključeva</p>
-        {onSummon && (
+        {trackUrl ? (
+          <a
+            href={trackUrl}
+            className="w-full py-2.5 rounded-xl bg-[#5F3DFC] text-white text-[13px] font-semibold hover:bg-[#4e2fdb] transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+            </svg>
+            Prati vozača uživo →
+          </a>
+        ) : onSummon ? (
           <button
             type="button"
             onClick={onSummon}
@@ -330,7 +374,7 @@ function ValetTicket({
             </svg>
             Pozovi auto
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -354,6 +398,7 @@ function SuccessContent() {
   const [valetToggled, setValetToggled] = useState(false);
   const [shuttleToggled, setShuttleToggled] = useState(false);
   const [summonStatus, setSummonStatus] = useState<string | null>(null);
+  const [activeTrackUrl, setActiveTrackUrl] = useState<string | null>(null);
 
   // Credits: ∞ when included in price, 1 when paid addon, 0 when not available
   const [valetCredits, setValetCredits] = useState<Credits>(0);
@@ -370,6 +415,10 @@ function SuccessContent() {
   const [addonShuttleOn, setAddonShuttleOn] = useState(false);
   const [addonsCheckoutLoading, setAddonsCheckoutLoading] = useState(false);
   const [addonsCheckoutError, setAddonsCheckoutError] = useState('');
+
+  // Spot upgrade
+  const [premiumSpots, setPremiumSpots] = useState<{ id: string; label: string; price_modifier_cents: number }[]>([]);
+  const [spotUpgradeLoading, setSpotUpgradeLoading] = useState(false);
 
   const fallbackDisplayId =
     searchParams.get('display_id') || searchParams.get('displayId') || searchParams.get('id') || null;
@@ -449,6 +498,28 @@ function SuccessContent() {
         // Auto-toggle included services on
         if (s.valet_enabled) setValetToggled(true);
         if (s.shuttle_enabled) setShuttleToggled(true);
+
+        // Fetch premium spots for upgrade
+        if (s.location_id && s.assigned_spot) {
+          fetch(`/api/spots?location_id=${encodeURIComponent(s.location_id)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (!active) return;
+              const available = (d.spots ?? []).filter(
+                (sp: { available: boolean; price_modifier_cents: number; label: string }) =>
+                  sp.available && sp.price_modifier_cents > 0 && sp.label !== s.assigned_spot?.label
+              );
+              setPremiumSpots(available);
+            })
+            .catch(() => {});
+        }
+
+        // For P&T: silently subscribe to push notifications for 15-min ride reminder
+        if (s.flow_type === 'park_now' && 'serviceWorker' in navigator && 'PushManager' in window) {
+          import('@/lib/push-notifications-v2').then(({ subscribeToNotifications }) => {
+            subscribeToNotifications().catch(() => {});
+          });
+        }
       } catch {
         if (!active) return;
         setSummary(null);
@@ -473,6 +544,40 @@ function SuccessContent() {
     const qs = params.toString();
     return qs ? `/insurance/apply?${qs}` : '/insurance/apply';
   }, [summary?.email]);
+
+  // P&T pre-ride: auto-summon + notify 15 min before check-in
+  useEffect(() => {
+    const isParkNow = summary?.flow_type === 'park_now';
+    if (!isParkNow || !checkoutStart || activeTrackUrl) return;
+
+    const rideTime = new Date(checkoutStart).getTime();
+    if (Number.isNaN(rideTime)) return;
+
+    const triggerAt = rideTime - 15 * 60 * 1000;
+    const delay = triggerAt - Date.now();
+
+    if (delay < 0) return; // ride time already passed
+
+    // Request notification permission proactively
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const timer = setTimeout(async () => {
+      // Fire browser notification
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        new Notification('Vaša vožnja kreće za 15 minuta', {
+          body: 'Vozač je pozvan i dolazi po vas.',
+          icon: '/favicon.ico',
+        });
+      }
+      // Auto-summon
+      await handleSummon('shuttle');
+    }, delay);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary?.flow_type, checkoutStart, activeTrackUrl]);
 
   const getMemberAuthHeaders = async () => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -621,7 +726,9 @@ function SuccessContent() {
         } else {
           if (shuttleCredits !== '∞') setShuttleCredits((s) => (s as number) - 1);
         }
-        window.location.href = `/track?id=${request.id}&type=${requestType}`;
+        const trackUrl = `/track?id=${request.id}&type=${requestType}`;
+        setActiveTrackUrl(trackUrl);
+        window.location.href = trackUrl;
         return;
       }
       openWhatsAppFallback(requestType);
@@ -802,8 +909,10 @@ function SuccessContent() {
               checkOut={checkoutEnd}
               attendant={summary.valet_attendant ?? null}
               pickupPoint={summary.addons_config?.pickup_point ?? null}
+              lotPoint={summary.lot_point ?? null}
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
               lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
+              trackUrl={activeTrackUrl}
               formatDateTime={formatDateTime}
               onSummon={() => handleSummon('car')}
             />
@@ -818,9 +927,11 @@ function SuccessContent() {
               checkOut={checkoutEnd}
               attendant={summary.valet_attendant ?? null}
               pickupPoint={summary.addons_config?.pickup_point ?? null}
+              lotPoint={summary.lot_point ?? null}
               phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
+              trackUrl={activeTrackUrl}
               formatDateTime={formatDateTime}
-              onSummon={() => handleSummon('shuttle')}
+              onSummon={summary.flow_type === 'park_now' ? null : () => handleSummon('shuttle')}
             />
           )}
 
@@ -1119,6 +1230,94 @@ function SuccessContent() {
               )}
             </div>
           )}
+
+          {/* 3b — Parking spot info */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
+                  <rect x="3" y="3" width="8" height="8" rx="1"/>
+                  <rect x="13" y="3" width="8" height="8" rx="1"/>
+                  <rect x="3" y="13" width="8" height="8" rx="1"/>
+                  <rect x="13" y="13" width="8" height="8" rx="1"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-black">Parking spot</p>
+                <p className="text-[11px] text-black/50">
+                  {summary?.assigned_spot ? 'Vaš dodijeljeni spot' : 'Automatski dodjeljujemo slobodan spot'}
+                </p>
+              </div>
+            </div>
+            {summary?.assigned_spot ? (
+              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
+                  <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
+                </div>
+                {summary.lot_point && (
+                  <a
+                    href={`https://www.google.com/maps?q=${summary.lot_point.lat},${summary.lot_point.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#5F3DFC] underline"
+                  >
+                    Navigacija
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+                <span className="text-[12px] text-[#5F3DFC] font-medium">Spot će biti potvrđen pri dolasku</span>
+                <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
+              </div>
+            )}
+            {premiumSpots.length > 0 && summary?.assigned_spot && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
+                {premiumSpots.map((sp) => (
+                  <button
+                    key={sp.id}
+                    type="button"
+                    disabled={spotUpgradeLoading}
+                    onClick={async () => {
+                      setSpotUpgradeLoading(true);
+                      try {
+                        const res = await fetch('/api/stripe/spot-upgrade', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            stripe_session_id: summary.session_id,
+                            new_spot_id: sp.id,
+                            current_spot_id: summary.assigned_spot?.label,
+                            email: summary.email,
+                            location_id: summary.location_id,
+                            location_name: summary.location_name,
+                          }),
+                        });
+                        const d = await res.json().catch(() => null) as { url?: string } | null;
+                        if (d?.url) window.location.href = d.url;
+                      } finally {
+                        setSpotUpgradeLoading(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
+                      <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
+                    </div>
+                    <span className="text-[12px] font-semibold text-[#92400E]">
+                      +{((sp.price_modifier_cents) / 100).toFixed(2)} €
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {premiumSpots.length === 0 && (
+              <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
+            )}
+          </div>
 
           {/* 4 — Pozovi vozilo (with credit badges) */}
           {showSummonSection && (

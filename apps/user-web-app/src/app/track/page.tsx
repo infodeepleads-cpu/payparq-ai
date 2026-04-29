@@ -7,7 +7,7 @@ import { Suspense } from 'react';
 
 const TrackMap = dynamic(() => import('./TrackMap'), { ssr: false });
 
-type RequestStatus = 'pending' | 'accepted' | 'en_route' | 'arrived' | 'done' | 'cancelled';
+type RequestStatus = 'scheduled' | 'pending' | 'accepted' | 'en_route' | 'arrived' | 'done' | 'cancelled';
 
 type ServiceRequest = {
   id: string;
@@ -178,6 +178,7 @@ function TrackInner() {
   const statusLabel = () => {
     if (!request) return '';
     const map: Record<RequestStatus, string> = {
+      scheduled: 'VOŽNJA REZERVIRANA',
       pending:   isShuttle ? 'TRAŽIMO VOZAČA' : 'TRAŽIMO VALETA',
       accepted:  isShuttle ? 'VOZAČ DOLAZI' : 'VALET DOLAZI',
       en_route:  isShuttle ? 'VOZAČ DOLAZI' : 'VALET DOLAZI',
@@ -190,6 +191,7 @@ function TrackInner() {
 
   const etaLabel = () => {
     if (!request) return '';
+    if (request.status === 'scheduled') return 'Vozač će biti dodijeljen ubrzo';
     if (request.status === 'pending') return 'Tražimo...';
     if (request.status === 'arrived') return isShuttle ? 'Vozilo vas čeka' : 'Vaš auto čeka';
     if (request.eta_minutes) return `Stiže za ~${request.eta_minutes} min`;

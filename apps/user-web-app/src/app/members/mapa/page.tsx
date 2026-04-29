@@ -53,12 +53,20 @@ export default function MapaPage() {
 
   useEffect(() => {
     fetchData();
-    const cleanup = setupRealtimeListeners(handleNotification);
-    return cleanup;
+    let cleanup: (() => void) | undefined;
+    setupRealtimeListeners(handleNotification).then(c => {
+      cleanup = c;
+    });
+    return () => cleanup?.();
   }, []);
 
   const fetchData = async () => {
     try {
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       // Fetch locations
       const { data: lotsData } = await supabase
         .from('locations')
@@ -102,6 +110,8 @@ export default function MapaPage() {
   };
 
   const subscribeToDriverLocations = () => {
+    if (!supabase) return null;
+
     const subscription = supabase
       .channel('driver_locations')
       .on(
@@ -123,6 +133,8 @@ export default function MapaPage() {
   };
 
   const subscribeToRides = () => {
+    if (!supabase) return null;
+
     const subscription = supabase
       .channel('ride_requests')
       .on(
@@ -153,6 +165,7 @@ export default function MapaPage() {
 
   const reportIssue = async () => {
     if (!selectedLot) return;
+    if (!supabase) return;
 
     try {
       const { error } = await supabase.from('lot_issues').insert({

@@ -19,6 +19,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     // Mobile scanner sends FCM token
     if (fcm_token && (device_type === 'android' || device_type === 'ios')) {
       const { error } = await supabaseAdmin
@@ -84,6 +91,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from('push_subscriptions')
       .select('*')
@@ -109,6 +123,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
       );
     }
 

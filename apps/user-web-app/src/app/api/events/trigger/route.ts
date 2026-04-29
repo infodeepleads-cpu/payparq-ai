@@ -13,6 +13,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Database unavailable' },
+        { status: 500 }
+      );
+    }
+
     // Log the event
     const { data: event, error: eventError } = await supabaseAdmin
       .from('notification_events')
@@ -47,6 +54,11 @@ async function broadcastNotification(
   event_id: string
 ) {
   try {
+    if (!supabaseAdmin) {
+      console.log('Supabase admin not available for broadcast');
+      return;
+    }
+
     // Determine who should receive notifications based on event type
     let recipients: any[] = [];
 
@@ -140,30 +152,32 @@ async function sendFCMNotifications(
         lot_id: data.lot_id || '',
         url: getNotificationLink(type, data),
       },
-      android: {
-        priority: 'high',
-      },
-      apns: {
-        headers: {
-          'apns-priority': '10',
-        },
-      },
     };
 
-    const response = await messaging.sendMulticast({
-      ...message,
-      tokens,
-    });
+    // Send to each token individually
+    let successCount = 0;
+    let failureCount = 0;
+    const failedTokens: string[] = [];
+
+    for (const token of tokens) {
+      try {
+        await messaging.send({
+          ...message,
+          token,
+        });
+        successCount++;
+      } catch (err) {
+        failureCount++;
+        failedTokens.push(token);
+      }
+    }
 
     console.log(
-      `FCM sent: ${response.successCount} succeeded, ${response.failureCount} failed`
+      `FCM sent: ${successCount} succeeded, ${failureCount} failed`
     );
 
     // Handle failed tokens
-    if (response.failureCount > 0) {
-      const failedTokens = response.responses
-        .map((resp, idx) => (!resp.success ? tokens[idx] : null))
-        .filter(Boolean);
+    if (failedTokens.length > 0) {
       console.warn('Failed FCM tokens:', failedTokens);
     }
   } catch (error) {
@@ -178,6 +192,11 @@ async function sendWebPushNotifications(
   event_id: string
 ) {
   try {
+    if (!supabaseAdmin) {
+      console.log('Supabase admin not available for web push notifications');
+      return;
+    }
+
     // Get user subscriptions
     const { data: subscriptions } = await supabaseAdmin
       .from('push_subscriptions')

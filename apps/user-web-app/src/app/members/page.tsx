@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
 import { ManagementPanel } from "@/components/ManagementPanel";
+import { CampaignsPanel } from "@/components/CampaignsPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -22,7 +23,8 @@ type NavItemId =
   | "reviews"
   | "help"
   | "operations"
-  | "management";
+  | "management"
+  | "campaigns";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
 type ActionProcessing = FlowType | HomeWidgetId;
@@ -258,6 +260,7 @@ export default function MembersPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isManager, setIsManager] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -401,6 +404,7 @@ export default function MembersPage() {
     if (!currentUser || !supabase) {
       setIsAdmin(false);
       setIsManager(false);
+      setRole(null);
       return;
     }
     try {
@@ -414,12 +418,14 @@ export default function MembersPage() {
           currentUser.user_metadata?.role ??
           currentUser.app_metadata?.role
       );
+      setRole(role);
       setIsAdmin(role === "admin" || role === "super_admin" || role === "officer");
       setIsManager(role === "admin" || role === "super_admin");
     } catch {
       const fallbackRole = normalizeRole(
         currentUser.user_metadata?.role ?? currentUser.app_metadata?.role
       );
+      setRole(fallbackRole);
       setIsAdmin(fallbackRole === "admin" || fallbackRole === "super_admin" || fallbackRole === "officer");
       setIsManager(fallbackRole === "admin" || fallbackRole === "super_admin");
     }
@@ -1762,7 +1768,7 @@ export default function MembersPage() {
 
               // If reserved shuttle, show reservation card instead of on-demand button
               if (isReserved) {
-                return <ShuttleReservationCard sessionId={homeContext.sessionId} locationId={homeContext.locationId} />;
+                return <ShuttleReservationCard sessionId={homeContext.sessionId ?? undefined} locationId={homeContext.locationId ?? undefined} />;
               }
 
               return (
@@ -2545,6 +2551,10 @@ export default function MembersPage() {
       return <ManagementPanel />;
     }
 
+    if (activeItem === "campaigns" && role === "super_admin") {
+      return <CampaignsPanel />;
+    }
+
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2830,6 +2840,19 @@ export default function MembersPage() {
                       <span>Management</span>
                     </button>
                   )}
+                  {role === "super_admin" && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("campaigns")}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                        activeItem === "campaigns"
+                          ? "bg-white text-black border-white"
+                          : "border-white/20 text-white/80"
+                      }`}
+                    >
+                      <span>Campaigns</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -3003,6 +3026,22 @@ export default function MembersPage() {
                           M
                         </span>
                         <span>Management</span>
+                      </button>
+                    )}
+                    {role === "super_admin" && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("campaigns")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "campaigns"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          C
+                        </span>
+                        <span>Campaigns</span>
                       </button>
                     )}
                   </nav>
