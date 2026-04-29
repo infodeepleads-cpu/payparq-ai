@@ -89,6 +89,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [loading, setLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [premiumSpots, setPremiumSpots] = useState<Array<{ id: string; label: string; price_modifier_cents: number; available: boolean }>>([]);
   const parkTaxiLeadMinutes = 60;
   const parkTaxiDefaultOffsetMinutes = 65;
   const parkTaxiDefaultDurationHours = 1;
@@ -164,6 +165,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     });
   }, [activeTab, parkTaxiDefaultDurationHours, parkTaxiDefaultOffsetMinutes]);
   
+  useEffect(() => {
+    if (!hub.id) return;
+    fetch(`/api/spots?location_id=${encodeURIComponent(hub.id)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.spots)) {
+          setPremiumSpots(d.spots.filter((s: { price_modifier_cents: number; available: boolean }) => s.price_modifier_cents > 0 && s.available));
+        }
+      })
+      .catch(() => {});
+  }, [hub.id]);
+
   const locationName = normalizeLocationName(hub.name) || "Parking Trogir";
   const locationId = hub.id || "parkng split airport";
   const slugKey = (hub.canonical_slug || "").toString().trim().toLowerCase();
@@ -1473,11 +1486,28 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         )}
                       </button>
                       {openSections[item.id] ? (
-                        <div className="px-4 md:px-6 pb-4 md:pb-6">
+                        <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
                           <div className="rounded-2xl border border-black/10 bg-white text-black p-4 md:p-5">
                             <p className="text-sm font-semibold">{item.value}</p>
                             <p className="text-xs text-black/70 mt-2">{item.description}</p>
                           </div>
+                          {item.id === 'extras' && premiumSpots.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-black/60 uppercase tracking-wide">Premium parking spots</p>
+                              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                                {premiumSpots.map((spot) => (
+                                  <div key={spot.id} className="rounded-xl border border-[#F59E0B]/40 bg-[#FFFBEB] p-3 flex flex-col gap-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-bold text-black">{spot.label}</span>
+                                      <span className="text-xs font-semibold text-[#F59E0B]">+{(spot.price_modifier_cents / 100).toFixed(2)} €</span>
+                                    </div>
+                                    <span className="text-[10px] text-black/50">Nadogradite nakon rezervacije</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-[11px] text-black/45">Premium mjesta rezervirajte na stranici potvrde nakon plaćanja.</p>
+                            </div>
+                          )}
                         </div>
                       ) : null}
                     </div>
