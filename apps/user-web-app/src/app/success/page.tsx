@@ -145,18 +145,16 @@ function ShuttleTicket({
             <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
           </div>
         )}
-        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
+        {lotPoint && (
           <div className="flex justify-between items-center">
-            <span className="text-black/50">1. vožnja — odredište</span>
+            <span className="text-black/50">Pick-up point</span>
             <a
-              href={pickupPoint?.lat && pickupPoint?.lng
-                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
-                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
+              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-[#0F6E56] underline text-[12px]"
             >
-              {pickupPoint?.label ?? 'Otvori kartu'}
+              {locationName ?? 'Parking'}
             </a>
           </div>
         )}
@@ -166,16 +164,18 @@ function ShuttleTicket({
             <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
           </div>
         )}
-        {lotPoint && (
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
           <div className="flex justify-between items-center">
-            <span className="text-black/50">2. vožnja — pickup</span>
+            <span className="text-black/50">Pick-up point</span>
             <a
-              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
+              href={pickupPoint?.lat && pickupPoint?.lng
+                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-[#0F6E56] underline text-[12px]"
             >
-              {locationName ?? 'Parking'}
+              {pickupPoint?.label ?? 'Otvori kartu'}
             </a>
           </div>
         )}
@@ -201,7 +201,7 @@ function ShuttleTicket({
       </div>
       {/* Bottom strip */}
       <div className="bg-[#0F6E56]/10 px-4 py-3 space-y-2">
-        <p className="text-[10px] text-[#0F6E56]/70 font-medium text-center">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</p>
+        <p className="text-[10px] text-[#0F6E56]/70 font-medium text-center">Pokažite kod vozaču shuttlea pri ukrcaju</p>
         {trackUrl ? (
           <a
             href={trackUrl}
@@ -293,18 +293,16 @@ function ValetTicket({
             <span className="font-semibold text-black">{formatDateTime(checkIn)}</span>
           </div>
         )}
-        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
+        {lotPoint && (
           <div className="flex justify-between items-center">
-            <span className="text-black/50">1. vožnja — odredište</span>
+            <span className="text-black/50">Pick-up point</span>
             <a
-              href={pickupPoint?.lat && pickupPoint?.lng
-                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
-                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
+              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-[#5F3DFC] underline text-[12px]"
             >
-              {pickupPoint?.label ?? 'Otvori kartu'}
+              {locationName ?? 'Parking'}
             </a>
           </div>
         )}
@@ -314,16 +312,18 @@ function ValetTicket({
             <span className="font-semibold text-black">{formatDateTime(checkOut)}</span>
           </div>
         )}
-        {lotPoint && (
+        {(pickupPoint?.label || (pickupPoint?.lat && pickupPoint?.lng)) && (
           <div className="flex justify-between items-center">
-            <span className="text-black/50">2. vožnja — pickup</span>
+            <span className="text-black/50">Pick-up point</span>
             <a
-              href={`https://www.google.com/maps?q=${lotPoint.lat},${lotPoint.lng}`}
+              href={pickupPoint?.lat && pickupPoint?.lng
+                ? `https://www.google.com/maps?q=${pickupPoint.lat},${pickupPoint.lng}`
+                : `https://www.google.com/maps/search/${encodeURIComponent(pickupPoint?.label ?? '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-[#5F3DFC] underline text-[12px]"
             >
-              {locationName ?? 'Parking'}
+              {pickupPoint?.label ?? 'Otvori kartu'}
             </a>
           </div>
         )}

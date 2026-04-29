@@ -406,7 +406,7 @@ function buildBookingConfirmationEmail(params: {
           <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
         </table>
       </td></tr>
-      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju · ETA 3–8 min</td></tr>
+      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju</td></tr>
       <tr><td style="padding:10px 14px;text-align:center;">
         <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#0F6E56;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
         <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
@@ -1170,6 +1170,7 @@ export async function POST(req: Request) {
     }
 
     console.log('✨ Successfully inserted parking session!');
+    await sendBookingConfirmation(session, client);
 
     // 4. UPDATE OCCUPANCY (Optional, best effort)
     try {
