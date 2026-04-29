@@ -2261,6 +2261,19 @@ class _SpotsSectionState extends State<_SpotsSection> {
       }
       await client.from('spots').insert(newSpots);
       await _fetchSpots();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Lang.sel(widget.isCroatian, '${newSpots.length} spots saved', '${newSpots.length} spotova spremljeno')),
+          backgroundColor: Colors.green,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Lang.sel(widget.isCroatian, 'Error saving spots: $e', 'Greška pri spremanju spotova: $e')),
+          backgroundColor: Colors.red,
+        ));
+      }
     } finally {
       if (mounted) setState(() => _generatingSpots = false);
     }
@@ -2284,9 +2297,21 @@ class _SpotsSectionState extends State<_SpotsSection> {
       }).toList();
       await client.from('spots').insert(newSpots);
       await _fetchSpots();
-      if (mounted) setState(() { _savingPins = false; _sectorMode = false; _manualPins.clear(); });
-    } catch (_) {
-      if (mounted) setState(() => _savingPins = false);
+      if (mounted) {
+        setState(() { _savingPins = false; _sectorMode = false; _manualPins.clear(); });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Lang.sel(widget.isCroatian, '${newSpots.length} spots saved', '${newSpots.length} spotova spremljeno')),
+          backgroundColor: Colors.green,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _savingPins = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Lang.sel(widget.isCroatian, 'Error saving spots: $e', 'Greška pri spremanju spotova: $e')),
+          backgroundColor: Colors.red,
+        ));
+      }
     }
   }
 
@@ -2305,24 +2330,26 @@ class _SpotsSectionState extends State<_SpotsSection> {
       children: [
         if (!_sectorMode) ...[
           Row(children: [
-            Expanded(child: OutlinedButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.auto_fix_high, size: 14),
+            Expanded(child: ElevatedButton.icon(
+              onPressed: _generatingSpots ? null : _generateSpots,
+              icon: _generatingSpots
+                  ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.auto_fix_high, size: 14),
               label: Text(Lang.sel(c, 'Auto fill', 'Auto popuni'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.black), foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 10)))),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))))),
             const SizedBox(width: 8),
             Expanded(child: Tooltip(
               message: _hasBoundary ? '' : Lang.sel(c, 'Draw lot boundary first', 'Prvo nacrtajte granicu parcele'),
               child: OutlinedButton.icon(
                 onPressed: _hasBoundary ? () => setState(() => _sectorMode = true) : null,
                 icon: const Icon(Icons.touch_app_outlined, size: 14),
-                label: Text(Lang.sel(c, '5-sector manual', '5-sektora ručno'), style: GoogleFonts.inter(fontSize: 12)),
+                label: Text(Lang.sel(c, 'Manual', 'Ručno'), style: GoogleFonts.inter(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: _hasBoundary ? AppTheme.border : Colors.black12),
                   foregroundColor: _hasBoundary ? Colors.black54 : Colors.black26,
                   padding: const EdgeInsets.symmetric(vertical: 10))))),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(children: [
             Expanded(child: TextField(
               controller: _rowsCtrl, keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
@@ -2331,13 +2358,6 @@ class _SpotsSectionState extends State<_SpotsSection> {
             Expanded(child: TextField(
               controller: _colsCtrl, keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
               decoration: InputDecoration(labelText: Lang.sel(c, 'Cols', 'Stupci'), filled: true, fillColor: AppTheme.background, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _generatingSpots ? null : _generateSpots,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-              child: _generatingSpots
-                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text(Lang.sel(c, 'Generate', 'Generiraj'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
           ]),
           if (!_hasBoundary) ...[
             const SizedBox(height: 6),
