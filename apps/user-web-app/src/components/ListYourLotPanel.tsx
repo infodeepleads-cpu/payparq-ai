@@ -86,24 +86,59 @@ export function ListYourLotPanel() {
   };
 
   const handleSubmit = async () => {
-    // TODO: Submit to /api/listings
-    console.log('Submitting listing:', data);
-    alert('Listing submitted! (Demo)');
-    setStep(1);
-    setData({
-      name: '',
-      address: '',
-      latitude: '',
-      longitude: '',
-      type: '',
-      capacity: '',
-      features: [],
-      photos: [],
-      openTime: '07:00',
-      closeTime: '22:00',
-      smartPricing: true,
-      permits: '',
-    });
+    try {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('address', data.address);
+      formData.append('latitude', data.latitude);
+      formData.append('longitude', data.longitude);
+      formData.append('type', data.type);
+      formData.append('capacity', data.capacity);
+      formData.append('features', JSON.stringify(data.features));
+      formData.append('openTime', data.openTime);
+      formData.append('closeTime', data.closeTime);
+      formData.append('smartPricing', String(data.smartPricing));
+      formData.append('permits', data.permits);
+
+      // Append photos
+      for (const photo of data.photos) {
+        formData.append('photos', photo);
+      }
+
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(`Error: ${result.error}`);
+        return;
+      }
+
+      alert('✅ Lot created successfully! It is now live and visible to drivers.');
+
+      // Reset form
+      setStep(1);
+      setData({
+        name: '',
+        address: '',
+        latitude: '',
+        longitude: '',
+        type: '',
+        capacity: '',
+        features: [],
+        photos: [],
+        openTime: '07:00',
+        closeTime: '22:00',
+        smartPricing: true,
+        permits: '',
+      });
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert('Failed to create listing. Please try again.');
+    }
   };
 
   return (
