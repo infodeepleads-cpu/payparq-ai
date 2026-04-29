@@ -371,7 +371,7 @@ function buildBookingConfirmationEmail(params: {
   const sectionLabel = (text: string) =>
     `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">${text}</div>`;
 
-  const trackingUrl = `https://www.payparq.com/members/mapa?session=${encodeURIComponent(sessionId)}`;
+  const trackingUrl = `https://www.payparq.com/api/track?session=${encodeURIComponent(sessionId)}`;
 
   const valetTicket = valetEnabled ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">

@@ -27,12 +27,11 @@ export default function DashboardPage() {
         const { role } = await res.json();
 
         // Route based on role
-        if (role === 'superadmin') {
+        if (role === 'superadmin' || role === 'super_admin') {
           router.push('/members');
         } else if (role === 'officer' || role === 'admin') {
           router.push('/officer/dashboard');
         } else {
-          // member, manager, or any other role defaults to members
           router.push('/members');
         }
       } catch (error) {

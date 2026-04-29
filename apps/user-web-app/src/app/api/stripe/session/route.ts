@@ -300,6 +300,7 @@ export async function GET(req: NextRequest) {
     let shuttleEnabled = false;
     let addonsConfig: Record<string, unknown> = {};
     let valetAttendant: string | null = null;
+    let lotPoint: { lat: number; lng: number } | null = null;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -371,20 +372,20 @@ export async function GET(req: NextRequest) {
       if (locationCandidate) {
         const byId = await dbClient
           .from('locations')
-          .select('id,display_id,name')
+          .select('id,display_id,name,lat,lng')
           .eq('id', locationCandidate)
           .maybeSingle();
         let locationRow = byId.data as
-          | { id?: string | null; display_id?: string | null; name?: string | null }
+          | { id?: string | null; display_id?: string | null; name?: string | null; lat?: number | null; lng?: number | null }
           | null;
         if (!locationRow) {
           const byDisplayId = await dbClient
             .from('locations')
-            .select('id,display_id,name')
+            .select('id,display_id,name,lat,lng')
             .eq('display_id', locationCandidate)
             .maybeSingle();
           locationRow = byDisplayId.data as
-            | { id?: string | null; display_id?: string | null; name?: string | null }
+            | { id?: string | null; display_id?: string | null; name?: string | null; lat?: number | null; lng?: number | null }
             | null;
         }
         if (locationRow) {
@@ -392,6 +393,9 @@ export async function GET(req: NextRequest) {
           activityLocationDisplayId = locationRow.display_id ? String(locationRow.display_id) : null;
           if (!activityLocationId && locationRow.id) {
             activityLocationId = String(locationRow.id);
+          }
+          if (locationRow.lat && locationRow.lng) {
+            lotPoint = { lat: Number(locationRow.lat), lng: Number(locationRow.lng) };
           }
         }
         // Separate query for service flags — gracefully handles missing columns
@@ -431,6 +435,7 @@ export async function GET(req: NextRequest) {
       shuttle_enabled: shuttleEnabled,
       addons_config: addonsConfig,
       valet_attendant: valetAttendant,
+      lot_point: lotPoint,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,
