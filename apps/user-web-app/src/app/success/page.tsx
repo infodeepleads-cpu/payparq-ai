@@ -416,6 +416,10 @@ function SuccessContent() {
   const [addonsCheckoutLoading, setAddonsCheckoutLoading] = useState(false);
   const [addonsCheckoutError, setAddonsCheckoutError] = useState('');
 
+  // Spot upgrade
+  const [premiumSpots, setPremiumSpots] = useState<{ id: string; label: string; price_modifier_cents: number }[]>([]);
+  const [spotUpgradeLoading, setSpotUpgradeLoading] = useState(false);
+
   const fallbackDisplayId =
     searchParams.get('display_id') || searchParams.get('displayId') || searchParams.get('id') || null;
   const fallbackLocationId =
@@ -494,6 +498,21 @@ function SuccessContent() {
         // Auto-toggle included services on
         if (s.valet_enabled) setValetToggled(true);
         if (s.shuttle_enabled) setShuttleToggled(true);
+
+        // Fetch premium spots for upgrade
+        if (s.location_id && s.assigned_spot) {
+          fetch(`/api/spots?location_id=${encodeURIComponent(s.location_id)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (!active) return;
+              const available = (d.spots ?? []).filter(
+                (sp: { available: boolean; price_modifier_cents: number; label: string }) =>
+                  sp.available && sp.price_modifier_cents > 0 && sp.label !== s.assigned_spot?.label
+              );
+              setPremiumSpots(available);
+            })
+            .catch(() => {});
+        }
 
         // For P&T: silently subscribe to push notifications for 15-min ride reminder
         if (s.flow_type === 'park_now' && 'serviceWorker' in navigator && 'PushManager' in window) {
@@ -1253,7 +1272,51 @@ function SuccessContent() {
                 <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
               </div>
             )}
-            <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
+            {premiumSpots.length > 0 && summary?.assigned_spot && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
+                {premiumSpots.map((sp) => (
+                  <button
+                    key={sp.id}
+                    type="button"
+                    disabled={spotUpgradeLoading}
+                    onClick={async () => {
+                      setSpotUpgradeLoading(true);
+                      try {
+                        const res = await fetch('/api/stripe/spot-upgrade', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            stripe_session_id: summary.session_id,
+                            new_spot_id: sp.id,
+                            current_spot_id: summary.assigned_spot?.label,
+                            email: summary.email,
+                            location_id: summary.location_id,
+                            location_name: summary.location_name,
+                          }),
+                        });
+                        const d = await res.json().catch(() => null) as { url?: string } | null;
+                        if (d?.url) window.location.href = d.url;
+                      } finally {
+                        setSpotUpgradeLoading(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
+                      <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
+                    </div>
+                    <span className="text-[12px] font-semibold text-[#92400E]">
+                      +{((sp.price_modifier_cents) / 100).toFixed(2)} €
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {premiumSpots.length === 0 && (
+              <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
+            )}
           </div>
 
           {/* 4 — Pozovi vozilo (with credit badges) */}

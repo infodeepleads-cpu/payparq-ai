@@ -1127,6 +1127,30 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ received: true });
     }
+
+    // 2b. SPOT UPGRADE
+    if (sessionMetadata.flow_type === 'spot_upgrade') {
+      const newSpotId = (sessionMetadata.new_spot_id ?? '').toString().trim();
+      const currentSpotId = (sessionMetadata.current_spot_id ?? '').toString().trim();
+      const originalSessionId = (sessionMetadata.original_session_id ?? '').toString().trim();
+      if (newSpotId && originalSessionId) {
+        try {
+          if (currentSpotId) {
+            await client.from('spot_assignments').update({ status: 'released' }).eq('spot_id', currentSpotId).eq('parking_session_id', originalSessionId);
+          }
+          await client.from('spot_assignments').upsert({
+            spot_id: newSpotId,
+            parking_session_id: originalSessionId,
+            status: 'active',
+          }, { onConflict: 'parking_session_id' });
+          console.log(`🅿️ Spot upgraded to ${newSpotId} for session ${originalSessionId}`);
+        } catch (e) {
+          console.error('⚠️ Spot upgrade assignment failed:', e);
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
     // 3. INSERT INTO SUPABASE
     const insertData = {
       location_id,
