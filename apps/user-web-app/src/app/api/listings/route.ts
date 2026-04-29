@@ -58,6 +58,10 @@ export async function POST(req: NextRequest) {
       photoUrls.push(file.name);
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     // Insert location record
     const { data: location, error: locationError } = await supabaseAdmin
       .from('locations')
