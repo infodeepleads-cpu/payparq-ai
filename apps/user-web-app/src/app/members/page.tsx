@@ -7,6 +7,7 @@ import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
 import { ManagementPanel } from "@/components/ManagementPanel";
 import { CampaignsPanel } from "@/components/CampaignsPanel";
+import { ListYourLotPanel } from "@/components/ListYourLotPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -24,7 +25,8 @@ type NavItemId =
   | "help"
   | "operations"
   | "management"
-  | "campaigns";
+  | "campaigns"
+  | "list-lot";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
 type ActionProcessing = FlowType | HomeWidgetId;
@@ -2555,6 +2557,10 @@ export default function MembersPage() {
       return <CampaignsPanel />;
     }
 
+    if (activeItem === "list-lot") {
+      return <ListYourLotPanel />;
+    }
+
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2840,6 +2846,17 @@ export default function MembersPage() {
                       <span>Management</span>
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveItem("list-lot")}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                      activeItem === "list-lot"
+                        ? "bg-white text-black border-white"
+                        : "border-white/20 text-white/80"
+                    }`}
+                  >
+                    <span>List your lot</span>
+                  </button>
                   {role === "super_admin" && (
                     <button
                       type="button"
