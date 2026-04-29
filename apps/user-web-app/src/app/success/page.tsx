@@ -1211,6 +1211,29 @@ function SuccessContent() {
             </div>
           )}
 
+          {/* 3b — Parking spot info */}
+          <div className="rounded-2xl border border-black/10 bg-white p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
+                  <rect x="3" y="3" width="8" height="8" rx="1"/>
+                  <rect x="13" y="3" width="8" height="8" rx="1"/>
+                  <rect x="3" y="13" width="8" height="8" rx="1"/>
+                  <rect x="13" y="13" width="8" height="8" rx="1"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-black">Parking spot</p>
+                <p className="text-[11px] text-black/50">Automatski dodjeljujemo slobodan spot</p>
+              </div>
+            </div>
+            <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+              <span className="text-[12px] text-[#5F3DFC] font-medium">Spot će biti potvrđen pri dolasku</span>
+              <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
+            </div>
+            <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
+          </div>
+
           {/* 4 — Pozovi vozilo (with credit badges) */}
           {showSummonSection && (
             <div className="rounded-2xl border border-black/10 bg-white p-4">

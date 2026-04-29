@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronDown, Car, Camera, MessageCircle, CreditCard, Plus, Minus, ChevronLeft, ChevronRight, MapPin, Route, Info } from "lucide-react";
+
+const LotMap = lazy(() => import('@/components/LotMap'));
 import { FooterBrand } from "@/components/FooterBrand";
 import { SiteHeader } from "@/components/SiteHeader";
 import { normalizeLocationName, resolveParkTaxiPriceEuro, resolveScannerTruthPriceEuro } from "@/lib/locationPricing";
@@ -50,7 +52,8 @@ type SectionKey =
   | "space"
   | "reviews"
   | "cancellation"
-  | "report";
+  | "report"
+  | "spots";
 
 export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems, travelTime }: {
   hub: HubData;
@@ -77,6 +80,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     reviews: false,
     cancellation: false,
     report: false,
+    spots: false,
   });
   const [isDesktop, setIsDesktop] = useState(false);
   
@@ -363,10 +367,12 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     /^https?:\/\/[^/]+\/storage\/v1\/object\/public\//.test(url);
   const photoList = Array.isArray(hub.verification_photos) ? hub.verification_photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [];
   const candidateHero = typeof _hero === "string" && _hero.trim().length > 0 ? _hero : undefined;
-  const effectivePhotoCount = photoList.length > 0 ? photoList.length : 1;
+  const hasLotCoords = typeof hub.latitude === "number" && typeof hub.longitude === "number";
+  const LOT_MAP_SENTINEL = '__lot_map__';
+  const effectivePhotoCount = (photoList.length > 0 ? photoList.length : 1) + (hasLotCoords ? 1 : 0);
   const streetAndPhotoCount = 1 + photoList.length;
   let photos = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
-  // Ensure at least 4 photos for slider
+  // Ensure at least 4 real photos for slider
   if (photos.length < 4) {
     const original = [...photos];
     while (photos.length < 4) {
@@ -374,8 +380,11 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     }
     photos = photos.slice(0, 4);
   }
+  // Append map slide last if lot has coords
+  if (hasLotCoords) photos = [...photos, LOT_MAP_SENTINEL];
   const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
-  const currentPhotoIsSupabase = isSupabaseStorageUrl(currentPhoto);
+  const isMapSlide = currentPhoto === LOT_MAP_SENTINEL;
+  const currentPhotoIsSupabase = !isMapSlide && isSupabaseStorageUrl(currentPhoto);
   const miniPhotosSource = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
   const miniPhotos = miniPhotosSource.slice(0, 7);
   const streetViewHref =
@@ -1058,15 +1067,21 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
             <div className="space-y-8 md:-ml-10">
               <div className="rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg h-[240px] md:h-auto" style={isDesktop ? { height: reserveHeight } : undefined}>
                 <div className="relative w-full h-full">
-                  <Image
-                    src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
-                    alt={`${locationName} parking`}
-                    fill
-                    priority
-                    quality={100}
-                    unoptimized={currentPhotoIsSupabase}
-                    className="object-cover"
-                  />
+                  {isMapSlide ? (
+                    <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e] flex items-center justify-center"><span className="text-white/50 text-xs">Učitavanje mape…</span></div>}>
+                      <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={false} />
+                    </Suspense>
+                  ) : (
+                    <Image
+                      src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
+                      alt={`${locationName} parking`}
+                      fill
+                      priority
+                      quality={100}
+                      unoptimized={currentPhotoIsSupabase}
+                      className="object-cover"
+                    />
+                  )}
                   {/* Photo Navigation */}
                   {photos.length > 1 && (
                     <>
@@ -1089,19 +1104,21 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </div>
                     </>
                   )}
-                  
-                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)] pointer-events-none" />
-                  
-                  <div className="absolute bottom-4 left-4 z-10">
-                    <div className="w-10 h-10 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
-                      <svg viewBox="0 0 64 64" className="w-6 h-6">
-                        <circle cx="20" cy="32" r="7" fill="#ffffff" />
-                        <circle cx="44" cy="32" r="7" fill="#ffffff" />
-                        <circle cx="32" cy="32" r="5" fill="#ffffff" />
-                        <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
-                      </svg>
+
+                  {!isMapSlide && <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)] pointer-events-none" />}
+
+                  {!isMapSlide && (
+                    <div className="absolute bottom-4 left-4 z-10">
+                      <div className="w-10 h-10 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
+                        <svg viewBox="0 0 64 64" className="w-6 h-6">
+                          <circle cx="20" cy="32" r="7" fill="#ffffff" />
+                          <circle cx="44" cy="32" r="7" fill="#ffffff" />
+                          <circle cx="32" cy="32" r="5" fill="#ffffff" />
+                          <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1358,6 +1375,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </button>
                     );
                   })}
+                  {hasLotCoords && (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPhotoIndex(photos.length - 1)}
+                      className={`relative aspect-square rounded-xl overflow-hidden border flex flex-col items-center justify-center bg-[#1a1a2e] ${currentPhotoIndex === photos.length - 1 ? "border-[#5F3DFC]" : "border-black/10"}`}
+                      aria-label="Parking mapa"
+                    >
+                      <MapPin className="w-4 h-4 text-[#5F3DFC]" />
+                      <span className="text-[8px] font-semibold text-[#5F3DFC] mt-0.5 leading-tight">Mapa</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1393,6 +1421,38 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       </div>
                     ) : null}
                   </div>
+
+                  {hasLotCoords && (
+                    <div className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left"
+                        aria-expanded={openSections.spots}
+                        onClick={() => setOpenSections((prev) => ({ ...prev, spots: !prev.spots }))}
+                      >
+                        <span className="inline-flex items-center gap-3">
+                          <MapPin className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                          <span className="text-sm md:text-base font-semibold">Parking mapa</span>
+                        </span>
+                        {openSections.spots ? (
+                          <Minus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        ) : (
+                          <Plus className="w-5 h-5 text-[#5F3DFC] shrink-0" />
+                        )}
+                      </button>
+                      {openSections.spots && (
+                        <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-3">
+                          <p className="text-xs text-black/60">Satelitski prikaz parkirališta s točnom lokacijom mjesta.</p>
+                          <div className="relative w-full h-[280px] md:h-[380px] rounded-2xl overflow-hidden border border-black/10">
+                            <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e] flex items-center justify-center"><span className="text-white/50 text-xs">Učitavanje mape…</span></div>}>
+                              <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={true} />
+                            </Suspense>
+                          </div>
+                          <p className="text-[11px] text-black/40">Premium mjesta i numeracija spotova uskoro.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {serviceWidgets.map((item) => (
                     <div key={item.id} className="rounded-2xl border border-black/10 bg-white text-black overflow-hidden">
