@@ -2272,16 +2272,15 @@ class _SpotsSectionState extends State<_SpotsSection> {
     try {
       final client = Supabase.instance.client;
       await client.from('spots').delete().eq('location_id', widget.locationId);
-      final lats = _manualPins.map((p) => p.latitude).toList()..sort();
-      final minLat = lats.first; final maxLat = lats.last;
-      final latRange = maxLat - minLat;
+      // 5 vertical lng-based columns (left→right = lane 1→5, each ~1 car width)
+      final lngs = _manualPins.map((p) => p.longitude).toList()..sort();
+      final minLng = lngs.first; final maxLng = lngs.last;
+      final lngRange = maxLng - minLng;
       final sectorCounts = List.filled(5, 0);
       final newSpots = _manualPins.map((p) {
-        final band = latRange > 0 ? ((p.latitude - minLat) / latRange * 4.99).floor().clamp(0, 4) : 0;
-        final sectorIdx = 4 - band;
-        sectorCounts[sectorIdx]++;
-        final rowLetter = String.fromCharCode(65 + sectorIdx);
-        return {'location_id': widget.locationId, 'label': '$rowLetter${sectorCounts[sectorIdx]}', 'row_num': sectorIdx, 'col_num': sectorCounts[sectorIdx] - 1, 'lat': p.latitude, 'lng': p.longitude, 'active': true};
+        final col = lngRange > 0 ? ((p.longitude - minLng) / lngRange * 4.99).floor().clamp(0, 4) : 0;
+        sectorCounts[col]++;
+        return {'location_id': widget.locationId, 'label': '${col + 1}-${sectorCounts[col]}', 'row_num': sectorCounts[col] - 1, 'col_num': col, 'lat': p.latitude, 'lng': p.longitude, 'active': true};
       }).toList();
       await client.from('spots').insert(newSpots);
       await _fetchSpots();
@@ -2347,8 +2346,8 @@ class _SpotsSectionState extends State<_SpotsSection> {
           ],
         ] else ...[
           Text(Lang.sel(c,
-            'Tap map to place spots. Row letter assigned by zone (${_manualPins.length} placed)',
-            'Tapni kartu za postavljanje spotova. Slovo retka po zoni (${_manualPins.length} postavljeno)'),
+            'Tap to place cars. Lane 1–5 left→right (~1 car width each). (${_manualPins.length} placed)',
+            'Tapni za postavljanje auta. Trak 1–5 lijevo→desno (~1 auto širine). (${_manualPins.length} postavljeno)'),
             style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
           const SizedBox(height: 8),
           ClipRRect(borderRadius: BorderRadius.circular(10),
@@ -2360,18 +2359,19 @@ class _SpotsSectionState extends State<_SpotsSection> {
                 TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
                 if (_hasBoundary) ...[
                   PolygonLayer(polygons: [Polygon(points: _boundaryLatLng, color: const Color(0x115F3DFC), borderColor: const Color(0xFF5F3DFC), borderStrokeWidth: 1.5)]),
+                  // 5 vertical car-width columns (left→right, lane 1→5)
                   if (_boundaryLatLng.isNotEmpty) ...[
                     ...List.generate(5, (i) {
                       final lats = _boundaryLatLng.map((p) => p.latitude).toList()..sort();
                       final lngs = _boundaryLatLng.map((p) => p.longitude).toList()..sort();
                       final minLat = lats.first; final maxLat = lats.last;
                       final minLng = lngs.first; final maxLng = lngs.last;
-                      final latStep = (maxLat - minLat) / 5;
-                      final sLat = minLat + i * latStep;
-                      final eLat = minLat + (i + 1) * latStep;
+                      final lngStep = (maxLng - minLng) / 5;
+                      final sLng = minLng + i * lngStep;
+                      final eLng = minLng + (i + 1) * lngStep;
                       return PolygonLayer(polygons: [Polygon(
-                        points: [LatLng(eLat, minLng), LatLng(eLat, maxLng), LatLng(sLat, maxLng), LatLng(sLat, minLng)],
-                        color: sectorColors[4 - i].withOpacity(0.35), borderStrokeWidth: 0)]);
+                        points: [LatLng(maxLat, sLng), LatLng(maxLat, eLng), LatLng(minLat, eLng), LatLng(minLat, sLng)],
+                        color: sectorColors[i].withOpacity(0.35), borderStrokeWidth: 0)]);
                     }),
                   ],
                 ],
