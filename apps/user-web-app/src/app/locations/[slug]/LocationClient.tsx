@@ -1069,7 +1069,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                 <div className="relative w-full h-full">
                   {isMapSlide ? (
                     <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e] flex items-center justify-center"><span className="text-white/50 text-xs">Učitavanje mape…</span></div>}>
-                      <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={false} locationId={hub.id} />
+                      <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={false} locationId={hub.id} boundary={(hub.verification_metadata?.boundary as Array<{lat:number;lng:number}> | undefined)} />
                     </Suspense>
                   ) : (
                     <Image
@@ -1445,7 +1445,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                           <p className="text-xs text-black/60">Satelitski prikaz parkirališta s točnom lokacijom mjesta.</p>
                           <div className="relative w-full h-[280px] md:h-[380px] rounded-2xl overflow-hidden border border-black/10">
                             <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e] flex items-center justify-center"><span className="text-white/50 text-xs">Učitavanje mape…</span></div>}>
-                              <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={true} locationId={hub.id} />
+                              <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={true} locationId={hub.id} boundary={(hub.verification_metadata?.boundary as Array<{lat:number;lng:number}> | undefined)} />
                             </Suspense>
                           </div>
                           <p className="text-[11px] text-black/40">Premium mjesta i numeracija spotova uskoro.</p>
