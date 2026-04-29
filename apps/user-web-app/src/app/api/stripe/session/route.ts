@@ -423,7 +423,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Spot assignment
-    let assignedSpot: { label: string } | null = null;
+    let assignedSpot: { label: string; lat: number | null; lng: number | null; col_num: number | null } | null = null;
     if (dbClient) {
       try {
         const { data: assignmentRows } = await dbClient
@@ -436,11 +436,11 @@ export async function GET(req: NextRequest) {
         if (spotId) {
           const { data: spotRow } = await dbClient
             .from('spots')
-            .select('label')
+            .select('label,lat,lng,col_num')
             .eq('id', spotId)
             .single();
-          const label = (spotRow as { label?: string } | null)?.label ?? null;
-          if (label) assignedSpot = { label };
+          const sr = spotRow as { label?: string; lat?: number | null; lng?: number | null; col_num?: number | null } | null;
+          if (sr?.label) assignedSpot = { label: sr.label, lat: sr.lat ?? null, lng: sr.lng ?? null, col_num: sr.col_num ?? null };
         }
       } catch {}
     }

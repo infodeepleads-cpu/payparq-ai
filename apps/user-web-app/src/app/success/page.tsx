@@ -1,6 +1,7 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -41,7 +42,7 @@ type SessionSummary = {
   addons_config?: AddonsConfig | null;
   valet_attendant?: string | null;
   lot_point?: { lat: number; lng: number } | null;
-  assigned_spot?: { label: string } | null;
+  assigned_spot?: { label: string; lat?: number | null; lng?: number | null; col_num?: number | null } | null;
 };
 
 type Credits = number | '∞';
@@ -1250,20 +1251,46 @@ function SuccessContent() {
               </div>
             </div>
             {summary?.assigned_spot ? (
-              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
-                  <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
+              <div className="space-y-2">
+                <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
+                    <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
+                    {summary.assigned_spot.col_num != null && (
+                      <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">
+                        Trak {summary.assigned_spot.col_num + 1}/5
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    const spotLat = summary.assigned_spot.lat;
+                    const spotLng = summary.assigned_spot.lng;
+                    const navLat = spotLat ?? summary.lot_point?.lat;
+                    const navLng = spotLng ?? summary.lot_point?.lng;
+                    return navLat && navLng ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${navLat},${navLng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-semibold text-[#5F3DFC] underline shrink-0"
+                      >
+                        {spotLat ? 'Navigiraj do spota' : 'Navigacija'}
+                      </a>
+                    ) : null;
+                  })()}
                 </div>
                 {summary.lot_point && (
-                  <a
-                    href={`https://www.google.com/maps?q=${summary.lot_point.lat},${summary.lot_point.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] font-semibold text-[#5F3DFC] underline"
-                  >
-                    Navigacija
-                  </a>
+                  <div className="rounded-xl overflow-hidden border border-[#5F3DFC]/20" style={{ height: 160 }}>
+                    <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e]" />}>
+                      <LotMap
+                        lat={summary.lot_point.lat}
+                        lng={summary.lot_point.lng}
+                        locationId={summary.location_id ?? undefined}
+                        assignedSpotLabel={summary.assigned_spot.label}
+                        interactive={false}
+                      />
+                    </Suspense>
+                  </div>
                 )}
               </div>
             ) : (
