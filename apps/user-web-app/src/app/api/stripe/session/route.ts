@@ -421,6 +421,30 @@ export async function GET(req: NextRequest) {
     if (sessionMetadata.flow_type === 'park_now') {
       shuttleEnabled = true;
     }
+
+    // Spot assignment
+    let assignedSpot: { label: string } | null = null;
+    if (dbClient) {
+      try {
+        const { data: assignmentRows } = await dbClient
+          .from('spot_assignments')
+          .select('spot_id')
+          .eq('parking_session_id', session.id)
+          .eq('status', 'active')
+          .limit(1);
+        const spotId = (assignmentRows as { spot_id: string }[] | null)?.[0]?.spot_id ?? null;
+        if (spotId) {
+          const { data: spotRow } = await dbClient
+            .from('spots')
+            .select('label')
+            .eq('id', spotId)
+            .single();
+          const label = (spotRow as { label?: string } | null)?.label ?? null;
+          if (label) assignedSpot = { label };
+        }
+      } catch {}
+    }
+
     return NextResponse.json({
       session_id: session.id,
       ref_id: session.id.slice(-8),
@@ -436,6 +460,7 @@ export async function GET(req: NextRequest) {
       addons_config: addonsConfig,
       valet_attendant: valetAttendant,
       lot_point: lotPoint,
+      assigned_spot: assignedSpot,
       check_in: entryTime,
       check_out: exitTime,
       wallet_topup_credit_cents: walletTopupCreditCents,

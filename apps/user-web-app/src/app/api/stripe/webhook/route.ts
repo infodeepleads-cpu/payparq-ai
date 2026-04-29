@@ -1172,7 +1172,44 @@ export async function POST(req: Request) {
     console.log('✨ Successfully inserted parking session!');
     await sendBookingConfirmation(session, client);
 
-    // 4. UPDATE OCCUPANCY (Optional, best effort)
+    // 4. AUTO-ASSIGN SPOT (best effort)
+    try {
+      if (location_id) {
+        const { data: availableSpots } = await client
+          .from('spots')
+          .select('id')
+          .eq('location_id', location_id)
+          .eq('active', true);
+
+        if (availableSpots && availableSpots.length > 0) {
+          const spotIds = (availableSpots as { id: string }[]).map((s) => s.id);
+          const { data: takenAssignments } = await client
+            .from('spot_assignments')
+            .select('spot_id')
+            .in('spot_id', spotIds)
+            .eq('status', 'active');
+
+          const takenIds = new Set(
+            (takenAssignments as { spot_id: string }[] | null)?.map((a) => a.spot_id) ?? []
+          );
+          const freeSpots = spotIds.filter((id) => !takenIds.has(id));
+
+          if (freeSpots.length > 0) {
+            const pickedId = freeSpots[Math.floor(Math.random() * freeSpots.length)];
+            await client.from('spot_assignments').insert({
+              spot_id: pickedId,
+              parking_session_id: session.id,
+              status: 'active',
+            });
+            console.log(`🅿️ Spot assigned: ${pickedId}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('⚠️ Spot assignment failed:', e);
+    }
+
+    // 5. UPDATE OCCUPANCY (Optional, best effort)
     try {
         // First check if location exists, if not create a dummy one to avoid error
         const { data: loc } = await client.from('locations').select('occupancy').eq('id', location_id).maybeSingle();

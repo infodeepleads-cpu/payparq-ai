@@ -41,6 +41,7 @@ type SessionSummary = {
   addons_config?: AddonsConfig | null;
   valet_attendant?: string | null;
   lot_point?: { lat: number; lng: number } | null;
+  assigned_spot?: { label: string } | null;
 };
 
 type Credits = number | '∞';
@@ -1224,13 +1225,34 @@ function SuccessContent() {
               </div>
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold text-black">Parking spot</p>
-                <p className="text-[11px] text-black/50">Automatski dodjeljujemo slobodan spot</p>
+                <p className="text-[11px] text-black/50">
+                  {summary?.assigned_spot ? 'Vaš dodijeljeni spot' : 'Automatski dodjeljujemo slobodan spot'}
+                </p>
               </div>
             </div>
-            <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
-              <span className="text-[12px] text-[#5F3DFC] font-medium">Spot će biti potvrđen pri dolasku</span>
-              <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
-            </div>
+            {summary?.assigned_spot ? (
+              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
+                  <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
+                </div>
+                {summary.lot_point && (
+                  <a
+                    href={`https://www.google.com/maps?q=${summary.lot_point.lat},${summary.lot_point.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#5F3DFC] underline"
+                  >
+                    Navigacija
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
+                <span className="text-[12px] text-[#5F3DFC] font-medium">Spot će biti potvrđen pri dolasku</span>
+                <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
+              </div>
+            )}
             <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
           </div>
 
