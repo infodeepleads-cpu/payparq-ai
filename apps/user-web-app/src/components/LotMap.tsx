@@ -20,6 +20,8 @@ type Spot = {
   available: boolean;
 };
 
+type BoundaryPoint = { lat: number; lng: number };
+
 type Props = {
   lat: number;
   lng: number;
@@ -27,9 +29,10 @@ type Props = {
   interactive?: boolean;
   locationId?: string;
   assignedSpotLabel?: string;
+  boundary?: BoundaryPoint[];
 };
 
-export default function LotMap({ lat, lng, label, interactive = false, locationId, assignedSpotLabel }: Props) {
+export default function LotMap({ lat, lng, label, interactive = false, locationId, assignedSpotLabel, boundary }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [spots, setSpots] = useState<Spot[]>([]);
@@ -73,6 +76,32 @@ export default function LotMap({ lat, lng, label, interactive = false, locationI
         new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([lng, lat])
           .addTo(map);
+      }
+
+      // Boundary polygon
+      if (boundary && boundary.length >= 3) {
+        const coords = boundary.map((p) => [p.lng, p.lat] as [number, number]);
+        coords.push(coords[0]); // close ring
+        map.addSource('lot-boundary', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'Polygon', coordinates: [coords] },
+            properties: {},
+          },
+        });
+        map.addLayer({
+          id: 'lot-boundary-fill',
+          type: 'fill',
+          source: 'lot-boundary',
+          paint: { 'fill-color': '#5F3DFC', 'fill-opacity': 0.12 },
+        });
+        map.addLayer({
+          id: 'lot-boundary-line',
+          type: 'line',
+          source: 'lot-boundary',
+          paint: { 'line-color': '#5F3DFC', 'line-width': 2, 'line-opacity': 0.8 },
+        });
       }
 
       // Spot markers
@@ -119,7 +148,7 @@ export default function LotMap({ lat, lng, label, interactive = false, locationI
       mapRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lng, interactive, spots, assignedSpotLabel]);
+  }, [lat, lng, interactive, spots, assignedSpotLabel, boundary]);
 
   return (
     <div className="relative w-full h-full">
