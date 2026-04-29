@@ -1464,6 +1464,127 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                         ),
                         const Divider(height: 1, thickness: 1, color: AppTheme.border),
 
+                        // Section 1b: Lot Boundary
+                        if (canEdit || meta['boundary'] != null) ...[
+                          Builder(builder: (_) {
+                            final raw = meta['boundary'];
+                            List<LatLng> boundaryPoints = raw != null
+                              ? (raw as List).map((p) => LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble())).toList()
+                              : <LatLng>[];
+                            bool drawMode = boundaryPoints.isEmpty && canEdit;
+                            bool savingBoundary = false;
+                            final locId = loc['id']?.toString() ?? '';
+
+                            Future<void> saveBoundary(StateSetter setSt) async {
+                              if (boundaryPoints.length < 3) return;
+                              setSt(() => savingBoundary = true);
+                              final newMeta = Map<String, dynamic>.from(meta);
+                              newMeta['boundary'] = boundaryPoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList();
+                              await Supabase.instance.client.from('locations').update({'verification_metadata': newMeta}).eq('id', locId);
+                              meta['boundary'] = newMeta['boundary'];
+                              setSt(() { savingBoundary = false; drawMode = false; });
+                            }
+
+                            return StatefulBuilder(builder: (_, setSt) {
+                              final center = LatLng(pendingLatitude != 0.0 ? pendingLatitude : 43.51, pendingLongitude != 0.0 ? pendingLongitude : 16.44);
+                              return ExpansionTile(
+                                tilePadding: EdgeInsets.zero,
+                                childrenPadding: const EdgeInsets.only(bottom: 12),
+                                leading: const Icon(Icons.crop_free, size: 17, color: Colors.black54),
+                                title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Lot Boundary', 'Granica parcele'),
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                                iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                                children: [
+                                  if (drawMode) ...[
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider),
+                                      'Tap map to mark corners (${boundaryPoints.length} added)',
+                                      'Tapni kartu za označavanje kutova (${boundaryPoints.length} dodano)'),
+                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(borderRadius: BorderRadius.circular(10),
+                                      child: SizedBox(height: 260, child: FlutterMap(
+                                        options: MapOptions(
+                                          initialCenter: center, initialZoom: 18,
+                                          onTap: (_, latLng) => setSt(() => boundaryPoints.add(latLng))),
+                                        children: [
+                                          TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                          if (boundaryPoints.length >= 3)
+                                            PolygonLayer(polygons: [Polygon(points: boundaryPoints, color: const Color(0x225F3DFC), borderColor: const Color(0xFF5F3DFC), borderStrokeWidth: 2.0)]),
+                                          MarkerLayer(markers: boundaryPoints.asMap().entries.map((e) => Marker(
+                                            point: e.value, width: 22, height: 22,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: e.key == 0 ? Colors.green.shade600 : const Color(0xFF5F3DFC),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 2)),
+                                              alignment: Alignment.center,
+                                              child: Text('${e.key + 1}', style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold))))).toList()),
+                                        ]))),
+                                    const SizedBox(height: 8),
+                                    Row(children: [
+                                      if (boundaryPoints.isNotEmpty) ...[
+                                        OutlinedButton(
+                                          onPressed: () => setSt(() => boundaryPoints.removeLast()),
+                                          style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                          child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Undo', 'Poništi'), style: GoogleFonts.inter(fontSize: 12))),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      if (boundaryPoints.length >= 3) ...[
+                                        ElevatedButton(
+                                          onPressed: savingBoundary ? null : () => saveBoundary(setSt),
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                          child: savingBoundary
+                                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                            : Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Save Boundary', 'Spremi granicu'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      OutlinedButton(
+                                        onPressed: () => setSt(() => drawMode = false),
+                                        style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                        child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Cancel', 'Odustani'), style: GoogleFonts.inter(fontSize: 12))),
+                                    ]),
+                                  ] else if (boundaryPoints.isNotEmpty) ...[
+                                    ClipRRect(borderRadius: BorderRadius.circular(10),
+                                      child: SizedBox(height: 180, child: FlutterMap(
+                                        options: MapOptions(initialCenter: center, initialZoom: 18, interactionOptions: const InteractionOptions(flags: InteractiveFlag.none)),
+                                        children: [
+                                          TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                                          PolygonLayer(polygons: [Polygon(points: boundaryPoints, color: const Color(0x225F3DFC), borderColor: const Color(0xFF5F3DFC), borderStrokeWidth: 2.0)]),
+                                          MarkerLayer(markers: boundaryPoints.map((p) => Marker(point: p, width: 10, height: 10, child: Container(decoration: const BoxDecoration(color: Color(0xFF5F3DFC), shape: BoxShape.circle)))).toList()),
+                                        ]))),
+                                    const SizedBox(height: 8),
+                                    Row(children: [
+                                      Text('${boundaryPoints.length} ${Lang.sel(ref.watch(localeIsCroatianProvider), 'corners', 'kutova')}',
+                                        style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+                                      const Spacer(),
+                                      OutlinedButton.icon(
+                                        onPressed: () => setSt(() => drawMode = true),
+                                        icon: const Icon(Icons.edit, size: 13),
+                                        label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Redraw', 'Nacrtaj ponovo'), style: GoogleFonts.inter(fontSize: 12)),
+                                        style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+                                      const SizedBox(width: 8),
+                                      OutlinedButton(
+                                        onPressed: () => setSt(() { boundaryPoints = []; meta['boundary'] = null; }),
+                                        style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                        child: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Clear', 'Obriši'), style: GoogleFonts.inter(fontSize: 12, color: Colors.red.shade400))),
+                                    ]),
+                                  ] else ...[
+                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'No boundary set. Draw it to enable GPS spot placement.', 'Granica nije postavljena. Nacrtajte je za GPS pozicioniranje spotova.'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+                                    const SizedBox(height: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: () => setSt(() => drawMode = true),
+                                      icon: const Icon(Icons.edit_location_alt, size: 14),
+                                      label: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Draw Boundary', 'Nacrtaj granicu'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
+                                  ],
+                                ],
+                              );
+                            });
+                          }),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
                         // Section 2: Photos
                         if (canEdit || editablePhotoUrls.isNotEmpty) ...[
                           ExpansionTile(
@@ -1622,137 +1743,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
 
                         // Section 4: Spots (superadmin + admin)
                         if (isSuperAdmin || isAdmin) ...[
-                          Builder(builder: (ctx) {
-                            List<Map<String, dynamic>> spotsData = [];
-                            bool spotsLoaded = false;
-                            bool generatingSpots = false;
-                            final rowsCtrl = TextEditingController(text: '4');
-                            final colsCtrl = TextEditingController(text: '5');
-                            final locationIdStr = loc['id']?.toString() ?? '';
-
-                            Future<void> fetchSpots(StateSetter setSt) async {
-                              if (locationIdStr.isEmpty) return;
-                              final client = Supabase.instance.client;
-                              final res = await client.from('spots').select('id,label,row_num,col_num,price_modifier_cents').eq('location_id', locationIdStr).order('row_num').order('col_num');
-                              final rows = (res as List).cast<Map<String, dynamic>>();
-                              final assignRes = await client.from('spot_assignments').select('spot_id').eq('status', 'active').inFilter('spot_id', rows.map((r) => r['id']).toList());
-                              final takenIds = Set<String>.from((assignRes as List).map((a) => a['spot_id']?.toString() ?? ''));
-                              setSt(() {
-                                spotsData = rows.map((r) => {...r, 'taken': takenIds.contains(r['id']?.toString())}).toList();
-                                spotsLoaded = true;
-                              });
-                            }
-
-                            Future<void> generateSpots(StateSetter setSt) async {
-                              final rows = int.tryParse(rowsCtrl.text.trim()) ?? 0;
-                              final cols = int.tryParse(colsCtrl.text.trim()) ?? 0;
-                              if (rows <= 0 || cols <= 0 || locationIdStr.isEmpty) return;
-                              setSt(() => generatingSpots = true);
-                              final client = Supabase.instance.client;
-                              await client.from('spots').delete().eq('location_id', locationIdStr);
-                              final newSpots = <Map<String, dynamic>>[];
-                              for (int r = 0; r < rows; r++) {
-                                for (int c = 0; c < cols; c++) {
-                                  final rowLetter = String.fromCharCode(65 + r); // A, B, C...
-                                  newSpots.add({'location_id': locationIdStr, 'label': '$rowLetter${c + 1}', 'row_num': r, 'col_num': c, 'active': true});
-                                }
-                              }
-                              await client.from('spots').insert(newSpots);
-                              await fetchSpots(setSt);
-                              setSt(() => generatingSpots = false);
-                            }
-
-                            return StatefulBuilder(builder: (_, setSt) {
-                              return ExpansionTile(
-                                tilePadding: EdgeInsets.zero,
-                                childrenPadding: const EdgeInsets.only(bottom: 12),
-                                leading: const Icon(Icons.grid_view_outlined, size: 17, color: Colors.black54),
-                                title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Spots', 'Spotovi'),
-                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-                                iconColor: Colors.black45,
-                                collapsedIconColor: Colors.black45,
-                                onExpansionChanged: (expanded) { if (expanded && !spotsLoaded) fetchSpots(setSt); },
-                                children: [
-                                  // Grid generator
-                                  Row(children: [
-                                    Expanded(child: TextField(
-                                      controller: rowsCtrl,
-                                      keyboardType: TextInputType.number,
-                                      style: GoogleFonts.inter(fontSize: 13),
-                                      decoration: InputDecoration(
-                                        labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Rows', 'Redovi'),
-                                        filled: true, fillColor: AppTheme.background,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)),
-                                    )),
-                                    const SizedBox(width: 8),
-                                    Expanded(child: TextField(
-                                      controller: colsCtrl,
-                                      keyboardType: TextInputType.number,
-                                      style: GoogleFonts.inter(fontSize: 13),
-                                      decoration: InputDecoration(
-                                        labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Cols', 'Stupci'),
-                                        filled: true, fillColor: AppTheme.background,
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)),
-                                    )),
-                                    const SizedBox(width: 8),
-                                    ElevatedButton(
-                                      onPressed: generatingSpots ? null : () => generateSpots(setSt),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.black, foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                        minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                                      child: generatingSpots
-                                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                        : Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Generate', 'Generiraj'),
-                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                                    ),
-                                  ]),
-                                  if (spotsData.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    Text('${spotsData.length} ${Lang.sel(ref.watch(localeIsCroatianProvider), 'spots', 'spotova')}',
-                                      style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
-                                    const SizedBox(height: 6),
-                                    GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 4, mainAxisSpacing: 4, childAspectRatio: 1.6),
-                                      itemCount: spotsData.length,
-                                      itemBuilder: (_, i) {
-                                        final spot = spotsData[i];
-                                        final taken = spot['taken'] == true;
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            color: taken ? Colors.black12 : Colors.green.shade100,
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: taken ? Colors.black26 : Colors.green.shade300, width: 1)),
-                                          alignment: Alignment.center,
-                                          child: Text(spot['label']?.toString() ?? '',
-                                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700,
-                                              color: taken ? Colors.black38 : Colors.green.shade800)),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(children: [
-                                      Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.green.shade300))),
-                                      const SizedBox(width: 4),
-                                      Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Free', 'Slobodno'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
-                                      const SizedBox(width: 12),
-                                      Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.black26))),
-                                      const SizedBox(width: 4),
-                                      Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Taken', 'Zauzeto'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
-                                    ]),
-                                  ],
-                                  if (spotsLoaded && spotsData.isEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'No spots yet. Generate a grid above.', 'Nema spotova. Generirajte mrežu gore.'),
-                                      style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
-                                  ],
-                                ],
-                              );
-                            });
-                          }),
+                          _SpotsSection(
+                            locationId: loc['id']?.toString() ?? '',
+                            boundary: meta['boundary'] as List?,
+                            center: LatLng(pendingLatitude != 0.0 ? pendingLatitude : 43.51, pendingLongitude != 0.0 ? pendingLongitude : 16.44),
+                            isCroatian: ref.watch(localeIsCroatianProvider),
+                          ),
                           const Divider(height: 1, thickness: 1, color: AppTheme.border),
                         ],
 
@@ -2156,6 +2152,303 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Spots Section ────────────────────────────────────────────────────────────
+
+class _SpotsSection extends StatefulWidget {
+  final String locationId;
+  final List<dynamic>? boundary;
+  final LatLng center;
+  final bool isCroatian;
+
+  const _SpotsSection({
+    required this.locationId,
+    required this.boundary,
+    required this.center,
+    required this.isCroatian,
+  });
+
+  @override
+  State<_SpotsSection> createState() => _SpotsSectionState();
+}
+
+class _SpotsSectionState extends State<_SpotsSection> {
+  List<Map<String, dynamic>> _spotsData = [];
+  bool _spotsLoaded = false;
+  bool _generatingSpots = false;
+  bool _sectorMode = false;
+  final List<LatLng> _manualPins = [];
+  bool _savingPins = false;
+  final _rowsCtrl = TextEditingController(text: '4');
+  final _colsCtrl = TextEditingController(text: '5');
+
+  @override
+  void dispose() {
+    _rowsCtrl.dispose();
+    _colsCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _hasBoundary => widget.boundary != null && widget.boundary!.length >= 3;
+
+  List<LatLng> get _boundaryLatLng => _hasBoundary
+      ? widget.boundary!
+          .map((p) => LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble()))
+          .toList()
+      : <LatLng>[];
+
+  Map<String, double> _interpolate(List<dynamic> corners, double u, double v) {
+    final tl = corners[0]; final tr = corners[1];
+    final br = corners[2]; final bl = corners[3];
+    final topLat = (tl['lat'] as num) + u * ((tr['lat'] as num) - (tl['lat'] as num));
+    final topLng = (tl['lng'] as num) + u * ((tr['lng'] as num) - (tl['lng'] as num));
+    final botLat = (bl['lat'] as num) + u * ((br['lat'] as num) - (bl['lat'] as num));
+    final botLng = (bl['lng'] as num) + u * ((br['lng'] as num) - (bl['lng'] as num));
+    return {'lat': topLat + v * (botLat - topLat), 'lng': topLng + v * (botLng - topLng)};
+  }
+
+  Future<void> _fetchSpots() async {
+    if (widget.locationId.isEmpty) return;
+    final client = Supabase.instance.client;
+    final res = await client
+        .from('spots')
+        .select('id,label,row_num,col_num,price_modifier_cents,lat,lng')
+        .eq('location_id', widget.locationId)
+        .order('row_num')
+        .order('col_num');
+    final rows = (res as List).cast<Map<String, dynamic>>();
+    if (rows.isEmpty) {
+      if (mounted) setState(() { _spotsData = []; _spotsLoaded = true; });
+      return;
+    }
+    final assignRes = await client
+        .from('spot_assignments')
+        .select('spot_id')
+        .eq('status', 'active')
+        .inFilter('spot_id', rows.map((r) => r['id']).toList());
+    final takenIds = Set<String>.from((assignRes as List).map((a) => a['spot_id']?.toString() ?? ''));
+    if (mounted) setState(() {
+      _spotsData = rows.map((r) => {...r, 'taken': takenIds.contains(r['id']?.toString())}).toList();
+      _spotsLoaded = true;
+    });
+  }
+
+  Future<void> _generateSpots() async {
+    final rows = int.tryParse(_rowsCtrl.text.trim()) ?? 0;
+    final cols = int.tryParse(_colsCtrl.text.trim()) ?? 0;
+    if (rows <= 0 || cols <= 0 || widget.locationId.isEmpty) return;
+    setState(() => _generatingSpots = true);
+    try {
+      final client = Supabase.instance.client;
+      await client.from('spots').delete().eq('location_id', widget.locationId);
+      final newSpots = <Map<String, dynamic>>[];
+      final corners = _hasBoundary && widget.boundary!.length >= 4 ? widget.boundary! : null;
+      for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+          final rowLetter = String.fromCharCode(65 + r);
+          double? spotLat, spotLng;
+          if (corners != null) {
+            final u = cols > 1 ? c / (cols - 1) : 0.5;
+            final v = rows > 1 ? r / (rows - 1) : 0.5;
+            final pos = _interpolate(corners, u, v);
+            spotLat = pos['lat']; spotLng = pos['lng'];
+          }
+          newSpots.add({'location_id': widget.locationId, 'label': '$rowLetter${c + 1}', 'row_num': r, 'col_num': c, 'lat': spotLat, 'lng': spotLng, 'active': true});
+        }
+      }
+      await client.from('spots').insert(newSpots);
+      await _fetchSpots();
+    } finally {
+      if (mounted) setState(() => _generatingSpots = false);
+    }
+  }
+
+  Future<void> _savePins() async {
+    if (_manualPins.isEmpty || widget.locationId.isEmpty) return;
+    setState(() => _savingPins = true);
+    try {
+      final client = Supabase.instance.client;
+      await client.from('spots').delete().eq('location_id', widget.locationId);
+      // 5 vertical lng-based columns (left→right = lane 1→5, each ~1 car width)
+      final lngs = _manualPins.map((p) => p.longitude).toList()..sort();
+      final minLng = lngs.first; final maxLng = lngs.last;
+      final lngRange = maxLng - minLng;
+      final sectorCounts = List.filled(5, 0);
+      final newSpots = _manualPins.map((p) {
+        final col = lngRange > 0 ? ((p.longitude - minLng) / lngRange * 4.99).floor().clamp(0, 4) : 0;
+        sectorCounts[col]++;
+        return {'location_id': widget.locationId, 'label': '${col + 1}-${sectorCounts[col]}', 'row_num': sectorCounts[col] - 1, 'col_num': col, 'lat': p.latitude, 'lng': p.longitude, 'active': true};
+      }).toList();
+      await client.from('spots').insert(newSpots);
+      await _fetchSpots();
+      if (mounted) setState(() { _savingPins = false; _sectorMode = false; _manualPins.clear(); });
+    } catch (_) {
+      if (mounted) setState(() => _savingPins = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.isCroatian;
+    final sectorColors = [Colors.red.shade100, Colors.orange.shade100, Colors.yellow.shade100, Colors.green.shade100, Colors.blue.shade100];
+
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 12),
+      leading: const Icon(Icons.grid_view_outlined, size: 17, color: Colors.black54),
+      title: Text(Lang.sel(c, 'Spots', 'Spotovi'), style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+      iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+      onExpansionChanged: (expanded) { if (expanded && !_spotsLoaded) _fetchSpots(); },
+      children: [
+        if (!_sectorMode) ...[
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.auto_fix_high, size: 14),
+              label: Text(Lang.sel(c, 'Auto fill', 'Auto popuni'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.black), foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 10)))),
+            const SizedBox(width: 8),
+            Expanded(child: Tooltip(
+              message: _hasBoundary ? '' : Lang.sel(c, 'Draw lot boundary first', 'Prvo nacrtajte granicu parcele'),
+              child: OutlinedButton.icon(
+                onPressed: _hasBoundary ? () => setState(() => _sectorMode = true) : null,
+                icon: const Icon(Icons.touch_app_outlined, size: 14),
+                label: Text(Lang.sel(c, '5-sector manual', '5-sektora ručno'), style: GoogleFonts.inter(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: _hasBoundary ? AppTheme.border : Colors.black12),
+                  foregroundColor: _hasBoundary ? Colors.black54 : Colors.black26,
+                  padding: const EdgeInsets.symmetric(vertical: 10))))),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: TextField(
+              controller: _rowsCtrl, keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
+              decoration: InputDecoration(labelText: Lang.sel(c, 'Rows', 'Redovi'), filled: true, fillColor: AppTheme.background, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+            const SizedBox(width: 8),
+            Expanded(child: TextField(
+              controller: _colsCtrl, keyboardType: TextInputType.number, style: GoogleFonts.inter(fontSize: 13),
+              decoration: InputDecoration(labelText: Lang.sel(c, 'Cols', 'Stupci'), filled: true, fillColor: AppTheme.background, border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none)))),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: _generatingSpots ? null : _generateSpots,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              child: _generatingSpots
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(Lang.sel(c, 'Generate', 'Generiraj'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+          ]),
+          if (!_hasBoundary) ...[
+            const SizedBox(height: 6),
+            Text(Lang.sel(c, '⚠ Draw lot boundary to add GPS to each spot.', '⚠ Nacrtajte granicu za GPS koordinate spotova.'),
+              style: GoogleFonts.inter(fontSize: 11, color: Colors.orange.shade700)),
+          ],
+        ] else ...[
+          Text(Lang.sel(c,
+            'Tap to place cars. Lane 1–5 left→right (~1 car width each). (${_manualPins.length} placed)',
+            'Tapni za postavljanje auta. Trak 1–5 lijevo→desno (~1 auto širine). (${_manualPins.length} postavljeno)'),
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.black45)),
+          const SizedBox(height: 8),
+          ClipRRect(borderRadius: BorderRadius.circular(10),
+            child: SizedBox(height: 300, child: FlutterMap(
+              options: MapOptions(
+                initialCenter: widget.center, initialZoom: 18,
+                onTap: (_, latLng) => setState(() => _manualPins.add(latLng))),
+              children: [
+                TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.payparq.ai'),
+                if (_hasBoundary) ...[
+                  PolygonLayer(polygons: [Polygon(points: _boundaryLatLng, color: const Color(0x115F3DFC), borderColor: const Color(0xFF5F3DFC), borderStrokeWidth: 1.5)]),
+                  // 5 vertical car-width columns (left→right, lane 1→5)
+                  if (_boundaryLatLng.isNotEmpty) ...[
+                    ...List.generate(5, (i) {
+                      final lats = _boundaryLatLng.map((p) => p.latitude).toList()..sort();
+                      final lngs = _boundaryLatLng.map((p) => p.longitude).toList()..sort();
+                      final minLat = lats.first; final maxLat = lats.last;
+                      final minLng = lngs.first; final maxLng = lngs.last;
+                      final lngStep = (maxLng - minLng) / 5;
+                      final sLng = minLng + i * lngStep;
+                      final eLng = minLng + (i + 1) * lngStep;
+                      return PolygonLayer(polygons: [Polygon(
+                        points: [LatLng(maxLat, sLng), LatLng(maxLat, eLng), LatLng(minLat, eLng), LatLng(minLat, sLng)],
+                        color: sectorColors[i].withOpacity(0.35), borderStrokeWidth: 0)]);
+                    }),
+                  ],
+                ],
+                MarkerLayer(markers: _manualPins.map((p) => Marker(
+                  point: p, width: 20, height: 20,
+                  child: Container(
+                    decoration: const BoxDecoration(color: Color(0xFF5F3DFC), shape: BoxShape.circle, boxShadow: [BoxShadow(color: Color(0x445F3DFC), blurRadius: 4)]),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.local_parking, color: Colors.white, size: 12)))).toList()),
+              ]))),
+          const SizedBox(height: 8),
+          Row(children: [
+            if (_manualPins.isNotEmpty) ...[
+              OutlinedButton(
+                onPressed: () => setState(() => _manualPins.removeLast()),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                child: Text(Lang.sel(c, 'Undo', 'Poništi'), style: GoogleFonts.inter(fontSize: 12))),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _savingPins ? null : _savePins,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                child: _savingPins
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(Lang.sel(c, 'Save spots', 'Spremi spotove'), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600))),
+              const SizedBox(width: 8),
+            ],
+            OutlinedButton(
+              onPressed: () => setState(() { _sectorMode = false; _manualPins.clear(); }),
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.border), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: Text(Lang.sel(c, 'Cancel', 'Odustani'), style: GoogleFonts.inter(fontSize: 12))),
+          ]),
+        ],
+        if (_spotsData.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('${_spotsData.length} ${Lang.sel(c, 'spots', 'spotova')}',
+            style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          GridView.builder(
+            shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 4, mainAxisSpacing: 4, childAspectRatio: 1.6),
+            itemCount: _spotsData.length,
+            itemBuilder: (_, i) {
+              final spot = _spotsData[i];
+              final taken = spot['taken'] == true;
+              final hasGps = spot['lat'] != null && spot['lng'] != null;
+              return Container(
+                decoration: BoxDecoration(
+                  color: taken ? Colors.black12 : Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: taken ? Colors.black26 : Colors.green.shade300, width: 1)),
+                alignment: Alignment.center,
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(spot['label']?.toString() ?? '', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: taken ? Colors.black38 : Colors.green.shade800)),
+                  if (hasGps) const Icon(Icons.location_on, size: 7, color: Colors.blue),
+                ]));
+            }),
+          const SizedBox(height: 6),
+          Row(children: [
+            Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.green.shade300))),
+            const SizedBox(width: 4),
+            Text(Lang.sel(c, 'Free', 'Slobodno'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+            const SizedBox(width: 10),
+            Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(3), border: Border.all(color: Colors.black26))),
+            const SizedBox(width: 4),
+            Text(Lang.sel(c, 'Taken', 'Zauzeto'), style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+            const SizedBox(width: 10),
+            const Icon(Icons.location_on, size: 10, color: Colors.blue),
+            const SizedBox(width: 3),
+            Text('GPS', style: GoogleFonts.inter(fontSize: 10, color: Colors.black45)),
+          ]),
+        ],
+        if (_spotsLoaded && _spotsData.isEmpty) ...[
+          const SizedBox(height: 8),
+          Text(Lang.sel(c, 'No spots yet. Generate a grid or use 5-sector above.', 'Nema spotova. Generirajte mrežu ili koristite 5-sektora.'),
+            style: GoogleFonts.inter(fontSize: 12, color: Colors.black45)),
+        ],
+      ],
     );
   }
 }
