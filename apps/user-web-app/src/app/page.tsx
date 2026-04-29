@@ -362,6 +362,50 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="relative border-t border-white/10">
+          <div className="absolute inset-0 bg-gradient-to-r from-white to-[#5F3DFC]"></div>
+          <div className="relative max-w-6xl mx-auto px-6 py-16 md:py-24 flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="flex-1">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-4">
+                List your space
+              </p>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-black">
+                Start earning money as a Payparq host
+              </h2>
+              <p className="text-lg text-black/70 mb-8 max-w-lg">
+                Turn your private parking spot into passive income. Go live in 60 minutes.
+              </p>
+              <div className="space-y-3 mb-8">
+                <div className="flex items-start gap-3">
+                  <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
+                  <p className="text-base text-black">100% free to list</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
+                  <p className="text-base text-black">Verified drivers and vehicles</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
+                  <p className="text-base text-black">Set your own prices</p>
+                </div>
+              </div>
+              <Link
+                href="/list-your-space"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#5F3DFC] text-white text-base font-bold shadow-lg hover:bg-[#4330c4] transition-colors"
+              >
+                List your parking space
+              </Link>
+            </div>
+            <div className="flex-1 hidden md:flex justify-center">
+              <img
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&h=600&fit=crop"
+                alt="Smiling host"
+                className="rounded-2xl object-cover h-[500px] w-full"
+              />
+            </div>
+          </div>
+        </section>
+
         <section className="bg-[#05020A] border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-16 md:py-20">
             <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">

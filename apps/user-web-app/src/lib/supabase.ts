@@ -15,5 +15,10 @@ const isValidUrl = (url: string) => {
 };
 
 export const supabase = isSupabaseConfigured && supabaseUrl && supabaseAnonKey && isValidUrl(supabaseUrl)
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
   : null;
