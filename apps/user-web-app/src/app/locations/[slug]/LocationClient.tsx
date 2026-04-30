@@ -381,8 +381,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const photoList = Array.isArray(hub.verification_photos) ? hub.verification_photos.filter((p) => typeof p === "string" && p.trim().length > 0) : [];
   const candidateHero = typeof _hero === "string" && _hero.trim().length > 0 ? _hero : undefined;
   const hasLotCoords = typeof hub.latitude === "number" && typeof hub.longitude === "number";
-  const LOT_MAP_SENTINEL = '__lot_map__';
-  const effectivePhotoCount = (photoList.length > 0 ? photoList.length : 1) + (hasLotCoords ? 1 : 0);
+  const effectivePhotoCount = (photoList.length > 0 ? photoList.length : 1);
   const streetAndPhotoCount = 1 + photoList.length;
   let photos = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
   // Ensure at least 4 real photos for slider
@@ -393,11 +392,8 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     }
     photos = photos.slice(0, 4);
   }
-  // Append map slide last if lot has coords
-  if (hasLotCoords) photos = [...photos, LOT_MAP_SENTINEL];
   const currentPhoto = photos[currentPhotoIndex] || "/Split_Airport_new_terminal_main_hall.jpg";
-  const isMapSlide = currentPhoto === LOT_MAP_SENTINEL;
-  const currentPhotoIsSupabase = !isMapSlide && isSupabaseStorageUrl(currentPhoto);
+  const currentPhotoIsSupabase = isSupabaseStorageUrl(currentPhoto);
   const miniPhotosSource = photoList.length > 0 ? photoList : [candidateHero || "/Split_Airport_new_terminal_main_hall.jpg"];
   const miniPhotos = miniPhotosSource.slice(0, 7);
   const streetViewHref =
@@ -1080,21 +1076,15 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
             <div className="space-y-8 md:-ml-10">
               <div className="rounded-3xl overflow-hidden border border-black/5 bg-black shadow-lg h-[240px] md:h-auto" style={isDesktop ? { height: reserveHeight } : undefined}>
                 <div className="relative w-full h-full">
-                  {isMapSlide ? (
-                    <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e] flex items-center justify-center"><span className="text-white/50 text-xs">Učitavanje mape…</span></div>}>
-                      <LotMap lat={hub.latitude as number} lng={hub.longitude as number} label={locationName} interactive={false} locationId={hub.id} boundary={(hub.verification_metadata?.boundary as Array<{lat:number;lng:number}> | undefined)} />
-                    </Suspense>
-                  ) : (
-                    <Image
-                      src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
-                      alt={`${locationName} parking`}
-                      fill
-                      priority
-                      quality={100}
-                      unoptimized={currentPhotoIsSupabase}
-                      className="object-cover"
-                    />
-                  )}
+                  <Image
+                    src={currentPhoto || "/Split_Airport_new_terminal_main_hall.jpg"}
+                    alt={`${locationName} parking`}
+                    fill
+                    priority
+                    quality={100}
+                    unoptimized={currentPhotoIsSupabase}
+                    className="object-cover"
+                  />
                   {/* Photo Navigation */}
                   {photos.length > 1 && (
                     <>
@@ -1118,20 +1108,18 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                     </>
                   )}
 
-                  {!isMapSlide && <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)] pointer-events-none" />}
+                  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_#4B5563_0,_transparent_55%),radial-gradient(circle_at_bottom,_#1F2937_0,_transparent_55%)] pointer-events-none" />
 
-                  {!isMapSlide && (
-                    <div className="absolute bottom-4 left-4 z-10">
-                      <div className="w-10 h-10 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
-                        <svg viewBox="0 0 64 64" className="w-6 h-6">
-                          <circle cx="20" cy="32" r="7" fill="#ffffff" />
-                          <circle cx="44" cy="32" r="7" fill="#ffffff" />
-                          <circle cx="32" cy="32" r="5" fill="#ffffff" />
-                          <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
-                        </svg>
-                      </div>
+                  <div className="absolute bottom-4 left-4 z-10">
+                    <div className="w-10 h-10 rounded-full bg-[#5F3DFC] shadow-md flex items-center justify-center">
+                      <svg viewBox="0 0 64 64" className="w-6 h-6">
+                        <circle cx="20" cy="32" r="7" fill="#ffffff" />
+                        <circle cx="44" cy="32" r="7" fill="#ffffff" />
+                        <circle cx="32" cy="32" r="5" fill="#ffffff" />
+                        <path d="M28 42 L32 46 L36 42 Z" fill="#ffffff" />
+                      </svg>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
