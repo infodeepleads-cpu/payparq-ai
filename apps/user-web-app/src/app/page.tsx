@@ -370,7 +370,7 @@ export default function Home() {
                 List your space
               </p>
               <h2 className="text-2xl md:text-5xl font-bold mb-4 md:mb-6 text-black">
-                Start earning money as a Payparq host
+                <span className="text-[#5F3DFC]">Start earning money</span> as a Payparq host
               </h2>
               <p className="text-sm md:text-lg text-black/70 mb-6 md:mb-8 max-w-lg">
                 Turn your private parking spot into passive income. Go live in 60 minutes.
