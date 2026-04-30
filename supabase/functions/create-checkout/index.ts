@@ -1611,7 +1611,12 @@ serve(async (req: Request) => {
 
     const now = new Date();
     const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
-    const resolveBerlinOffsetMinutes = (_value: Date): number => 60;
+    const resolveBerlinOffsetMinutes = (value: Date): number => {
+      const utcDate = new Date(value.toLocaleString("en-US", { timeZone: "UTC" }));
+      const berlinDate = new Date(value.toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
+      const diffMs = utcDate.getTime() - berlinDate.getTime();
+      return Math.round(diffMs / (1000 * 60));
+    };
     const formatBerlinDateTime = (value: Date): string => {
       try {
         const parts = new Intl.DateTimeFormat("en-GB", {
