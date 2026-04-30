@@ -3090,6 +3090,20 @@ export default function MembersPage() {
                         <span>Campaigns</span>
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("list-lot")}
+                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        activeItem === "list-lot"
+                          ? "bg-white text-black"
+                          : "text-white/70 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                        +
+                      </span>
+                      <span>List your lot</span>
+                    </button>
                   </nav>
                   <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
                     <div className="space-y-1 text-[11px] text-white/70">
@@ -3142,6 +3156,8 @@ export default function MembersPage() {
                         ? "Rewards"
                         : activeItem === "reviews"
                         ? "Recenzije"
+                        : activeItem === "list-lot"
+                        ? "List your lot"
                         : "Help"}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">
