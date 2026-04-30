@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { ChevronRight, HelpCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { ListingHeader } from './ListingHeader';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
@@ -300,33 +301,19 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
     : String(step);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <button onClick={handleBack} className="text-sm text-gray-600 hover:text-gray-900 mb-3 flex items-center gap-1">← Back</button>
-          <h2 className="text-2xl font-bold mb-1">{stepTitle}</h2>
-          <p className="text-gray-600">{stepSub}</p>
-        </div>
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Step {stepProgress} of 3</p>
-            <div className="flex gap-1 mt-1.5">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className={`h-1 rounded-full transition-all ${s === Number(step) ? 'bg-[#5F3DFC] w-8' : s < Number(step) ? 'bg-green-500 w-6' : 'bg-gray-300 w-6'}`} />
-              ))}
-            </div>
-          </div>
-          <button onClick={() => setStep('intro')} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            Save & Exit
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Conditionally show new header for steps (not intro) */}
+      {step !== 'intro' && <ListingHeader currentStep={step} currentSubStep={step1Sub} onBack={handleBack} />}
+
+      {/* Main content */}
+      <div className="flex-1 overflow-auto">
+        <div className={isFullScreen ? 'h-full' : ''}>
+          <div className="space-y-6 px-6 py-6 max-w-7xl mx-auto">
 
       {/* ── STEP 1a: Region + Address ── */}
       {step === 1 && step1Sub === 'region' && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-5">
+        <div className="flex gap-6 animate-fadeIn">
+          <div className="flex-1 space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
               <select
@@ -372,14 +359,16 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             )}
           </div>
-          <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+          <div className="w-[30%]">
+            <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+          </div>
         </div>
       )}
 
       {/* ── STEP 1b: Map ── */}
       {step === 1 && step1Sub === 'map' && (
-        <div className={isFullScreen ? "space-y-4 h-full" : "grid grid-cols-3 gap-8"}>
-          <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "col-span-2 space-y-4"}>
+        <div className={isFullScreen ? "space-y-4 h-full" : "flex gap-6 animate-fadeIn"}>
+          <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "flex-1 space-y-4"}>
             <p className="text-sm text-gray-600">Click the map to pin the exact entrance to your parking space</p>
             <div className={isFullScreen ? "flex-1 rounded-lg overflow-hidden border border-gray-300" : ""}>
               <DynamicMap
@@ -395,14 +384,18 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               <p className="text-sm text-green-600 font-medium">✓ Entrance marked at {parseFloat(data.latitude).toFixed(4)}, {parseFloat(data.longitude).toFixed(4)}</p>
             )}
           </div>
-          {!isFullScreen && <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />}
+          {!isFullScreen && (
+            <div className="w-[30%]">
+              <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+            </div>
+          )}
         </div>
       )}
 
       {/* ── STEP 1c: Name ── */}
       {step === 1 && step1Sub === 'name' && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-5">
+        <div className="flex gap-6 animate-fadeIn">
+          <div className="flex-1 space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
               <input
@@ -416,14 +409,16 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               <p className="text-xs text-gray-500 mt-2">This is what drivers will see when searching for parking</p>
             </div>
           </div>
-          <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+          <div className="w-[30%]">
+            <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+          </div>
         </div>
       )}
 
       {/* ── STEP 2: Get ready for drivers ── */}
       {step === 2 && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-6">
+        <div className="flex gap-6 animate-fadeIn">
+          <div className="flex-1 space-y-6">
             <div className="space-y-3">
               <h3 className="text-base font-semibold">Availability</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -465,14 +460,16 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             </div>
           </div>
-          <InfoWidget tip="Set realistic hours and pricing to attract more bookings and earn more." />
+          <div className="w-[30%]">
+            <InfoWidget tip="Set realistic hours and pricing to attract more bookings and earn more." />
+          </div>
         </div>
       )}
 
       {/* ── STEP 3: Build the picture ── */}
       {step === 3 && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-6">
+        <div className="flex gap-6 animate-fadeIn">
+          <div className="flex-1 space-y-6">
             <div className="space-y-3">
               <h3 className="text-base font-semibold">Photos</h3>
               <p className="text-sm text-gray-600">Upload 3–5 photos to showcase your parking space</p>
@@ -531,14 +528,16 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             </div>
           </div>
-          <InfoWidget tip="High-quality photos increase bookings by up to 40%. Include entrance, layout and surroundings." />
+          <div className="w-[30%]">
+            <InfoWidget tip="High-quality photos increase bookings by up to 40%. Include entrance, layout and surroundings." />
+          </div>
         </div>
       )}
 
       {/* ── REVIEW ── */}
       {step === 'review' && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-4">
+        <div className="flex gap-6 animate-fadeIn">
+          <div className="flex-1 space-y-4">
             <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
               <div><p className="text-gray-500">Location</p><p className="font-medium">{data.name}, {data.address}, {data.postalCode} ({selectedRegion?.label})</p></div>
               <div><p className="text-gray-500">Space</p><p className="font-medium">{data.capacity} cars • {data.type} • {data.features.join(', ')}</p></div>
@@ -550,7 +549,9 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               Publish Listing
             </button>
           </div>
-          <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+          <div className="w-[30%]">
+            <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+          </div>
         </div>
       )}
 
@@ -564,6 +565,9 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
           </button>
         </div>
       )}
+      </div>
+        </div>
+      </div>
     </div>
   );
 }
