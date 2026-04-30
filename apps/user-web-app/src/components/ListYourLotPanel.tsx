@@ -99,20 +99,27 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
   };
 
   const handlePlaceSelect = () => {
-    if (autocompleteRef.current) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.formatted_address) {
-        updateData('address', place.formatted_address);
-      }
-      if (place.geometry?.location) {
-        updateData('latitude', String(place.geometry.location.lat()));
-        updateData('longitude', String(place.geometry.location.lng()));
-      }
-      const postalCode = place.address_components?.find((c: any) =>
-        c.types.includes('postal_code')
-      )?.long_name || '';
-      if (postalCode) {
-        updateData('postalCode', postalCode);
+    if (autocompleteRef.current && window.google) {
+      try {
+        const places = (autocompleteRef.current as any).getPlaces?.();
+        if (!places || places.length === 0) return;
+
+        const place = places[0];
+        if (place.formatted_address) {
+          updateData('address', place.formatted_address);
+        }
+        if (place.geometry?.location) {
+          updateData('latitude', String(place.geometry.location.lat()));
+          updateData('longitude', String(place.geometry.location.lng()));
+        }
+        const postalCode = place.address_components?.find((c: any) =>
+          c.types.includes('postal_code')
+        )?.long_name || '';
+        if (postalCode) {
+          updateData('postalCode', postalCode);
+        }
+      } catch (e) {
+        console.warn('Place selection error:', e);
       }
     }
   };
