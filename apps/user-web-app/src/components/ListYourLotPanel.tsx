@@ -215,37 +215,43 @@ export function ListYourLotPanel() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
             >
               <option value="">Select type</option>
-              <option value="driveway">Driveway</option>
+              <option value="kolnik">Kolnik (Paved)</option>
               <option value="garage">Garage</option>
               <option value="lot">Parking Lot</option>
               <option value="street">Street Parking</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Capacity</label>
-            <select
+            <label className="block text-sm font-medium mb-2">Capacity (number of cars)</label>
+            <input
+              type="number"
               value={data.capacity}
               onChange={(e) => updateData('capacity', e.target.value)}
+              placeholder="e.g., 5, 10, 20"
+              min="1"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-            >
-              <option value="">Select capacity</option>
-              <option value="1">1 car</option>
-              <option value="2-5">2-5 cars</option>
-              <option value="5+">5+ cars</option>
-            </select>
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-3">Features</label>
             <div className="space-y-2">
-              {['covered', 'lighting', 'security', 'heated'].map((f) => (
-                <label key={f} className="flex items-center gap-2 cursor-pointer">
+              {[
+                { id: 'covered', label: 'Covered' },
+                { id: 'lighting', label: 'Lighting' },
+                { id: 'ramp', label: 'Ramp' },
+                { id: 'asphalt', label: 'Asphalt' },
+                { id: 'concrete', label: 'Concrete' },
+                { id: 'earth', label: 'Earth' },
+                { id: 'rough_terrain', label: 'Rough Terrain' },
+              ].map((f) => (
+                <label key={f.id} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={data.features.includes(f)}
-                    onChange={() => toggleFeature(f)}
+                    checked={data.features.includes(f.id)}
+                    onChange={() => toggleFeature(f.id)}
                     className="w-4 h-4 rounded border-gray-300"
                   />
-                  <span className="text-sm capitalize">{f}</span>
+                  <span className="text-sm">{f.label}</span>
                 </label>
               ))}
             </div>
