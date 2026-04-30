@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
-type Step1Sub = 'region' | 'address' | 'map';
+type Step1Sub = 'region' | 'map' | 'name';
 
 const REGIONS = [
   { id: 'HR', label: 'Croatia', center: [45.815, 15.982] },
@@ -105,9 +105,9 @@ export function ListYourLotPanel() {
 
   const canProceed = () => {
     if (step === 1) {
-      if (step1Sub === 'region') return !!data.region;
-      if (step1Sub === 'address') return !!(data.name && data.address && data.postalCode);
+      if (step1Sub === 'region') return !!(data.region && data.address && data.postalCode);
       if (step1Sub === 'map') return !!(data.latitude && data.longitude);
+      if (step1Sub === 'name') return !!data.name;
     }
     if (step === 2) return !!(data.openTime && data.closeTime && data.permits);
     if (step === 3) return data.photos.length >= 3 && !!(data.type && data.capacity && data.features.length > 0);
@@ -118,29 +118,27 @@ export function ListYourLotPanel() {
 
   const handleNext = async () => {
     if (step === 1) {
-      if (step1Sub === 'region') { setStep1Sub('address'); return; }
-      if (step1Sub === 'address') {
-        // Geocode address to pre-pin the map
-        if (!data.latitude || !data.longitude) {
-          try {
-            setGeocoding(true);
-            const query = `${data.address}, ${data.postalCode}, ${selectedRegion?.label}`;
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-            const results = await res.json();
-            if (results.length > 0) {
-              updateData('latitude', results[0].lat);
-              updateData('longitude', results[0].lon);
-            }
-          } catch {
-            // silently fall through — user can still pin manually
-          } finally {
-            setGeocoding(false);
+      if (step1Sub === 'region') {
+        // Geocode address before showing map
+        try {
+          setGeocoding(true);
+          const query = `${data.address}, ${data.postalCode}, ${selectedRegion?.label}`;
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+          const results = await res.json();
+          if (results.length > 0) {
+            updateData('latitude', results[0].lat);
+            updateData('longitude', results[0].lon);
           }
+        } catch {
+          // silently fall through — user can still pin manually
+        } finally {
+          setGeocoding(false);
         }
         setStep1Sub('map');
         return;
       }
-      if (step1Sub === 'map') { setStep(2); return; }
+      if (step1Sub === 'map') { setStep1Sub('name'); return; }
+      if (step1Sub === 'name') { setStep(2); return; }
     }
     if (step === 2) { setStep(3); return; }
     if (step === 3) { setStep('review'); return; }
@@ -148,11 +146,11 @@ export function ListYourLotPanel() {
 
   const handleBack = () => {
     if (step === 1) {
-      if (step1Sub === 'address') { setStep1Sub('region'); return; }
-      if (step1Sub === 'map') { setStep1Sub('address'); return; }
+      if (step1Sub === 'map') { setStep1Sub('region'); return; }
+      if (step1Sub === 'name') { setStep1Sub('map'); return; }
       setStep('intro');
     } else if (step === 2) {
-      setStep1Sub('map');
+      setStep1Sub('name');
       setStep(1);
     } else if (step === 3) {
       setStep(2);
@@ -246,17 +244,17 @@ export function ListYourLotPanel() {
 
   // ─── STEP HEADER ───────────────────────────────────────────────────────
   const stepTitle = step === 1
-    ? step1Sub === 'region' ? 'Where is your parking space located?' : step1Sub === 'address' ? 'What is the address?' : 'Pin your exact location'
+    ? step1Sub === 'region' ? 'Where is your parking space located?' : step1Sub === 'map' ? 'Pin your exact location' : 'Name your parking space'
     : step === 2 ? 'Get ready for drivers'
     : 'Build the picture';
 
   const stepSub = step === 1
-    ? step1Sub === 'region' ? 'Select your region' : step1Sub === 'address' ? 'Enter the full address and postal code' : 'Click the map to mark your parking entrance'
+    ? step1Sub === 'region' ? 'Select region, then enter your address' : step1Sub === 'map' ? 'Click the map to mark your parking entrance' : 'Give your parking space a name'
     : step === 2 ? 'Set availability and pricing'
     : 'Add photos and space details';
 
   const stepProgress = step === 1
-    ? step1Sub === 'region' ? '1a' : step1Sub === 'address' ? '1b' : '1c'
+    ? step1Sub === 'region' ? '1a' : step1Sub === 'map' ? '1b' : '1c'
     : String(step);
 
   return (
@@ -283,68 +281,55 @@ export function ListYourLotPanel() {
         </div>
       </div>
 
-      {/* ── STEP 1a: Region ── */}
+      {/* ── STEP 1a: Region + Address ── */}
       {step === 1 && step1Sub === 'region' && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-4">
-            <p className="text-sm font-medium text-gray-700">Region</p>
-            <div className="grid grid-cols-3 gap-3">
-              {REGIONS.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => updateData('region', r.id)}
-                  className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${data.region === r.id ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 text-[#5F3DFC]' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <InfoWidget tip="Choose the country where your parking space is located. This helps drivers find your space." />
-        </div>
-      )}
-
-      {/* ── STEP 1b: Address ── */}
-      {step === 1 && step1Sub === 'address' && (
         <div className="grid grid-cols-3 gap-8">
           <div className="col-span-2 space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
-              <input
-                type="text"
-                value={data.name}
-                onChange={(e) => updateData('name', e.target.value)}
-                placeholder="e.g., Downtown Parking A"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-              />
+              <p className="text-sm font-medium text-gray-700 mb-3">Region</p>
+              <div className="grid grid-cols-3 gap-3">
+                {REGIONS.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => updateData('region', r.id)}
+                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${data.region === r.id ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 text-[#5F3DFC]' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-              <input
-                type="text"
-                value={data.address}
-                onChange={(e) => updateData('address', e.target.value)}
-                placeholder="Street and house number"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-              <input
-                type="text"
-                value={data.postalCode}
-                onChange={(e) => updateData('postalCode', e.target.value)}
-                placeholder="e.g., 10000"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-              />
-            </div>
+            {data.region && (
+              <div className="space-y-4 pt-2 border-t border-gray-100">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                  <input
+                    type="text"
+                    value={data.address}
+                    onChange={(e) => updateData('address', e.target.value)}
+                    placeholder="Street and house number"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                  <input
+                    type="text"
+                    value={data.postalCode}
+                    onChange={(e) => updateData('postalCode', e.target.value)}
+                    placeholder="e.g., 10000"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
         </div>
       )}
 
-      {/* ── STEP 1c: Map ── */}
+      {/* ── STEP 1b: Map ── */}
       {step === 1 && step1Sub === 'map' && (
         <div className="grid grid-cols-3 gap-8">
           <div className="col-span-2 space-y-4">
@@ -362,6 +347,27 @@ export function ListYourLotPanel() {
             )}
           </div>
           <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+        </div>
+      )}
+
+      {/* ── STEP 1c: Name ── */}
+      {step === 1 && step1Sub === 'name' && (
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
+              <input
+                type="text"
+                value={data.name}
+                onChange={(e) => updateData('name', e.target.value)}
+                placeholder="e.g., Downtown Parking A"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-2">This is what drivers will see when searching for parking</p>
+            </div>
+          </div>
+          <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
         </div>
       )}
 
