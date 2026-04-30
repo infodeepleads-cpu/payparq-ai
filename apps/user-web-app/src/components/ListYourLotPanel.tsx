@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { ChevronRight, MapPin } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
 type Step = 1 | 2 | 3 | 4 | 5 | 'review';
 
@@ -12,21 +15,21 @@ interface ListingData {
   latitude: string;
   longitude: string;
 
-  // Step 2: Space Details
-  type: string; // 'driveway' | 'garage' | 'lot' | 'street'
-  capacity: string; // '1' | '2-5' | '5+'
-  features: string[]; // 'covered', 'lighting', 'security', 'heated'
+  // Step 2: Details
+  type: string;
+  capacity: string;
+  features: string[];
 
   // Step 3: Photos
   photos: File[];
 
   // Step 4: Availability
-  openTime: string; // "07:00"
-  closeTime: string; // "22:00"
+  openTime: string;
+  closeTime: string;
 
   // Step 5: Pricing & Permits
   smartPricing: boolean;
-  permits: string; // 'yes' | 'no'
+  permits: string;
 }
 
 export function ListYourLotPanel() {
@@ -100,7 +103,6 @@ export function ListYourLotPanel() {
       formData.append('smartPricing', String(data.smartPricing));
       formData.append('permits', data.permits);
 
-      // Append photos
       for (const photo of data.photos) {
         formData.append('photos', photo);
       }
@@ -117,9 +119,8 @@ export function ListYourLotPanel() {
         return;
       }
 
-      alert('✅ Lot created successfully! It is now live and visible to drivers.');
+      alert('✅ Parking listing created successfully!');
 
-      // Reset form
       setStep(1);
       setData({
         name: '',
@@ -143,7 +144,6 @@ export function ListYourLotPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
       <div className="flex justify-between items-center gap-2">
         {[1, 2, 3, 4, 5].map((s) => (
           <div key={s} className="flex items-center gap-2 flex-1">
@@ -163,17 +163,16 @@ export function ListYourLotPanel() {
         ))}
       </div>
 
-      {/* Step 1: Location */}
       {step === 1 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">1. Location</h3>
           <div>
-            <label className="block text-sm font-medium mb-2">Lot Name</label>
+            <label className="block text-sm font-medium mb-2">Parking Name</label>
             <input
               type="text"
               value={data.name}
               onChange={(e) => updateData('name', e.target.value)}
-              placeholder="e.g., Downtown Lot A"
+              placeholder="e.g., Downtown Parking A"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
             />
           </div>
@@ -187,37 +186,27 @@ export function ListYourLotPanel() {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">Latitude</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={data.latitude}
-                onChange={(e) => updateData('latitude', e.target.value)}
-                placeholder="43.5081"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Longitude</label>
-              <input
-                type="number"
-                step="0.0001"
-                value={data.longitude}
-                onChange={(e) => updateData('longitude', e.target.value)}
-                placeholder="16.4402"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Mark Location</label>
+            <p className="text-xs text-gray-600 mb-3">Click on the map to mark your parking entrance</p>
+            <DynamicMap
+              lat={data.latitude ? parseFloat(data.latitude) : 45.815}
+              lng={data.longitude ? parseFloat(data.longitude) : 15.982}
+              onLocationSelect={(lat, lng) => {
+                updateData('latitude', String(lat));
+                updateData('longitude', String(lng));
+              }}
+            />
           </div>
+          {data.latitude && data.longitude && (
+            <p className="text-xs text-green-600">✓ Location marked at {parseFloat(data.latitude).toFixed(4)}, {parseFloat(data.longitude).toFixed(4)}</p>
+          )}
         </div>
       )}
 
-      {/* Step 2: Space Details */}
       {step === 2 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">2. Space Details</h3>
+          <h3 className="text-lg font-semibold">2. Details</h3>
           <div>
             <label className="block text-sm font-medium mb-2">Type</label>
             <select
@@ -264,7 +253,6 @@ export function ListYourLotPanel() {
         </div>
       )}
 
-      {/* Step 3: Photos */}
       {step === 3 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">3. Photos (5+ required)</h3>
@@ -299,7 +287,6 @@ export function ListYourLotPanel() {
         </div>
       )}
 
-      {/* Step 4: Availability */}
       {step === 4 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">4. Availability</h3>
@@ -329,7 +316,6 @@ export function ListYourLotPanel() {
         </div>
       )}
 
-      {/* Step 5: Pricing & Permits */}
       {step === 5 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">5. Pricing & Permits</h3>
@@ -370,10 +356,9 @@ export function ListYourLotPanel() {
         </div>
       )}
 
-      {/* Review Step */}
       {step === 'review' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Review Your Listing</h3>
+          <h3 className="text-lg font-semibold">Review Your Parking Listing</h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-sm">
             <div>
               <p className="text-gray-600">Location</p>
@@ -405,7 +390,6 @@ export function ListYourLotPanel() {
         </div>
       )}
 
-      {/* Navigation */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={() => {

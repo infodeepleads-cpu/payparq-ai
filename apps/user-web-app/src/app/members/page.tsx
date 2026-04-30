@@ -2884,7 +2884,7 @@ export default function MembersPage() {
                         : "border-white/20 text-white/80"
                     }`}
                   >
-                    <span>List your lot</span>
+                    <span>List your parking</span>
                   </button>
                   {role === "super_admin" && (
                     <button
@@ -3102,7 +3102,7 @@ export default function MembersPage() {
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                         +
                       </span>
-                      <span>List your lot</span>
+                      <span>List your parking</span>
                     </button>
                   </nav>
                   <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
@@ -3157,7 +3157,7 @@ export default function MembersPage() {
                         : activeItem === "reviews"
                         ? "Recenzije"
                         : activeItem === "list-lot"
-                        ? "List your lot"
+                        ? "List your parking"
                         : "Help"}
                     </div>
                     <div className="bg-white p-5 md:p-6 shadow-sm min-h-0 flex-1 flex flex-col overflow-hidden">
