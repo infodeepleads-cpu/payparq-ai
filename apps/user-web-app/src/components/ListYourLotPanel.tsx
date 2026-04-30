@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ChevronRight, HelpCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { Autocomplete } from '@react-google-maps/api';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
@@ -54,9 +55,14 @@ function InfoWidget({ tip }: { tip: string }) {
   );
 }
 
-export function ListYourLotPanel() {
+interface ListYourLotPanelProps {
+  isFullScreen?: boolean;
+}
+
+export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps) {
   const [step, setStep] = useState<MainStep>('intro');
   const [step1Sub, setStep1Sub] = useState<Step1Sub>('region');
+  const autocompleteRef = useRef<any>(null);
   const [data, setData] = useState<ListingData>({
     region: '',
     name: '',
@@ -85,6 +91,25 @@ export function ListYourLotPanel() {
         ? prev.features.filter((f) => f !== feature)
         : [...prev.features, feature],
     }));
+  };
+
+  const handlePlaceSelect = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place.formatted_address) {
+        updateData('address', place.formatted_address);
+      }
+      if (place.geometry?.location) {
+        updateData('latitude', String(place.geometry.location.lat()));
+        updateData('longitude', String(place.geometry.location.lng()));
+      }
+      const postalCode = place.address_components?.find((c: any) =>
+        c.types.includes('postal_code')
+      )?.long_name || '';
+      if (postalCode) {
+        updateData('postalCode', postalCode);
+      }
+    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,20 +144,25 @@ export function ListYourLotPanel() {
   const handleNext = async () => {
     if (step === 1) {
       if (step1Sub === 'region') {
-        // Geocode address before showing map
-        try {
-          setGeocoding(true);
-          const query = `${data.address}, ${data.postalCode}, ${selectedRegion?.label}`;
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-          const results = await res.json();
-          if (results.length > 0) {
-            updateData('latitude', results[0].lat);
-            updateData('longitude', results[0].lon);
+        // Geocode address if not already set by Autocomplete
+        if (!data.latitude || !data.longitude) {
+          try {
+            setGeocoding(true);
+            const query = `${data.address}, ${data.postalCode}, ${selectedRegion?.label}`;
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+            );
+            const results = await res.json();
+            if (results.results.length > 0) {
+              const { lat, lng } = results.results[0].geometry.location;
+              updateData('latitude', String(lat));
+              updateData('longitude', String(lng));
+            }
+          } catch {
+            // silently fall through — user can still pin manually
+          } finally {
+            setGeocoding(false);
           }
-        } catch {
-          // silently fall through — user can still pin manually
-        } finally {
-          setGeocoding(false);
         }
         setStep1Sub('map');
         return;
@@ -286,31 +316,36 @@ export function ListYourLotPanel() {
         <div className="grid grid-cols-3 gap-8">
           <div className="col-span-2 space-y-5">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Region</p>
-              <div className="grid grid-cols-3 gap-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+              <select
+                value={data.region}
+                onChange={(e) => updateData('region', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+              >
+                <option value="">Select a region</option>
                 {REGIONS.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => updateData('region', r.id)}
-                    className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${data.region === r.id ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 text-[#5F3DFC]' : 'border-gray-200 hover:border-gray-300 text-gray-700'}`}
-                  >
+                  <option key={r.id} value={r.id}>
                     {r.label}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
             {data.region && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                  <input
-                    type="text"
-                    value={data.address}
-                    onChange={(e) => updateData('address', e.target.value)}
-                    placeholder="Street and house number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  />
+                  <Autocomplete
+                    ref={autocompleteRef}
+                    onPlaceChanged={handlePlaceSelect}
+                  >
+                    <input
+                      type="text"
+                      value={data.address}
+                      onChange={(e) => updateData('address', e.target.value)}
+                      placeholder="Search address..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                    />
+                  </Autocomplete>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
@@ -331,22 +366,24 @@ export function ListYourLotPanel() {
 
       {/* ── STEP 1b: Map ── */}
       {step === 1 && step1Sub === 'map' && (
-        <div className="grid grid-cols-3 gap-8">
-          <div className="col-span-2 space-y-4">
+        <div className={isFullScreen ? "space-y-4 h-full" : "grid grid-cols-3 gap-8"}>
+          <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "col-span-2 space-y-4"}>
             <p className="text-sm text-gray-600">Click the map to pin the exact entrance to your parking space</p>
-            <DynamicMap
-              lat={data.latitude ? parseFloat(data.latitude) : mapCenter[0]}
-              lng={data.longitude ? parseFloat(data.longitude) : mapCenter[1]}
-              onLocationSelect={(lat, lng) => {
-                updateData('latitude', String(lat));
-                updateData('longitude', String(lng));
-              }}
-            />
+            <div className={isFullScreen ? "flex-1 rounded-lg overflow-hidden border border-gray-300" : ""}>
+              <DynamicMap
+                lat={data.latitude ? parseFloat(data.latitude) : mapCenter[0]}
+                lng={data.longitude ? parseFloat(data.longitude) : mapCenter[1]}
+                onLocationSelect={(lat, lng) => {
+                  updateData('latitude', String(lat));
+                  updateData('longitude', String(lng));
+                }}
+              />
+            </div>
             {data.latitude && data.longitude && (
               <p className="text-sm text-green-600 font-medium">✓ Entrance marked at {parseFloat(data.latitude).toFixed(4)}, {parseFloat(data.longitude).toFixed(4)}</p>
             )}
           </div>
-          <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+          {!isFullScreen && <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />}
         </div>
       )}
 

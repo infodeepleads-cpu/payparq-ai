@@ -2,12 +2,12 @@
 
 import { useEffect, useState, FormEvent, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
 import { ManagementPanel } from "@/components/ManagementPanel";
 import { CampaignsPanel } from "@/components/CampaignsPanel";
-import { ListYourLotPanel } from "@/components/ListYourLotPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -258,6 +258,7 @@ function readMemberPlates(currentUser: User | null) {
 }
 
 export default function MembersPage() {
+  const router = useRouter();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -2557,10 +2558,6 @@ export default function MembersPage() {
       return <CampaignsPanel />;
     }
 
-    if (activeItem === "list-lot") {
-      return <ListYourLotPanel />;
-    }
-
     return (
       <div className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight text-black">
@@ -2877,12 +2874,8 @@ export default function MembersPage() {
                   )}
                   <button
                     type="button"
-                    onClick={() => setActiveItem("list-lot")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "list-lot"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
+                    onClick={() => router.push('/list-your-parking')}
+                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap border-white/20 text-white/80 hover:bg-white/10 transition-colors`}
                   >
                     <span>List your parking</span>
                   </button>
@@ -3092,12 +3085,8 @@ export default function MembersPage() {
                     )}
                     <button
                       type="button"
-                      onClick={() => setActiveItem("list-lot")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "list-lot"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
+                      onClick={() => router.push('/list-your-parking')}
+                      className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
                     >
                       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                         +
