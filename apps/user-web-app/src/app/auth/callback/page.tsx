@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -20,7 +19,7 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } = await supabase!.auth.exchangeCodeForSession(code);
 
         if (exchangeError) {
           setError(exchangeError.message);
