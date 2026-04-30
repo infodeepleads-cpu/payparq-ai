@@ -249,9 +249,9 @@ export function ListYourLotPanel() {
                 <div
                   key={s}
                   className={`h-1 flex-1 rounded-full ${
-                    s === step
+                    s === Number(step)
                       ? 'bg-[#5F3DFC] w-8'
-                      : s < step
+                      : s < Number(step)
                       ? 'bg-green-500 w-6'
                       : 'bg-gray-300 w-6'
                   }`}
