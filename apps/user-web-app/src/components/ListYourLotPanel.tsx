@@ -40,6 +40,10 @@ export function ListYourLotPanel() {
     photos: [],
   });
 
+  const isStep1Complete = data.name && data.address && data.latitude && data.longitude && data.type && data.capacity && data.features.length > 0;
+  const isStep2Complete = data.openTime && data.closeTime && data.permits;
+  const isStep3Complete = data.photos.length >= 3;
+
   const updateData = (key: keyof ListingData, value: any) => {
     setData((prev) => ({ ...prev, [key]: value }));
   };
@@ -130,68 +134,84 @@ export function ListYourLotPanel() {
 
   if (step === 'intro') {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold mb-2">Great Progress, Karlo!</h2>
           <p className="text-gray-600">Now let's get some details about your space so you can publish your listing.</p>
         </div>
 
-        <div className="grid gap-6">
-          {/* Section 1 */}
-          <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setStep(1)}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Step 1</h3>
-                <p className="text-gray-600">Locations, features and more</p>
+        <div className="grid grid-cols-3 gap-8">
+          {/* Left side - Steps */}
+          <div className="col-span-2 space-y-4">
+            {/* Section 1 */}
+            <div className={`border rounded-lg p-6 transition-all cursor-pointer ${isStep1Complete ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`} onClick={() => setStep(1)}>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Step 1</h3>
+                  <p className="text-gray-600">Locations, features and more</p>
+                </div>
+                <div className={`text-2xl font-bold ${isStep1Complete ? 'text-green-500 text-3xl' : 'text-[#5F3DFC]'}`}>
+                  {isStep1Complete ? '✓' : '1'}
+                </div>
               </div>
-              <div className="text-[#5F3DFC] text-2xl font-bold">1</div>
+              <p className="text-sm text-gray-500">Add your parking location on a map, describe the space type, capacity, and features</p>
             </div>
-            <p className="text-sm text-gray-500">Add your parking location on a map, describe the space type, capacity, and features</p>
-          </div>
 
-          {/* Section 2 */}
-          <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setStep(2)}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Step 2</h3>
-                <p className="text-gray-600">Get ready for drivers</p>
+            {/* Section 2 */}
+            <div className={`border rounded-lg p-6 transition-all cursor-pointer ${isStep2Complete ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`} onClick={() => setStep(2)}>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Step 2</h3>
+                  <p className="text-gray-600">Get ready for drivers</p>
+                </div>
+                <div className={`text-2xl font-bold ${isStep2Complete ? 'text-green-500 text-3xl' : 'text-[#5F3DFC]'}`}>
+                  {isStep2Complete ? '✓' : '2'}
+                </div>
               </div>
-              <div className="text-[#5F3DFC] text-2xl font-bold">2</div>
+              <p className="text-sm text-gray-500">Bookings, settings, calendar, price</p>
             </div>
-            <p className="text-sm text-gray-500">Set availability hours, pricing strategy, and permit requirements</p>
-          </div>
 
-          {/* Section 3 */}
-          <div className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setStep(3)}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Step 3</h3>
-                <p className="text-gray-600">Build the picture</p>
+            {/* Section 3 */}
+            <div className={`border rounded-lg p-6 transition-all cursor-pointer ${isStep3Complete ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`} onClick={() => setStep(3)}>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Step 3</h3>
+                  <p className="text-gray-600">Build the picture</p>
+                </div>
+                <div className={`text-2xl font-bold ${isStep3Complete ? 'text-green-500 text-3xl' : 'text-[#5F3DFC]'}`}>
+                  {isStep3Complete ? '✓' : '3'}
+                </div>
               </div>
-              <div className="text-[#5F3DFC] text-2xl font-bold">3</div>
+              <p className="text-sm text-gray-500">Photos and street view</p>
             </div>
-            <p className="text-sm text-gray-500">Upload photos and street view to showcase your parking space</p>
-          </div>
-        </div>
 
-        {/* Earnings Estimate */}
-        <div className="bg-gradient-to-r from-[#5F3DFC]/10 to-[#5F3DFC]/5 border border-[#5F3DFC]/20 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <p className="text-sm text-gray-700">In your area, we think that your spaces could earn up to</p>
-            <button className="text-gray-400 hover:text-gray-600">
-              <HelpCircle className="w-4 h-4" />
+            <button
+              onClick={() => setStep(1)}
+              className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6"
+            >
+              Start with the basics
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-3xl font-bold text-[#5F3DFC]">€6,912.00 <span className="text-lg font-normal text-gray-600">per year</span></p>
-        </div>
 
-        <button
-          onClick={() => setStep(1)}
-          className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2"
-        >
-          Start with the basics
-          <ChevronRight className="w-5 h-5" />
-        </button>
+          {/* Right side - Earnings Widget */}
+          <div className="col-span-1">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-2">
+                  <p className="text-sm text-gray-700 leading-snug">In London, we think that your spaces could earn</p>
+                  <button className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-3xl font-bold text-[#5F3DFC]">
+                  £6,912.00
+                  <span className="text-lg font-normal text-gray-600 block">per year</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
