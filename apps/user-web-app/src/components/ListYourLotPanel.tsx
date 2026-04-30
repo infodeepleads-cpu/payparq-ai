@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { ChevronRight, HelpCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Autocomplete } from '@react-google-maps/api';
+import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
@@ -60,6 +60,11 @@ interface ListYourLotPanelProps {
 }
 
 export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps) {
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
+  });
+
   const [step, setStep] = useState<MainStep>('intro');
   const [step1Sub, setStep1Sub] = useState<Step1Sub>('region');
   const autocompleteRef = useRef<any>(null);
@@ -330,7 +335,7 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
                 ))}
               </select>
             </div>
-            {data.region && (
+            {data.region && isLoaded && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
