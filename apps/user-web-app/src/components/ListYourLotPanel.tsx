@@ -504,6 +504,7 @@ export function ListYourLotPanel() {
               </div>
             )}
           </div>
+          </div>
 
           {/* Right column: Info Widget */}
           <div className="col-span-1">
