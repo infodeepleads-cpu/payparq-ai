@@ -69,7 +69,7 @@ export function ListYourLotPanel() {
       case 2:
         return data.openTime && data.closeTime && data.permits;
       case 3:
-        return data.photos.length >= 5;
+        return data.photos.length >= 3;
       default:
         return true;
     }
@@ -391,7 +391,7 @@ export function ListYourLotPanel() {
         <div className="space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Photos</h3>
-            <p className="text-sm text-gray-600">Upload at least 5 photos to showcase your parking space</p>
+            <p className="text-sm text-gray-600">Upload 3-5 photos to showcase your parking space</p>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
                 type="file"
