@@ -273,7 +273,8 @@ export function ListYourLotPanel() {
 
       {/* Step 1: Locations, features and more */}
       {step === 1 && (
-        <div className="space-y-6">
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Parking Name</h3>
             <input
@@ -365,12 +366,27 @@ export function ListYourLotPanel() {
               ))}
             </div>
           </div>
+          </div>
+
+          {/* Right column: Info Widget */}
+          <div className="col-span-1">
+            <div className="sticky top-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex gap-3">
+                <div className="text-2xl">💡</div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Useful Info</h4>
+                  <p className="text-sm text-gray-700">Your exact address will only be shared with confirmed bookings</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Step 2: Get ready for drivers */}
       {step === 2 && (
-        <div className="space-y-6">
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Availability</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -435,12 +451,27 @@ export function ListYourLotPanel() {
               ))}
             </div>
           </div>
+          </div>
+
+          {/* Right column: Info Widget */}
+          <div className="col-span-1">
+            <div className="sticky top-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex gap-3">
+                <div className="text-2xl">💡</div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Useful Info</h4>
+                  <p className="text-sm text-gray-700">Set realistic hours and pricing to attract more bookings</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Step 3: Build the picture */}
       {step === 3 && (
-        <div className="space-y-6">
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Photos</h3>
             <p className="text-sm text-gray-600">Upload 3-5 photos to showcase your parking space</p>
@@ -472,6 +503,19 @@ export function ListYourLotPanel() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Right column: Info Widget */}
+          <div className="col-span-1">
+            <div className="sticky top-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex gap-3">
+                <div className="text-2xl">💡</div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Useful Info</h4>
+                  <p className="text-sm text-gray-700">High-quality photos increase bookings by up to 40%</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
