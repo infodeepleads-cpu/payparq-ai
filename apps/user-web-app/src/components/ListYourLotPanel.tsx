@@ -218,24 +218,56 @@ export function ListYourLotPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Header with step indicator */}
-      <div>
-        <button
-          onClick={() => setStep('intro')}
-          className="text-sm text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-1"
-        >
-          ← Back
-        </button>
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold mb-1">
-              {step === 1 ? 'Locations, features and more' : step === 2 ? 'Get ready for drivers' : 'Build the picture'}
-            </h2>
-            <p className="text-gray-600">
-              {step === 1 ? 'Start with the basics' : step === 2 ? 'Set availability and pricing' : 'Add photos and details'}
-            </p>
+      {/* Header with step indicator and Save/Exit buttons */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <button
+            onClick={() => setStep('intro')}
+            className="text-sm text-gray-600 hover:text-gray-900 mb-4 flex items-center gap-1"
+          >
+            ← Back
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-1">
+                {step === 1 ? 'Locations, features and more' : step === 2 ? 'Get ready for drivers' : 'Build the picture'}
+              </h2>
+              <p className="text-gray-600">
+                {step === 1 ? 'Start with the basics' : step === 2 ? 'Set availability and pricing' : 'Add photos and details'}
+              </p>
+            </div>
+            <div className="text-4xl font-bold text-[#5F3DFC]">{step}</div>
           </div>
-          <div className="text-4xl font-bold text-[#5F3DFC]">{step}</div>
+        </div>
+
+        {/* Top Right: Step Progress and Buttons */}
+        <div className="flex flex-col items-end gap-4">
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Step {step} of 3</p>
+            <div className="flex gap-1 mt-2">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={`h-1 flex-1 rounded-full ${
+                    s === step
+                      ? 'bg-[#5F3DFC] w-8'
+                      : s < step
+                      ? 'bg-green-500 w-6'
+                      : 'bg-gray-300 w-6'
+                  }`}
+                ></div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStep('intro')}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Save & Exit
+            </button>
+          </div>
         </div>
       </div>
 
