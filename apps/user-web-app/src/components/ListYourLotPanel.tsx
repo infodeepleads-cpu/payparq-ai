@@ -312,8 +312,8 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
 
       {/* ── STEP 1a: Region + Address ── */}
       {step === 1 && step1Sub === 'region' && (
-        <div className="flex gap-6 animate-fadeIn">
-          <div className="flex-1 space-y-5">
+        <div className="flex gap-8 animate-fadeIn">
+          <div className="w-[35%] space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
               <select
@@ -359,8 +359,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             )}
           </div>
-          <div className="w-[30%]">
-            <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+          <div className="w-[65%] flex items-center justify-center">
+            <div className="w-80">
+              <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+            </div>
           </div>
         </div>
       )}
@@ -385,8 +387,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
             )}
           </div>
           {!isFullScreen && (
-            <div className="w-[30%]">
-              <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+            <div className="w-[65%] flex items-center justify-center">
+              <div className="w-80">
+                <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+              </div>
             </div>
           )}
         </div>
@@ -409,8 +413,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               <p className="text-xs text-gray-500 mt-2">This is what drivers will see when searching for parking</p>
             </div>
           </div>
-          <div className="w-[30%]">
-            <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+          <div className="w-[65%] flex items-center justify-center">
+            <div className="w-80">
+              <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+            </div>
           </div>
         </div>
       )}
@@ -460,8 +466,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             </div>
           </div>
-          <div className="w-[30%]">
-            <InfoWidget tip="Set realistic hours and pricing to attract more bookings and earn more." />
+          <div className="w-[65%] flex items-center justify-center">
+            <div className="w-80">
+              <InfoWidget tip="Set realistic hours and pricing to attract more bookings and earn more." />
+            </div>
           </div>
         </div>
       )}
@@ -528,8 +536,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               </div>
             </div>
           </div>
-          <div className="w-[30%]">
-            <InfoWidget tip="High-quality photos increase bookings by up to 40%. Include entrance, layout and surroundings." />
+          <div className="w-[65%] flex items-center justify-center">
+            <div className="w-80">
+              <InfoWidget tip="High-quality photos increase bookings by up to 40%. Include entrance, layout and surroundings." />
+            </div>
           </div>
         </div>
       )}
@@ -549,8 +559,10 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               Publish Listing
             </button>
           </div>
-          <div className="w-[30%]">
-            <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+          <div className="w-[65%] flex items-center justify-center">
+            <div className="w-80">
+              <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+            </div>
           </div>
         </div>
       )}
