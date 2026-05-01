@@ -1060,7 +1060,7 @@ export function ListYourLotPanel({
                 <div className="border-b border-gray-200 pb-3">
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Prostor</p>
                   <p className="font-medium text-gray-900">{data.spaceType ? (data.spaceType === 'single' ? 'Jedno parkirno mjesto' : 'Više parkirnih mjesta') : '—'}</p>
-                  <p className="text-gray-600 text-xs">{data.type || '—'} • {data.features.length > 0 ? data.features.join(', ') : 'Nema odabranih značajki'}</p>
+                  <p className="text-gray-600 text-xs">{data.type ? (data.type === 'private_driveway' ? 'Privatni prilaz' : data.type === 'commercial_carpark' ? 'Komercijalno parkiralište' : data.type === 'residential_carpark' ? 'Stambeno parkiralište' : 'Zaključana garaža') : '—'} • {data.features.length > 0 ? data.features.join(', ') : 'Nema odabranih značajki'}</p>
                 </div>
                 <div className="border-b border-gray-200 pb-3">
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Veličina vozila</p>
@@ -1071,10 +1071,6 @@ export function ListYourLotPanel({
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Pristup</p>
                   <p className="font-medium text-gray-900">{data.accessControl === 'yes' ? `Kontrola: ${data.accessControlType || '—'}` : 'Nema kontrole pristupa'}</p>
                   <p className="text-gray-600 text-xs">Dozvola potrebna: {data.permitRequired === 'yes' ? 'Da' : 'Ne'}</p>
-                </div>
-                <div className="border-b border-gray-200 pb-3">
-                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Dostupnost</p>
-                  <p className="font-medium text-gray-900">Dnevno {data.openTime} – {data.closeTime}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Fotografije</p>
