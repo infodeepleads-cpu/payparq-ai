@@ -16,7 +16,7 @@ const REGIONS = [
   { id: 'SI', label: 'Slovenia', center: [46.056, 14.506] },
   { id: 'RS', label: 'Serbia', center: [44.787, 20.457] },
   { id: 'BA', label: 'Bosnia', center: [43.852, 18.396] },
-  { id: 'ME', label: 'Montenegro', center: [42.442, 19.268] },
+  { id: 'ME', label: 'Crna Gora', center: [42.442, 19.268] },
   { id: 'IT', label: 'Italy', center: [41.902, 12.496] },
   { id: 'AT', label: 'Austria', center: [48.209, 16.370] },
   { id: 'DE', label: 'Germany', center: [52.520, 13.405] },
@@ -43,31 +43,44 @@ interface ListingData {
 function InfoWidget({ tip }: { tip: string }) {
   return (
     <div className="col-span-1">
-      <div className="sticky top-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex gap-3">
-          <div className="text-2xl">💡</div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Useful Info</h4>
-            <p className="text-sm text-gray-700">{tip}</p>
-          </div>
+      <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
+        <div className="flex items-start gap-2 mb-3">
+          <p className="text-sm text-gray-700 leading-snug">Korisne Informacije</p>
         </div>
+        <p className="text-base text-gray-700 leading-snug">{tip}</p>
       </div>
     </div>
   );
 }
 
+type MainStep = 'intro' | 1 | 2 | 3 | 'review';
+type Step1Sub = 'region' | 'map' | 'name';
+
 interface ListYourLotPanelProps {
   isFullScreen?: boolean;
+  onStepChange?: (step: MainStep) => void;
+  onSubStepChange?: (subStep: Step1Sub) => void;
 }
 
-export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps) {
+export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStepChange }: ListYourLotPanelProps) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
 
-  const [step, setStep] = useState<MainStep>('intro');
-  const [step1Sub, setStep1Sub] = useState<Step1Sub>('region');
+  const [step, setStepInternal] = useState<MainStep>('intro');
+  const [step1Sub, setStep1SubInternal] = useState<Step1Sub>('region');
+
+  const setStep = (newStep: MainStep) => {
+    setStepInternal(newStep);
+    onStepChange?.(newStep);
+  };
+
+  const setStep1Sub = (newSubStep: Step1Sub) => {
+    setStep1SubInternal(newSubStep);
+    onSubStepChange?.(newSubStep);
+  };
+
   const autocompleteRef = useRef<any>(null);
   const [data, setData] = useState<ListingData>({
     region: '',
@@ -301,29 +314,35 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
     : String(step);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Conditionally show new header for steps (not intro) */}
-      {step !== 'intro' && <ListingHeader currentStep={step} currentSubStep={step1Sub} onBack={handleBack} />}
-
+    <div className="min-h-screen bg-white flex flex-col w-full">
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className={isFullScreen ? 'h-full' : ''}>
-          <div className="space-y-6 px-6 py-6 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-hidden w-full">
+        <div className="h-full w-full flex flex-col">
+          <div className="h-full w-full flex m-0 p-0">
 
-      {/* ── STEP 1a: Region + Address ── */}
+      {/* ── STEP 1: Choose Country ── */}
       {step === 1 && step1Sub === 'region' && (
-        <div className="flex gap-8 animate-fadeIn h-full">
-          <div className="flex-1 space-y-5">
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left white sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 overflow-auto h-full">
+            <div className="px-6 space-y-5 h-full">
+              {/* Welcome message */}
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremimo vas da postanete vlasnik prostora.</h2>
+                <p className="text-gray-600 mb-6">Korak 1 od 5</p>
+              </div>
+              {/* Main content area */}
+              <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Where is your parking space located?</label>
               <select
                 value={data.region}
                 onChange={(e) => updateData('region', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                className="w-full border border-gray-300 rounded-lg px-4 py-6 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 appearance-none"
               >
-                <option value="">Select a region</option>
+                <option value="" className="text-gray-900">Select a country</option>
                 {REGIONS.map((r) => (
-                  <option key={r.id} value={r.id}>
+                  <option key={r.id} value={r.id} className="text-gray-900">
                     {r.label}
                   </option>
                 ))}
@@ -342,18 +361,18 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
                       value={data.address}
                       onChange={(e) => updateData('address', e.target.value)}
                       placeholder="Search address..."
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                     />
                   </Autocomplete>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Poštanski broj</label>
                   <input
                     type="text"
                     value={data.postalCode}
                     onChange={(e) => updateData('postalCode', e.target.value)}
                     placeholder="e.g., 10000"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                   />
                 </div>
               </div>
@@ -362,18 +381,23 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               {geocoding ? 'Finding location…' : 'Continue'}
               {!geocoding && <ChevronRight className="w-4 h-4" />}
             </button>
+            </div>
+            </div>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+          {/* Right white sector with widget */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── STEP 1b: Map ── */}
+      {/* ── STEP 2: Verify Location ── */}
       {step === 1 && step1Sub === 'map' && (
-        <div className={isFullScreen ? "space-y-4 h-full" : "flex gap-6 animate-fadeIn"}>
+        <div className={isFullScreen ? "space-y-4 h-full" : "flex gap-[19px] animate-fadeIn"}>
           <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "flex-1 space-y-4"}>
             <p className="text-sm text-gray-600">Click the map to pin the exact entrance to your parking space</p>
             <div className={isFullScreen ? "flex-1 rounded-lg overflow-hidden border border-gray-300" : ""}>
@@ -402,9 +426,9 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
         </div>
       )}
 
-      {/* ── STEP 1c: Name ── */}
+      {/* ── STEP 3: Name Your Space ── */}
       {step === 1 && step1Sub === 'name' && (
-        <div className="flex gap-6 animate-fadeIn">
+        <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
@@ -431,9 +455,9 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
         </div>
       )}
 
-      {/* ── STEP 2: Get ready for drivers ── */}
+      {/* ── STEP 4: Get Ready For Drivers ── */}
       {step === 2 && (
-        <div className="flex gap-6 animate-fadeIn">
+        <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-6">
             <div className="space-y-3">
               <h3 className="text-base font-semibold">Availability</h3>
@@ -488,9 +512,9 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
         </div>
       )}
 
-      {/* ── STEP 3: Build the picture ── */}
+      {/* ── STEP 5: Build The Picture ── */}
       {step === 3 && (
-        <div className="flex gap-6 animate-fadeIn">
+        <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-6">
             <div className="space-y-3">
               <h3 className="text-base font-semibold">Photos</h3>
@@ -564,7 +588,7 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
 
       {/* ── REVIEW ── */}
       {step === 'review' && (
-        <div className="flex gap-6 animate-fadeIn">
+        <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-4">
             <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
               <div><p className="text-gray-500">Location</p><p className="font-medium">{data.name}, {data.address}, {data.postalCode} ({selectedRegion?.label})</p></div>
