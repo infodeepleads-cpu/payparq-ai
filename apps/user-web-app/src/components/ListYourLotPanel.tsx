@@ -334,7 +334,7 @@ export function ListYourLotPanel({
       setStep('intro');
       setStep1Sub('region');
       setCitySelected(false);
-      setData({ region: '', name: '', address: '', addressLine2: '', town: '', postalCode: '', latitude: '', longitude: '', openTime: '07:00', closeTime: '22:00', smartPricing: true, permits: '', photos: [], type: '', capacity: '', features: [] });
+      setData({ region: '', name: '', address: '', addressLine2: '', town: '', postalCode: '', latitude: '', longitude: '', spaceType: '', vehicleSize: '', heightRestrictions: '', maxHeight: '', accessControl: '', accessControlType: '', permitRequired: '', spaceAllocated: '', openTime: '07:00', closeTime: '22:00', smartPricing: true, permits: '', photos: [], type: '', capacity: '', features: [] });
     } catch {
       alert('Failed to create listing. Please try again.');
     }
@@ -697,7 +697,7 @@ export function ListYourLotPanel({
                     { id: 'disabled', label: 'Disabled access' },
                     { id: 'charging', label: 'Electric charging' },
                     { id: 'valet', label: 'Valet' },
-                    { id: 'gated', label: 'Gated' },
+                    { id: 'rampa', label: 'Rampa' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
@@ -1052,12 +1052,35 @@ export function ListYourLotPanel({
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte podatke prije objavljivanja.</h2>
                 <p className="text-gray-600">Pregled</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
-                <div><p className="text-gray-500">Location</p><p className="font-medium">{data.name}, {data.address}, {data.postalCode} ({selectedRegion?.label})</p></div>
-                <div><p className="text-gray-500">Space</p><p className="font-medium">{data.capacity} cars • {data.type} • {data.features.join(', ')}</p></div>
-                <div><p className="text-gray-500">Available</p><p className="font-medium">Daily {data.openTime} – {data.closeTime}</p></div>
-                <div><p className="text-gray-500">Pricing</p><p className="font-medium">{data.smartPricing ? 'Smart Pricing' : 'Manual'} • Permit: {data.permits}</p></div>
-                <div><p className="text-gray-500">Photos</p><p className="font-medium">{data.photos.length} uploaded</p></div>
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4 text-sm">
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Mjesto</p>
+                  <p className="font-medium text-gray-900">{data.name || '—'}, {data.address || '—'}, {data.postalCode || '—'}</p>
+                  <p className="text-gray-600 text-xs">{selectedRegion?.label || '—'}</p>
+                </div>
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Prostor</p>
+                  <p className="font-medium text-gray-900">{data.spaceType ? (data.spaceType === 'single' ? 'Jedno parkirno mjesto' : 'Više parkirnih mjesta') : '—'}</p>
+                  <p className="text-gray-600 text-xs">{data.type || '—'} • {data.features.length > 0 ? data.features.join(', ') : 'Nema odabranih značajki'}</p>
+                </div>
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Veličina vozila</p>
+                  <p className="font-medium text-gray-900">{data.vehicleSize ? data.vehicleSize.charAt(0).toUpperCase() + data.vehicleSize.slice(1) : '—'}</p>
+                  {data.heightRestrictions && <p className="text-gray-600 text-xs">Max visina: {data.maxHeight || '—'}</p>}
+                </div>
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Pristup</p>
+                  <p className="font-medium text-gray-900">{data.accessControl === 'yes' ? `Kontrola: ${data.accessControlType || '—'}` : 'Nema kontrole pristupa'}</p>
+                  <p className="text-gray-600 text-xs">Dozvola potrebna: {data.permitRequired === 'yes' ? 'Da' : 'Ne'}</p>
+                </div>
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Dostupnost</p>
+                  <p className="font-medium text-gray-900">Dnevno {data.openTime} – {data.closeTime}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Fotografije</p>
+                  <p className="font-medium text-gray-900">{data.photos.length} fotografija učitano</p>
+                </div>
               </div>
               <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
                 Publish Listing
