@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { ChevronRight, HelpCircle } from 'lucide-react';
+import { ChevronRight, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { ListingHeader } from './ListingHeader';
@@ -46,6 +46,9 @@ function InfoWidget({ tip }: { tip: string }) {
       <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
         <div className="flex items-start gap-2 mb-3">
           <p className="text-sm text-gray-700 leading-snug">Korisne Informacije</p>
+          <button className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <Info className="w-4 h-4" />
+          </button>
         </div>
         <p className="text-base text-gray-700 leading-snug">{tip}</p>
       </div>
@@ -53,23 +56,31 @@ function InfoWidget({ tip }: { tip: string }) {
   );
 }
 
-type MainStep = 'intro' | 1 | 2 | 3 | 'review';
-type Step1Sub = 'region' | 'map' | 'name';
-
 interface ListYourLotPanelProps {
   isFullScreen?: boolean;
+  currentStep?: MainStep;
+  currentSubStep?: Step1Sub;
   onStepChange?: (step: MainStep) => void;
   onSubStepChange?: (subStep: Step1Sub) => void;
 }
 
-export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStepChange }: ListYourLotPanelProps) {
+export function ListYourLotPanel({
+  isFullScreen = false,
+  currentStep: propStep,
+  currentSubStep: propSubStep,
+  onStepChange,
+  onSubStepChange
+}: ListYourLotPanelProps) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
 
-  const [step, setStepInternal] = useState<MainStep>('intro');
-  const [step1Sub, setStep1SubInternal] = useState<Step1Sub>('region');
+  const [step, setStepInternal] = useState<MainStep>(propStep || 'intro');
+  const [step1Sub, setStep1SubInternal] = useState<Step1Sub>(propSubStep || 'region');
+
+  const currentStepValue = propStep !== undefined ? propStep : step;
+  const currentSubStepValue = propSubStep !== undefined ? propSubStep : step1Sub;
 
   const setStep = (newStep: MainStep) => {
     setStepInternal(newStep);
@@ -237,7 +248,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
   };
 
   // ─── INTRO ─────────────────────────────────────────────────────────────
-  if (step === 'intro') {
+  if (currentStepValue === 'intro') {
     return (
       <div className="space-y-6">
         <div>
@@ -284,7 +295,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
               <div className="flex items-start gap-2 mb-3">
                 <p className="text-sm text-gray-700 leading-snug">In your area, we think your spaces could earn</p>
                 <button className="text-gray-400 hover:text-gray-600 flex-shrink-0">
-                  <HelpCircle className="w-4 h-4" />
+                  <Info className="w-4 h-4" />
                 </button>
               </div>
               <p className="text-3xl font-bold text-[#5F3DFC]">
@@ -299,19 +310,19 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
   }
 
   // ─── STEP HEADER ───────────────────────────────────────────────────────
-  const stepTitle = step === 1
-    ? step1Sub === 'region' ? 'Where is your parking space located?' : step1Sub === 'map' ? 'Pin your exact location' : 'Name your parking space'
-    : step === 2 ? 'Get ready for drivers'
+  const stepTitle = currentStepValue === 1
+    ? currentSubStepValue === 'region' ? 'Where is your parking space located?' : currentSubStepValue === 'map' ? 'Pin your exact location' : 'Name your parking space'
+    : currentStepValue === 2 ? 'Get ready for drivers'
     : 'Build the picture';
 
-  const stepSub = step === 1
-    ? step1Sub === 'region' ? 'Select region, then enter your address' : step1Sub === 'map' ? 'Click the map to mark your parking entrance' : 'Give your parking space a name'
-    : step === 2 ? 'Set availability and pricing'
+  const stepSub = currentStepValue === 1
+    ? currentSubStepValue === 'region' ? 'Select region, then enter your address' : currentSubStepValue === 'map' ? 'Click the map to mark your parking entrance' : 'Give your parking space a name'
+    : currentStepValue === 2 ? 'Set availability and pricing'
     : 'Add photos and space details';
 
-  const stepProgress = step === 1
-    ? step1Sub === 'region' ? '1a' : step1Sub === 'map' ? '1b' : '1c'
-    : String(step);
+  const stepProgress = currentStepValue === 1
+    ? currentSubStepValue === 'region' ? '1a' : currentSubStepValue === 'map' ? '1b' : '1c'
+    : String(currentStepValue);
 
   return (
     <div className="min-h-screen bg-white flex flex-col w-full">
@@ -321,14 +332,14 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
           <div className="h-full w-full flex m-0 p-0">
 
       {/* ── STEP 1: Choose Country ── */}
-      {step === 1 && step1Sub === 'region' && (
-        <div className="flex animate-fadeIn h-full w-full">
+      {currentStepValue === 1 && currentSubStepValue === 'region' && (
+        <div className="flex animate-fadeIn h-full w-full -ml-[20px]">
           {/* Left white sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 overflow-auto h-full">
             <div className="px-6 space-y-5 h-full">
               {/* Welcome message */}
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremimo vas da postanete vlasnik prostora.</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremimo vas da postanete vlasnik parkinga.</h2>
                 <p className="text-gray-600 mb-6">Korak 1 od 5</p>
               </div>
               {/* Main content area */}
@@ -355,6 +366,9 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
                   <Autocomplete
                     ref={autocompleteRef}
                     onPlaceChanged={handlePlaceSelect}
+                    options={{
+                      componentRestrictions: { country: data.region.toLowerCase() }
+                    }}
                   >
                     <input
                       type="text"
@@ -378,7 +392,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
               </div>
             )}
             <button onClick={handleNext} disabled={!canProceed() || geocoding} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              {geocoding ? 'Finding location…' : 'Continue'}
+              {geocoding ? 'Finding location…' : 'Nastaviti'}
               {!geocoding && <ChevronRight className="w-4 h-4" />}
             </button>
             </div>
@@ -396,7 +410,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
       )}
 
       {/* ── STEP 2: Verify Location ── */}
-      {step === 1 && step1Sub === 'map' && (
+      {currentStepValue === 1 && currentSubStepValue === 'map' && (
         <div className={isFullScreen ? "space-y-4 h-full" : "flex gap-[19px] animate-fadeIn"}>
           <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "flex-1 space-y-4"}>
             <p className="text-sm text-gray-600">Click the map to pin the exact entrance to your parking space</p>
@@ -427,7 +441,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
       )}
 
       {/* ── STEP 3: Name Your Space ── */}
-      {step === 1 && step1Sub === 'name' && (
+      {currentStepValue === 1 && currentSubStepValue === 'name' && (
         <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-5">
             <div>
@@ -456,7 +470,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
       )}
 
       {/* ── STEP 4: Get Ready For Drivers ── */}
-      {step === 2 && (
+      {currentStepValue === 2 && (
         <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-6">
             <div className="space-y-3">
@@ -513,7 +527,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
       )}
 
       {/* ── STEP 5: Build The Picture ── */}
-      {step === 3 && (
+      {currentStepValue === 3 && (
         <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-6">
             <div className="space-y-3">
@@ -587,7 +601,7 @@ export function ListYourLotPanel({ isFullScreen = false, onStepChange, onSubStep
       )}
 
       {/* ── REVIEW ── */}
-      {step === 'review' && (
+      {currentStepValue === 'review' && (
         <div className="flex gap-[19px] animate-fadeIn">
           <div className="flex-1 space-y-4">
             <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
