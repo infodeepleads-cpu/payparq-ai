@@ -1,6 +1,6 @@
 'use client';
 
-type MainStep = 'intro' | 1 | 2 | 3 | 'review';
+type MainStep = 'intro' | 1 | 2 | 3 | 4 | 5 | 'review';
 type Step1Sub = 'region' | 'map' | 'name';
 
 interface ListingHeaderProps {

@@ -8,7 +8,7 @@ import { ListingHeader } from './ListingHeader';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
-type MainStep = 'intro' | 1 | 2 | 3 | 'review';
+type MainStep = 'intro' | 1 | 2 | 3 | 4 | 5 | 'review';
 type Step1Sub = 'region' | 'map' | 'name';
 
 const REGIONS = [
