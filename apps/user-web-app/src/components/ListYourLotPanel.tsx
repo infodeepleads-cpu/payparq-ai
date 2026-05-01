@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { ChevronRight, Info } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ChevronRight, Info, Clock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { ListingHeader } from './ListingHeader';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
-type MainStep = 'intro' | 1 | 2 | 3 | 4 | 5 | 'review';
-type Step1Sub = 'region' | 'map' | 'name';
+type MainStep = 'intro' | 1 | 2 | 3 | 'review';
+type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'vehicleSize' | 'accessControl';
+type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions';
+type Step3Sub = 'photos' | 'streetView' | 'summary';
 
 const REGIONS = [
   { id: 'HR', label: 'Croatia', center: [45.815, 15.982] },
@@ -48,6 +50,24 @@ interface ListingData {
   type: string;
   capacity: string;
   features: string[];
+  available24_7: boolean;
+  daysAvailable: string[];
+  accessHoursSameForAll: boolean;
+  allowOvernightBookings: boolean;
+  dayHours: { [key: string]: { open: string; close: string } };
+  noticeRequired: string;
+  startTakingBookingsToday: boolean;
+  bookingStartDate: string;
+  bookingWindow: string;
+  acceptMonthlyBookings: boolean;
+  acceptHourlyDailyBookings: boolean;
+  availablePlan: string;
+  pricingModel: string;
+  overrideNearbyLocations: boolean;
+  addAdditionalInfo: boolean;
+  additionalDescription: string;
+  postBookingInstructions: string;
+  addPostBookingInfo: boolean;
 }
 
 function InfoWidget({ tip }: { tip: string }) {
@@ -70,16 +90,24 @@ interface ListYourLotPanelProps {
   isFullScreen?: boolean;
   currentStep?: MainStep;
   currentSubStep?: Step1Sub;
+  currentStep2Sub?: Step2Sub;
+  currentStep3Sub?: Step3Sub;
   onStepChange?: (step: MainStep) => void;
   onSubStepChange?: (subStep: Step1Sub) => void;
+  onStep2SubChange?: (subStep: Step2Sub) => void;
+  onStep3SubChange?: (subStep: Step3Sub) => void;
 }
 
 export function ListYourLotPanel({
   isFullScreen = false,
   currentStep: propStep,
   currentSubStep: propSubStep,
+  currentStep2Sub: propStep2Sub,
+  currentStep3Sub: propStep3Sub,
   onStepChange,
-  onSubStepChange
+  onSubStepChange,
+  onStep2SubChange,
+  onStep3SubChange
 }: ListYourLotPanelProps) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -88,9 +116,13 @@ export function ListYourLotPanel({
 
   const [step, setStepInternal] = useState<MainStep>(propStep || 'intro');
   const [step1Sub, setStep1SubInternal] = useState<Step1Sub>(propSubStep || 'region');
+  const [step2Sub, setStep2SubInternal] = useState<Step2Sub>(propStep2Sub || 'availability');
+  const [step3Sub, setStep3SubInternal] = useState<Step3Sub>(propStep3Sub || 'photos');
 
   const currentStepValue = propStep !== undefined ? propStep : step;
   const currentSubStepValue = propSubStep !== undefined ? propSubStep : step1Sub;
+  const currentStep2SubValue = propStep2Sub !== undefined ? propStep2Sub : step2Sub;
+  const currentStep3SubValue = propStep3Sub !== undefined ? propStep3Sub : step3Sub;
 
   const setStep = (newStep: MainStep) => {
     setStepInternal(newStep);
@@ -102,8 +134,22 @@ export function ListYourLotPanel({
     onSubStepChange?.(newSubStep);
   };
 
+  const setStep2Sub = (newSubStep: Step2Sub) => {
+    setStep2SubInternal(newSubStep);
+    onStep2SubChange?.(newSubStep);
+  };
+
+  const setStep3Sub = (newSubStep: Step3Sub) => {
+    setStep3SubInternal(newSubStep);
+    onStep3SubChange?.(newSubStep);
+  };
+
   const cityAutocompleteRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const streetViewRef = useRef<HTMLDivElement>(null);
+  const streetViewInstanceRef = useRef<any>(null);
   const [citySelected, setCitySelected] = useState(false);
+  const [streetViewHeading, setStreetViewHeading] = useState(0);
   const [data, setData] = useState<ListingData>({
     region: '',
     name: '',
@@ -129,6 +175,32 @@ export function ListYourLotPanel({
     type: '',
     capacity: '',
     features: [],
+    available24_7: true,
+    daysAvailable: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    accessHoursSameForAll: true,
+    allowOvernightBookings: false,
+    dayHours: {
+      monday: { open: '00:00', close: '23:59' },
+      tuesday: { open: '00:00', close: '23:59' },
+      wednesday: { open: '00:00', close: '23:59' },
+      thursday: { open: '00:00', close: '23:59' },
+      friday: { open: '00:00', close: '23:59' },
+      saturday: { open: '00:00', close: '23:59' },
+      sunday: { open: '00:00', close: '23:59' },
+    },
+    noticeRequired: '0',
+    startTakingBookingsToday: true,
+    bookingStartDate: new Date().toISOString().split('T')[0],
+    bookingWindow: 'this_month',
+    acceptMonthlyBookings: true,
+    acceptHourlyDailyBookings: true,
+    availablePlan: 'monday_to_sunday',
+    pricingModel: 'dynamic',
+    overrideNearbyLocations: false,
+    addAdditionalInfo: false,
+    additionalDescription: '',
+    postBookingInstructions: '',
+    addPostBookingInfo: false,
   });
 
   const updateData = (key: keyof ListingData, value: any) => {
@@ -143,6 +215,52 @@ export function ListYourLotPanel({
         : [...prev.features, feature],
     }));
   };
+
+  useEffect(() => {
+    if (currentStepValue === 3 && currentStep3SubValue === 'streetView' && streetViewRef.current && isLoaded && data.latitude && data.longitude && window.google?.maps) {
+      try {
+        const lat = parseFloat(data.latitude);
+        const lng = parseFloat(data.longitude);
+
+        if (isNaN(lat) || isNaN(lng)) {
+          console.error('Invalid coordinates:', lat, lng);
+          return;
+        }
+
+        const location = new window.google.maps.LatLng(lat, lng);
+
+        if (!streetViewInstanceRef.current) {
+          streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(
+            streetViewRef.current,
+            {
+              position: location,
+              pov: {
+                heading: streetViewHeading,
+                pitch: 0,
+              },
+              zoom: 1,
+              motionTracking: false,
+              motionTrackingControl: true,
+              panControl: true,
+              zoomControl: true,
+            }
+          );
+
+          streetViewInstanceRef.current.addListener('pov_changed', () => {
+            const pov = streetViewInstanceRef.current.getPov();
+            setStreetViewHeading(pov.heading);
+          });
+
+          console.log('Street View initialized at:', lat, lng);
+        } else {
+          streetViewInstanceRef.current.setPosition(location);
+          streetViewInstanceRef.current.setPov({ heading: streetViewHeading, pitch: 0 });
+        }
+      } catch (error) {
+        console.error('Street View initialization error:', error);
+      }
+    }
+  }, [currentStepValue, currentStep3SubValue, isLoaded, data.latitude, data.longitude]);
 
   const geocodeFullAddress = async () => {
     console.log('🔍 geocodeFullAddress called - timestamp:', new Date().toISOString());
@@ -238,6 +356,133 @@ export function ListYourLotPanel({
   const selectedRegion = REGIONS.find((r) => r.id === data.region);
   const mapCenter = selectedRegion ? selectedRegion.center : [45.815, 15.982];
 
+  const generateDescription = () => {
+    const lines = [];
+
+    // Parking name and location
+    if (data.name && data.address && data.town) {
+      lines.push(`${data.spaceType} space${data.spaceType > 1 ? 's' : ''} located at ${data.name}, ${data.address} in ${data.town}.`);
+    } else if (data.address && data.town) {
+      lines.push(`${data.spaceType} space${data.spaceType > 1 ? 's' : ''} located on ${data.address} in ${data.town}.`);
+    }
+
+    // Parking type
+    const typeMap = {
+      'private_driveway': 'private driveway',
+      'commercial_carpark': 'commercial car park',
+      'residential_carpark': 'residential car park',
+      'lock_up': 'secure lock-up'
+    };
+    if (data.type) {
+      lines.push(`This is a ${typeMap[data.type] || data.type} suitable for parking.`);
+    }
+
+    // Vehicle size
+    if (data.vehicleSize) {
+      const sizeMap = {
+        'small': 'Small vehicles',
+        'medium': 'Small to Medium vehicles',
+        'large': 'Large vehicles (4x4)',
+        'van': 'Vans and large vehicles'
+      };
+      lines.push(`The space is suitable for ${sizeMap[data.vehicleSize] || data.vehicleSize}.`);
+    }
+
+    // Features/Amenities
+    if (data.features && data.features.length > 0) {
+      lines.push(`Amenities include: ${data.features.join(', ')}.`);
+    }
+
+    // Availability
+    if (data.available24_7) {
+      lines.push(`The space is available 24 hours on all days.`);
+    } else if (data.openTime && data.closeTime) {
+      const days = data.daysAvailable ? data.daysAvailable.length : 7;
+      lines.push(`The space is available ${days} days per week from ${data.openTime} to ${data.closeTime}.`);
+    }
+
+    // Permit requirements
+    if (data.permitRequired === 'yes') {
+      lines.push(`A permit is required for this parking space - instructions for collection will be provided in your confirmation email.`);
+    }
+
+    // Booking flexibility
+    const bookingTypes = [];
+    if (data.acceptMonthlyBookings) bookingTypes.push('monthly bookings');
+    if (data.acceptHourlyDailyBookings) bookingTypes.push('hourly and daily bookings');
+    if (bookingTypes.length > 0) {
+      lines.push(`We accept ${bookingTypes.join(' and ')}.`);
+    }
+
+    // Multiple access
+    if (data.spaceType) {
+      lines.push(`You can enter/exit this location multiple times throughout the duration of your booking.`);
+    }
+
+    // Pricing model
+    if (data.pricingModel === 'dynamic') {
+      lines.push(`Pricing is dynamically adjusted based on market demand to ensure competitive rates.`);
+    } else if (data.pricingModel === 'static') {
+      lines.push(`Fixed pricing available for this space.`);
+    }
+
+    return lines.join(' ');
+  };
+
+  const generatePostBookingInstructions = () => {
+    const lines = [];
+
+    // Location and access
+    if (data.address && data.postalCode && data.town) {
+      lines.push(`The space is located at ${data.address}, ${data.town}, ${data.postalCode}.`);
+    }
+
+    // Permit instructions
+    if (data.permitRequired === 'yes') {
+      lines.push(`You will need to arrange to collect a permit for access to ensure that you don't receive a Parking Charge, the space owner details are below.`);
+    }
+
+    // Access control instructions
+    if (data.accessControl === 'yes' && data.accessControlType) {
+      const accessTypeMap = {
+        'gate': 'Gate code or remote',
+        'key': 'Key will be provided',
+        'code': 'Access code will be provided',
+        'keycard': 'Keycard will be provided',
+        'remote': 'Remote control will be provided'
+      };
+      lines.push(`Access to the space is controlled by ${accessTypeMap[data.accessControlType] || data.accessControlType}. Instructions will be provided upon booking confirmation.`);
+    }
+
+    // Overnight and multiple access
+    if (data.allowOvernightBookings) {
+      lines.push(`Overnight parking is permitted. You can enter and exit the space as needed during your booking period.`);
+    } else {
+      lines.push(`You can enter/exit this location multiple times throughout the duration of your booking.`);
+    }
+
+    // Notice period
+    if (data.noticeRequired && data.noticeRequired !== '') {
+      const noticeMap = {
+        'no_notice': 'No notice required',
+        '15_min': '15 minutes notice',
+        '30_min': '30 minutes notice',
+        '1_hour': '1 hour notice',
+        '2_hours': '2 hours notice',
+        'half_day': 'Half day notice',
+        'full_day': 'Full day notice'
+      };
+      if (noticeMap[data.noticeRequired]) {
+        lines.push(`Please note: ${noticeMap[data.noticeRequired]} is required before visiting the space.`);
+      }
+    }
+
+    // Contact information
+    lines.push(`Should you require any assistance, you can contact the space owner, Karlo on [Contact Number].`);
+
+    return lines.join(' ');
+  };
+
   const isStep1Complete = !!(data.region && data.address && data.town && data.latitude && data.longitude);
   const isStep2Complete = !!(data.openTime && data.closeTime && data.permits);
   const isStep3Complete = data.photos.length >= 3 && !!(data.type && data.capacity && data.features.length > 0);
@@ -246,7 +491,7 @@ export function ListYourLotPanel({
     if (step === 1) {
       if (step1Sub === 'region') return !!(data.region && data.address && citySelected);
       if (step1Sub === 'map') return !!(data.latitude && data.longitude);
-      if (step1Sub === 'name') return !!(data.name && data.spaceType);
+      if (step1Sub === 'name') return !!(data.name && data.spaceType && parseInt(data.spaceType) > 0);
     }
     if (step === 2) return true;
     if (step === 3) return !!data.type;
@@ -270,73 +515,180 @@ export function ListYourLotPanel({
         return;
       }
       if (currentSubStepValue === 'name') {
-        console.log('📝 Step 1c → moving to step 2');
-        setStep(2);
+        console.log('📝 Step 1c → moving to type');
+        setStep1Sub('type');
+        return;
+      }
+      if (currentSubStepValue === 'type') {
+        console.log('🎨 Step 1d → moving to features');
+        setStep1Sub('features');
+        return;
+      }
+      if (currentSubStepValue === 'features') {
+        console.log('⭐ Step 1e → moving to vehicleSize');
+        setStep1Sub('vehicleSize');
+        return;
+      }
+      if (currentSubStepValue === 'vehicleSize') {
+        console.log('🚗 Step 1f → moving to accessControl');
+        setStep1Sub('accessControl');
+        return;
+      }
+      if (currentSubStepValue === 'accessControl') {
+        console.log('🔐 Step 1g → moving to review');
+        setStep('review');
         return;
       }
     }
     if (currentStepValue === 2) {
-      console.log('🕐 Step 2 → moving to step 3');
-      setStep(3);
-      return;
+      if (currentStep2SubValue === 'availability') {
+        console.log('📅 Step 2a → moving to booking start');
+        setStep2Sub('bookingStart');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingStart') {
+        console.log('📅 Step 2b → moving to calendar preview');
+        setStep2Sub('calendarPreview');
+        return;
+      }
+      if (currentStep2SubValue === 'calendarPreview') {
+        console.log('🗓️ Step 2c → moving to booking window');
+        setStep2Sub('bookingWindow');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingWindow') {
+        console.log('📅 Step 2d → moving to booking types');
+        setStep2Sub('bookingTypes');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingTypes') {
+        console.log('📋 Step 2e → moving to pricing');
+        setStep2Sub('pricing');
+        return;
+      }
+      if (currentStep2SubValue === 'pricing') {
+        console.log('💰 Step 2f → moving to description');
+        setStep2Sub('description');
+        return;
+      }
+      if (currentStep2SubValue === 'description') {
+        console.log('📝 Step 2g → moving to post-booking instructions');
+        setStep2Sub('postBookingInstructions');
+        return;
+      }
+      if (currentStep2SubValue === 'postBookingInstructions') {
+        console.log('📋 Step 2h → moving to step 3');
+        setStep(3);
+        return;
+      }
     }
     if (currentStepValue === 3) {
-      console.log('📸 Step 3 → moving to step 4');
-      setStep(4);
-      return;
-    }
-    if (currentStepValue === 4) {
-      console.log('🚗 Step 4 → moving to step 5');
-      setStep(5);
-      return;
-    }
-    if (currentStepValue === 5) {
-      console.log('🔐 Step 5 → moving to review');
-      setStep('review');
-      return;
+      if (currentStep3SubValue === 'photos') {
+        console.log('📸 Step 3a → moving to street view');
+        setStep3Sub('streetView');
+        return;
+      }
+      if (currentStep3SubValue === 'streetView') {
+        console.log('🗺️ Step 3b → moving to summary');
+        setStep3Sub('summary');
+        return;
+      }
+      if (currentStep3SubValue === 'summary') {
+        console.log('✅ Step 3c → moving to review');
+        setStep('review');
+        return;
+      }
     }
   };
 
   const handleBack = () => {
-    if (step === 1) {
-      if (step1Sub === 'map') { setStep1Sub('region'); return; }
-      if (step1Sub === 'name') { setStep1Sub('map'); return; }
-      setStep('intro');
-    } else if (step === 2) {
-      setStep1Sub('name');
-      setStep(1);
-    } else if (step === 3) {
-      setStep(2);
-    } else if (step === 4) {
+    if (currentStepValue === 1) {
+      if (currentSubStepValue === 'region') {
+        setStep('intro');
+        return;
+      }
+      if (currentSubStepValue === 'map') {
+        setStep1Sub('region');
+        return;
+      }
+      if (currentSubStepValue === 'name') {
+        setStep1Sub('map');
+        return;
+      }
+      if (currentSubStepValue === 'type') {
+        setStep1Sub('name');
+        return;
+      }
+      if (currentSubStepValue === 'features') {
+        setStep1Sub('type');
+        return;
+      }
+      if (currentSubStepValue === 'vehicleSize') {
+        setStep1Sub('features');
+        return;
+      }
+      if (currentSubStepValue === 'accessControl') {
+        setStep1Sub('vehicleSize');
+        return;
+      }
+    } else if (currentStepValue === 2) {
+      if (currentStep2SubValue === 'postBookingInstructions') {
+        setStep2Sub('description');
+        return;
+      }
+      if (currentStep2SubValue === 'description') {
+        setStep2Sub('pricing');
+        return;
+      }
+      if (currentStep2SubValue === 'pricing') {
+        setStep2Sub('bookingTypes');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingTypes') {
+        setStep2Sub('bookingWindow');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingWindow') {
+        setStep2Sub('calendarPreview');
+        return;
+      }
+      if (currentStep2SubValue === 'calendarPreview') {
+        setStep2Sub('bookingStart');
+        return;
+      }
+      if (currentStep2SubValue === 'bookingStart') {
+        setStep2Sub('availability');
+        return;
+      }
+      if (currentStep2SubValue === 'availability') {
+        setStep1Sub('accessControl');
+        setStep(1);
+        return;
+      }
+    } else if (currentStepValue === 3) {
+      if (currentStep3SubValue === 'summary') {
+        setStep3Sub('streetView');
+        return;
+      }
+      if (currentStep3SubValue === 'streetView') {
+        setStep3Sub('photos');
+        return;
+      }
+      if (currentStep3SubValue === 'photos') {
+        setStep2Sub('postBookingInstructions');
+        setStep(2);
+        return;
+      }
+    } else if (currentStepValue === 'review') {
       setStep(3);
-    } else if (step === 5) {
-      setStep(4);
-    } else if (step === 'review') {
-      setStep(5);
     }
   };
 
   const handleSubmit = async () => {
-    try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([k, v]) => {
-        if (k === 'photos') return;
-        if (k === 'features') { formData.append(k, JSON.stringify(v)); return; }
-        formData.append(k, String(v));
-      });
-      for (const photo of data.photos) formData.append('photos', photo);
-
-      const response = await fetch('/api/listings', { method: 'POST', body: formData });
-      const result = await response.json();
-      if (!response.ok) { alert(`Error: ${result.error}`); return; }
-
-      alert('✅ Parking listing published successfully!');
-      setStep('intro');
-      setStep1Sub('region');
-      setCitySelected(false);
-    } catch {
-      alert('Failed to create listing. Please try again.');
-    }
+    alert('✅ Section 1 completed! Data saved.');
+    setStep('intro');
+    setStep1Sub('region');
+    setCitySelected(false);
   };
 
   // ─── INTRO ─────────────────────────────────────────────────────────────
@@ -612,33 +964,17 @@ export function ListYourLotPanel({
               </div>
 
               <div className="border-t border-gray-200 pt-5">
-                <label className="block text-sm font-medium text-gray-700 mb-3">What type of parking do you have?</label>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => updateData('spaceType', 'single')}
-                    className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                    style={{borderColor: data.spaceType === 'single' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceType === 'single' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                  >
-                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceType === 'single' ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                      {data.spaceType === 'single' && (
-                        <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                      )}
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">Jedno parkirno mjesto</span>
-                  </button>
-                  <button
-                    onClick={() => updateData('spaceType', 'multiple')}
-                    className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                    style={{borderColor: data.spaceType === 'multiple' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceType === 'multiple' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                  >
-                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceType === 'multiple' ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                      {data.spaceType === 'multiple' && (
-                        <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                      )}
-                    </div>
-                    <span className="ml-3 text-sm font-medium text-gray-900">Više parkirnih mjesta</span>
-                  </button>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Koliko parking mjesta imate?</label>
+                <p className="text-xs text-gray-600 mb-3">Unesite točan broj dostupnih mjesta</p>
+                <input
+                  type="number"
+                  min="1"
+                  max="999"
+                  value={data.spaceType ? String(data.spaceType) : ''}
+                  onChange={(e) => updateData('spaceType', e.target.value)}
+                  placeholder="npr. 1, 5, 10..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                />
               </div>
 
               <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
@@ -656,16 +992,7 @@ export function ListYourLotPanel({
                   <div className="flex items-start gap-2 mb-3">
                     <p className="text-sm text-gray-700 leading-snug font-medium">Korisne Informacije</p>
                   </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Jedno parkirno mjesto</p>
-                      <p className="text-xs text-gray-700 mt-1">For owners who only have one space available to book at any given time.</p>
-                    </div>
-                    <div className="border-t border-gray-300 pt-3">
-                      <p className="text-sm font-medium text-gray-900">Više parkirnih mjesta</p>
-                      <p className="text-xs text-gray-700 mt-1">Maximise your earnings if you can accommodate two vehicles or more at any given time.</p>
-                    </div>
-                  </div>
+                  <p className="text-xs text-gray-700 leading-relaxed">Unesite točan broj parking mjesta koja su dostupna za rezervacije. To će biti prikazano na vašem popisu i kalendaru dostupnosti.</p>
                 </div>
               </div>
             </div>
@@ -673,76 +1000,14 @@ export function ListYourLotPanel({
         </div>
       )}
 
-      {/* ── STEP 4: Get Ready For Drivers ── */}
-      {currentStepValue === 2 && (
+      {/* ── STEP 1d: Parking Type ── */}
+      {currentStepValue === 1 && currentSubStepValue === 'type' && (
         <div className="flex animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pripremite se za vozače.</h2>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold">Add Ons Dodaci</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'covered', label: 'Covered parking' },
-                    { id: 'transfers', label: 'Arranged transfers' },
-                    { id: 'cctv', label: 'CCTV' },
-                    { id: 'lighting', label: 'Security lighting' },
-                    { id: 'staff', label: 'On-site staff' },
-                    { id: 'underground', label: 'Underground parking' },
-                    { id: 'disabled', label: 'Disabled access' },
-                    { id: 'charging', label: 'Electric charging' },
-                    { id: 'valet', label: 'Valet' },
-                    { id: 'rampa', label: 'Rampa' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => toggleFeature(id)}
-                      className="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: data.features.includes(id) ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.features.includes(id) ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', border: `2px solid ${data.features.includes(id) ? '#5F3DFC' : '#9CA3AF'}`, borderRadius: '4px', transition: 'all 0.2s'}}>
-                        {data.features.includes(id) && (
-                          <span style={{color: '#5F3DFC', fontSize: '16px', lineHeight: '1'}}>✓</span>
-                        )}
-                      </div>
-                      <span className="ml-2 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
-                  <p className="text-sm text-gray-700">Providing what features your parking space has helps it stand out for drivers looking to book.</p>
-                </div>
-              </div>
-
-              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-                Continue
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
-            <div className="w-80">
-              <div className="sticky top-6">
-                <InfoWidget tip="Odaberite značajke koje čine vaš parking posebnim i atraktivnim za vozače." />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── STEP 5: Build The Picture ── */}
-      {currentStepValue === 3 && (
-        <div className="flex animate-fadeIn h-full w-full">
-          {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
-            <div className="px-6 space-y-6">
-              <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Dodajte slike i detalje.</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Vrsta parkinga.</h2>
               </div>
 
               <div className="space-y-3">
@@ -757,7 +1022,6 @@ export function ListYourLotPanel({
                 </select>
                 <p className="text-sm text-gray-600 mt-2">Here are a few examples:</p>
               </div>
-
 
               <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
                 Nastaviti
@@ -795,14 +1059,64 @@ export function ListYourLotPanel({
         </div>
       )}
 
-      {/* ── STEP 6: Vehicle Size & Height ── */}
-      {currentStepValue === 4 && (
+      {/* ── STEP 1e: Features/Add-ons ── */}
+      {currentStepValue === 1 && currentSubStepValue === 'features' && (
         <div className="flex animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Veličina vozila i pristupa.</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Mogućnosti i dodaci.</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold">What features does your space have?</h3>
+                <p className="text-sm text-gray-600">Select all that apply</p>
+                <div className="space-y-2">
+                  {['EV Charging', 'Covered', 'Gated', 'Well-lit', 'CCTV', 'Wheelchair Accessible', 'Weather Protected', 'Valet Service', 'Car Wash', 'Parking Attendant'].map((feature) => (
+                    <button
+                      key={feature}
+                      onClick={() => updateData('features', data.features.includes(feature) ? data.features.filter(f => f !== feature) : [...data.features, feature])}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.features.includes(feature) ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.features.includes(feature) ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', border: `2px solid ${data.features.includes(feature) ? '#5F3DFC' : '#9CA3AF'}`, borderRadius: '4px', transition: 'all 0.2s'}}>
+                        {data.features.includes(feature) && (
+                          <span style={{color: '#5F3DFC', fontSize: '16px', lineHeight: '1'}}>✓</span>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{feature}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Select features that make your parking space stand out. These help drivers find exactly what they need." />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 1f: Vehicle Size & Height ── */}
+      {currentStepValue === 1 && currentSubStepValue === 'vehicleSize' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Veličina vozila.</h2>
               </div>
 
               <div className="space-y-4">
@@ -832,21 +1146,21 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">Postoje li neka ograničenja visine prilikom pristupa vašem prostoru?</h3>
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold">Postoje li neka ograničenja visine?</h3>
                 <div className="space-y-3">
                   {[
-                    { id: 'no', label: 'No' },
                     { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
-                      onClick={() => updateData('heightRestrictions', id)}
+                      onClick={() => updateData('heightRestrictions', id === 'yes')}
                       className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: data.heightRestrictions === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.heightRestrictions === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                      style={{borderColor: (data.heightRestrictions && id === 'yes') || (!data.heightRestrictions && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.heightRestrictions && id === 'yes') || (!data.heightRestrictions && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.heightRestrictions === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {data.heightRestrictions === id && (
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.heightRestrictions && id === 'yes') || (!data.heightRestrictions && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.heightRestrictions && id === 'yes') || (!data.heightRestrictions && id === 'no')) && (
                           <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
                         )}
                       </div>
@@ -854,33 +1168,22 @@ export function ListYourLotPanel({
                     </button>
                   ))}
                 </div>
-
-                {data.heightRestrictions === 'yes' && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Maximum height in meters</label>
-                    <select value={data.maxHeight} onChange={(e) => updateData('maxHeight', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
-                      <option value="">Select maximum height</option>
-                      <option value="1.8">1.8m</option>
-                      <option value="2.0">2.0m</option>
-                      <option value="2.1">2.1m</option>
-                      <option value="2.2">2.2m</option>
-                      <option value="2.3">2.3m</option>
-                      <option value="2.4">2.4m</option>
-                      <option value="2.5">2.5m</option>
-                      <option value="2.6">2.6m</option>
-                      <option value="2.7">2.7m</option>
-                      <option value="2.8">2.8m</option>
-                      <option value="2.9">2.9m</option>
-                      <option value="3.0">3.0m</option>
-                      <option value="3.2">3.2m</option>
-                      <option value="3.5">3.5m</option>
-                      <option value="4.0">4.0m+</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
-              <button onClick={handleNext} disabled={!data.vehicleSize || !data.heightRestrictions || (data.heightRestrictions === 'yes' && !data.maxHeight)} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+              {data.heightRestrictions && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">Maximum Height (in meters)</label>
+                  <input
+                    type="number"
+                    value={data.maxHeight}
+                    onChange={(e) => updateData('maxHeight', e.target.value)}
+                    placeholder="e.g., 2.0"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  />
+                </div>
+              )}
+
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
                 Nastaviti
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -888,62 +1191,42 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-gray-900">Vehicle size guide:</p>
-
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Small parking space</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">2 door vehicles. Compact cars, motorcycles, small sedans.</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Medium parking space</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">4 door vehicles. Standard sedans, hatchbacks, small SUVs.</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Large parking space</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">4x4 vehicles, Saloon cars. Large SUVs, oversized sedans.</p>
-              </div>
-
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2">Commercial vehicle</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">Van, minibus, and larger commercial vehicles.</p>
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Be clear about vehicle size limitations. This helps drivers find parking that fits their vehicle." />
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── STEP 7: Access & Details ── */}
-      {currentStepValue === 5 && (
+      {/* ── STEP 1g: Access Control ── */}
+      {currentStepValue === 1 && currentSubStepValue === 'accessControl' && (
         <div className="flex animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Kako se pristupa vašem prostoru.</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Kako se pristupa vašem prostoru?</h2>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-900">How is your parking space accessed?</h3>
-                <p className="text-sm text-gray-600 mb-4">Does your space require access control?</p>
-                <p className="text-xs text-gray-500 mb-3">E.g. key fob, pincode etc.</p>
-
+                <h3 className="text-base font-semibold">Postoji li kontrola pristupa?</h3>
+                <p className="text-sm text-gray-600">Select if access control is required</p>
                 <div className="space-y-3">
                   {[
-                    { id: 'no', label: 'No' },
                     { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
                       onClick={() => updateData('accessControl', id)}
                       className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: data.accessControl === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.accessControl === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                      style={{borderColor: (data.accessControl === 'yes' && id === 'yes') || (data.accessControl === 'no' && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.accessControl === 'yes' && id === 'yes') || (data.accessControl === 'no' && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.accessControl === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {data.accessControl === id && (
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.accessControl === 'yes' && id === 'yes') || (data.accessControl === 'no' && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.accessControl === 'yes' && id === 'yes') || (data.accessControl === 'no' && id === 'no')) && (
                           <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
                         )}
                       </div>
@@ -951,34 +1234,39 @@ export function ListYourLotPanel({
                     </button>
                   ))}
                 </div>
-
-                {data.accessControl === 'yes' && (
-                  <div className="space-y-2 mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Vrsta kontrole pristupa</label>
-                    <select value={data.accessControlType} onChange={(e) => updateData('accessControlType', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
-                      <option value="">Select access control type</option>
-                      <option value="key_fob">Key fob</option>
-                      <option value="pincode">Pincode</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
+              {data.accessControl === 'yes' && (
+                <div className="space-y-4 border-t border-gray-200 pt-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type of Access Control</label>
+                    <select value={data.accessControlType} onChange={(e) => updateData('accessControlType', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
+                      <option value="">Select access type</option>
+                      <option value="gate">Gate</option>
+                      <option value="key">Key</option>
+                      <option value="code">Code</option>
+                      <option value="keycard">Keycard</option>
+                      <option value="remote">Remote</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold text-gray-900">Does your space require a permit?</h3>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Je li potrebna dozvola?</label>
                 <div className="space-y-3">
                   {[
-                    { id: 'no', label: 'No' },
                     { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
                       onClick={() => updateData('permitRequired', id)}
                       className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: data.permitRequired === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.permitRequired === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                      style={{borderColor: (data.permitRequired === 'yes' && id === 'yes') || (data.permitRequired === 'no' && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.permitRequired === 'yes' && id === 'yes') || (data.permitRequired === 'no' && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.permitRequired === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {data.permitRequired === id && (
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.permitRequired === 'yes' && id === 'yes') || (data.permitRequired === 'no' && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.permitRequired === 'yes' && id === 'yes') || (data.permitRequired === 'no' && id === 'no')) && (
                           <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
                         )}
                       </div>
@@ -989,20 +1277,60 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold text-gray-900">Is your space allocated?</h3>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Space Allocation</label>
+                <input
+                  type="text"
+                  value={data.spaceAllocated}
+                  onChange={(e) => updateData('spaceAllocated', e.target.value)}
+                  placeholder="e.g., Spot A1"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                />
+              </div>
+
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
+                Publish
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Clearly specify how drivers will access your parking space to avoid confusion." />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2a: Availability Settings ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'availability' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Hi, Karlo! Let's get you ready to accept bookings from drivers</h2>
+              </div>
+
+              {/* 24/7 Question */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Is your space available 24/7?</h3>
                 <div className="space-y-3">
                   {[
-                    { id: 'no', label: 'No' },
                     { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
-                      onClick={() => updateData('spaceAllocated', id)}
+                      onClick={() => updateData('available24_7', id === 'yes')}
                       className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: data.spaceAllocated === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceAllocated === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                      style={{borderColor: (data.available24_7 && id === 'yes') || (!data.available24_7 && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.available24_7 && id === 'yes') || (!data.available24_7 && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceAllocated === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {data.spaceAllocated === id && (
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.available24_7 && id === 'yes') || (!data.available24_7 && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.available24_7 && id === 'yes') || (!data.available24_7 && id === 'no')) && (
                           <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
                         )}
                       </div>
@@ -1012,7 +1340,290 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <button onClick={handleNext} disabled={!data.accessControl || !data.permitRequired || !data.spaceAllocated || (data.accessControl === 'yes' && !data.accessControlType)} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+              {!data.available24_7 && (
+                <>
+                  {/* Days Available */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
+                    <h3 className="text-base font-semibold text-gray-900">What days is your space available?</h3>
+                    <div className="space-y-2">
+                      {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                        <button
+                          key={day}
+                          onClick={() => updateData('daysAvailable', data.daysAvailable.includes(day) ? data.daysAvailable.filter(d => d !== day) : [...data.daysAvailable, day])}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: data.daysAvailable.includes(day) ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.daysAvailable.includes(day) ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', border: `2px solid ${data.daysAvailable.includes(day) ? '#5F3DFC' : '#9CA3AF'}`, borderRadius: '4px', transition: 'all 0.2s'}}>
+                            {data.daysAvailable.includes(day) && (
+                              <span style={{color: '#5F3DFC', fontSize: '16px', lineHeight: '1'}}>✓</span>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900 capitalize">{day}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Access Hours */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
+                    <h3 className="text-base font-semibold text-gray-900">What are the access hours for each day?</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'same', label: 'Same for all' },
+                        { id: 'different', label: 'Different for each day' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('accessHoursSameForAll', id === 'same')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.accessHoursSameForAll && id === 'same') || (!data.accessHoursSameForAll && id === 'different') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.accessHoursSameForAll && id === 'same') || (!data.accessHoursSameForAll && id === 'different') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.accessHoursSameForAll && id === 'same') || (!data.accessHoursSameForAll && id === 'different') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.accessHoursSameForAll && id === 'same') || (!data.accessHoursSameForAll && id === 'different')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {data.accessHoursSameForAll && (
+                      <div className="space-y-3 pt-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+                          <input type="time" value={data.openTime} onChange={(e) => updateData('openTime', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                          <input type="time" value={data.closeTime} onChange={(e) => updateData('closeTime', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
+                        </div>
+                      </div>
+                    )}
+
+                    {!data.accessHoursSameForAll && (
+                      <div className="space-y-4 pt-4">
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                          <div key={day} className="border border-gray-200 rounded-lg p-4">
+                            <p className="text-sm font-medium text-gray-900 mb-3 capitalize">{day}</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
+                                <input type="time" value={data.dayHours[day]?.open || '00:00'} onChange={(e) => updateData('dayHours', {...data.dayHours, [day]: {...data.dayHours[day], open: e.target.value}})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
+                                <input type="time" value={data.dayHours[day]?.close || '23:59'} onChange={(e) => updateData('dayHours', {...data.dayHours, [day]: {...data.dayHours[day], close: e.target.value}})} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Overnight Bookings */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
+                    <h3 className="text-base font-semibold text-gray-900">Allow overnight bookings?</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'no', label: 'No' },
+                        { id: 'yes', label: 'Yes' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('allowOvernightBookings', id === 'yes')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.allowOvernightBookings && id === 'yes') || (!data.allowOvernightBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.allowOvernightBookings && id === 'yes') || (!data.allowOvernightBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.allowOvernightBookings && id === 'yes') || (!data.allowOvernightBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.allowOvernightBookings && id === 'yes') || (!data.allowOvernightBookings && id === 'no')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">In this step, we want to understand what your basic availability settings should be. Once your space has been listed, you'll have even more control with our new advanced availability settings.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2b: Booking Start Date ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'bookingStart' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">When would you like to start accepting bookings?</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Do you want to start taking bookings from today?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'yes', label: 'Yes' },
+                    { id: 'no', label: 'No' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('startTakingBookingsToday', id === 'yes')}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: (data.startTakingBookingsToday && id === 'yes') || (!data.startTakingBookingsToday && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.startTakingBookingsToday && id === 'yes') || (!data.startTakingBookingsToday && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.startTakingBookingsToday && id === 'yes') || (!data.startTakingBookingsToday && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.startTakingBookingsToday && id === 'yes') || (!data.startTakingBookingsToday && id === 'no')) && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!data.startTakingBookingsToday && (
+                <div className="space-y-4 border-t border-gray-200 pt-6">
+                  <label className="block text-sm font-medium text-gray-700">What date would you like to start taking bookings from?</label>
+                  <input
+                    type="date"
+                    value={data.bookingStartDate}
+                    onChange={(e) => updateData('bookingStartDate', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">Do you require notice before a driver arrives?</h3>
+                <select
+                  value={data.noticeRequired}
+                  onChange={(e) => updateData('noticeRequired', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  style={{colorScheme: 'light'}}
+                >
+                  <option value="">Select notice requirement</option>
+                  <option value="no_notice">No Notice Required</option>
+                  <option value="15_min">15 minutes notice</option>
+                  <option value="30_min">30 minutes notice</option>
+                  <option value="1_hour">1 hour notice</option>
+                  <option value="2_hours">2 hours notice</option>
+                  <option value="half_day">Half day notice</option>
+                  <option value="full_day">Full day notice</option>
+                </select>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 space-y-4">
+              <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+                <p className="text-xs text-gray-700 leading-relaxed">You can always change this date later from your dashboard. We'll schedule your listing to go live on the date you select.</p>
+              </div>
+              <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">Notice Requirements</p>
+                <p className="text-xs text-gray-700 leading-relaxed">Requiring no notice will maximise the number of bookings you receive, particularly from our mobile apps. Please ensure though that if you do require notice - either to move another vehicle or to provide users with access equipment, that you set this time period correctly.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2c: Calendar Preview ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'calendarPreview' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Preview your calendar</h2>
+                <p className="text-sm text-gray-600">You can update your calendar after your space has been published</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Calendar Navigation */}
+                <div className="flex items-center justify-between mb-6">
+                  <button className="text-[#5F3DFC] hover:text-[#4330c4] font-medium">← Previous</button>
+                  <h3 className="text-xl font-semibold text-gray-900">June 2026</h3>
+                  <button className="text-[#5F3DFC] hover:text-[#4330c4] font-medium">Next →</button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="border border-gray-200 rounded-lg p-6">
+                  <div className="grid grid-cols-7 gap-2">
+                    {/* Day headers */}
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      <div key={day} className="text-center font-semibold text-sm text-gray-700 py-3">
+                        {day.slice(0, 3)}
+                      </div>
+                    ))}
+
+                    {/* Calendar dates - June 2026 starts on Sunday, so we add 6 empty cells for Mon-Sat */}
+                    {/* Empty cells for first week */}
+                    {[...Array(6)].map((_, i) => (
+                      <div key={`empty-${i}`} className="aspect-square"></div>
+                    ))}
+
+                    {/* June dates (1-30) */}
+                    {[...Array(30)].map((_, i) => {
+                      const date = i + 1;
+                      const isAvailable = data.daysAvailable?.length > 0;
+                      const hoursText = data.available24_7 ? '24 hours' : `${data.openTime} - ${data.closeTime}`;
+                      return (
+                        <div
+                          key={date}
+                          className={`aspect-square border-2 rounded-lg p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
+                            isAvailable
+                              ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
+                              : 'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          <p className="font-bold text-lg text-gray-900">{date}</p>
+                          {isAvailable ? (
+                            <>
+                              <p className="text-xs text-gray-700 mt-1 font-medium">
+                                {data.spaceType} mjesto{parseInt(data.spaceType) > 1 ? 'a' : ''}
+                              </p>
+                              <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
+                                <Clock className="w-3 h-3" />
+                                <span>{hoursText}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 mt-2">Unavailable</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
                 Nastaviti
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1021,21 +1632,685 @@ export function ListYourLotPanel({
 
           {/* Right sector - 35% */}
           <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
-            <div className="space-y-4">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">This is a preview of how your calendar will look. After publishing, you'll be able to adjust availability for specific dates, set blackout dates, and manage your bookings from the dashboard.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2d: Booking Window ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'bookingWindow' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Successful hosting starts with your calendar</h2>
+                <p className="text-sm text-gray-600">Drivers will be able to book your space instantly on the days that it's marked as available.</p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium text-gray-900">Important Reminders</p>
+                <p className="text-xs text-gray-700 leading-relaxed">Cancelling disrupts drivers' plans, so please ensure that you keep your calendar up to date by marking any days as unavailable if/when you require the space for yourself.</p>
+                <div className="flex items-start gap-2 mt-2 pt-3 border-t border-blue-200">
+                  <input type="checkbox" defaultChecked className="mt-0.5" />
+                  <label className="text-xs text-gray-700">Got it! I'll keep my calendar up to date.</label>
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">How far in the future do you wish to enable bookings to be made?</h3>
+                <select
+                  value={data.bookingWindow}
+                  onChange={(e) => updateData('bookingWindow', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  style={{colorScheme: 'light'}}
+                >
+                  <option value="this_month">This month</option>
+                  <option value="3_months">3 Months</option>
+                  <option value="6_months">6 Months</option>
+                  <option value="1_year">1 Year</option>
+                  <option value="unlimited">Unlimited (all future dates)</option>
+                </select>
+                <p className="text-xs text-gray-600 mt-3">
+                  Sometimes it's difficult to know when your space will be available in the distant future. If you aren't sure your space will be available in a few months time, you can prevent any reservations that are too far ahead of time.
+                </p>
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mt-3">
+                  <span className="font-semibold">Note:</span> any restrictions here will prevent your space from being able to accept long term bookings.
+                </p>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Booking Window</p>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {data.bookingWindow === 'this_month' && 'Drivers can only book for this month. This is a good option if your availability changes frequently.'}
+                {data.bookingWindow === '3_months' && 'Drivers can book up to 3 months in advance. A good balance for planning.'}
+                {data.bookingWindow === '6_months' && 'Drivers can book up to 6 months in advance.'}
+                {data.bookingWindow === '1_year' && 'Drivers can book up to 1 year in advance. Good for long-term planning.'}
+                {data.bookingWindow === 'unlimited' && 'Drivers can book any date in the future with no restrictions.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2e: Booking Types ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'bookingTypes' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">What type of booking do you want to accept?</h2>
+              </div>
+
+              {/* Monthly Bookings */}
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">I would like to receive monthly bookings</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('acceptMonthlyBookings', id === 'yes')}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no')) && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hourly & Daily Bookings */}
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">I would like to receive hourly & daily bookings</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('acceptHourlyDailyBookings', id === 'yes')}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no')) && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Available Plans */}
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <label className="block text-sm font-medium text-gray-700">Available plans</label>
+                <select
+                  value={data.availablePlan}
+                  onChange={(e) => updateData('availablePlan', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  style={{colorScheme: 'light'}}
+                >
+                  <option value="monday_to_sunday">Monday to Sunday</option>
+                  <option value="monday_to_friday">Monday to Friday</option>
+                </select>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Choosing to accept both monthly bookings along with hourly and daily bookings will typically maximise your earning potential.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2f: Pricing Model ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'pricing' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Choose your pricing model</h2>
+              </div>
+
+              {/* Dynamic Pricing */}
+              <div className="space-y-4">
+                <button
+                  onClick={() => updateData('pricingModel', 'dynamic')}
+                  className="w-full border-2 rounded-lg p-6 transition-all text-left"
+                  style={{borderColor: data.pricingModel === 'dynamic' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.pricingModel === 'dynamic' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Dynamic Pricing</h3>
+                      <p className="text-sm text-green-600 font-medium mt-1">Recommended</p>
+                    </div>
+                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${data.pricingModel === 'dynamic' ? '#5F3DFC' : '#D1D5DB'}`, transition: 'all 0.2s'}}>
+                      {data.pricingModel === 'dynamic' && (
+                        <div style={{width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700">Our dynamic pricing tool will automatically adjust your price to match demand to ensure you maximise your annual earnings from your space.</p>
+                </button>
+              </div>
+
+              {/* Static Pricing */}
+              <div className="space-y-4">
+                <button
+                  onClick={() => updateData('pricingModel', 'static')}
+                  className="w-full border-2 rounded-lg p-6 transition-all text-left"
+                  style={{borderColor: data.pricingModel === 'static' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.pricingModel === 'static' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Static Pricing</h3>
+                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '24px', height: '24px', borderRadius: '50%', border: `2px solid ${data.pricingModel === 'static' ? '#5F3DFC' : '#D1D5DB'}`, transition: 'all 0.2s'}}>
+                      {data.pricingModel === 'static' && (
+                        <div style={{width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700">Set your own price. To maximise earnings, set a competitive price when compared to other spaces listed in your area.</p>
+                </button>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 space-y-4">
+              {/* Dynamic Pricing Info */}
               <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-                <p className="text-xs text-gray-700 leading-relaxed">Providing clear information about access control, permits, and allocation helps drivers understand exactly how to use your parking space and reduces confusion or disputes.</p>
+                <p className="text-sm font-semibold text-gray-900 mb-2">Dynamic Pricing (Recommended)</p>
+                <p className="text-xs text-gray-700 leading-relaxed mb-3">Prices your listing automatically based on current market demands to boost your bookings. Factors include:</p>
+                <ul className="text-xs text-gray-700 space-y-2 list-disc list-inside">
+                  <li>How many people are searching for parking in your area</li>
+                  <li>Day of the week, seasonality and local events</li>
+                  <li>Past booking volume and quality of reviews</li>
+                </ul>
               </div>
 
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Access Control</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">Key fob or pincode access ensures only authorized users can park in your space, adding security and preventing unauthorized usage.</p>
+              {/* Static Pricing Info */}
+              <div className="bg-gradient-to-br from-amber-100/20 to-amber-50/20 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-gray-900 mb-2">Static Pricing</p>
+                <p className="text-xs text-gray-700 leading-relaxed mb-3">Allows you to set your own parking price in line with our Fair Pricing Policy.</p>
+                <p className="text-xs text-gray-700 leading-relaxed font-medium">When a listing is priced in line with the policy, the space is expected to receive the first booking within the first 4 weeks.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2g: Your Description ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'description' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Your description</h2>
+                <p className="text-sm text-gray-600">We have generated a description about your space based on the information you have provided us with.</p>
               </div>
 
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Permits & Allocation</h4>
-                <p className="text-xs text-gray-700 leading-relaxed">Specify if permits are needed or if your space is designated for specific users. This clarity helps attract the right renters and prevents booking conflicts.</p>
+              {/* Generated Description */}
+              <div className="space-y-4">
+                <textarea
+                  value={data.additionalDescription || generateDescription()}
+                  onChange={(e) => updateData('additionalDescription', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 font-mono"
+                  rows={8}
+                  placeholder="Edit the description..."
+                />
               </div>
+
+              {/* Override Nearby Locations */}
+              <div className="space-y-3 border-t border-gray-200 pt-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={data.overrideNearbyLocations}
+                    onChange={(e) => updateData('overrideNearbyLocations', e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-[#5F3DFC] focus:ring-[#5F3DFC]"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Override nearby locations</span>
+                </label>
+              </div>
+
+              {/* Additional Information */}
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">Do you wish to add additional information?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('addAdditionalInfo', id === 'yes')}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: (data.addAdditionalInfo && id === 'yes') || (!data.addAdditionalInfo && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.addAdditionalInfo && id === 'yes') || (!data.addAdditionalInfo && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.addAdditionalInfo && id === 'yes') || (!data.addAdditionalInfo && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.addAdditionalInfo && id === 'yes') || (!data.addAdditionalInfo && id === 'no')) && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">The description is meant to be a brief overview of your parking space to assist drivers in their understanding of its location, features and suitability, prior to booking.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2h: Post-Booking Instructions ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'postBookingInstructions' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Post-booking instructions</h2>
+                <p className="text-sm text-gray-600">We have generated post-booking instructions for your space on the information you have provided.</p>
+              </div>
+
+              {/* Generated Post-Booking Instructions */}
+              <div className="space-y-4">
+                <textarea
+                  value={data.postBookingInstructions || generatePostBookingInstructions()}
+                  onChange={(e) => updateData('postBookingInstructions', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 font-mono"
+                  rows={8}
+                  placeholder="Edit the post-booking instructions..."
+                />
+              </div>
+
+              {/* Additional Information Question */}
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">Do you wish to add additional information which will help the driver find or access your space?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('addPostBookingInfo', id === 'yes')}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: (data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {((data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no')) && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">We have generated post-booking instructions for your space on the information you have provided. This is meant to provide instruction to people who have booked your space on how to access and use your space.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 3a: Upload Photos ── */}
+      {currentStepValue === 3 && currentStep3SubValue === 'photos' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Hi, Karlo! Show drivers what your space looks like</h2>
+                <p className="text-sm text-gray-600">Step 3</p>
+              </div>
+
+              {/* Upload Widget */}
+              <div className="space-y-4">
+                <label className="flex items-center justify-center w-full">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-[#5F3DFC]/30 rounded-lg p-8 cursor-pointer hover:border-[#5F3DFC] hover:bg-[#5F3DFC]/5 transition-all text-center"
+                  >
+                    <div className="space-y-2">
+                      <svg className="w-10 h-10 mx-auto text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <p className="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Guidance Text */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-gray-900 font-medium">Many hosts have at least 3 photos. You can start with just one photo and come back later to add more.</p>
+                <p className="text-sm text-gray-700">Including photos of the entrance so that drivers can imagine parking in your space.</p>
+              </div>
+
+              {/* Uploaded Photos */}
+              {data.photos.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-900">Uploaded Photos ({data.photos.length})</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {data.photos.map((photo, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={URL.createObjectURL(photo)}
+                          alt={`Uploaded photo ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => setData((prev) => ({
+                            ...prev,
+                            photos: prev.photos.filter((_, i) => i !== index)
+                          }))}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Example Photos Section */}
+              <div className="space-y-3 border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900">Below are some example photos posted by other hosts:</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Street Example */}
+                  <div className="space-y-2">
+                    <div className="w-full h-40 bg-gradient-to-b from-blue-200 to-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                      <svg className="w-full h-full" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+                        {/* Sky */}
+                        <rect width="300" height="100" fill="#87CEEB" />
+                        {/* Buildings */}
+                        <rect x="10" y="70" width="60" height="130" fill="#8B7355" />
+                        <rect x="80" y="60" width="70" height="140" fill="#A0826D" />
+                        <rect x="170" y="75" width="65" height="125" fill="#8B7355" />
+                        <rect x="250" y="80" width="40" height="120" fill="#A0826D" />
+                        {/* Road */}
+                        <rect y="100" width="300" height="100" fill="#555555" />
+                        {/* Road markings */}
+                        <line x1="0" y1="130" x2="300" y2="130" stroke="#FFFF00" strokeWidth="2" strokeDasharray="10,10" />
+                        {/* Parking spaces */}
+                        <rect x="120" y="145" width="30" height="35" fill="none" stroke="#FFFFFF" strokeWidth="1.5" />
+                        <rect x="155" y="145" width="30" height="35" fill="none" stroke="#FFFFFF" strokeWidth="1.5" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-gray-600">Street view of parking location</p>
+                  </div>
+
+                  {/* Driveway/Park Example */}
+                  <div className="space-y-2">
+                    <div className="w-full h-40 bg-gradient-to-b from-green-100 to-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                      <svg className="w-full h-full" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+                        {/* Sky */}
+                        <rect width="300" height="80" fill="#87CEEB" />
+                        {/* Trees */}
+                        <circle cx="40" cy="100" r="25" fill="#228B22" />
+                        <circle cx="260" cy="110" r="30" fill="#228B22" />
+                        {/* Building/House */}
+                        <rect x="120" y="50" width="60" height="60" fill="#CD853F" />
+                        <polygon points="120,50 150,20 180,50" fill="#8B4513" />
+                        {/* Driveway */}
+                        <rect x="80" y="120" width="140" height="50" fill="#666666" />
+                        {/* Parking spaces */}
+                        <rect x="95" y="130" width="35" height="35" fill="none" stroke="#FFFFFF" strokeWidth="1.5" />
+                        <rect x="170" y="130" width="35" height="35" fill="none" stroke="#FFFFFF" strokeWidth="1.5" />
+                        {/* Car parked */}
+                        <rect x="98" y="133" width="28" height="28" fill="#CC0000" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-gray-600">Driveway/parking space view</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recommendation Text */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-gray-900"><span className="font-medium">Recommendation:</span> We recommend uploading at least 3 photos to increase your listing's visibility and attract more drivers.</p>
+              </div>
+
+              <button onClick={handleNext} disabled={data.photos.length === 0} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Good quality photos are essential to attract drivers to your parking space. Show the entrance, parking area, and any distinctive features that help drivers identify your space.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 3b: Google Street View ── */}
+      {currentStepValue === 3 && currentStep3SubValue === 'streetView' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Google Street View</h2>
+                <p className="text-sm text-gray-600">Confirm the location of your parking space</p>
+              </div>
+
+              {/* Street View Preview */}
+              <div className="space-y-4">
+                {data.latitude && data.longitude ? (
+                  <div ref={streetViewRef} className="w-full h-96 bg-gray-200 rounded-lg border border-gray-300 overflow-hidden" />
+                ) : (
+                  <div className="w-full h-96 bg-gradient-to-br from-blue-100 to-gray-200 rounded-lg flex items-center justify-center border border-gray-300 overflow-hidden">
+                    <div className="flex flex-col items-center justify-center">
+                      <svg className="w-16 h-16 text-gray-400 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                      </svg>
+                      <p className="text-sm text-gray-600">Street View Preview</p>
+                      <p className="text-xs text-gray-500 mt-1">Complete Step 1 to see Street View of your location</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Guidance Text */}
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                  <p className="text-sm text-gray-900 font-medium">You can adjust the Street View direction via the preview so that it's directed at your parking space, if possible.</p>
+                  <p className="text-sm text-gray-700">Use the directional controls to rotate the view toward your parking entrance.</p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-900"><span className="font-medium">Important:</span> Please ensure that the Street View is focused on the street, and not inside any buildings.</p>
+                </div>
+              </div>
+
+              {/* Direction Controls Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-900">Direction Control Tips:</p>
+                  {data.latitude && data.longitude && (
+                    <div className="text-xs font-mono bg-white px-2 py-1 rounded border border-gray-300">
+                      Heading: {Math.round(streetViewHeading)}°
+                    </div>
+                  )}
+                </div>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                  <li>Drag the Street View image to rotate and adjust direction</li>
+                  <li>Focus on the entrance to your parking space</li>
+                  <li>Show distinctive landmarks or features</li>
+                  <li>Avoid indoor/covered areas when possible</li>
+                </ul>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Street View helps drivers understand exactly where your parking space is located. Adjust the view to show the entrance and any distinguishing features that help drivers find you. Make sure the view is oriented toward the street and parking area, not into buildings.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 3c: Summary & Expectations ── */}
+      {currentStepValue === 3 && currentStep3SubValue === 'summary' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Based on your settings, here's what you could expect</h2>
+                <p className="text-sm text-gray-600">Summary of your parking listing</p>
+              </div>
+
+              {/* Expectation Cards */}
+              <div className="space-y-4">
+                {/* Card 1: Start Taking Bookings */}
+                <div className="border border-gray-200 rounded-lg p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-[#5F3DFC]/15 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-[#5F3DFC]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M11 17H5V5h8v8h6v-2h2v7h-2v-2h-2v2zm-6-2h4v-4H5v4zm6 0h2v-2h-2v2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">Your space is available to start taking bookings from the {data.bookingStartDate ? new Date(data.bookingStartDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }) : '2nd May'}</h3>
+                      <p className="text-sm text-gray-600">Your space will appear in the search results and customers can begin placing bookings from this date, in line with your availability settings.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 2: Driver Bookings */}
+                <div className="border border-gray-200 rounded-lg p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">Drivers can book your space on days it is available</h3>
+                      <p className="text-sm text-gray-600">On booking your parking space, drivers are provided with your secure post-booking instructions. These let people know the full address and your contact details, as well as whether or not they need to arrange collection of access equipment. They may contact you if they need assistance in finding the space.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3: Booking Confirmation */}
+                <div className="border border-gray-200 rounded-lg p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H4V4h16v16zm-5.04-6.71l-2.75 3.54-2.96-3.83-1.3 1.3L9.25 16l4.05-5.16 1.59 2.04 4.5-5.81-1.41-1.41z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">Receive booking confirmation</h3>
+                      <p className="text-sm text-gray-600">You will receive a booking confirmation email breaking down the customer's stay, along with all the contact details you might need. To get paid make sure that you've added payment details to your account, payments will be processed to you on the first business day of each month.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                Završiti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">You're almost there! Review what to expect once your listing goes live. Your parking space will be visible to drivers based on your availability and booking settings.</p>
             </div>
           </div>
         </div>
@@ -1059,7 +2334,7 @@ export function ListYourLotPanel({
                 </div>
                 <div className="border-b border-gray-200 pb-3">
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Prostor</p>
-                  <p className="font-medium text-gray-900">{data.spaceType ? (data.spaceType === 'single' ? 'Jedno parkirno mjesto' : 'Više parkirnih mjesta') : '—'}</p>
+                  <p className="font-medium text-gray-900">{data.spaceType ? `${data.spaceType} mjesto${parseInt(data.spaceType) > 1 ? 'a' : ''}` : '—'}</p>
                   <p className="text-gray-600 text-xs">{data.type ? (data.type === 'private_driveway' ? 'Privatni prilaz' : data.type === 'commercial_carpark' ? 'Komercijalno parkiralište' : data.type === 'residential_carpark' ? 'Stambeno parkiralište' : 'Zaključana garaža') : '—'} • {data.features.length > 0 ? data.features.join(', ') : 'Nema odabranih značajki'}</p>
                 </div>
                 <div className="border-b border-gray-200 pb-3">
@@ -1071,10 +2346,6 @@ export function ListYourLotPanel({
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Pristup</p>
                   <p className="font-medium text-gray-900">{data.accessControl === 'yes' ? `Kontrola: ${data.accessControlType || '—'}` : 'Nema kontrole pristupa'}</p>
                   <p className="text-gray-600 text-xs">Dozvola potrebna: {data.permitRequired === 'yes' ? 'Da' : 'Ne'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Fotografije</p>
-                  <p className="font-medium text-gray-900">{data.photos.length} fotografija učitano</p>
                 </div>
               </div>
               <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
