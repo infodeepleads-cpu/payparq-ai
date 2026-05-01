@@ -394,13 +394,11 @@ export function ListYourLotPanel({ isFullScreen = false }: ListYourLotPanelProps
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          {!isFullScreen && (
-            <div className="w-[65%] flex items-center justify-center">
-              <div className="w-80">
-                <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
-              </div>
+          <div className="w-80">
+            <div className="sticky top-6">
+              <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
             </div>
-          )}
+          </div>
         </div>
       )}
 
