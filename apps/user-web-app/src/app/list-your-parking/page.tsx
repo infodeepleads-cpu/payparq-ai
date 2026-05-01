@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ListYourLotPanel } from '@/components/ListYourLotPanel';
 
-type MainStep = 'intro' | 1 | 2 | 3 | 'review';
+type MainStep = 'intro' | 1 | 2 | 3 | 4 | 5 | 'review';
 type Step1Sub = 'region' | 'map' | 'name';
 
 export default function ListYourParkingPage() {
