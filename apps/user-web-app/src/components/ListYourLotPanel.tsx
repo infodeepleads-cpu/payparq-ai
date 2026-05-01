@@ -334,7 +334,6 @@ export function ListYourLotPanel({
       setStep('intro');
       setStep1Sub('region');
       setCitySelected(false);
-      setData({ region: '', name: '', address: '', addressLine2: '', town: '', postalCode: '', latitude: '', longitude: '', spaceType: '', vehicleSize: '', heightRestrictions: '', maxHeight: '', accessControl: '', accessControlType: '', permitRequired: '', spaceAllocated: '', openTime: '07:00', closeTime: '22:00', smartPricing: true, permits: '', photos: [], type: '', capacity: '', features: [] });
     } catch {
       alert('Failed to create listing. Please try again.');
     }
