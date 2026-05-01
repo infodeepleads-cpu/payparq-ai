@@ -106,8 +106,8 @@ export default function ListYourParkingPage() {
             isFullScreen={true}
             currentStep={currentStep}
             currentSubStep={currentSubStep}
-            onStepChange={setCurrentStep}
-            onSubStepChange={setCurrentSubStep}
+            onStepChange={(step) => setCurrentStep(step)}
+            onSubStepChange={(subStep) => setCurrentSubStep(subStep)}
           />
         </div>
       </div>
