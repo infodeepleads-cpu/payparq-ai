@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { ChevronRight, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { ListingHeader } from './ListingHeader';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
@@ -27,9 +27,19 @@ interface ListingData {
   region: string;
   name: string;
   address: string;
+  addressLine2: string;
+  town: string;
   postalCode: string;
   latitude: string;
   longitude: string;
+  spaceType: string;
+  vehicleSize: string;
+  heightRestrictions: string;
+  maxHeight: string;
+  accessControl: string;
+  accessControlType: string;
+  permitRequired: string;
+  spaceAllocated: string;
   openTime: string;
   closeTime: string;
   smartPricing: boolean;
@@ -92,14 +102,25 @@ export function ListYourLotPanel({
     onSubStepChange?.(newSubStep);
   };
 
-  const autocompleteRef = useRef<any>(null);
+  const cityAutocompleteRef = useRef<any>(null);
+  const [citySelected, setCitySelected] = useState(false);
   const [data, setData] = useState<ListingData>({
     region: '',
     name: '',
     address: '',
+    addressLine2: '',
+    town: '',
     postalCode: '',
     latitude: '',
     longitude: '',
+    spaceType: '',
+    vehicleSize: '',
+    heightRestrictions: '',
+    maxHeight: '',
+    accessControl: '',
+    accessControlType: '',
+    permitRequired: '',
+    spaceAllocated: '',
     openTime: '07:00',
     closeTime: '22:00',
     smartPricing: true,
@@ -123,31 +144,87 @@ export function ListYourLotPanel({
     }));
   };
 
-  const handlePlaceSelect = () => {
-    if (autocompleteRef.current && window.google) {
-      try {
-        const places = (autocompleteRef.current as any).getPlaces?.();
-        if (!places || places.length === 0) return;
+  const geocodeFullAddress = async () => {
+    console.log('🔍 geocodeFullAddress called - timestamp:', new Date().toISOString());
+    console.log('📍 Current data state:', { address: data.address, addressLine2: data.addressLine2, town: data.town, postalCode: data.postalCode, region: data.region });
 
-        const place = places[0];
-        if (place.formatted_address) {
-          updateData('address', place.formatted_address);
+    if (!isLoaded) {
+      console.error('❌ Google Maps API not loaded yet (isLoaded=false)');
+      return;
+    }
+
+    if (!window.google?.maps?.Geocoder) {
+      console.error('❌ Google Geocoder not available (window.google.maps.Geocoder missing)');
+      return;
+    }
+
+    const geocoder = new window.google.maps.Geocoder();
+    const addressParts = [data.address, data.addressLine2, data.town, data.postalCode].filter(Boolean);
+    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '';
+
+    if (!fullAddress || !data.address || !data.town) {
+      console.error('❌ Address incomplete - cannot geocode:', { fullAddress, address: data.address, town: data.town });
+      return;
+    }
+
+    console.log('🔍 Starting geocode for address:', fullAddress, 'with country:', data.region);
+
+    return new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        console.error('❌ Geocoding timeout after 5 seconds');
+        resolve();
+      }, 5000);
+
+      geocoder.geocode({ address: fullAddress, componentRestrictions: { country: data.region } }, (results, status) => {
+        clearTimeout(timeout);
+        console.log('📡 Geocoder callback - status:', status, 'results:', results?.length || 0);
+
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const location = results[0].geometry.location;
+          const lat = location.lat();
+          const lng = location.lng();
+          console.log('✅ Geocoding SUCCESS - coordinates:', { lat, lng });
+          updateData('latitude', String(lat));
+          updateData('longitude', String(lng));
+          resolve();
+        } else {
+          console.error('❌ Geocoding FAILED - status:', status, 'results empty:', !results?.length);
+          resolve();
         }
+      });
+    });
+  };
+
+  const handleCitySelect = () => {
+    if (cityAutocompleteRef.current) {
+      try {
+        const place = cityAutocompleteRef.current.getPlace();
+        console.log('🏙️ City selected from Google:', place?.formatted_address);
+
+        if (!place || !place.formatted_address) {
+          console.warn('❌ Invalid city selection');
+          return;
+        }
+
+        updateData('town', place.formatted_address);
+        setCitySelected(true);
+        console.log('✅ City confirmed:', place.formatted_address);
+
+        // Geocode the city immediately to zoom map
         if (place.geometry?.location) {
-          updateData('latitude', String(place.geometry.location.lat()));
-          updateData('longitude', String(place.geometry.location.lng()));
-        }
-        const postalCode = place.address_components?.find((c: any) =>
-          c.types.includes('postal_code')
-        )?.long_name || '';
-        if (postalCode) {
-          updateData('postalCode', postalCode);
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          updateData('latitude', String(lat));
+          updateData('longitude', String(lng));
+          console.log('🗺️ City zoomed to:', lat, lng);
         }
       } catch (e) {
-        console.warn('Place selection error:', e);
+        console.error('❌ City selection error:', e);
       }
     }
   };
+
+
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -161,54 +238,63 @@ export function ListYourLotPanel({
   const selectedRegion = REGIONS.find((r) => r.id === data.region);
   const mapCenter = selectedRegion ? selectedRegion.center : [45.815, 15.982];
 
-  const isStep1Complete = !!(data.region && data.address && data.postalCode && data.latitude && data.longitude);
+  const isStep1Complete = !!(data.region && data.address && data.town && data.latitude && data.longitude);
   const isStep2Complete = !!(data.openTime && data.closeTime && data.permits);
   const isStep3Complete = data.photos.length >= 3 && !!(data.type && data.capacity && data.features.length > 0);
 
   const canProceed = () => {
     if (step === 1) {
-      if (step1Sub === 'region') return !!(data.region && data.address && data.postalCode);
+      if (step1Sub === 'region') return !!(data.region && data.address && citySelected);
       if (step1Sub === 'map') return !!(data.latitude && data.longitude);
-      if (step1Sub === 'name') return !!data.name;
+      if (step1Sub === 'name') return !!(data.name && data.spaceType);
     }
-    if (step === 2) return !!(data.openTime && data.closeTime && data.permits);
-    if (step === 3) return data.photos.length >= 3 && !!(data.type && data.capacity && data.features.length > 0);
+    if (step === 2) return true;
+    if (step === 3) return !!data.type;
     return true;
   };
 
-  const [geocoding, setGeocoding] = useState(false);
 
   const handleNext = async () => {
-    if (step === 1) {
-      if (step1Sub === 'region') {
-        // Geocode address if not already set by Autocomplete
-        if (!data.latitude || !data.longitude) {
-          try {
-            setGeocoding(true);
-            const query = `${data.address}, ${data.postalCode}, ${selectedRegion?.label}`;
-            const res = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-            );
-            const results = await res.json();
-            if (results.results.length > 0) {
-              const { lat, lng } = results.results[0].geometry.location;
-              updateData('latitude', String(lat));
-              updateData('longitude', String(lng));
-            }
-          } catch {
-            // silently fall through — user can still pin manually
-          } finally {
-            setGeocoding(false);
-          }
-        }
+    console.log('📍 handleNext - step:', currentStepValue, 'sub:', currentSubStepValue);
+
+    if (currentStepValue === 1) {
+      if (currentSubStepValue === 'region') {
+        console.log('🏠 Step 1a → geocoding full address and moving to map');
+        await geocodeFullAddress();
         setStep1Sub('map');
         return;
       }
-      if (step1Sub === 'map') { setStep1Sub('name'); return; }
-      if (step1Sub === 'name') { setStep(2); return; }
+      if (currentSubStepValue === 'map') {
+        console.log('🗺️ Step 1b → moving to name');
+        setStep1Sub('name');
+        return;
+      }
+      if (currentSubStepValue === 'name') {
+        console.log('📝 Step 1c → moving to step 2');
+        setStep(2);
+        return;
+      }
     }
-    if (step === 2) { setStep(3); return; }
-    if (step === 3) { setStep('review'); return; }
+    if (currentStepValue === 2) {
+      console.log('🕐 Step 2 → moving to step 3');
+      setStep(3);
+      return;
+    }
+    if (currentStepValue === 3) {
+      console.log('📸 Step 3 → moving to step 4');
+      setStep(4);
+      return;
+    }
+    if (currentStepValue === 4) {
+      console.log('🚗 Step 4 → moving to step 5');
+      setStep(5);
+      return;
+    }
+    if (currentStepValue === 5) {
+      console.log('🔐 Step 5 → moving to review');
+      setStep('review');
+      return;
+    }
   };
 
   const handleBack = () => {
@@ -221,6 +307,12 @@ export function ListYourLotPanel({
       setStep(1);
     } else if (step === 3) {
       setStep(2);
+    } else if (step === 4) {
+      setStep(3);
+    } else if (step === 5) {
+      setStep(4);
+    } else if (step === 'review') {
+      setStep(5);
     }
   };
 
@@ -241,7 +333,8 @@ export function ListYourLotPanel({
       alert('✅ Parking listing published successfully!');
       setStep('intro');
       setStep1Sub('region');
-      setData({ region: '', name: '', address: '', postalCode: '', latitude: '', longitude: '', openTime: '07:00', closeTime: '22:00', smartPricing: true, permits: '', photos: [], type: '', capacity: '', features: [] });
+      setCitySelected(false);
+      setData({ region: '', name: '', address: '', addressLine2: '', town: '', postalCode: '', latitude: '', longitude: '', openTime: '07:00', closeTime: '22:00', smartPricing: true, permits: '', photos: [], type: '', capacity: '', features: [] });
     } catch {
       alert('Failed to create listing. Please try again.');
     }
@@ -325,22 +418,19 @@ export function ListYourLotPanel({
     : String(currentStepValue);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col w-full">
-      {/* Main content */}
-      <div className="flex-1 overflow-hidden w-full">
-        <div className="h-full w-full flex flex-col">
-          <div className="h-full w-full flex m-0 p-0">
+    <div className="h-full bg-white flex flex-col w-full">
+      <ListingHeader currentStep={currentStepValue} currentSubStep={currentSubStepValue} onBack={handleBack} />
+      <div className="h-full w-full flex m-0 p-0">
 
       {/* ── STEP 1: Choose Country ── */}
       {currentStepValue === 1 && currentSubStepValue === 'region' && (
-        <div className="flex animate-fadeIn h-full w-full -ml-[20px]">
+        <div className="flex animate-fadeIn h-full w-full">
           {/* Left white sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 overflow-auto h-full">
+          <div className="flex-[0_0_65%] bg-white py-6 h-full">
             <div className="px-6 space-y-5 h-full">
               {/* Welcome message */}
               <div className="animate-fadeIn mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremimo vas da postanete vlasnik parkinga.</h2>
-                <p className="text-gray-600 mb-6">Korak 1 od 5</p>
               </div>
               {/* Main content area */}
               <div className="space-y-5">
@@ -349,11 +439,12 @@ export function ListYourLotPanel({
               <select
                 value={data.region}
                 onChange={(e) => updateData('region', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-6 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 appearance-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-6 text-base text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                style={{colorScheme: 'light'}}
               >
-                <option value="" className="text-gray-900">Select a country</option>
+                <option value="">Select a country</option>
                 {REGIONS.map((r) => (
-                  <option key={r.id} value={r.id} className="text-gray-900">
+                  <option key={r.id} value={r.id}>
                     {r.label}
                   </option>
                 ))}
@@ -362,38 +453,79 @@ export function ListYourLotPanel({
             {data.region && isLoaded && (
               <div className="space-y-4 pt-2 border-t border-gray-100">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                   <Autocomplete
-                    ref={autocompleteRef}
-                    onPlaceChanged={handlePlaceSelect}
+                    onLoad={(instance) => {
+                      console.log('🔌 City Autocomplete loaded');
+                      cityAutocompleteRef.current = instance;
+                    }}
+                    onPlaceChanged={handleCitySelect}
                     options={{
-                      componentRestrictions: { country: data.region.toLowerCase() }
+                      componentRestrictions: { country: data.region.toLowerCase() },
+                      types: ['locality', 'administrative_area_level_2']
                     }}
                   >
                     <input
                       type="text"
-                      value={data.address}
-                      onChange={(e) => updateData('address', e.target.value)}
-                      placeholder="Search address..."
+                      value={data.town}
+                      onChange={(e) => {
+                        updateData('town', e.target.value);
+                        setCitySelected(false);
+                      }}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                     />
                   </Autocomplete>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Poštanski broj</label>
-                  <input
-                    type="text"
-                    value={data.postalCode}
-                    onChange={(e) => updateData('postalCode', e.target.value)}
-                    placeholder="e.g., 10000"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  />
-                </div>
+
+                {citySelected && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Address 1</label>
+                      <input
+                        type="text"
+                        value={data.address}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          updateData('address', value);
+                          console.log('📝 Address changed to:', value);
+                        }}
+                        autoComplete="off"
+                        spellCheck="false"
+                        inputMode="none"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Address 2</label>
+                      <input
+                        type="text"
+                        value={data.addressLine2}
+                        onChange={(e) => updateData('addressLine2', e.target.value)}
+                        autoComplete="off"
+                        spellCheck="false"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                      <input
+                        type="text"
+                        value={data.postalCode}
+                        onChange={(e) => updateData('postalCode', e.target.value)}
+                        autoComplete="off"
+                        spellCheck="false"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             )}
-            <button onClick={handleNext} disabled={!canProceed() || geocoding} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              {geocoding ? 'Finding location…' : 'Nastaviti'}
-              {!geocoding && <ChevronRight className="w-4 h-4" />}
+            <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+              Nastaviti
+              <ChevronRight className="w-4 h-4" />
             </button>
             </div>
             </div>
@@ -411,30 +543,48 @@ export function ListYourLotPanel({
 
       {/* ── STEP 2: Verify Location ── */}
       {currentStepValue === 1 && currentSubStepValue === 'map' && (
-        <div className={isFullScreen ? "space-y-4 h-full" : "flex gap-[19px] animate-fadeIn"}>
-          <div className={isFullScreen ? "space-y-4 h-full flex flex-col" : "flex-1 space-y-4"}>
-            <p className="text-sm text-gray-600">Click the map to pin the exact entrance to your parking space</p>
-            <div className={isFullScreen ? "flex-1 rounded-lg overflow-hidden border border-gray-300" : ""}>
-              <DynamicMap
-                lat={data.latitude ? parseFloat(data.latitude) : mapCenter[0]}
-                lng={data.longitude ? parseFloat(data.longitude) : mapCenter[1]}
-                onLocationSelect={(lat, lng) => {
-                  updateData('latitude', String(lat));
-                  updateData('longitude', String(lng));
-                }}
-              />
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full flex flex-col overflow-hidden">
+            <div className="px-6 space-y-3 h-full flex flex-col overflow-hidden">
+              <div className="animate-fadeIn flex-shrink-0">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pritisnite kartu kako biste označili točan ulaz na svoje parkirno mjesto.</h2>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex-shrink-0">
+                <p className="text-sm font-medium text-gray-900">Address:</p>
+                <p className="text-xs text-gray-700">
+                  {data.address}{data.addressLine2 && ` ${data.addressLine2}`}{data.town && `, ${data.town}`}{data.postalCode && ` ${data.postalCode}`}
+                </p>
+              </div>
+              <button onClick={() => setStep1Sub('region')} className="px-0 py-1 text-[#5F3DFC] text-xs font-medium hover:text-[#4330c4] transition-colors flex-shrink-0">
+                ✎ Uredi adresu
+              </button>
+              <div style={{ height: '500px' }} className="rounded-lg overflow-hidden border border-gray-300">
+                <DynamicMap
+                  lat={data.latitude ? parseFloat(data.latitude) : mapCenter[0]}
+                  lng={data.longitude ? parseFloat(data.longitude) : mapCenter[1]}
+                  onLocationSelect={(lat, lng) => {
+                    updateData('latitude', String(lat));
+                    updateData('longitude', String(lng));
+                  }}
+                  fullScreen={true}
+                />
+              </div>
+              {data.latitude && data.longitude && (
+                <p className="text-xs text-green-600 font-medium flex-shrink-0">✓ Entrance marked at {parseFloat(data.latitude).toFixed(4)}, {parseFloat(data.longitude).toFixed(4)}</p>
+              )}
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 flex-shrink-0">
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-            {data.latitude && data.longitude && (
-              <p className="text-sm text-green-600 font-medium">✓ Entrance marked at {parseFloat(data.latitude).toFixed(4)}, {parseFloat(data.longitude).toFixed(4)}</p>
-            )}
-            <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              Continue
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
+              </div>
             </div>
           </div>
         </div>
@@ -442,28 +592,83 @@ export function ListYourLotPanel({
 
       {/* ── STEP 3: Name Your Space ── */}
       {currentStepValue === 1 && currentSubStepValue === 'name' && (
-        <div className="flex gap-[19px] animate-fadeIn">
-          <div className="flex-1 space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
-              <input
-                type="text"
-                value={data.name}
-                onChange={(e) => updateData('name', e.target.value)}
-                placeholder="e.g., Downtown Parking A"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                autoFocus
-              />
-              <p className="text-xs text-gray-500 mt-2">This is what drivers will see when searching for parking</p>
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-5">
+              <div className="animate-fadeIn">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Nazovite svoje parkirno mjesto.</h2>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Parking Name</label>
+                <input
+                  type="text"
+                  value={data.name}
+                  onChange={(e) => updateData('name', e.target.value)}
+                  placeholder="e.g., Downtown Parking A"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-2">This is what drivers will see when searching for parking</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-5">
+                <label className="block text-sm font-medium text-gray-700 mb-3">What type of parking do you have?</label>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => updateData('spaceType', 'single')}
+                    className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                    style={{borderColor: data.spaceType === 'single' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceType === 'single' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                  >
+                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceType === 'single' ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                      {data.spaceType === 'single' && (
+                        <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                      )}
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">Jedno parkirno mjesto</span>
+                  </button>
+                  <button
+                    onClick={() => updateData('spaceType', 'multiple')}
+                    className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                    style={{borderColor: data.spaceType === 'multiple' ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceType === 'multiple' ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                  >
+                    <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceType === 'multiple' ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                      {data.spaceType === 'multiple' && (
+                        <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                      )}
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-900">Više parkirnih mjesta</span>
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-            <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              Continue
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6 space-y-4">
+                <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
+                <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
+                  <div className="flex items-start gap-2 mb-3">
+                    <p className="text-sm text-gray-700 leading-snug font-medium">Korisne Informacije</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Jedno parkirno mjesto</p>
+                      <p className="text-xs text-gray-700 mt-1">For owners who only have one space available to book at any given time.</p>
+                    </div>
+                    <div className="border-t border-gray-300 pt-3">
+                      <p className="text-sm font-medium text-gray-900">Više parkirnih mjesta</p>
+                      <p className="text-xs text-gray-700 mt-1">Maximise your earnings if you can accommodate two vehicles or more at any given time.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -471,56 +676,61 @@ export function ListYourLotPanel({
 
       {/* ── STEP 4: Get Ready For Drivers ── */}
       {currentStepValue === 2 && (
-        <div className="flex gap-[19px] animate-fadeIn">
-          <div className="flex-1 space-y-6">
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Availability</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Opens at</label>
-                  <input type="time" value={data.openTime} onChange={(e) => updateData('openTime', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Closes at</label>
-                  <input type="time" value={data.closeTime} onChange={(e) => updateData('closeTime', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
-                </div>
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pripremite se za vozače.</h2>
               </div>
-              <p className="text-sm text-gray-600">Available every day from {data.openTime} to {data.closeTime}</p>
-            </div>
 
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Pricing Strategy</h3>
-              <div className="bg-[#5F3DFC]/10 border border-[#5F3DFC]/20 rounded-lg p-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={data.smartPricing} onChange={(e) => updateData('smartPricing', e.target.checked)} className="w-4 h-4 rounded border-gray-300" />
-                  <div>
-                    <span className="text-sm font-medium block">Use Smart Pricing</span>
-                    <span className="text-xs text-gray-600">Automatically adjusts rates based on demand and location</span>
-                  </div>
-                </label>
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold">Add Ons Dodaci</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'covered', label: 'Covered parking' },
+                    { id: 'transfers', label: 'Arranged transfers' },
+                    { id: 'cctv', label: 'CCTV' },
+                    { id: 'lighting', label: 'Security lighting' },
+                    { id: 'staff', label: 'On-site staff' },
+                    { id: 'underground', label: 'Underground parking' },
+                    { id: 'disabled', label: 'Disabled access' },
+                    { id: 'charging', label: 'Electric charging' },
+                    { id: 'valet', label: 'Valet' },
+                    { id: 'gated', label: 'Gated' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => toggleFeature(id)}
+                      className="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.features.includes(id) ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.features.includes(id) ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', border: `2px solid ${data.features.includes(id) ? '#5F3DFC' : '#9CA3AF'}`, borderRadius: '4px', transition: 'all 0.2s'}}>
+                        {data.features.includes(id) && (
+                          <span style={{color: '#5F3DFC', fontSize: '16px', lineHeight: '1'}}>✓</span>
+                        )}
+                      </div>
+                      <span className="ml-2 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">Providing what features your parking space has helps it stand out for drivers looking to book.</p>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Parking Permit</h3>
-              <p className="text-sm text-gray-600">Does this space require a parking permit?</p>
-              <div className="space-y-2">
-                {[{ v: 'yes', l: 'Yes, permit required' }, { v: 'no', l: 'No permit needed' }].map(({ v, l }) => (
-                  <label key={v} className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="permits" value={v} checked={data.permits === v} onChange={(e) => updateData('permits', e.target.value)} className="w-4 h-4" />
-                    <span className="text-sm">{l}</span>
-                  </label>
-                ))}
-              </div>
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Continue
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-            <button onClick={handleNext} disabled={!canProceed()} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              Continue
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="Set realistic hours and pricing to attract more bookings and earn more." />
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Odaberite značajke koje čine vaš parking posebnim i atraktivnim za vozače." />
+              </div>
             </div>
           </div>
         </div>
@@ -528,73 +738,305 @@ export function ListYourLotPanel({
 
       {/* ── STEP 5: Build The Picture ── */}
       {currentStepValue === 3 && (
-        <div className="flex gap-[19px] animate-fadeIn">
-          <div className="flex-1 space-y-6">
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Photos</h3>
-              <p className="text-sm text-gray-600">Upload 3–5 photos to showcase your parking space</p>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input type="file" multiple accept="image/*" onChange={handlePhotoUpload} className="hidden" id="photo-upload" />
-                <label htmlFor="photo-upload" className="cursor-pointer">
-                  <p className="font-medium">Click to upload photos</p>
-                  <p className="text-sm text-gray-500">or drag and drop</p>
-                </label>
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Dodajte slike i detalje.</h2>
               </div>
-              {data.photos.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-2">{data.photos.length} photo{data.photos.length !== 1 ? 's' : ''} uploaded</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {data.photos.map((photo, i) => (
-                      <div key={i} className="aspect-square bg-gray-200 rounded flex items-center justify-center text-xs text-gray-600">{photo.name.substring(0, 8)}...</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold">Space Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Type</label>
-                  <select value={data.type} onChange={(e) => updateData('type', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40">
-                    <option value="">Select type</option>
-                    <option value="kolnik">Kolnik (Paved)</option>
-                    <option value="garage">Garage</option>
-                    <option value="lot">Parking Lot</option>
-                    <option value="street">Street Parking</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Capacity (cars)</label>
-                  <input type="number" value={data.capacity} onChange={(e) => updateData('capacity', e.target.value)} placeholder="e.g. 5" min="1" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" />
-                </div>
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">What best describes your parking space?</h3>
+                <p className="text-sm text-gray-600">Select a type of space</p>
+                <select value={data.type} onChange={(e) => updateData('type', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
+                  <option value="">Select a type of space</option>
+                  <option value="private_driveway">Private Driveway</option>
+                  <option value="commercial_carpark">Commercial Car Park</option>
+                  <option value="residential_carpark">Residential Car Park</option>
+                  <option value="lockup_garage">Lock-Up Garage</option>
+                </select>
+                <p className="text-sm text-gray-600 mt-2">Here are a few examples:</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Features</label>
-                <div className="grid grid-cols-2 gap-2">
+
+
+              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-gray-900">Here are a few examples:</p>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Private Driveway</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">A personal residential driveway. Typically fits 1-3 vehicles. Located at a private home or residence. Single entrance/exit. Good for homeowners looking to rent their driveway space.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Commercial Car Park</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Large organized parking lot or multi-level structure. Professional management with marked spaces. Located in commercial areas, city centers, or near businesses.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Residential Car Park</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Parking area at apartment building or residential complex. Shared spaces for residents and guests. Multiple vehicles in designated areas. Secure access with gates or barriers.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Lock-Up Garage</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Individual secure garage unit or storage space. Complete privacy and protection from weather. Single vehicle capacity. Locked access with personal keys. Ideal for secure long-term parking.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 6: Vehicle Size & Height ── */}
+      {currentStepValue === 4 && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Veličina vozila i pristupa.</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold">What size vehicle does your parking space accommodate?</h3>
+                <p className="text-sm text-gray-600">Size of parking space</p>
+                <div className="space-y-3">
                   {[
-                    { id: 'covered', label: 'Covered' }, { id: 'lighting', label: 'Lighting' },
-                    { id: 'ramp', label: 'Ramp' }, { id: 'asphalt', label: 'Asphalt' },
-                    { id: 'concrete', label: 'Concrete' }, { id: 'earth', label: 'Earth' },
-                    { id: 'rough_terrain', label: 'Rough Terrain' },
-                  ].map((f) => (
-                    <label key={f.id} className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={data.features.includes(f.id)} onChange={() => toggleFeature(f.id)} className="w-4 h-4 rounded border-gray-300" />
-                      <span className="text-sm">{f.label}</span>
-                    </label>
+                    { id: 'small', label: 'Small parking space' },
+                    { id: 'medium', label: 'Medium parking space' },
+                    { id: 'large', label: 'Large parking space' },
+                    { id: 'commercial', label: 'Commercial vehicle' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('vehicleSize', id)}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.vehicleSize === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.vehicleSize === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.vehicleSize === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {data.vehicleSize === id && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
                   ))}
                 </div>
               </div>
+
+              <div className="space-y-4 border-t border-gray-200 pt-6 mt-6">
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Postoje li neka ograničenja visine prilikom pristupa vašem prostoru?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('heightRestrictions', id)}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.heightRestrictions === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.heightRestrictions === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.heightRestrictions === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {data.heightRestrictions === id && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {data.heightRestrictions === 'yes' && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Maximum height in meters</label>
+                    <select value={data.maxHeight} onChange={(e) => updateData('maxHeight', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
+                      <option value="">Select maximum height</option>
+                      <option value="1.8">1.8m</option>
+                      <option value="2.0">2.0m</option>
+                      <option value="2.1">2.1m</option>
+                      <option value="2.2">2.2m</option>
+                      <option value="2.3">2.3m</option>
+                      <option value="2.4">2.4m</option>
+                      <option value="2.5">2.5m</option>
+                      <option value="2.6">2.6m</option>
+                      <option value="2.7">2.7m</option>
+                      <option value="2.8">2.8m</option>
+                      <option value="2.9">2.9m</option>
+                      <option value="3.0">3.0m</option>
+                      <option value="3.2">3.2m</option>
+                      <option value="3.5">3.5m</option>
+                      <option value="4.0">4.0m+</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={handleNext} disabled={!data.vehicleSize || !data.heightRestrictions || (data.heightRestrictions === 'yes' && !data.maxHeight)} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-            <button onClick={handleNext} disabled={!canProceed() || data.photos.length < 3} className="w-full mt-6 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
-              Review & Publish
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="High-quality photos increase bookings by up to 40%. Include entrance, layout and surroundings." />
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-gray-900">Vehicle size guide:</p>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Small parking space</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">2 door vehicles. Compact cars, motorcycles, small sedans.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Medium parking space</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">4 door vehicles. Standard sedans, hatchbacks, small SUVs.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Large parking space</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">4x4 vehicles, Saloon cars. Large SUVs, oversized sedans.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2">Commercial vehicle</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Van, minibus, and larger commercial vehicles.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 7: Access & Details ── */}
+      {currentStepValue === 5 && (
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Kako se pristupa vašem prostoru.</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">How is your parking space accessed?</h3>
+                <p className="text-sm text-gray-600 mb-4">Does your space require access control?</p>
+                <p className="text-xs text-gray-500 mb-3">E.g. key fob, pincode etc.</p>
+
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('accessControl', id)}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.accessControl === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.accessControl === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.accessControl === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {data.accessControl === id && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {data.accessControl === 'yes' && (
+                  <div className="space-y-2 mt-4">
+                    <label className="block text-sm font-medium text-gray-700">Vrsta kontrole pristupa</label>
+                    <select value={data.accessControlType} onChange={(e) => updateData('accessControlType', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
+                      <option value="">Select access control type</option>
+                      <option value="key_fob">Key fob</option>
+                      <option value="pincode">Pincode</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">Does your space require a permit?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('permitRequired', id)}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.permitRequired === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.permitRequired === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.permitRequired === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {data.permitRequired === id && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 border-t border-gray-200 pt-6">
+                <h3 className="text-base font-semibold text-gray-900">Is your space allocated?</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 'no', label: 'No' },
+                    { id: 'yes', label: 'Yes' },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => updateData('spaceAllocated', id)}
+                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                      style={{borderColor: data.spaceAllocated === id ? '#5F3DFC' : '#D1D5DB', backgroundColor: data.spaceAllocated === id ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                    >
+                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${data.spaceAllocated === id ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                        {data.spaceAllocated === id && (
+                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                        )}
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleNext} disabled={!data.accessControl || !data.permitRequired || !data.spaceAllocated || (data.accessControl === 'yes' && !data.accessControlType)} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+                <p className="text-xs text-gray-700 leading-relaxed">Providing clear information about access control, permits, and allocation helps drivers understand exactly how to use your parking space and reduces confusion or disputes.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Access Control</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Key fob or pincode access ensures only authorized users can park in your space, adding security and preventing unauthorized usage.</p>
+              </div>
+
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Permits & Allocation</h4>
+                <p className="text-xs text-gray-700 leading-relaxed">Specify if permits are needed or if your space is designated for specific users. This clarity helps attract the right renters and prevents booking conflicts.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -602,28 +1044,36 @@ export function ListYourLotPanel({
 
       {/* ── REVIEW ── */}
       {currentStepValue === 'review' && (
-        <div className="flex gap-[19px] animate-fadeIn">
-          <div className="flex-1 space-y-4">
-            <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
-              <div><p className="text-gray-500">Location</p><p className="font-medium">{data.name}, {data.address}, {data.postalCode} ({selectedRegion?.label})</p></div>
-              <div><p className="text-gray-500">Space</p><p className="font-medium">{data.capacity} cars • {data.type} • {data.features.join(', ')}</p></div>
-              <div><p className="text-gray-500">Available</p><p className="font-medium">Daily {data.openTime} – {data.closeTime}</p></div>
-              <div><p className="text-gray-500">Pricing</p><p className="font-medium">{data.smartPricing ? 'Smart Pricing' : 'Manual'} • Permit: {data.permits}</p></div>
-              <div><p className="text-gray-500">Photos</p><p className="font-medium">{data.photos.length} uploaded</p></div>
+        <div className="flex animate-fadeIn h-full w-full">
+          {/* Left sector - 65% */}
+          <div className="flex-[0_0_65%] bg-white py-6 h-full">
+            <div className="px-6 space-y-4">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte podatke prije objavljivanja.</h2>
+                <p className="text-gray-600">Pregled</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-5 space-y-3 text-sm">
+                <div><p className="text-gray-500">Location</p><p className="font-medium">{data.name}, {data.address}, {data.postalCode} ({selectedRegion?.label})</p></div>
+                <div><p className="text-gray-500">Space</p><p className="font-medium">{data.capacity} cars • {data.type} • {data.features.join(', ')}</p></div>
+                <div><p className="text-gray-500">Available</p><p className="font-medium">Daily {data.openTime} – {data.closeTime}</p></div>
+                <div><p className="text-gray-500">Pricing</p><p className="font-medium">{data.smartPricing ? 'Smart Pricing' : 'Manual'} • Permit: {data.permits}</p></div>
+                <div><p className="text-gray-500">Photos</p><p className="font-medium">{data.photos.length} uploaded</p></div>
+              </div>
+              <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                Publish Listing
+              </button>
             </div>
-            <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-              Publish Listing
-            </button>
           </div>
-          <div className="w-80">
-            <div className="sticky top-6">
-              <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+          {/* Right sector - 35% */}
+          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+            <div className="w-80">
+              <div className="sticky top-6">
+                <InfoWidget tip="Review all details before publishing. You can edit after going live." />
+              </div>
             </div>
           </div>
         </div>
       )}
-          </div>
-        </div>
       </div>
     </div>
   );

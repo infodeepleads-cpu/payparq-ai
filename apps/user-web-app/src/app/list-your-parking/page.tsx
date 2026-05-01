@@ -12,6 +12,25 @@ export default function ListYourParkingPage() {
   const [currentStep, setCurrentStep] = useState<MainStep>('intro');
   const [currentSubStep, setCurrentSubStep] = useState<Step1Sub>('region');
 
+  const handleBackButton = () => {
+    if (currentStep === 'intro') {
+      router.back();
+    } else if (currentStep === 1) {
+      if (currentSubStep === 'region') {
+        setCurrentStep('intro');
+      } else if (currentSubStep === 'map') {
+        setCurrentSubStep('region');
+      } else if (currentSubStep === 'name') {
+        setCurrentSubStep('map');
+      }
+    } else if (currentStep === 2) {
+      setCurrentSubStep('name');
+      setCurrentStep(1);
+    } else if (currentStep === 3) {
+      setCurrentStep(2);
+    }
+  };
+
   // Dynamic step labels in Croatian (1a→1, 1b→2, 1c→3, 2→4, 3→5)
   const getStepNumber = () => {
     if (currentStep === 'intro') return '1';
@@ -69,8 +88,8 @@ export default function ListYourParkingPage() {
 
           {/* Right: Back arrow */}
           <button
-            onClick={() => router.back()}
-            className="text-gray-400 hover:text-gray-200 text-2xl flex-shrink-0"
+            onClick={handleBackButton}
+            className="text-gray-400 hover:text-gray-200 text-2xl flex-shrink-0 -ml-[38px]"
           >
             ←
           </button>
@@ -81,9 +100,15 @@ export default function ListYourParkingPage() {
       </div>
 
       {/* Full-screen content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto">
-          <ListYourLotPanel isFullScreen={true} onStepChange={setCurrentStep} onSubStepChange={setCurrentSubStep} />
+      <div className="flex-1 overflow-hidden">
+        <div className="max-w-6xl mx-auto h-full">
+          <ListYourLotPanel
+            isFullScreen={true}
+            currentStep={currentStep}
+            currentSubStep={currentSubStep}
+            onStepChange={setCurrentStep}
+            onSubStepChange={setCurrentSubStep}
+          />
         </div>
       </div>
     </div>
