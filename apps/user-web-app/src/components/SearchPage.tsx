@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { createClient } from '@supabase/supabase-js';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
 import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
-import { MapPin, List } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface Parking {
   id: string;
@@ -30,12 +31,18 @@ export function SearchPage() {
     libraries: ['places'],
   });
 
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+
   const [listings, setListings] = useState<Parking[]>([]);
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
   const [mapCenter, setMapCenter] = useState({ lat: 45.815, lng: 15.982 }); // Zagreb center
   const [selectedListing, setSelectedListing] = useState<Parking | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showMobileMap, setShowMobileMap] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Filter state
   const [priceRange, setPriceRange] = useState([0, 100]);
@@ -43,58 +50,75 @@ export function SearchPage() {
   const [parkingType, setParkingType] = useState<'all' | 'self-park' | 'garage'>('all');
   const [vehicleType, setVehicleType] = useState('compact');
 
-  // Mock data - replace with Supabase query
+  // Fetch real data from Supabase
   useEffect(() => {
-    const mockListings: Parking[] = [
-      {
-        id: '1',
-        name: 'Downtown Garage',
-        address: 'Ilica 10, Zagreb',
-        lat: 45.8150,
-        lng: 15.9819,
-        pricePerHour: 8.5,
-        rating: 4.8,
-        reviews: 324,
-        photo: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-        distance: 0.3,
-        availability: true,
-        features: ['garage', 'on-site-staff', 'wheelchair-accessible', 'ev-charging'],
-        type: 'garage',
-      },
-      {
-        id: '2',
-        name: 'Main Street Lot',
-        address: 'Tkalciceva 5, Zagreb',
-        lat: 45.8160,
-        lng: 15.9825,
-        pricePerHour: 5.0,
-        rating: 4.5,
-        reviews: 156,
-        photo: 'https://images.unsplash.com/photo-1506521295926-19bfd768e4ef?w=400',
-        distance: 0.5,
-        availability: true,
-        features: ['self-park', 'lot-uncovered'],
-        type: 'self-park',
-      },
-      {
-        id: '3',
-        name: 'Premium Valet Service',
-        address: 'Ban Jelacic 8, Zagreb',
-        lat: 45.8141,
-        lng: 15.9815,
-        pricePerHour: 15.0,
-        rating: 4.9,
-        reviews: 89,
-        photo: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=400',
-        distance: 0.2,
-        availability: true,
-        features: ['valet', 'touchless', 'in-out-allowed'],
-        type: 'valet',
-      },
-    ];
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        const { data: locations, error } = await supabase
+          .from('locations')
+          .select('id, name, address, latitude, longitude, base_price_hourly, occupancy, capacity, valet_enabled, addons_config, verification_status')
+          .eq('verification_status', 'verified')
+          .limit(50);
 
-    setListings(mockListings);
-    setFilteredListings(mockListings);
+        if (error) throw error;
+
+        if (locations) {
+          // Get active sessions for availability check
+          const { data: sessions } = await supabase
+            .from('parking_sessions')
+            .select('location_id')
+            .gte('checkout_time', new Date().toISOString());
+
+          const occupiedLocationIds = new Set(sessions?.map((s: any) => s.location_id) || []);
+
+          const parkingListings: Parking[] = locations.map((loc: any) => {
+            const features: string[] = [];
+            if (loc.valet_enabled) features.push('valet');
+            if (loc.addons_config?.garage) features.push('garage');
+            if (loc.addons_config?.on_site_staff) features.push('on-site-staff');
+            if (loc.addons_config?.wheelchair_accessible) features.push('wheelchair-accessible');
+            if (loc.addons_config?.ev_charging) features.push('ev-charging');
+            if (loc.addons_config?.lot_uncovered) features.push('lot-uncovered');
+            if (loc.addons_config?.alley_access) features.push('alley-access');
+            if (loc.addons_config?.self_park) features.push('self-park');
+            if (loc.addons_config?.touchless) features.push('touchless');
+            if (loc.addons_config?.in_out_allowed) features.push('in-out-allowed');
+
+            const occupied = occupiedLocationIds.has(loc.id);
+            const availability = occupied ? ((loc.capacity - loc.occupancy) / loc.capacity) * 100 : 100;
+
+            return {
+              id: loc.id,
+              name: loc.name,
+              address: loc.address,
+              lat: loc.latitude,
+              lng: loc.longitude,
+              pricePerHour: loc.base_price_hourly || 5.0,
+              rating: 4.5 + Math.random() * 0.4, // Mock rating (todo: fetch from reviews table)
+              reviews: Math.floor(Math.random() * 500), // Mock reviews
+              photo: `https://images.unsplash.com/photo-${1558618666 + Math.random() * 10}?w=400`, // Mock photo
+              distance: Math.random() * 2, // Mock distance
+              availability: availability > 0,
+              features,
+              type: loc.valet_enabled ? 'valet' : (loc.addons_config?.garage ? 'garage' : 'self-park'),
+            };
+          });
+
+          setListings(parkingListings);
+          setFilteredListings(parkingListings);
+        }
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        // Fallback to mock data on error
+        setListings([]);
+        setFilteredListings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
   }, []);
 
   // Apply filters
@@ -117,8 +141,15 @@ export function SearchPage() {
     setFilteredListings(filtered);
   }, [listings, priceRange, selectedFeatures, parkingType]);
 
-  if (!isLoaded) {
-    return <div className="w-full h-screen flex items-center justify-center">Loading map...</div>;
+  if (!isLoaded || loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-200 border-t-[#5F3DFC] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-700 font-medium">Loading parking spaces...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -187,18 +218,27 @@ export function SearchPage() {
 
           {/* Listings */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {filteredListings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                isSelected={selectedListing?.id === listing.id}
-                onSelect={setSelectedListing}
-                onBook={() => {
-                  setSelectedListing(listing);
-                  setShowBookingModal(true);
-                }}
-              />
-            ))}
+            {filteredListings.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center">
+                <div>
+                  <p className="text-gray-600 font-medium">No parking spaces found</p>
+                  <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
+                </div>
+              </div>
+            ) : (
+              filteredListings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  isSelected={selectedListing?.id === listing.id}
+                  onSelect={setSelectedListing}
+                  onBook={() => {
+                    setSelectedListing(listing);
+                    setShowBookingModal(true);
+                  }}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -249,18 +289,27 @@ export function SearchPage() {
           /* Mobile List */
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="overflow-y-auto p-4 space-y-3">
-              {filteredListings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  isSelected={selectedListing?.id === listing.id}
-                  onSelect={setSelectedListing}
-                  onBook={() => {
-                    setSelectedListing(listing);
-                    setShowBookingModal(true);
-                  }}
-                />
-              ))}
+              {filteredListings.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-center">
+                  <div>
+                    <p className="text-gray-600 font-medium">No parking spaces found</p>
+                    <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
+                  </div>
+                </div>
+              ) : (
+                filteredListings.map((listing) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isSelected={selectedListing?.id === listing.id}
+                    onSelect={setSelectedListing}
+                    onBook={() => {
+                      setSelectedListing(listing);
+                      setShowBookingModal(true);
+                    }}
+                  />
+                ))
+              )}
             </div>
           </div>
         )}
