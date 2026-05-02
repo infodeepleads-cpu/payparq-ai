@@ -52,7 +52,7 @@ export function SearchFilters({
   };
 
   const toggleFeature = (feature: string) => {
-    setSelectedFeatures(
+    onFeaturesChange(
       selectedFeatures.includes(feature) ? selectedFeatures.filter((f) => f !== feature) : [...selectedFeatures, feature]
     );
   };
