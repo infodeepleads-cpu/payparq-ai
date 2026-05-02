@@ -293,10 +293,10 @@ export default function Contact() {
               I want to park at a PayParq location.
             </p>
             <Link
-              href="/members"
+              href="/search"
               className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors"
             >
-              Get Started
+              Započnite
             </Link>
           </div>
           <div className="space-y-6 text-sm md:text-base text-black/80">
