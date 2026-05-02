@@ -84,6 +84,8 @@ export function SearchPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
+  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+  const [showDetailsView, setShowDetailsView] = useState(false);
 
   const toggleQuickFilter = (filterId: string) => {
     setQuickFilters((prev) =>
@@ -130,7 +132,7 @@ export function SearchPage() {
       try {
         setLoading(true);
         const { data: locations, error } = await supabase
-          .from('locationshubs')
+          .from('locations')
           .select('*')
           .limit(50);
 
@@ -176,7 +178,7 @@ export function SearchPage() {
               pricePerHour: loc.price_per_hour || loc.base_price || 5.0,
               rating: loc.rating || 4.5,
               reviews: loc.reviews || Math.floor(Math.random() * 200),
-              photo: loc.photo || `https://images.unsplash.com/photo-${1558618666 + Math.random() * 100}?w=400`,
+              photo: loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400',
               distance: parseFloat(distance.toFixed(1)),
               availability: true,
               features,
@@ -192,6 +194,11 @@ export function SearchPage() {
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
+        console.error('Error details:', {
+          message: (err as any)?.message,
+          details: (err as any)?.details,
+          hint: (err as any)?.hint,
+        });
         setListings([]);
         setFilteredListings([]);
       } finally {
@@ -291,8 +298,31 @@ export function SearchPage() {
       filtered = filtered.filter((l) => selectedFeatures.some((f) => l.features.includes(f)));
     }
 
-    setFilteredListings(filtered);
-  }, [listings, priceRange, selectedFeatures, parkingType, quickFilters]);
+    // Apply sorting
+    const sorted = [...filtered];
+    switch (sortBy) {
+      case 'distance':
+        sorted.sort((a, b) => a.distance - b.distance);
+        break;
+      case 'price':
+        sorted.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        break;
+      case 'rating':
+        sorted.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'walk':
+        sorted.sort((a, b) => a.distance - b.distance);
+        break;
+      case 'value':
+        sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
+        break;
+      case 'relevance':
+      default:
+        break;
+    }
+
+    setFilteredListings(sorted);
+  }, [listings, priceRange, selectedFeatures, parkingType, quickFilters, sortBy]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -330,7 +360,7 @@ export function SearchPage() {
     }
   }, [filterModalOpen]);
 
-  if (!isLoaded || loading) {
+  if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-white">
         <div className="text-center">
@@ -749,10 +779,23 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Desktop: Split layout - Filters LEFT 35%, Map RIGHT 65% */}
+      {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
-        {/* Parking Lots Cards 35% LEFT */}
-        <div className="w-[35%] flex flex-col overflow-hidden bg-white border-r border-gray-200">
+        {/* Parking Lots Cards - 35% (normal) or flex-1 (details) LEFT */}
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'}`}>
+          {/* Sort Dropdown - Top Right */}
+          <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-gray-200 flex justify-end">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+            >
+              <option value="relevance">Sort by Relevance</option>
+              <option value="distance">Sort by Distance</option>
+              <option value="price">Sort by Price</option>
+            </select>
+          </div>
+
           {/* Listings Cards */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {error ? (
@@ -780,14 +823,64 @@ export function SearchPage() {
                     setSelectedListing(listing);
                     setShowBookingModal(true);
                   }}
+                  onDetails={() => setShowDetailsView(true)}
                 />
               ))
             )}
           </div>
         </div>
 
-        {/* Map 65% RIGHT */}
-        <div className="w-[65%] bg-gray-100">
+        {/* Details Panel - flex-1 MIDDLE (only in details view) */}
+        {showDetailsView && selectedListing && (
+          <div className="flex-1 bg-white border-r border-gray-200 p-6 overflow-y-auto">
+            <button
+              onClick={() => setShowDetailsView(false)}
+              className="text-sm text-gray-600 hover:text-gray-900 mb-4"
+            >
+              ← Back
+            </button>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">{selectedListing.name}</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Address</p>
+                <p className="text-sm text-gray-900">{selectedListing.address}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
+                <p className="text-lg font-bold text-gray-900">€{selectedListing.pricePerHour.toFixed(0)}/sat</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Rating</p>
+                <p className="text-sm text-gray-900">{selectedListing.rating} ⭐ ({selectedListing.reviews} reviews)</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Distance</p>
+                <p className="text-sm text-gray-900">{selectedListing.distance.toFixed(1)} km</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Type</p>
+                <p className="text-sm text-gray-900 capitalize">{selectedListing.type}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedListing(selectedListing);
+                  setShowBookingModal(true);
+                }}
+                className="w-full mt-6 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Book Now
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Map 65% RIGHT (normal) or flex-1 RIGHT (details) */}
+        <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'}`}>
+          {!isLoaded ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-gray-200 border-t-[#5F3DFC] rounded-full animate-spin" />
+            </div>
+          ) : (
           <GoogleMap
             zoom={16}
             center={mapCenter}
@@ -832,6 +925,7 @@ export function SearchPage() {
               />
             )}
           </GoogleMap>
+          )}
         </div>
       </div>
 
