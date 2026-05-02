@@ -8,7 +8,6 @@ import { ListingCard } from './ListingCard';
 import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
-import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { MapPin, Star, Search } from 'lucide-react';
 
 interface Parking {
@@ -52,64 +51,8 @@ export function SearchPage() {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [showPredictions, setShowPredictions] = useState(false);
   const [searchLocationPin, setSearchLocationPin] = useState<{ lat: number; lng: number } | null>(null);
-  const [startTime, setStartTime] = useState<string>(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() >= 30 ? 30 : 0, 0, 0);
-    const y = now.getFullYear(), mo = String(now.getMonth() + 1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
-    const h = String(now.getHours()).padStart(2,'0'), m = String(now.getMinutes()).padStart(2,'0');
-    return `${y}-${mo}-${d}T${h}:${m}`;
-  });
-  const [endTime, setEndTime] = useState<string>(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() >= 30 ? 30 : 0, 0, 0);
-    now.setHours(now.getHours() + 3);
-    const y = now.getFullYear(), mo = String(now.getMonth() + 1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
-    const h = String(now.getHours()).padStart(2,'0'), m = String(now.getMinutes()).padStart(2,'0');
-    return `${y}-${mo}-${d}T${h}:${m}`;
-  });
-  const [monthlyStartDate, setMonthlyStartDate] = useState<string>(() => {
-    const now = new Date();
-    const y = now.getFullYear(), mo = String(now.getMonth() + 1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
-    return `${y}-${mo}-${d}`;
-  });
-  const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
-  const homeDropdownRef = useRef<HTMLDivElement>(null);
-  const [showTotalPrice, setShowTotalPrice] = useState(false);
-  const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
-  const allParkingDropdownRef = useRef<HTMLDivElement>(null);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [quickFilters, setQuickFilters] = useState<string[]>([]);
-  const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [error, setError] = useState<string>('');
-  const filterModalRef = useRef<HTMLDivElement>(null);
-
-  const toggleQuickFilter = (filterId: string) => {
-    setQuickFilters((prev) =>
-      prev.includes(filterId) ? prev.filter((f) => f !== filterId) : [...prev, filterId]
-    );
-  };
-
-  const FILTER_OPTIONS = [
-    { id: 'valet', label: 'Valet', count: 29 },
-    { id: 'garage-covered', label: 'Garage - Covered', count: 26 },
-    { id: 'lot-uncovered', label: 'Lot - Uncovered', count: 29 },
-    { id: 'immediate-parking', label: 'Immediate Parking', count: 11 },
-    { id: 'on-site-staff', label: 'On-Site Staff', count: 23 },
-    { id: 'month-to-month', label: 'Month to Month', count: 29 },
-    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: 13 },
-    { id: 'self-park', label: 'Self Park', count: 4 },
-    { id: 'ev-charging', label: 'EV Charging', count: 3 },
-  ];
-
-  const toggleFilter = (filterId: string) => {
-    setSelectedFilters((prev) =>
-      prev.includes(filterId) ? prev.filter((f) => f !== filterId) : [...prev, filterId]
-    );
-  };
-
-  const clearAllFilters = () => {
-    setSelectedFilters([]);
-  };
+  const [startTime, setStartTime] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [endTime, setEndTime] = useState<string>(new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16));
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
 
   const setSearchLocation = (value: string | undefined) => {
@@ -122,105 +65,97 @@ export function SearchPage() {
   const [parkingType, setParkingType] = useState<'all' | 'self-park' | 'garage'>('all');
   const [vehicleType, setVehicleType] = useState('compact');
 
-  // Mock listings data
+  // Fetch real data from Supabase - Hub locations only
   useEffect(() => {
-    setLoading(true);
-    const mockListings: Parking[] = [
-      {
-        id: '1',
-        name: 'Shortest Walk',
-        address: '2 Spruce St. (150 Nassau St.)',
-        lat: 45.815,
-        lng: 15.982,
-        pricePerHour: 57.0,
-        rating: 4.2,
-        reviews: 149,
-        photo: 'https://images.unsplash.com/photo-1558618666-e2816b86d4ca?w=400',
-        distance: 0.2,
-        availability: true,
-        features: ['valet', 'garage'],
-        type: 'valet',
-      },
-      {
-        id: '2',
-        name: 'Downtown Premium',
-        address: '45 Broadway Ave. (200 Park Ave.)',
-        lat: 45.82,
-        lng: 15.99,
-        pricePerHour: 65.0,
-        rating: 4.7,
-        reviews: 284,
-        photo: 'https://images.unsplash.com/photo-1560707303-4e980ce876ad?w=400',
-        distance: 0.15,
-        availability: true,
-        features: ['garage', 'on-site-staff', 'ev-charging'],
-        type: 'garage',
-      },
-      {
-        id: '3',
-        name: 'Budget Friendly',
-        address: '88 Madison St. (300 5th Ave.)',
-        lat: 45.81,
-        lng: 15.97,
-        pricePerHour: 42.0,
-        rating: 4.0,
-        reviews: 156,
-        photo: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=400',
-        distance: 0.3,
-        availability: true,
-        features: ['self-park', 'wheelchair-accessible'],
-        type: 'self-park',
-      },
-      {
-        id: '4',
-        name: 'Valet Express',
-        address: '12 Central Park Ave.',
-        lat: 45.825,
-        lng: 15.985,
-        pricePerHour: 72.0,
-        rating: 4.6,
-        reviews: 203,
-        photo: 'https://images.unsplash.com/photo-1552519507-da3dc3b7c5f9?w=400',
-        distance: 0.25,
-        availability: true,
-        features: ['valet', 'touchless', 'ev-charging'],
-        type: 'valet',
-      },
-      {
-        id: '5',
-        name: 'Secure Parking',
-        address: '67 Market St.',
-        lat: 45.812,
-        lng: 15.975,
-        pricePerHour: 55.0,
-        rating: 4.4,
-        reviews: 178,
-        photo: 'https://images.unsplash.com/photo-1597045866519-c90900e4d3e0?w=400',
-        distance: 0.35,
-        availability: true,
-        features: ['garage', 'security', 'on-site-staff'],
-        type: 'garage',
-      },
-      {
-        id: '6',
-        name: 'Quick Park',
-        address: '99 Harbor View',
-        lat: 45.818,
-        lng: 15.988,
-        pricePerHour: 48.0,
-        rating: 4.1,
-        reviews: 132,
-        photo: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400',
-        distance: 0.4,
-        availability: true,
-        features: ['self-park', 'alley-access'],
-        type: 'self-park',
-      },
-    ];
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        const { data: locations, error } = await supabase
+          .from('locations')
+          .select('id, name, address, latitude, longitude, base_price_hourly, occupancy, capacity, valet_enabled, addons_config, verification_status, verification_metadata, average_rating, review_count, seo_title, seo_description')
+          .eq('verification_status', 'verified')
+          .limit(50);
 
-    setListings(mockListings);
-    setFilteredListings(mockListings);
-    setLoading(false);
+        if (error) throw error;
+
+        if (locations) {
+          // Get active sessions for availability check
+          const { data: sessions } = await supabase
+            .from('parking_sessions')
+            .select('location_id')
+            .gte('checkout_time', new Date().toISOString());
+
+          const occupiedLocationIds = new Set(sessions?.map((s: any) => s.location_id) || []);
+
+          const parkingListings: Parking[] = locations
+            .filter((loc: any) => {
+              // Include hub-enabled locations
+              const metadata = loc.verification_metadata as Record<string, any>;
+              return metadata?.hub_enabled === true;
+            })
+            .map((loc: any) => {
+              const features: string[] = [];
+              if (loc.valet_enabled) features.push('valet');
+              if (loc.addons_config?.garage) features.push('garage');
+              if (loc.addons_config?.on_site_staff) features.push('on-site-staff');
+              if (loc.addons_config?.wheelchair_accessible) features.push('wheelchair-accessible');
+              if (loc.addons_config?.ev_charging) features.push('ev-charging');
+              if (loc.addons_config?.lot_uncovered) features.push('lot-uncovered');
+              if (loc.addons_config?.alley_access) features.push('alley-access');
+              if (loc.addons_config?.self_park) features.push('self-park');
+              if (loc.addons_config?.touchless) features.push('touchless');
+              if (loc.addons_config?.in_out_allowed) features.push('in-out-allowed');
+
+              const occupied = occupiedLocationIds.has(loc.id);
+              const availability = occupied ? ((loc.capacity - loc.occupancy) / loc.capacity) * 100 : 100;
+
+              // Calculate distance (mock - in production, use user's location)
+              const userLat = 45.815;
+              const userLng = 15.982;
+              const R = 6371; // km
+              const dLat = (loc.latitude - userLat) * (Math.PI / 180);
+              const dLng = (loc.longitude - userLng) * (Math.PI / 180);
+              const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(userLat * (Math.PI / 180)) *
+                  Math.cos(loc.latitude * (Math.PI / 180)) *
+                  Math.sin(dLng / 2) *
+                  Math.sin(dLng / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distance = R * c;
+
+              return {
+                id: loc.id,
+                name: loc.name,
+                address: loc.address,
+                lat: loc.latitude,
+                lng: loc.longitude,
+                pricePerHour: loc.base_price_hourly || 5.0,
+                rating: loc.average_rating || 4.5,
+                reviews: loc.review_count || 0,
+                photo: `https://images.unsplash.com/photo-${1558618666 + Math.random() * 100}?w=400`,
+                distance: parseFloat(distance.toFixed(1)),
+                availability: availability > 0,
+                features,
+                type: loc.valet_enabled ? 'valet' : (loc.addons_config?.garage ? 'garage' : 'self-park'),
+                seoTitle: loc.seo_title,
+                seoDescription: loc.seo_description,
+              };
+            });
+
+          setListings(parkingListings);
+          setFilteredListings(parkingListings);
+        }
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        setListings([]);
+        setFilteredListings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
   }, []);
 
   // Initialize Places service and handle location search
@@ -278,8 +213,7 @@ export function SearchPage() {
           lng,
         });
         setSearchLocationPin({ lat, lng });
-        setSearchLocation('Current Location');
-        setShowPredictions(false);
+        setSearchLocation('Current Location' || '');
       });
     }
   };
@@ -287,17 +221,6 @@ export function SearchPage() {
   // Apply filters
   useEffect(() => {
     let filtered = listings;
-
-    // Quick filters
-    if (quickFilters.includes('instant-access')) {
-      filtered = filtered.filter((l) => l.availability);
-    }
-    if (quickFilters.includes('covered-garage')) {
-      filtered = filtered.filter((l) => l.type === 'garage');
-    }
-    if (quickFilters.includes('self-park')) {
-      filtered = filtered.filter((l) => l.type === 'self-park');
-    }
 
     // Price filter
     filtered = filtered.filter((l) => l.pricePerHour >= priceRange[0] && l.pricePerHour <= priceRange[1]);
@@ -313,43 +236,7 @@ export function SearchPage() {
     }
 
     setFilteredListings(filtered);
-  }, [listings, priceRange, selectedFeatures, parkingType, quickFilters]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (homeDropdownRef.current && !homeDropdownRef.current.contains(e.target as Node)) {
-        setHomeDropdownOpen(false);
-      }
-    };
-    if (homeDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [homeDropdownOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (allParkingDropdownRef.current && !allParkingDropdownRef.current.contains(e.target as Node)) {
-        setAllParkingDropdownOpen(false);
-      }
-    };
-    if (allParkingDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [allParkingDropdownOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterModalRef.current && !filterModalRef.current.contains(e.target as Node)) {
-        setFilterModalOpen(false);
-      }
-    };
-    if (filterModalOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [filterModalOpen]);
+  }, [listings, priceRange, selectedFeatures, parkingType]);
 
   if (!isLoaded || loading) {
     return (
@@ -447,42 +334,13 @@ export function SearchPage() {
             {/* Separator */}
             <div className="h-8 w-px bg-gray-300 mx-4"></div>
 
-            {/* DateTime/Date Picker Dropdown */}
-            {reservationType === 'Mjesečna' ? (
-              <MonthlyDatePickerDropdown
-                startDate={monthlyStartDate}
-                onStartDateChange={setMonthlyStartDate}
-              />
-            ) : (
-              <DateTimePickerDropdown
-                startTime={startTime}
-                endTime={endTime}
-                onStartTimeChange={setStartTime}
-                onEndTimeChange={setEndTime}
-              />
-            )}
-          </div>
-
-          {/* Right: Home Dropdown */}
-          <div ref={homeDropdownRef} className="ml-auto flex items-center gap-3 flex-shrink-0 relative">
-            <button
-              onClick={() => setHomeDropdownOpen(!homeDropdownOpen)}
-              className="flex flex-col items-center justify-center gap-1.5 p-2 hover:opacity-70 transition-opacity"
-            >
-              <div className="w-5 h-px bg-black"></div>
-              <div className="w-5 h-px bg-black"></div>
-            </button>
-
-            {homeDropdownOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[200px]">
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg rounded-b-lg">
-                  Log In / Sign Up
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                  Home
-                </button>
-              </div>
-            )}
+            {/* DateTime Picker Dropdown */}
+            <DateTimePickerDropdown
+              startTime={startTime}
+              endTime={endTime}
+              onStartTimeChange={setStartTime}
+              onEndTimeChange={setEndTime}
+            />
           </div>
         </div>
       </div>
@@ -575,219 +433,42 @@ export function SearchPage() {
 
               <div className="h-8 w-px bg-gray-300 mx-2"></div>
 
-              {reservationType === 'Mjesečna' ? (
-                <MonthlyDatePickerDropdown
-                  startDate={monthlyStartDate}
-                  onStartDateChange={setMonthlyStartDate}
-                />
-              ) : (
-                <DateTimePickerDropdown
-                  startTime={startTime}
-                  endTime={endTime}
-                  onStartTimeChange={setStartTime}
-                  onEndTimeChange={setEndTime}
-                />
-              )}
+              <DateTimePickerDropdown
+                startTime={startTime}
+                endTime={endTime}
+                onStartTimeChange={setStartTime}
+                onEndTimeChange={setEndTime}
+              />
             </div>
           </div>
         )}
       </div>
 
-      {/* Subheader - Filter widgets */}
-      <div className="hidden md:block bg-white border-b border-gray-200 py-3 px-6">
-        <div className="flex items-center gap-4">
-          {/* Filters Button */}
-          <button
-            onClick={() => setFilterModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 text-sm font-medium text-gray-900"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            Filters
-          </button>
-
-          {/* Quick filter buttons - only show for hourly/daily */}
-          {reservationType !== 'Mjesecna' && (
-            <button
-              onClick={() => toggleQuickFilter('instant-access')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                quickFilters.includes('instant-access')
-                  ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
-                  : 'border border-gray-300 text-gray-900 hover:border-gray-400'
-              }`}
-            >
-              Instant Access
-            </button>
-          )}
-          <button
-            onClick={() => toggleQuickFilter('covered-garage')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              quickFilters.includes('covered-garage')
-                ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
-                : 'border border-gray-300 text-gray-900 hover:border-gray-400'
-            }`}
-          >
-            Covered Garage
-          </button>
-          <button
-            onClick={() => toggleQuickFilter('self-park')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              quickFilters.includes('self-park')
-                ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
-                : 'border border-gray-300 text-gray-900 hover:border-gray-400'
-            }`}
-          >
-            Self Park
-          </button>
-
-          {/* All Parking Options Dropdown - only show for hourly/daily */}
-          {reservationType !== 'Mjesecna' && (
-            <div ref={allParkingDropdownRef} className="relative">
-              <button
-                onClick={() => setAllParkingDropdownOpen(!allParkingDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 text-sm font-medium text-gray-900"
-              >
-                All Parking Options
-                <svg className={`w-4 h-4 transition-transform ${allParkingDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-              </button>
-            {allParkingDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px]">
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
-                  All Types
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
-                  Indoor Parking
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
-                  Outdoor Parking
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                  Valet Parking
-                </button>
-              </div>
-            )}
-            </div>
-          )}
-
-          {/* Right: Toggle show total price */}
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Show total price with fees</span>
-            <button
-              onClick={() => setShowTotalPrice(!showTotalPrice)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                showTotalPrice ? 'bg-[#5F3DFC]' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  showTotalPrice ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Modal */}
-      {filterModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
-          <div
-            ref={filterModalRef}
-            className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-          >
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Filters</h2>
-
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              {/* Left column - 5 filters */}
-              <div className="space-y-4">
-                {FILTER_OPTIONS.slice(0, 5).map((filter) => (
-                  <label key={filter.id} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.includes(filter.id)}
-                      onChange={() => toggleFilter(filter.id)}
-                      className="w-4 h-4 accent-[#5F3DFC] rounded cursor-pointer"
-                    />
-                    <span className="text-sm font-medium text-gray-900">{filter.label}</span>
-                    <span className="text-xs text-gray-500">({filter.count})</span>
-                  </label>
-                ))}
-              </div>
-
-              {/* Right column - 4 filters + show price toggle */}
-              <div className="space-y-4">
-                {FILTER_OPTIONS.slice(5).map((filter) => (
-                  <label key={filter.id} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedFilters.includes(filter.id)}
-                      onChange={() => toggleFilter(filter.id)}
-                      className="w-4 h-4 accent-[#5F3DFC] rounded cursor-pointer"
-                    />
-                    <span className="text-sm font-medium text-gray-900">{filter.label}</span>
-                    <span className="text-xs text-gray-500">({filter.count})</span>
-                  </label>
-                ))}
-
-                {/* Show price toggle */}
-                <div className="pt-2 flex items-center gap-3">
-                  <button
-                    onClick={() => setShowTotalPrice(!showTotalPrice)}
-                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors flex-shrink-0 ${
-                      showTotalPrice ? 'bg-[#5F3DFC]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        showTotalPrice ? 'translate-x-5' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-sm font-medium text-gray-900">Show total price</span>
-                </div>
-              </div>
-            </div>
-
-            {/* CTAs */}
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-              <button
-                onClick={clearAllFilters}
-                className="text-sm font-medium text-gray-600 hover:text-gray-900"
-              >
-                Clear All
-              </button>
-              <button
-                onClick={() => setFilterModalOpen(false)}
-                className="px-6 py-2 bg-[#5F3DFC] text-white text-sm font-medium rounded-lg hover:bg-[#4F2DEC]"
-              >
-                Show {filteredListings.length} results
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Desktop: Split layout - Filters LEFT 35%, Map RIGHT 65% */}
       <div className="hidden md:flex flex-1 overflow-hidden">
-        {/* Parking Lots Cards 35% LEFT */}
+        {/* Filters + List 35% LEFT */}
         <div className="w-[35%] flex flex-col overflow-hidden bg-white border-r border-gray-200">
-          {/* Listings Cards */}
+          {/* Filters */}
+          <div className="border-b border-gray-200 p-4 overflow-y-auto flex-shrink-0 bg-gray-50">
+            <SearchFilters
+              priceRange={priceRange}
+              onPriceChange={setPriceRange}
+              selectedFeatures={selectedFeatures}
+              onFeaturesChange={setSelectedFeatures}
+              parkingType={parkingType}
+              onParkingTypeChange={setParkingType}
+              vehicleType={vehicleType}
+              onVehicleTypeChange={setVehicleType}
+            />
+          </div>
+
+          {/* Listings */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {error ? (
+            {filteredListings.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
                 <div>
-                  <p className="text-red-600 font-medium">Error: {error}</p>
-                  <p className="text-sm text-gray-500 mt-1">Check browser console for details</p>
-                </div>
-              </div>
-            ) : filteredListings.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center">
-                <div>
-                  <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
-                  <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                  <p className="text-gray-600 font-medium">No parking spaces found</p>
+                  <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
                 </div>
               </div>
             ) : (
