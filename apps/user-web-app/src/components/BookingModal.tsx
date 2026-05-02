@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Clock } from 'lucide-react';
+import { X, Clock, Loader2 } from 'lucide-react';
 
 interface Parking {
   id: string;
@@ -25,6 +25,7 @@ export function BookingModal({ listing, onClose, onConfirm }: BookingModalProps)
   const [duration, setDuration] = useState(3); // 3 hours default
   const [fees, setFees] = useState(0);
   const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Set default start time to 3 hours from now
   useEffect(() => {
@@ -46,20 +47,40 @@ export function BookingModal({ listing, onClose, onConfirm }: BookingModalProps)
     setTotal(Math.round((subtotal + feesAmount) * 100) / 100);
   }, [duration, listing.pricePerHour]);
 
-  const handleConfirm = async () => {
-    // In production, this would call your backend to create a Stripe checkout session
-    // For now, just log the booking details
-    console.log({
-      listingId: listing.id,
-      startDate,
-      startTime,
-      duration,
-      total,
-    });
+  const handleCheckout = async () => {
+    try {
+      setIsLoading(true);
 
-    // Redirect to Stripe checkout (placeholder)
-    // window.location.href = `/api/checkout?listingId=${listing.id}&total=${total}`;
-    onConfirm();
+      // Call backend API to create Stripe checkout session
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listingId: listing.id,
+          listingName: listing.name,
+          startDate,
+          startTime,
+          duration,
+          pricePerHour: listing.pricePerHour,
+          subtotal: listing.pricePerHour * duration,
+          fees,
+          total,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create checkout session');
+
+      const { sessionId } = await response.json();
+
+      // Redirect to Stripe checkout
+      if (typeof window !== 'undefined') {
+        window.location.href = `https://checkout.stripe.com/pay/${sessionId}`;
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Failed to proceed to checkout. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -152,15 +173,24 @@ export function BookingModal({ listing, onClose, onConfirm }: BookingModalProps)
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-900 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-900 font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
-              onClick={handleConfirm}
-              className="flex-1 px-4 py-3 bg-[#5F3DFC] text-white font-semibold rounded-lg hover:bg-[#4330c4] transition-colors"
+              onClick={handleCheckout}
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-[#5F3DFC] text-white font-semibold rounded-lg hover:bg-[#4330c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Proceed to Checkout
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Proceed to Checkout'
+              )}
             </button>
           </div>
 

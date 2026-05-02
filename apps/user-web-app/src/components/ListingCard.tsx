@@ -1,7 +1,31 @@
 'use client';
 
 import Image from 'next/image';
-import { MapPin, Star, DollarSign } from 'lucide-react';
+import {
+  MapPin,
+  Star,
+  DollarSign,
+  Zap,
+  Users,
+  Accessibility,
+  Lock,
+  Waves,
+  ParkingCircle,
+  Repeat2,
+} from 'lucide-react';
+
+const AMENITY_ICONS: Record<string, React.ReactNode> = {
+  valet: <Users className="w-4 h-4" />,
+  garage: <Lock className="w-4 h-4" />,
+  'on-site-staff': <Users className="w-4 h-4" />,
+  'wheelchair-accessible': <Accessibility className="w-4 h-4" />,
+  'ev-charging': <Zap className="w-4 h-4" />,
+  'lot-uncovered': <ParkingCircle className="w-4 h-4" />,
+  'alley-access': <Repeat2 className="w-4 h-4" />,
+  'self-park': <ParkingCircle className="w-4 h-4" />,
+  touchless: <Waves className="w-4 h-4" />,
+  'in-out-allowed': <Repeat2 className="w-4 h-4" />,
+};
 
 interface Parking {
   id: string;
@@ -52,7 +76,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook }: ListingCa
       <div className="flex items-start gap-1 text-xs text-gray-600 mb-2">
         <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
         <span>
-          {listing.address} • {listing.distance} mi
+          {listing.address} • {listing.distance.toFixed(1)} km
         </span>
       </div>
 
@@ -83,15 +107,21 @@ export function ListingCard({ listing, isSelected, onSelect, onBook }: ListingCa
         </button>
       </div>
 
-      {/* Features tags */}
+      {/* Features tags with icons */}
       <div className="mt-2 flex flex-wrap gap-1">
         {listing.features.slice(0, 2).map((feature) => (
-          <span key={feature} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+          <span
+            key={feature}
+            className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded flex items-center gap-1"
+          >
+            {AMENITY_ICONS[feature]}
             {feature.replace('-', ' ')}
           </span>
         ))}
         {listing.features.length > 2 && (
-          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">+{listing.features.length - 2}</span>
+          <span className="text-xs bg-[#5F3DFC]/10 text-[#5F3DFC] px-2 py-1 rounded font-medium">
+            +{listing.features.length - 2} more
+          </span>
         )}
       </div>
     </div>
