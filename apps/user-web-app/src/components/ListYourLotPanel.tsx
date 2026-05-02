@@ -361,9 +361,9 @@ export function ListYourLotPanel({
 
     // Parking name and location
     if (data.name && data.address && data.town) {
-      lines.push(`${data.spaceType} space${data.spaceType > 1 ? 's' : ''} located at ${data.name}, ${data.address} in ${data.town}.`);
+      lines.push(`${data.spaceType} space${parseInt(data.spaceType) > 1 ? 's' : ''} located at ${data.name}, ${data.address} in ${data.town}.`);
     } else if (data.address && data.town) {
-      lines.push(`${data.spaceType} space${data.spaceType > 1 ? 's' : ''} located on ${data.address} in ${data.town}.`);
+      lines.push(`${data.spaceType} space${parseInt(data.spaceType) > 1 ? 's' : ''} located on ${data.address} in ${data.town}.`);
     }
 
     // Parking type
