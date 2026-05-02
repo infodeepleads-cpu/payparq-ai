@@ -7,6 +7,7 @@ import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
 import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
+import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MapPin, Star, Search } from 'lucide-react';
 
 interface Parking {
@@ -333,30 +334,13 @@ export function SearchPage() {
             {/* Separator */}
             <div className="h-8 w-px bg-gray-300 mx-4"></div>
 
-            {/* Start Time */}
-            <div className="flex-1 flex flex-col justify-center">
-              <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Start Time</label>
-              <input
-                type="datetime-local"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none"
-              />
-            </div>
-
-            {/* Separator */}
-            <div className="h-8 w-px bg-gray-300 mx-4"></div>
-
-            {/* End Time */}
-            <div className="flex-1 flex flex-col justify-center">
-              <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">End Time</label>
-              <input
-                type="datetime-local"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none"
-              />
-            </div>
+            {/* DateTime Picker Dropdown */}
+            <DateTimePickerDropdown
+              startTime={startTime}
+              endTime={endTime}
+              onStartTimeChange={setStartTime}
+              onEndTimeChange={setEndTime}
+            />
           </div>
         </div>
       </div>
@@ -449,27 +433,12 @@ export function SearchPage() {
 
               <div className="h-8 w-px bg-gray-300 mx-2"></div>
 
-              <div className="flex-1 flex flex-col justify-center">
-                <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Start Time</label>
-                <input
-                  type="datetime-local"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none"
-                />
-              </div>
-
-              <div className="h-8 w-px bg-gray-300 mx-2"></div>
-
-              <div className="flex-1 flex flex-col justify-center">
-                <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">End Time</label>
-                <input
-                  type="datetime-local"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none"
-                />
-              </div>
+              <DateTimePickerDropdown
+                startTime={startTime}
+                endTime={endTime}
+                onStartTimeChange={setStartTime}
+                onEndTimeChange={setEndTime}
+              />
             </div>
           </div>
         )}
