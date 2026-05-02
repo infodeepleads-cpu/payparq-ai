@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface Props {
   startTime: string;
@@ -10,20 +10,31 @@ interface Props {
   onEndTimeChange: (value: string) => void;
 }
 
+const toLocalISOString = (date: Date) => {
+  const y = date.getFullYear(), mo = String(date.getMonth() + 1).padStart(2,'0'), d = String(date.getDate()).padStart(2,'0');
+  const h = String(date.getHours()).padStart(2,'0'), m = String(date.getMinutes()).padStart(2,'0');
+  return `${y}-${mo}-${d}T${h}:${m}`;
+};
+
 export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, onEndTimeChange }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [displayMonth, setDisplayMonth] = useState(new Date());
 
-  // Parse dates from ISO strings
+  // Parse local time strings directly
   const startDate = new Date(startTime);
   const endDate = new Date(endTime);
+
+  const getLocalTimeString = (date: Date) => {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
 
   const formatDisplay = (iso: string) => {
     const d = new Date(iso);
     const day = d.getDate();
     const month = d.toLocaleString('en-US', { month: 'short' });
-    const time = d.toTimeString().slice(0, 5);
+    const time = getLocalTimeString(d);
     return `${day} ${month} · ${time}`;
   };
 
@@ -43,125 +54,58 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
     }
   }, [isOpen]);
 
-  // Calendar component
-  const Calendar = ({ date, onChange }: { date: Date; onChange: (d: Date) => void }) => {
-    const year = displayMonth.getFullYear();
-    const month = displayMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
+  // Generate date options for next 30 days
+  const generateDateOptions = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const formatted = date.toISOString().slice(0, 10);
+      const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+      dates.push({ value: formatted, label });
     }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
-
-    const isToday = (day: number | null) => {
-      if (!day) return false;
-      const today = new Date();
-      return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    };
-
-    const isSelected = (day: number | null) => {
-      if (!day) return false;
-      return day === date.getDate() && month === date.getMonth() && year === date.getFullYear();
-    };
-
-    return (
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setDisplayMonth(new Date(year, month - 1))}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-semibold text-gray-900">{displayMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</span>
-          <button
-            onClick={() => setDisplayMonth(new Date(year, month + 1))}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 text-xs mb-2">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-            <div key={d} className="text-center text-gray-500 font-semibold h-6 flex items-center justify-center">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((day, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                if (day) {
-                  const newDate = new Date(year, month, day, date.getHours(), date.getMinutes());
-                  onChange(newDate);
-                }
-              }}
-              className={`h-6 flex items-center justify-center text-xs rounded-full transition ${
-                day === null
-                  ? 'text-gray-300'
-                  : isSelected(day)
-                    ? 'bg-[#5F3DFC] text-white font-semibold'
-                    : isToday(day)
-                      ? 'font-bold text-gray-900'
-                      : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+    return dates;
   };
 
-  // Time list component
-  const TimeList = ({ value, onChange }: { value: Date; onChange: (d: Date) => void }) => {
-    const timeListRef = useRef<HTMLDivElement>(null);
+  // Generate time options (every 30 min)
+  const generateTimeOptions = () => {
     const times = [];
     for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        times.push({ h, m, display: `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}` });
+      for (let m of [0, 30]) {
+        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        times.push({ value: timeStr, label: timeStr });
       }
     }
+    return times;
+  };
 
-    useEffect(() => {
-      const selectedIndex = times.findIndex((t) => t.h === value.getHours() && t.m === value.getMinutes());
-      if (selectedIndex !== -1 && timeListRef.current) {
-        const selected = timeListRef.current.children[selectedIndex] as HTMLElement;
-        selected?.scrollIntoView({ block: 'center' });
-      }
-    }, [isOpen]);
+  const handleStartDateChange = (newDate: string) => {
+    const [year, month, day] = newDate.split('-').map(Number);
+    const updated = new Date(startDate);
+    updated.setFullYear(year, month - 1, day);
+    onStartTimeChange(toLocalISOString(updated));
+  };
 
-    return (
-      <div ref={timeListRef} className="max-h-48 overflow-y-auto p-2">
-        {times.map((t) => (
-          <button
-            key={t.display}
-            onClick={() => {
-              const newDate = new Date(value);
-              newDate.setHours(t.h, t.m);
-              onChange(newDate);
-            }}
-            className={`w-full text-center py-1 px-2 text-xs rounded mb-1 transition ${
-              t.h === value.getHours() && t.m === value.getMinutes()
-                ? 'bg-[#5F3DFC]/10 text-[#5F3DFC] font-semibold'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            {t.display}
-          </button>
-        ))}
-      </div>
-    );
+  const handleStartTimeChange = (newTime: string) => {
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const updated = new Date(startDate);
+    updated.setHours(hours, minutes, 0, 0);
+    onStartTimeChange(toLocalISOString(updated));
+  };
+
+  const handleEndDateChange = (newDate: string) => {
+    const [year, month, day] = newDate.split('-').map(Number);
+    const updated = new Date(endDate);
+    updated.setFullYear(year, month - 1, day);
+    onEndTimeChange(toLocalISOString(updated));
+  };
+
+  const handleEndTimeChange = (newTime: string) => {
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const updated = new Date(endDate);
+    updated.setHours(hours, minutes, 0, 0);
+    onEndTimeChange(toLocalISOString(updated));
   };
 
   return (
@@ -169,52 +113,91 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
       {/* Label */}
       <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none block">Start → End Time</label>
 
-      {/* Display button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none w-full text-left"
-      >
-        {displayText}
-      </button>
+      {/* Display button with dropdown indicator */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer leading-none flex-1 text-left"
+        >
+          {displayText}
+        </button>
+        <ChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0" />
+      </div>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 grid grid-cols-4 gap-0 overflow-hidden min-w-[600px]">
-          {/* Start Date */}
-          <div className="border-r border-gray-200">
-            <div className="px-2 py-2 border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50">Start Date</div>
-            <Calendar date={startDate} onChange={(d) => {
-              const newISO = new Date(d.getFullYear(), d.getMonth(), d.getDate(), startDate.getHours(), startDate.getMinutes()).toISOString().slice(0, 16);
-              onStartTimeChange(newISO);
-            }} />
+        <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-3 space-y-3 w-full">
+          {/* Start Date and Time */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
+              <select
+                value={startDate.toISOString().slice(0, 10)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+              >
+                {generateDateOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Start Time</label>
+              <select
+                value={getLocalTimeString(startDate)}
+                onChange={(e) => handleStartTimeChange(e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+              >
+                {generateTimeOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Start Time */}
-          <div className="border-r border-gray-200">
-            <div className="px-2 py-2 border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50">Start Time</div>
-            <TimeList value={startDate} onChange={(d) => {
-              const newISO = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), d.getHours(), d.getMinutes()).toISOString().slice(0, 16);
-              onStartTimeChange(newISO);
-            }} />
+          {/* End Date and Time */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
+              <select
+                value={endDate.toISOString().slice(0, 10)}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+              >
+                {generateDateOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">End Time</label>
+              <select
+                value={getLocalTimeString(endDate)}
+                onChange={(e) => handleEndTimeChange(e.target.value)}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+              >
+                {generateTimeOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* End Date */}
-          <div className="border-r border-gray-200">
-            <div className="px-2 py-2 border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50">End Date</div>
-            <Calendar date={endDate} onChange={(d) => {
-              const newISO = new Date(d.getFullYear(), d.getMonth(), d.getDate(), endDate.getHours(), endDate.getMinutes()).toISOString().slice(0, 16);
-              onEndTimeChange(newISO);
-            }} />
-          </div>
-
-          {/* End Time */}
-          <div>
-            <div className="px-2 py-2 border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50">End Time</div>
-            <TimeList value={endDate} onChange={(d) => {
-              const newISO = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), d.getHours(), d.getMinutes()).toISOString().slice(0, 16);
-              onEndTimeChange(newISO);
-            }} />
-          </div>
+          {/* Submit Button */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-full bg-[#5F3DFC] text-white font-semibold text-xs py-2 rounded hover:bg-[#4F2DEC] transition-colors"
+          >
+            Potvrdi
+          </button>
         </div>
       )}
     </div>
