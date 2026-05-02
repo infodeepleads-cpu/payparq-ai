@@ -70,7 +70,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
 
   // Generate time options (every 30 min)
   const generateTimeOptions = () => {
-    const times = [];
+    const times: Array<{ value: string; label: string }> = [];
     for (let h = 0; h < 24; h++) {
       for (let m of [0, 30]) {
         const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
