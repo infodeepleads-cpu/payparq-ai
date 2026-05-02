@@ -367,7 +367,7 @@ export function ListYourLotPanel({
     }
 
     // Parking type
-    const typeMap = {
+    const typeMap: Record<string, string> = {
       'private_driveway': 'private driveway',
       'commercial_carpark': 'commercial car park',
       'residential_carpark': 'residential car park',
@@ -379,7 +379,7 @@ export function ListYourLotPanel({
 
     // Vehicle size
     if (data.vehicleSize) {
-      const sizeMap = {
+      const sizeMap: Record<string, string> = {
         'small': 'Small vehicles',
         'medium': 'Small to Medium vehicles',
         'large': 'Large vehicles (4x4)',
@@ -444,7 +444,7 @@ export function ListYourLotPanel({
 
     // Access control instructions
     if (data.accessControl === 'yes' && data.accessControlType) {
-      const accessTypeMap = {
+      const accessTypeMap: Record<string, string> = {
         'gate': 'Gate code or remote',
         'key': 'Key will be provided',
         'code': 'Access code will be provided',
@@ -463,7 +463,7 @@ export function ListYourLotPanel({
 
     // Notice period
     if (data.noticeRequired && data.noticeRequired !== '') {
-      const noticeMap = {
+      const noticeMap: Record<string, string> = {
         'no_notice': 'No notice required',
         '15_min': '15 minutes notice',
         '30_min': '30 minutes notice',
