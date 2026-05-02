@@ -11,6 +11,8 @@ import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { MapPin, Star, Search } from 'lucide-react';
 
+const GOOGLE_MAPS_LIBRARIES = ['places'] as const;
+
 interface Parking {
   id: string;
   name: string;
@@ -32,7 +34,7 @@ interface Parking {
 export function SearchPage() {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: ['places'],
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const supabase = createClient(
@@ -128,80 +130,65 @@ export function SearchPage() {
       try {
         setLoading(true);
         const { data: locations, error } = await supabase
-          .from('locations')
-          .select('id, name, address, latitude, longitude, base_price_hourly, occupancy, capacity, valet_enabled, addons_config, verification_status, verification_metadata, average_rating, review_count, seo_title, seo_description')
-          .eq('verification_status', 'verified')
+          .from('locationshubs')
+          .select('*')
           .limit(50);
 
         if (error) throw error;
 
-        if (locations) {
-          // Get active sessions for availability check
-          const { data: sessions } = await supabase
-            .from('parking_sessions')
-            .select('location_id')
-            .gte('checkout_time', new Date().toISOString());
+        if (locations && locations.length > 0) {
+          const parkingListings: Parking[] = locations.map((loc: any) => {
+            const features: string[] = [];
 
-          const occupiedLocationIds = new Set(sessions?.map((s: any) => s.location_id) || []);
+            // Parse features from addons if available
+            if (loc.addons) {
+              const addons = typeof loc.addons === 'string' ? JSON.parse(loc.addons) : loc.addons || {};
+              if (addons.valet) features.push('valet');
+              if (addons.garage) features.push('garage');
+              if (addons.staff) features.push('on-site-staff');
+              if (addons.wheelchair) features.push('wheelchair-accessible');
+              if (addons.ev_charging) features.push('ev-charging');
+            }
 
-          const parkingListings: Parking[] = locations
-            .filter((loc: any) => {
-              // Include hub-enabled locations
-              const metadata = loc.verification_metadata as Record<string, any>;
-              return metadata?.hub_enabled === true;
-            })
-            .map((loc: any) => {
-              const features: string[] = [];
-              if (loc.valet_enabled) features.push('valet');
-              if (loc.addons_config?.garage) features.push('garage');
-              if (loc.addons_config?.on_site_staff) features.push('on-site-staff');
-              if (loc.addons_config?.wheelchair_accessible) features.push('wheelchair-accessible');
-              if (loc.addons_config?.ev_charging) features.push('ev-charging');
-              if (loc.addons_config?.lot_uncovered) features.push('lot-uncovered');
-              if (loc.addons_config?.alley_access) features.push('alley-access');
-              if (loc.addons_config?.self_park) features.push('self-park');
-              if (loc.addons_config?.touchless) features.push('touchless');
-              if (loc.addons_config?.in_out_allowed) features.push('in-out-allowed');
+            // Calculate distance from center
+            const userLat = 45.815;
+            const userLng = 15.982;
+            const lat = loc.latitude || loc.lat || 45.815;
+            const lng = loc.longitude || loc.lng || 15.982;
+            const R = 6371; // km
+            const dLat = (lat - userLat) * (Math.PI / 180);
+            const dLng = (lng - userLng) * (Math.PI / 180);
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(userLat * (Math.PI / 180)) *
+                Math.cos(lat * (Math.PI / 180)) *
+                Math.sin(dLng / 2) *
+                Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
 
-              const occupied = occupiedLocationIds.has(loc.id);
-              const availability = occupied ? ((loc.capacity - loc.occupancy) / loc.capacity) * 100 : 100;
-
-              // Calculate distance (mock - in production, use user's location)
-              const userLat = 45.815;
-              const userLng = 15.982;
-              const R = 6371; // km
-              const dLat = (loc.latitude - userLat) * (Math.PI / 180);
-              const dLng = (loc.longitude - userLng) * (Math.PI / 180);
-              const a =
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(userLat * (Math.PI / 180)) *
-                  Math.cos(loc.latitude * (Math.PI / 180)) *
-                  Math.sin(dLng / 2) *
-                  Math.sin(dLng / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              const distance = R * c;
-
-              return {
-                id: loc.id,
-                name: loc.name,
-                address: loc.address,
-                lat: loc.latitude,
-                lng: loc.longitude,
-                pricePerHour: loc.base_price_hourly || 5.0,
-                rating: loc.average_rating || 4.5,
-                reviews: loc.review_count || 0,
-                photo: `https://images.unsplash.com/photo-${1558618666 + Math.random() * 100}?w=400`,
-                distance: parseFloat(distance.toFixed(1)),
-                availability: availability > 0,
-                features,
-                type: loc.valet_enabled ? 'valet' : (loc.addons_config?.garage ? 'garage' : 'self-park'),
-                seoTitle: loc.seo_title,
-                seoDescription: loc.seo_description,
-              };
-            });
+            return {
+              id: loc.id,
+              name: loc.name || 'Parking',
+              address: loc.address || '',
+              lat: lat,
+              lng: lng,
+              pricePerHour: loc.price_per_hour || loc.base_price || 5.0,
+              rating: loc.rating || 4.5,
+              reviews: loc.reviews || Math.floor(Math.random() * 200),
+              photo: loc.photo || `https://images.unsplash.com/photo-${1558618666 + Math.random() * 100}?w=400`,
+              distance: parseFloat(distance.toFixed(1)),
+              availability: true,
+              features,
+              type: (loc.type || 'self-park') as any,
+            };
+          });
 
           setListings(parkingListings);
           setFilteredListings(parkingListings);
+        } else {
+          setListings([]);
+          setFilteredListings([]);
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
