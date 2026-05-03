@@ -1494,7 +1494,7 @@ export function SearchPage() {
               >
                 <button
                   onClick={() => setSelectedListing(listing)}
-                  className="relative w-20 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+                  className="relative w-14 h-14 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
                   {/* Circle SVG */}
                   <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
