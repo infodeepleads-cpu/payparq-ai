@@ -15,12 +15,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      ...(supabaseHost
-        ? [
-            { protocol: "https", hostname: supabaseHost, pathname: "/storage/**" },
-            { protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" },
-          ]
-        : []),
+      ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/**" }, { protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
