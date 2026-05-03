@@ -1496,15 +1496,15 @@ export function SearchPage() {
                   onClick={() => setSelectedListing(listing)}
                   className="relative w-16 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Circle with pointer SVG - rounded edges */}
+                  {/* Comic strip elliptic speech bubble SVG */}
                   <svg viewBox="0 0 100 130" className="w-full h-full drop-shadow-md">
-                    {/* Main bubble - rounded rectangle */}
-                    <rect x="15" y="10" width="70" height="60" rx="15" ry="15" fill="white" stroke="black" strokeWidth="2.5"/>
+                    {/* Elliptical bubble */}
+                    <ellipse cx="50" cy="38" rx="40" ry="35" fill="white" stroke="black" strokeWidth="2.5"/>
                     {/* Pointer tail */}
-                    <polygon points="50,70 35,100 65,100" fill="white" stroke="black" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                    <polygon points="50,73 32,105 68,105" fill="white" stroke="black" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                   {/* Price inside */}
-                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '20px' }}>
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '18px' }}>
                     <span className="text-sm font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
