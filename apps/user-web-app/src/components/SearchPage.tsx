@@ -1496,14 +1496,14 @@ export function SearchPage() {
                   onClick={() => setSelectedListing(listing)}
                   className="relative w-16 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Circle with pointer SVG */}
-                  <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md">
-                    <circle cx="50" cy="40" r="35" fill="white" stroke="black" strokeWidth="2"/>
-                    <polygon points="50,75 35,85 65,85" fill="white" stroke="black" strokeWidth="2"/>
+                  {/* Comic speech bubble SVG */}
+                  <svg viewBox="0 0 100 130" className="w-full h-full drop-shadow-md">
+                    {/* Main bubble - rounded rectangle */}
+                    <path d="M 15,15 Q 10,10 20,10 L 80,10 Q 90,10 90,20 L 90,65 Q 90,75 80,75 L 55,75 L 35,95 L 45,75 L 20,75 Q 10,75 10,65 L 10,20 Q 10,10 20,10 Z" fill="white" stroke="black" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
-                  {/* Price inside circle */}
-                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '20px' }}>
-                    <span className="text-sm font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
+                  {/* Price inside */}
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '15px' }}>
+                    <span className="text-xs font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
               </OverlayView>
