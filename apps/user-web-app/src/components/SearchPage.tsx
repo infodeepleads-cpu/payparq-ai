@@ -110,7 +110,7 @@ export function SearchPage() {
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showAllParkingOptions, setShowAllParkingOptions] = useState(false);
-  const [showVehicleWidget, setShowVehicleWidget] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
@@ -426,7 +426,7 @@ export function SearchPage() {
 
   useEffect(() => {
     setPhotoIndex(0);
-    setShowVehicleWidget(false);
+    setShowVehicleModal(false);
     setVehicleInput('');
     setSelectedVehicle(null);
     setVehicleCheckResult(null);
@@ -977,7 +977,7 @@ export function SearchPage() {
             {/* Vehicle Size Info - Below Photo - Clickable */}
             <button
               onClick={() => {
-                setShowVehicleWidget(!showVehicleWidget);
+                setShowVehicleModal(true);
                 setVehicleCheckResult(null);
               }}
               className="flex-shrink-0 w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
@@ -989,7 +989,7 @@ export function SearchPage() {
                   <p className="text-xs text-gray-600 mt-1">Add your vehicle details to check if your car fits and view any oversize fees.</p>
                 </div>
               </div>
-              <ChevronRight className={`w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5 transition-transform ${showVehicleWidget ? 'rotate-90' : ''}`} />
+              <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
             </button>
 
             {/* Book Now Suggestion Widget */}
@@ -1322,9 +1322,49 @@ export function SearchPage() {
               </div>
             </div>
 
-            {/* Vehicle Size Widget */}
-            {showVehicleWidget && (
-              <div className="flex-shrink-0 px-6 py-6 bg-white border-b border-gray-200 space-y-4">
+
+          </div>
+        )}
+
+        {/* Price Breakdown Modal */}
+        {showPriceBreakdown && selectedListing && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
+              <div className="space-y-4">
+                <p className="text-lg font-bold text-gray-900">Price Breakdown</p>
+
+                <div className="space-y-2 border-b border-gray-200 pb-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Međuzbroj</p>
+                    <p className="text-sm font-semibold text-gray-900">€{selectedListing.pricePerHour.toFixed(2)}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Service Fee (5%)</p>
+                    <p className="text-sm font-semibold text-gray-900">€{(selectedListing.pricePerHour * 0.05).toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <p className="text-lg font-bold text-gray-900">Total</p>
+                  <p className="text-lg font-bold text-gray-900">€{(selectedListing.pricePerHour * 1.05).toFixed(2)}</p>
+                </div>
+
+                <button
+                  onClick={() => setShowPriceBreakdown(false)}
+                  className="w-full mt-6 px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Modal - Centered Overlay */}
+        {showVehicleModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-y-auto max-h-[90vh]">
+              <div className="p-6 space-y-4">
                 {/* Header */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Add Vehicle</h3>
@@ -1332,7 +1372,7 @@ export function SearchPage() {
                 </div>
 
                 {/* Make and Model Input */}
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <label className="text-sm font-semibold text-gray-900">Make and Model</label>
                   <input
                     type="text"
@@ -1345,7 +1385,7 @@ export function SearchPage() {
 
                   {/* Search Results Dropdown */}
                   {vehicleInput && (
-                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" style={{ width: 'calc(100% - 48px)' }}>
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                       {VEHICLE_DATABASE.filter((v) =>
                         `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
                       ).map((vehicle, idx) => (
@@ -1393,7 +1433,7 @@ export function SearchPage() {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => {
-                      setShowVehicleWidget(false);
+                      setShowVehicleModal(false);
                       setVehicleInput('');
                       setSelectedVehicle(null);
                       setVehicleCheckResult(null);
@@ -1405,7 +1445,7 @@ export function SearchPage() {
                   <button
                     onClick={() => {
                       if (selectedVehicle) {
-                        setShowVehicleWidget(false);
+                        setShowVehicleModal(false);
                       }
                     }}
                     disabled={!selectedVehicle}
@@ -1414,41 +1454,6 @@ export function SearchPage() {
                     Add Vehicle
                   </button>
                 </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* Price Breakdown Modal */}
-        {showPriceBreakdown && selectedListing && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
-              <div className="space-y-4">
-                <p className="text-lg font-bold text-gray-900">Price Breakdown</p>
-
-                <div className="space-y-2 border-b border-gray-200 pb-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Međuzbroj</p>
-                    <p className="text-sm font-semibold text-gray-900">€{selectedListing.pricePerHour.toFixed(2)}</p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Service Fee (5%)</p>
-                    <p className="text-sm font-semibold text-gray-900">€{(selectedListing.pricePerHour * 0.05).toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <p className="text-lg font-bold text-gray-900">Total</p>
-                  <p className="text-lg font-bold text-gray-900">€{(selectedListing.pricePerHour * 1.05).toFixed(2)}</p>
-                </div>
-
-                <button
-                  onClick={() => setShowPriceBreakdown(false)}
-                  className="w-full mt-6 px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
