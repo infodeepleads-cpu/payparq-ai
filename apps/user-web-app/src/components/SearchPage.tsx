@@ -1494,15 +1494,15 @@ export function SearchPage() {
               >
                 <button
                   onClick={() => setSelectedListing(listing)}
-                  className="relative w-20 h-16 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+                  className="relative w-20 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Cloud SVG - Rounded */}
-                  <svg viewBox="0 0 100 70" className="w-full h-full drop-shadow-md">
-                    <path d="M20,50 Q10,50 10,40 Q10,25 22,15 Q28,8 38,8 Q42,2 55,2 Q70,2 78,12 Q88,15 90,28 Q98,30 98,40 Q98,52 88,58 L20,58 Q12,58 12,50 Z" fill="white" stroke="black" strokeWidth="1.5" strokeLinejoin="round"/>
+                  {/* Circle SVG */}
+                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+                    <circle cx="50" cy="50" r="48" fill="white" stroke="black" strokeWidth="2"/>
                   </svg>
-                  {/* Price inside cloud */}
+                  {/* Price inside circle */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
+                    <span className="text-sm font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
               </OverlayView>
