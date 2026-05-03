@@ -272,13 +272,21 @@ export function SearchPage() {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
 
+            // Mirror create-checkout's locationPriceCents() logic exactly
+            const rawCents: number = loc.rate_per_hour ?? loc.price_per_hour ?? 500;
+            const floorCents: number = loc.rate_per_hour_floor ?? 0;
+            const ceilCents: number = loc.rate_per_hour_ceiling ?? Infinity;
+            const clampedCents = Math.min(Math.max(rawCents, floorCents), ceilCents);
+            // DB stores in cents when value > 100, euros otherwise (legacy)
+            const pricePerHour = clampedCents > 100 ? clampedCents / 100 : clampedCents || 5.0;
+
             return {
               id: loc.id,
               name: loc.name || 'Parking',
               address: loc.address || '',
               lat: lat,
               lng: lng,
-              pricePerHour: loc.price_per_hour || loc.base_price || 5.0,
+              pricePerHour,
               rating: loc.rating || 4.5,
               reviews: loc.reviews || Math.floor(Math.random() * 200),
               photo: loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400',
@@ -963,6 +971,7 @@ export function SearchPage() {
                     }}
                     onDetails={() => setShowDetailsView(true)}
                     badgeText={badgeText}
+                    checkoutUrl={buildCheckoutUrl(listing)}
                   />
                 );
               })

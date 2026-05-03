@@ -52,9 +52,10 @@ interface ListingCardProps {
   onBook: () => void;
   onDetails?: () => void;
   badgeText?: string;
+  checkoutUrl?: string;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja' }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl }: ListingCardProps) {
   return (
     <div
       onClick={() => onSelect(listing)}
@@ -94,7 +95,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
           <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}</span>
-          <span className="text-xs text-gray-500">Subtotal</span>
+          <span className="text-xs text-gray-500">/ sat</span>
         </div>
 
         {/* Address & Info */}
@@ -138,15 +139,15 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           >
             Detalji
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onBook();
-            }}
+          <a
+            href={checkoutUrl || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.stopPropagation(); if (!checkoutUrl) e.preventDefault(); }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             Rezervirajte sad
-          </button>
+          </a>
         </div>
       </div>
       </div>
