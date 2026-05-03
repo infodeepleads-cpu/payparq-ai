@@ -252,6 +252,9 @@ export function SearchPage() {
 
           setListings(parkingListings);
           setFilteredListings(parkingListings);
+          if (parkingListings.length > 0) {
+            setSelectedListing(parkingListings[0]);
+          }
         } else {
           setListings([]);
           setFilteredListings([]);

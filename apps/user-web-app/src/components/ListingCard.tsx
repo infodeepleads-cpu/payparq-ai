@@ -120,11 +120,13 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
 
         {/* Bottom Right - CTA Buttons & Spots Widget */}
         <div className="flex gap-2 justify-end items-center" style={{ marginLeft: '-8px' }}>
-          {/* Spots Left Widget */}
-          <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
-            <Info className="w-3.5 h-3.5 text-yellow-700" />
-            <span className="text-xs font-semibold text-gray-900">3 spots left</span>
-          </div>
+          {/* Spots Left Widget - Only show when selected */}
+          {isSelected && (
+            <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
+              <Info className="w-3.5 h-3.5 text-yellow-700" />
+              <span className="text-xs font-semibold text-gray-900">3 spots left</span>
+            </div>
+          )}
 
           <button
             onClick={(e) => {
