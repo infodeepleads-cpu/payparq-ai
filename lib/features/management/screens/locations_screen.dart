@@ -904,6 +904,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
         bool addonFuelOn = (addonsConfig['fuel'] as Map?)?['enabled'] == true;
         bool addonShuttleOn = (addonsConfig['shuttle'] as Map?)?['enabled'] == true;
+        // Listing detail section controllers
+        final accessHoursCtrl = TextEditingController(
+            text: (meta['access_hours'] as String?) ?? 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00');
+        final amenitiesCtrl = TextEditingController(
+            text: (meta['amenities'] as String?) ?? 'Sobar, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima');
+        final thingsToKnowCtrl = TextEditingController(
+            text: (meta['things_to_know'] as String?) ?? 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.');
+        final gettingThereCtrl = TextEditingController(
+            text: (meta['getting_there'] as String?) ?? 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.');
+        final howItWorksCtrl = TextEditingController(
+            text: (meta['how_it_works'] as String?) ?? '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići');
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -1189,6 +1200,17 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             lotZone: lotZoneCtrl.text,
                           ),
                         );
+                    // Save listing detail sections to verification_metadata
+                    final updatedMeta = Map<String, dynamic>.from(meta);
+                    updatedMeta['access_hours'] = accessHoursCtrl.text.trim();
+                    updatedMeta['amenities'] = amenitiesCtrl.text.trim();
+                    updatedMeta['things_to_know'] = thingsToKnowCtrl.text.trim();
+                    updatedMeta['getting_there'] = gettingThereCtrl.text.trim();
+                    updatedMeta['how_it_works'] = howItWorksCtrl.text.trim();
+                    await ref.read(locationsControllerProvider).updateVerificationMetadata(
+                      loc['id'].toString(), updatedMeta,
+                    );
+                    meta.addAll(updatedMeta);
                     if (photosChanged) {
                       setState(() {
                         uploadStatusText = Lang.sel(
@@ -1752,7 +1774,86 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                           const Divider(height: 1, thickness: 1, color: AppTheme.border),
                         ],
 
-                        // Section 5: Admin (super_admin only)
+                        // Section 5: Listing Details (admin editable)
+                        if (canEdit) ...[
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.schedule_outlined, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Access Hours', 'Radno vrijeme'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: accessHoursCtrl, maxLines: 4, style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. pon – pet: 6:00 – 23:00',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.star_outline, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Amenities', 'Sadržaji'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: amenitiesCtrl, maxLines: 5, style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. EV punjenje, Pokriven, ...',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.info_outline, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Things You Should Know', 'Što trebate znati'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: thingsToKnowCtrl, maxLines: 6, style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. Ograničenja veličine vozila...',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.directions_outlined, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Getting There', 'Kako doći'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: gettingThereCtrl, maxLines: 4, style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. Unesite s ulice Riva...',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.help_outline, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'How It Works', 'Kako radi'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: howItWorksCtrl, maxLines: 5, style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: '1. Pokažite propusnicu\n2. Uđite\n3. Odvozte se',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                        ],
+
+                        // Section 6: Admin (super_admin only)
                         if (isSuperAdmin) ...[
                           ExpansionTile(
                             tilePadding: EdgeInsets.zero,
