@@ -54,10 +54,12 @@ interface ListingCardProps {
   badgeText?: string;
   checkoutUrl?: string;
   durationHours?: number;
+  showFee?: boolean;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1 }: ListingCardProps) {
-  const total = parseFloat((durationHours * listing.pricePerHour * 1.05).toFixed(2));
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false }: ListingCardProps) {
+  const subtotal = durationHours * listing.pricePerHour;
+  const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
     <div
       onClick={() => onSelect(listing)}
@@ -108,8 +110,14 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           {/* Rating */}
           <div className="flex items-center gap-1 mb-1">
             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
-            <span className="text-xs text-gray-500">({listing.reviews})</span>
+            {listing.reviews > 0 ? (
+              <>
+                <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
+                <span className="text-xs text-gray-500">({listing.reviews})</span>
+              </>
+            ) : (
+              <span className="text-xs font-semibold text-gray-500">New Listing</span>
+            )}
           </div>
 
           {/* Walking Distance */}
