@@ -166,6 +166,16 @@ class LocationsController {
     _ref.invalidate(locationsStreamProvider);
   }
 
+  Future<void> updateVerificationMetadata(
+      String id, Map<String, dynamic> metadata) async {
+    try {
+      await _repo.updateVerificationMetadata(id, metadata);
+      _ref.invalidate(locationsStreamProvider);
+    } catch (e) {
+      throw AppError('Update metadata failed: $e', cause: e);
+    }
+  }
+
   Future<void> updateServiceFlags(
       String id, {required bool valetEnabled, required bool shuttleEnabled}) async {
     await _repo.updateServiceFlags(id, valetEnabled: valetEnabled, shuttleEnabled: shuttleEnabled);
