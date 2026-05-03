@@ -44,6 +44,7 @@ interface Parking {
   rating: number;
   reviews: number;
   photo: string;
+  photos?: string[];
   distance: number;
   availability: boolean;
   features: string[];
@@ -268,9 +269,7 @@ export function SearchPage() {
         if (error) throw error;
 
         if (locations && locations.length > 0) {
-          console.log('Locations fetched:', locations);
           const parkingListings: Parking[] = locations.map((loc: any) => {
-            console.log(`Processing location ${loc.name}:`, { verification_metadata: loc.verification_metadata });
             const features: string[] = [];
 
             // Parse features from addons if available
@@ -303,7 +302,10 @@ export function SearchPage() {
                 ? JSON.parse(loc.verification_metadata)
                 : loc.verification_metadata;
             }
-            console.log(`Parsed metadata for ${loc.name}:`, { metadata, accessHours: metadata.access_hours, amenities: metadata.amenities });
+            const photoUrl = (() => {
+              const verificationPhotos = Array.isArray(metadata.verification_photos) ? metadata.verification_photos : (typeof metadata.verification_photos === 'string' ? JSON.parse(metadata.verification_photos) : []);
+              return verificationPhotos.length > 0 ? verificationPhotos[0] : (loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400');
+            })();
 
             return {
               id: loc.id,
@@ -312,20 +314,24 @@ export function SearchPage() {
               lat: lat,
               lng: lng,
               pricePerHour,
-              rating: loc.review_score || 4.5,
+              rating: loc.review_score || 0,
               reviews: loc.review_count || 0,
-              photo: loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400',
+              photo: photoUrl,
+              photos: (() => {
+                const verificationPhotos = Array.isArray(metadata.verification_photos) ? metadata.verification_photos : (typeof metadata.verification_photos === 'string' ? JSON.parse(metadata.verification_photos) : []);
+                return verificationPhotos.length > 0 ? verificationPhotos : [photoUrl];
+              })(),
               distance: parseFloat(distance.toFixed(1)),
               availability: true,
               features,
               type: (loc.type || 'self-park') as any,
               maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
-              accessHours: metadata.access_hours as string | undefined,
-              amenities: metadata.amenities as string | undefined,
-              thingsToKnow: metadata.things_to_know as string | undefined,
-              gettingThere: metadata.getting_there as string | undefined,
-              howItWorks: metadata.how_it_works as string | undefined,
+              accessHours: (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00',
+              amenities: (metadata.amenities as string | undefined) || 'Sobar, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
+              thingsToKnow: (metadata.things_to_know as string | undefined) || 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
+              gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
+              howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
             };
           });
 
@@ -365,6 +371,11 @@ export function SearchPage() {
     setListings(prev => prev.map(recalc));
     setFilteredListings(prev => prev.map(recalc));
   }, [searchLocationPin]);
+
+  // Reset photo index when listing selection changes
+  useEffect(() => {
+    setPhotoIndex(0);
+  }, [selectedListing?.id]);
 
   // Initialize Places service and handle location search
   useEffect(() => {
@@ -1031,11 +1042,16 @@ export function SearchPage() {
           <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
             {/* Photo Gallery - Fixed Height */}
             <div className="flex-shrink-0 h-64 bg-gray-100 relative overflow-hidden">
-              <img
-                src={selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'}
-                alt={selectedListing.name}
-                className="w-full h-full object-cover"
-              />
+              {(() => {
+                const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
+                return (
+                  <img
+                    src={photosArray[photoIndex]}
+                    alt={selectedListing.name}
+                    className="w-full h-full object-cover"
+                  />
+                );
+              })()}
 
               {/* Back Button - Top Left */}
               <button
@@ -1060,8 +1076,12 @@ export function SearchPage() {
 
               {/* Right Arrow */}
               <button
-                onClick={() => setPhotoIndex(photoIndex + 1)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 rounded-full p-3 shadow-md transition-all"
+                onClick={() => {
+                  const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
+                  if (photoIndex < photosArray.length - 1) setPhotoIndex(photoIndex + 1);
+                }}
+                disabled={(() => { const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800']; return photoIndex >= photosArray.length - 1; })()}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1070,7 +1090,7 @@ export function SearchPage() {
 
               {/* Photo Counter */}
               <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                {photoIndex + 1}
+                {(() => { const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800']; return `${photoIndex + 1}/${photosArray.length}`; })()}
               </div>
             </div>
 
@@ -1120,8 +1140,14 @@ export function SearchPage() {
                 {/* Rating */}
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
-                  <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                  {selectedListing.reviews > 0 ? (
+                    <>
+                      <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
+                      <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-semibold text-gray-500">New Listing</span>
+                  )}
                 </div>
 
                 {/* Walking Distance */}
@@ -1312,10 +1338,10 @@ export function SearchPage() {
                       {selectedListing.reviews > 0 ? (
                         <>
                           <div className="flex items-baseline gap-2">
-                            <span className="text-2xl text-gray-900">{parseFloat((selectedListing.rating / 2).toFixed(1))}</span>
-                            <span>/5</span>
+                            <span className="text-2xl text-gray-900">{selectedListing.rating.toFixed(1)}</span>
+                            <span>/10</span>
                           </div>
-                          <p>{(() => { const s = selectedListing.rating / 2; return s >= 4.5 ? 'Izvrsno' : s >= 4.0 ? 'Vrlo dobro' : s >= 3.5 ? 'Dobro' : 'Prosječno'; })()}</p>
+                          <p>{(() => { const s = selectedListing.rating; return s >= 9 ? 'Izvrsno' : s >= 8 ? 'Vrlo dobro' : s >= 7 ? 'Dobro' : 'Prosječno'; })()}</p>
                           <p>Na temelju {selectedListing.reviews} recenzija.</p>
                         </>
                       ) : (
