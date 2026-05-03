@@ -1018,9 +1018,42 @@ export function SearchPage() {
                 </div>
               </div>
             ) : (
-              filteredListings.map((listing, index) => {
-                const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
-                const badgeText = index < badges.length ? badges[index] : undefined;
+              (() => {
+                // Compute badge assignments with priority: Value > Distance > Rating
+                // Each lot gets at most 1 badge
+                const badgeMap = new Map<string, string>();
+
+                if (filteredListings.length > 0) {
+                  // 1. Best Value (cheapest price) - highest priority
+                  const cheapestListing = filteredListings.reduce((min, curr) =>
+                    curr.pricePerHour < min.pricePerHour ? curr : min
+                  );
+                  badgeMap.set(cheapestListing.id, 'Najbolja Vrijednost');
+                  console.log('Best Value:', cheapestListing.name, `€${cheapestListing.pricePerHour}`);
+                }
+
+                if (filteredListings.length > 1) {
+                  // 2. Shortest Walk (least distance) - skip if already has badge
+                  const unbagedListings = filteredListings.filter(l => !badgeMap.has(l.id));
+                  const closestListing = unbagedListings.reduce((min, curr) =>
+                    curr.distance < min.distance ? curr : min
+                  );
+                  badgeMap.set(closestListing.id, 'Najkraća Šetnja');
+                  console.log('Shortest Walk:', closestListing.name, `${closestListing.distance}km`, `(unbagged count: ${unbagedListings.length})`);
+                }
+
+                if (filteredListings.length > 2) {
+                  // 3. Best Rating - skip if already has badge
+                  const unbagedListings = filteredListings.filter(l => !badgeMap.has(l.id));
+                  const highestRatedListing = unbagedListings.reduce((max, curr) =>
+                    curr.rating > max.rating ? curr : max
+                  );
+                  badgeMap.set(highestRatedListing.id, 'Nejvise Ocijenjeno');
+                  console.log('Best Rating:', highestRatedListing.name, `${highestRatedListing.rating}/10`);
+                }
+
+                return filteredListings.map((listing) => {
+                  const badgeText = badgeMap.get(listing.id);
                 return (
                   <ListingCard
                     key={listing.id}
@@ -1038,7 +1071,8 @@ export function SearchPage() {
                     showFee={showTotalPrice}
                   />
                 );
-              })
+                });
+              })()
             )}
           </div>
         </div>
@@ -1644,7 +1678,7 @@ export function SearchPage() {
               >
                 <div className="w-8 h-12 flex items-start justify-center -translate-x-1/2 -translate-y-full">
                   <svg viewBox="0 0 24 32" className="w-full h-full">
-                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#FF4444" stroke="white" strokeWidth="0.5"/>
+                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#5F3DFC" stroke="white" strokeWidth="0.5"/>
                   </svg>
                 </div>
               </OverlayView>
@@ -1700,7 +1734,7 @@ export function SearchPage() {
                   position={searchLocationPin}
                   icon={{
                     path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                    fillColor: '#FF6B6B',
+                    fillColor: '#5F3DFC',
                     fillOpacity: 1,
                     strokeColor: '#fff',
                     strokeWeight: 2,
