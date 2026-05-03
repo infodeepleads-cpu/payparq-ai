@@ -876,7 +876,7 @@ export function SearchPage() {
       {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Parking Lots Cards - 35% (normal) or flex-1 (details) LEFT */}
-        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'}`}>
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
           {/* Sort Dropdown - Top Right */}
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
@@ -932,8 +932,8 @@ export function SearchPage() {
         {/* Details Panel - flex-1 MIDDLE (only in details view) */}
         {showDetailsView && selectedListing && (
           <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-            {/* Photo Gallery - Top 2/3 */}
-            <div className="flex-1 bg-gray-100 relative overflow-hidden">
+            {/* Photo Gallery - Fixed Height */}
+            <div className="flex-shrink-0 h-64 bg-gray-100 relative overflow-hidden">
               <img
                 src={selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'}
                 alt={selectedListing.name}
@@ -977,14 +977,16 @@ export function SearchPage() {
               </div>
             </div>
 
-            {/* Vehicle Size Info - Below Photo - Clickable */}
-            <button
-              onClick={() => {
-                setShowVehicleModal(true);
-                setVehicleCheckResult(null);
-              }}
-              className="flex-shrink-0 w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
-            >
+            {/* Scrollable Content Section */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Vehicle Size Info - Below Photo - Clickable */}
+              <button
+                onClick={() => {
+                  setShowVehicleModal(true);
+                  setVehicleCheckResult(null);
+                }}
+                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
+              >
               <div className="flex items-start gap-3 flex-1">
                 <Info className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div className="text-left">
@@ -1324,7 +1326,7 @@ export function SearchPage() {
                 </div>
               </div>
             </div>
-
+            </div>
 
           </div>
         )}
