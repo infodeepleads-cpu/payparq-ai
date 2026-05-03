@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
 import { createClient } from '@supabase/supabase-js';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
@@ -1485,34 +1485,41 @@ export function SearchPage() {
               ],
             }}
           >
+            {/* Parking lot location markers - Cloud with price */}
             {filteredListings.map((listing) => (
-              <Marker
+              <OverlayView
                 key={listing.id}
                 position={{ lat: listing.lat, lng: listing.lng }}
-                onClick={() => setSelectedListing(listing)}
-                icon={{
-                  path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                  fillColor: '#5F3DFC',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 2,
-                  scale: 0.5,
-                }}
-              />
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <button
+                  onClick={() => setSelectedListing(listing)}
+                  className="relative w-20 h-16 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+                >
+                  {/* Cloud SVG */}
+                  <svg viewBox="0 0 100 60" className="w-full h-full drop-shadow-md">
+                    <path d="M15,40 Q15,20 35,20 Q45,5 60,5 Q80,5 85,20 Q95,20 95,35 Q95,50 80,55 L20,55 Q10,55 10,45 Z" fill="white" stroke="black" strokeWidth="1.5"/>
+                  </svg>
+                  {/* Price inside cloud */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
+                  </div>
+                </button>
+              </OverlayView>
             ))}
-            {/* Search location marker */}
+
+            {/* Search location marker - Classic Google pin */}
             {searchLocationPin && (
-              <Marker
+              <OverlayView
                 position={searchLocationPin}
-                icon={{
-                  path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                  fillColor: '#FF6B6B',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 2,
-                  scale: 0.5,
-                }}
-              />
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div className="w-8 h-12 -translate-x-1/2 -translate-y-1/2">
+                  <svg viewBox="0 0 24 32" className="w-full h-full">
+                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#FF4444" stroke="white" strokeWidth="0.5"/>
+                  </svg>
+                </div>
+              </OverlayView>
             )}
           </GoogleMap>
           )}
