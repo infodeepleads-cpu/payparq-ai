@@ -1379,7 +1379,7 @@ export function SearchPage() {
                     placeholder="Type to Search"
                     value={vehicleInput}
                     onChange={(e) => setVehicleInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
                   />
                   <p className="text-xs text-gray-500">Example: Honda Civic</p>
 
