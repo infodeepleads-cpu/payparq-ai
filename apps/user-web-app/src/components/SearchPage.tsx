@@ -294,6 +294,14 @@ export function SearchPage() {
               rate_per_hour_ceiling: loc.rate_per_hour_ceiling,
             }, 'hourly');
 
+            // Parse verification_metadata if it's a string
+            let metadata: any = {};
+            if (loc.verification_metadata) {
+              metadata = typeof loc.verification_metadata === 'string'
+                ? JSON.parse(loc.verification_metadata)
+                : loc.verification_metadata;
+            }
+
             return {
               id: loc.id,
               name: loc.name || 'Parking',
@@ -310,11 +318,11 @@ export function SearchPage() {
               type: (loc.type || 'self-park') as any,
               maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
-              accessHours: loc.verification_metadata?.access_hours as string | undefined,
-              amenities: loc.verification_metadata?.amenities as string | undefined,
-              thingsToKnow: loc.verification_metadata?.things_to_know as string | undefined,
-              gettingThere: loc.verification_metadata?.getting_there as string | undefined,
-              howItWorks: loc.verification_metadata?.how_it_works as string | undefined,
+              accessHours: metadata.access_hours as string | undefined,
+              amenities: metadata.amenities as string | undefined,
+              thingsToKnow: metadata.things_to_know as string | undefined,
+              gettingThere: metadata.getting_there as string | undefined,
+              howItWorks: metadata.how_it_works as string | undefined,
             };
           });
 
