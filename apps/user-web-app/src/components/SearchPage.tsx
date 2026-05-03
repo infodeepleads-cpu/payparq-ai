@@ -302,10 +302,19 @@ export function SearchPage() {
                 ? JSON.parse(loc.verification_metadata)
                 : loc.verification_metadata;
             }
-            const photoUrl = (() => {
-              const verificationPhotos = Array.isArray(metadata.verification_photos) ? metadata.verification_photos : (typeof metadata.verification_photos === 'string' ? JSON.parse(metadata.verification_photos) : []);
-              return verificationPhotos.length > 0 ? verificationPhotos[0] : (loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400');
+            const verificationPhotos = (() => {
+              if (Array.isArray(loc.verification_photos)) return loc.verification_photos;
+              if (typeof loc.verification_photos === 'string') {
+                try {
+                  return JSON.parse(loc.verification_photos);
+                } catch {
+                  return [];
+                }
+              }
+              return [];
             })();
+
+            const photoUrl = verificationPhotos.length > 0 ? verificationPhotos[0] : (loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400');
 
             return {
               id: loc.id,
@@ -317,10 +326,7 @@ export function SearchPage() {
               rating: loc.review_score || 0,
               reviews: loc.review_count || 0,
               photo: photoUrl,
-              photos: (() => {
-                const verificationPhotos = Array.isArray(metadata.verification_photos) ? metadata.verification_photos : (typeof metadata.verification_photos === 'string' ? JSON.parse(metadata.verification_photos) : []);
-                return verificationPhotos.length > 0 ? verificationPhotos : [photoUrl];
-              })(),
+              photos: verificationPhotos.length > 0 ? verificationPhotos : [photoUrl],
               distance: parseFloat(distance.toFixed(1)),
               availability: true,
               features,
