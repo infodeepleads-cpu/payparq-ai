@@ -1019,37 +1019,34 @@ export function SearchPage() {
               </div>
             ) : (
               (() => {
-                // Compute badge assignments with priority: Value > Distance > Rating
-                // Each lot gets at most 1 badge
+                // Find actual best in each category (not filtered)
                 const badgeMap = new Map<string, string>();
 
                 if (filteredListings.length > 0) {
-                  // 1. Best Value (cheapest price) - highest priority
                   const cheapestListing = filteredListings.reduce((min, curr) =>
                     curr.pricePerHour < min.pricePerHour ? curr : min
                   );
                   badgeMap.set(cheapestListing.id, 'Najbolja Vrijednost');
-                  console.log('Best Value:', cheapestListing.name, `€${cheapestListing.pricePerHour}`);
                 }
 
-                if (filteredListings.length > 1) {
-                  // 2. Shortest Walk (least distance) - skip if already has badge
-                  const unbagedListings = filteredListings.filter(l => !badgeMap.has(l.id));
-                  const closestListing = unbagedListings.reduce((min, curr) =>
+                if (filteredListings.length > 0) {
+                  const closestListing = filteredListings.reduce((min, curr) =>
                     curr.distance < min.distance ? curr : min
                   );
-                  badgeMap.set(closestListing.id, 'Najkraća Šetnja');
-                  console.log('Shortest Walk:', closestListing.name, `${closestListing.distance}km`, `(unbagged count: ${unbagedListings.length})`);
+                  // Only badge if not already badged (priority: Value > Distance)
+                  if (!badgeMap.has(closestListing.id)) {
+                    badgeMap.set(closestListing.id, 'Najkraća Šetnja');
+                  }
                 }
 
-                if (filteredListings.length > 2) {
-                  // 3. Best Rating - skip if already has badge
-                  const unbagedListings = filteredListings.filter(l => !badgeMap.has(l.id));
-                  const highestRatedListing = unbagedListings.reduce((max, curr) =>
+                if (filteredListings.length > 0) {
+                  const highestRatedListing = filteredListings.reduce((max, curr) =>
                     curr.rating > max.rating ? curr : max
                   );
-                  badgeMap.set(highestRatedListing.id, 'Nejvise Ocijenjeno');
-                  console.log('Best Rating:', highestRatedListing.name, `${highestRatedListing.rating}/10`);
+                  // Only badge if not already badged (priority: Value > Distance > Rating)
+                  if (!badgeMap.has(highestRatedListing.id)) {
+                    badgeMap.set(highestRatedListing.id, 'Najviše Ocijenjeno');
+                  }
                 }
 
                 return filteredListings.map((listing) => {
