@@ -1494,17 +1494,21 @@ export function SearchPage() {
               >
                 <button
                   onClick={() => setSelectedListing(listing)}
-                  className="relative w-16 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+                  style={{ transform: 'translate(-50%, -90%)' }}
+                  className="relative w-16 h-20 transition-transform hover:scale-110"
                 >
-                  {/* Map marker pin - circle with needle */}
-                  <svg viewBox="0 0 100 150" className="w-full h-full drop-shadow-md">
-                    {/* Circle */}
-                    <circle cx="50" cy="45" r="40" fill="white" stroke="black" strokeWidth="2.5"/>
-                    {/* Pin needle pointing down */}
-                    <path d="M 50,85 L 35,130 L 50,115 L 65,130 Z" fill="black" stroke="black" strokeWidth="1.5" strokeLinejoin="round"/>
+                  {/* Single path speech bubble — oval body + smooth tail */}
+                  <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
+                    <path
+                      d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                      fill="white"
+                      stroke="black"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
                   </svg>
-                  {/* Price inside */}
-                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '18px' }}>
+                  {/* Price centered in oval */}
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '28px' }}>
                     <span className="text-sm font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
