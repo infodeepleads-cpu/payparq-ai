@@ -53,9 +53,11 @@ interface ListingCardProps {
   onDetails?: () => void;
   badgeText?: string;
   checkoutUrl?: string;
+  durationHours?: number;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1 }: ListingCardProps) {
+  const total = parseFloat((durationHours * listing.pricePerHour * 1.05).toFixed(2));
   return (
     <div
       onClick={() => onSelect(listing)}
@@ -94,8 +96,8 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
       <div className="flex-1 flex flex-col relative">
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
-          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}</span>
-          <span className="text-xs text-gray-500">/ sat</span>
+          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
+          <span className="text-xs text-gray-500">Ukupno</span>
         </div>
 
         {/* Address & Info */}

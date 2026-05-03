@@ -972,6 +972,7 @@ export function SearchPage() {
                     onDetails={() => setShowDetailsView(true)}
                     badgeText={badgeText}
                     checkoutUrl={buildCheckoutUrl(listing)}
+                    durationHours={durationHours}
                   />
                 );
               })
