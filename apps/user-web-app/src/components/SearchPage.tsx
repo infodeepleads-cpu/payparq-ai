@@ -9,9 +9,29 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info } from 'lucide-react';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
+
+const VEHICLE_DATABASE = [
+  { make: 'Honda', model: 'Civic', height: 1.46 },
+  { make: 'Toyota', model: 'Camry', height: 1.47 },
+  { make: 'Ford', model: 'Focus', height: 1.48 },
+  { make: 'BMW', model: '3 Series', height: 1.42 },
+  { make: 'Volkswagen', model: 'Golf', height: 1.45 },
+  { make: 'Toyota', model: 'RAV4', height: 1.68 },
+  { make: 'Honda', model: 'CR-V', height: 1.66 },
+  { make: 'Ford', model: 'Escape', height: 1.68 },
+  { make: 'Chevrolet', model: 'Equinox', height: 1.68 },
+  { make: 'Toyota', model: 'Highlander', height: 1.76 },
+  { make: 'Ford', model: 'Expedition', height: 1.90 },
+  { make: 'Chevrolet', model: 'Silverado', height: 1.88 },
+  { make: 'Ford', model: 'F-150', height: 1.87 },
+  { make: 'Ram', model: '1500', height: 1.89 },
+  { make: 'Mercedes', model: 'E-Class', height: 1.46 },
+  { make: 'Audi', model: 'A6', height: 1.47 },
+  { make: 'Nissan', model: 'Altima', height: 1.48 },
+];
 
 interface Parking {
   id: string;
@@ -29,6 +49,8 @@ interface Parking {
   type: 'self-park' | 'garage' | 'valet' | 'lot';
   seoTitle?: string;
   seoDescription?: string;
+  maxHeight?: number;
+  heightRestrictions?: boolean;
 }
 
 export function SearchPage() {
@@ -87,6 +109,34 @@ export function SearchPage() {
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [showAllParkingOptions, setShowAllParkingOptions] = useState(false);
+  const [showVehicleWidget, setShowVehicleWidget] = useState(false);
+  const [vehicleInput, setVehicleInput] = useState('');
+  const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
+
+  const parkingOptions = [
+    'All Types',
+    'Best Value',
+    'Highest Rated',
+    'Valet Parking',
+    'Covered Garage',
+    'Open Lot',
+    'Street Parking',
+    'Parking Deck',
+    'Basement Parking',
+    'Underground Parking',
+    'Ground Level',
+    'Multi-Level',
+    'Attended Parking',
+    'Unattended Parking',
+    'Gated Parking',
+    'Secure Parking',
+    'Climate Controlled',
+    'Heated Parking',
+    'EV Charging Available',
+    'Disability Accessible',
+  ];
 
   const toggleQuickFilter = (filterId: string) => {
     setQuickFilters((prev) =>
@@ -184,6 +234,8 @@ export function SearchPage() {
               availability: true,
               features,
               type: (loc.type || 'self-park') as any,
+              maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
+              heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
             };
           });
 
@@ -363,6 +415,10 @@ export function SearchPage() {
 
   useEffect(() => {
     setPhotoIndex(0);
+    setShowVehicleWidget(false);
+    setVehicleInput('');
+    setSelectedVehicle(null);
+    setVehicleCheckResult(null);
   }, [selectedListing?.id]);
 
   if (loading) {
@@ -668,19 +724,38 @@ export function SearchPage() {
                 </svg>
               </button>
             {allParkingDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px]">
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
-                  All Types
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
-                  Indoor Parking
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
-                  Outdoor Parking
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                  Valet Parking
-                </button>
+              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px] max-h-96 overflow-y-auto">
+                {parkingOptions.slice(0, showAllParkingOptions ? parkingOptions.length : 3).map((option, index) => (
+                  <button
+                    key={index}
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 ${
+                      index === 0 ? 'rounded-t-lg border-t-0' : ''
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+
+                {/* Toggle Slider at Bottom */}
+                {parkingOptions.length > 3 && (
+                  <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50 rounded-b-lg">
+                    <span className="text-xs font-medium text-gray-600">
+                      {showAllParkingOptions ? 'Show Less' : `Show All (${parkingOptions.length})`}
+                    </span>
+                    <button
+                      onClick={() => setShowAllParkingOptions(!showAllParkingOptions)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showAllParkingOptions ? 'bg-[#5F3DFC]' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          showAllParkingOptions ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             </div>
@@ -789,7 +864,7 @@ export function SearchPage() {
         {/* Parking Lots Cards - 35% (normal) or flex-1 (details) LEFT */}
         <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'}`}>
           {/* Sort Dropdown - Top Right */}
-          <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-gray-200 flex justify-end">
+          <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
@@ -818,19 +893,24 @@ export function SearchPage() {
                 </div>
               </div>
             ) : (
-              filteredListings.map((listing) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  isSelected={selectedListing?.id === listing.id}
-                  onSelect={setSelectedListing}
-                  onBook={() => {
-                    setSelectedListing(listing);
-                    setShowBookingModal(true);
-                  }}
-                  onDetails={() => setShowDetailsView(true)}
-                />
-              ))
+              filteredListings.map((listing, index) => {
+                const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
+                const badgeText = index < badges.length ? badges[index] : undefined;
+                return (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isSelected={selectedListing?.id === listing.id}
+                    onSelect={setSelectedListing}
+                    onBook={() => {
+                      setSelectedListing(listing);
+                      setShowBookingModal(true);
+                    }}
+                    onDetails={() => setShowDetailsView(true)}
+                    badgeText={badgeText}
+                  />
+                );
+              })
             )}
           </div>
         </div>
@@ -882,6 +962,130 @@ export function SearchPage() {
                 {photoIndex + 1}
               </div>
             </div>
+
+            {/* Vehicle Size Info - Below Photo - Clickable */}
+            <button
+              onClick={() => {
+                setShowVehicleWidget(!showVehicleWidget);
+                setVehicleCheckResult(null);
+              }}
+              className="flex-shrink-0 w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
+            >
+              <div className="flex items-start gap-3 flex-1">
+                <Info className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-900">Vehicle size restrictions may apply</p>
+                  <p className="text-xs text-gray-600 mt-1">Add your vehicle details to check if your car fits and view any oversize fees.</p>
+                </div>
+              </div>
+              <ChevronRight className={`w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5 transition-transform ${showVehicleWidget ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Book Now Suggestion Widget */}
+            <button className="flex-shrink-0 w-full px-6 py-4 bg-yellow-50 hover:bg-yellow-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-yellow-200">
+              <div className="flex items-start gap-3 flex-1">
+                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-gray-900">We suggest you book now.</p>
+                  <p className="text-xs text-gray-900 mt-1">We only have 2 spots remaining here during the times you selected.</p>
+                </div>
+              </div>
+            </button>
+
+            {/* Vehicle Size Widget */}
+            {showVehicleWidget && (
+              <div className="flex-shrink-0 px-6 py-6 bg-white border-b border-gray-200 space-y-4">
+                {/* Header */}
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Add Vehicle</h3>
+                  <p className="text-sm text-gray-600 mt-1">Tell us what you need to park and we'll help you find the best spot.</p>
+                </div>
+
+                {/* Make and Model Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-900">Make and Model</label>
+                  <input
+                    type="text"
+                    placeholder="Type to Search"
+                    value={vehicleInput}
+                    onChange={(e) => setVehicleInput(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                  />
+                  <p className="text-xs text-gray-500">Example: Honda Civic</p>
+
+                  {/* Search Results Dropdown */}
+                  {vehicleInput && (
+                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" style={{ width: 'calc(100% - 48px)' }}>
+                      {VEHICLE_DATABASE.filter((v) =>
+                        `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
+                      ).map((vehicle, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedVehicle(vehicle);
+                            setVehicleInput(`${vehicle.make} ${vehicle.model}`);
+                            if (selectedListing?.maxHeight) {
+                              setVehicleCheckResult(vehicle.height <= selectedListing.maxHeight ? 'fits' : 'prohibited');
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-200 text-sm"
+                        >
+                          {vehicle.make} {vehicle.model} <span className="text-gray-500">({vehicle.height}m)</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Vehicle Check Result */}
+                {selectedVehicle && vehicleCheckResult && (
+                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    vehicleCheckResult === 'fits'
+                      ? 'bg-green-100 text-green-800 border border-green-300'
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                  }`}>
+                    <span>{vehicleCheckResult === 'fits' ? '✓ Fits' : '✗ Prohibited'}</span>
+                    <span className="text-xs">
+                      {vehicleCheckResult === 'fits'
+                        ? `Your ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.height}m) fits within the limit (${selectedListing?.maxHeight}m)`
+                        : `Your ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.height}m) exceeds the limit (${selectedListing?.maxHeight}m)`}
+                    </span>
+                  </div>
+                )}
+
+                {!selectedListing?.maxHeight && selectedVehicle && (
+                  <div className="p-3 rounded-lg text-sm text-gray-700 bg-gray-100 border border-gray-300">
+                    No height restriction data available for this lot.
+                  </div>
+                )}
+
+                {/* CTA Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowVehicleWidget(false);
+                      setVehicleInput('');
+                      setSelectedVehicle(null);
+                      setVehicleCheckResult(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
+                  >
+                    Not Now
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedVehicle) {
+                        setShowVehicleWidget(false);
+                      }
+                    }}
+                    disabled={!selectedVehicle}
+                    className="flex-1 px-4 py-2 bg-[#5F3DFC] text-white text-sm font-semibold rounded-lg hover:bg-[#4F2DEC] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add Vehicle
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Details - Bottom 1/3 */}
             <div className="flex-shrink-0 p-6 overflow-y-auto border-t border-gray-200">
@@ -1040,18 +1244,23 @@ export function SearchPage() {
                   </div>
                 </div>
               ) : (
-                filteredListings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isSelected={selectedListing?.id === listing.id}
-                    onSelect={setSelectedListing}
-                    onBook={() => {
-                      setSelectedListing(listing);
-                      setShowBookingModal(true);
-                    }}
-                  />
-                ))
+                filteredListings.map((listing, index) => {
+                  const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
+                  const badgeText = index < badges.length ? badges[index] : undefined;
+                  return (
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      isSelected={selectedListing?.id === listing.id}
+                      onSelect={setSelectedListing}
+                      onBook={() => {
+                        setSelectedListing(listing);
+                        setShowBookingModal(true);
+                      }}
+                      badgeText={badgeText}
+                    />
+                  );
+                })
               )}
             </div>
           </div>

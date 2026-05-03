@@ -13,6 +13,7 @@ import {
   ParkingCircle,
   Repeat2,
   Footprints,
+  Info,
 } from 'lucide-react';
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -50,9 +51,10 @@ interface ListingCardProps {
   onSelect: (listing: Parking) => void;
   onBook: () => void;
   onDetails?: () => void;
+  badgeText?: string;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja' }: ListingCardProps) {
   return (
     <div
       onClick={() => onSelect(listing)}
@@ -60,8 +62,10 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
         isSelected ? 'border-blue-500 bg-blue-500/10 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
       }`}
     >
-      {/* Shortest Walk Badge */}
-      <div className="font-semibold text-white bg-black px-2 rounded w-fit mb-1" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', marginTop: '-12px', marginLeft: '-12px' }}>Najkraća Šetnja</div>
+      {/* Badge */}
+      {badgeText && (
+        <div className="font-bold text-white bg-black px-2 w-fit mb-1 flex items-center justify-center" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', marginTop: '-12px', marginLeft: '-12px', borderRadius: '0 0 16px 0' }}>{badgeText}</div>
+      )}
 
       {/* Main Content */}
       <div className="flex flex-row gap-3 flex-1">
@@ -72,7 +76,8 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
             onSelect(listing);
             onDetails?.();
           }}
-          className="relative w-24 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+          className="relative w-24 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+          style={{ height: '95px' }}
         >
         <Image
           src={listing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400'}
@@ -88,7 +93,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
       <div className="flex-1 flex flex-col relative">
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
-          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}/sat</span>
+          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}</span>
           <span className="text-xs text-gray-500">Subtotal</span>
         </div>
 
@@ -113,15 +118,21 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
           </div>
         </div>
 
-        {/* Bottom Right - CTA Buttons */}
-        <div className="flex gap-2 justify-end">
+        {/* Bottom Right - CTA Buttons & Spots Widget */}
+        <div className="flex gap-2 justify-end items-center" style={{ marginLeft: '-8px' }}>
+          {/* Spots Left Widget */}
+          <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
+            <Info className="w-3.5 h-3.5 text-yellow-700" />
+            <span className="text-xs font-semibold text-gray-900">3 spots left</span>
+          </div>
+
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSelect(listing);
               onDetails?.();
             }}
-            className="text-xs font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap"
+            className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap"
           >
             Details
           </button>
