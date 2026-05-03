@@ -1494,14 +1494,15 @@ export function SearchPage() {
               >
                 <button
                   onClick={() => setSelectedListing(listing)}
-                  className="relative w-14 h-14 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
+                  className="relative w-16 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Circle SVG */}
-                  <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-                    <circle cx="50" cy="50" r="48" fill="white" stroke="black" strokeWidth="2"/>
+                  {/* Circle with pointer SVG */}
+                  <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-md">
+                    <circle cx="50" cy="40" r="35" fill="white" stroke="black" strokeWidth="2"/>
+                    <polygon points="50,75 35,85 65,85" fill="white" stroke="black" strokeWidth="2"/>
                   </svg>
                   {/* Price inside circle */}
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '20px' }}>
                     <span className="text-sm font-bold text-black">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
@@ -1514,7 +1515,7 @@ export function SearchPage() {
                 position={searchLocationPin}
                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
               >
-                <div className="w-8 h-12 -translate-x-1/2 -translate-y-1/2">
+                <div className="w-8 h-12 flex items-start justify-center -translate-x-1/2 -translate-y-full">
                   <svg viewBox="0 0 24 32" className="w-full h-full">
                     <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#FF4444" stroke="white" strokeWidth="0.5"/>
                   </svg>
