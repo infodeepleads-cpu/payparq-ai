@@ -11,7 +11,7 @@ import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { MapPin, Star, Search } from 'lucide-react';
 
-const GOOGLE_MAPS_LIBRARIES = ['places'] as const;
+const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
 interface Parking {
   id: string;
