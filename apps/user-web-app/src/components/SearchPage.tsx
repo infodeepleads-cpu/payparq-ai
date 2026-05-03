@@ -126,6 +126,47 @@ export function SearchPage() {
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
 
+  // --- Live pricing helpers ---
+  const durationHours = (() => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diff = end.getTime() - start.getTime();
+    return Math.max(1, Math.ceil(diff / 3_600_000));
+  })();
+
+  const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
+  const serviceFee = parseFloat((subtotal * 0.05).toFixed(2));
+  const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
+
+  const formatDuration = () => {
+    const h = durationHours;
+    if (h < 24) return `${h} ${h === 1 ? 'sat' : h < 5 ? 'sata' : 'sati'}`;
+    const days = Math.floor(h / 24), rem = h % 24;
+    return rem > 0 ? `${days}d ${rem}h` : `${days} ${days === 1 ? 'dan' : 'dana'}`;
+  };
+
+  const formatTimeRange = () => {
+    const s = new Date(startTime), e = new Date(endTime);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const today = new Date();
+    const isToday = s.toDateString() === today.toDateString();
+    const dateStr = isToday ? 'Danas' : `${s.getDate()}.${s.getMonth() + 1}.`;
+    return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  };
+
+  const buildCheckoutUrl = (listing: Parking) => {
+    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`;
+    const params = new URLSearchParams({
+      location_id: listing.id,
+      type: 'hourly',
+      check_in: new Date(startTime).toISOString(),
+      check_out: new Date(endTime).toISOString(),
+      flow: 'reserve',
+    });
+    return `${base}?${params.toString()}`;
+  };
+  // ---------------------------
+
   const parkingOptions = [
     'All Types',
     'Best Value',
@@ -1067,12 +1108,12 @@ export function SearchPage() {
                   className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
                 >
                   <div className="flex-1">
-                    <p className="text-xs text-gray-700 font-semibold">Danas 8:30 - 21:00</p>
-                    <p className="text-sm text-gray-900 mt-1">12 sati, 30 minuta</p>
+                    <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
+                    <p className="text-sm text-gray-900 mt-1">{formatDuration()}</p>
                     <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">$44.99</p>
+                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                     <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
                   </div>
                 </button>
@@ -1085,10 +1126,15 @@ export function SearchPage() {
                   </div>
                 </div>
 
-                {/* CTA Button - Between boxes, left-aligned */}
-                <button className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors" style={{ width: 'fit-content' }}>
-                  Book Now
-                </button>
+                {/* CTA Button - Stripe checkout */}
+                <a
+                  href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                </a>
 
                 {/* Green Box */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
@@ -1336,29 +1382,37 @@ export function SearchPage() {
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
               <div className="space-y-4">
-                <p className="text-lg font-bold text-gray-900">Price Breakdown</p>
+                <p className="text-lg font-bold text-gray-900">Pregled cijene</p>
 
                 <div className="space-y-2 border-b border-gray-200 pb-4">
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Međuzbroj</p>
-                    <p className="text-sm font-semibold text-gray-900">€{selectedListing.pricePerHour.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">{formatDuration()} × €{selectedListing.pricePerHour.toFixed(2)}/h</p>
+                    <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Service Fee (5%)</p>
-                    <p className="text-sm font-semibold text-gray-900">€{(selectedListing.pricePerHour * 0.05).toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">Naknada za uslugu (5%)</p>
+                    <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <p className="text-lg font-bold text-gray-900">Total</p>
-                  <p className="text-lg font-bold text-gray-900">€{(selectedListing.pricePerHour * 1.05).toFixed(2)}</p>
+                  <p className="text-lg font-bold text-gray-900">Ukupno</p>
+                  <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
                 </div>
 
+                <a
+                  href={buildCheckoutUrl(selectedListing)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
+                >
+                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                </a>
                 <button
                   onClick={() => setShowPriceBreakdown(false)}
-                  className="w-full mt-6 px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                 >
-                  Close
+                  Zatvori
                 </button>
               </div>
             </div>
