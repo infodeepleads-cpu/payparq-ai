@@ -1449,7 +1449,7 @@ export function SearchPage() {
                       }
                     }}
                     disabled={!selectedVehicle}
-                    className="flex-1 px-4 py-2 bg-[#5F3DFC] text-white text-sm font-semibold rounded-lg hover:bg-[#4F2DEC] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Add Vehicle
                   </button>
