@@ -1421,7 +1421,7 @@ export function SearchPage() {
         )}
 
         {/* Price Breakdown Modal */}
-        {showPriceBreakdown && (
+        {showPriceBreakdown && selectedListing && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
               <div className="space-y-4">
