@@ -9,7 +9,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search, ChevronRight, Info } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut } from 'lucide-react';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
@@ -114,6 +114,17 @@ export function SearchPage() {
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
+  const [showOnlineSpecialReminder, setShowOnlineSpecialReminder] = useState(false);
+  const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
+  const [showThingsToKnow, setShowThingsToKnow] = useState(false);
+  const [showAmenities, setShowAmenities] = useState(false);
+  const [showAccessHours, setShowAccessHours] = useState(false);
+  const [showHowToRedeem, setShowHowToRedeem] = useState(false);
+  const [showFacilityReviews, setShowFacilityReviews] = useState(false);
+  const [showGettingThere, setShowGettingThere] = useState(false);
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  const [showCustomerSupport, setShowCustomerSupport] = useState(false);
+  const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
 
   const parkingOptions = [
     'All Types',
@@ -992,6 +1003,325 @@ export function SearchPage() {
               </div>
             </button>
 
+            {/* Location Information Widget */}
+            <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden">
+              {/* Black Badge Header */}
+              <div className="font-bold text-white bg-black px-2 flex items-center justify-start" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '0 0 16px 0' }}>
+                Lokacija
+              </div>
+
+              {/* Location Content - Card Style */}
+              <div className="px-6 py-4 space-y-2">
+                {/* Address */}
+                <p className="font-semibold text-gray-900" style={{ fontSize: '15px' }}>{selectedListing.address}</p>
+
+                {/* Rating */}
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
+                  <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                </div>
+
+                {/* Walking Distance */}
+                <div className="flex items-center gap-1 text-xs text-gray-600">
+                  <Footprints className="w-3 h-3 flex-shrink-0" />
+                  <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Reservation Details Widget */}
+            <div className="flex-shrink-0 w-full bg-white border-b border-gray-200">
+              {/* Header and Content Combined */}
+              <div className="px-6 py-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <button className="inline-block bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 transition-colors">
+                    <p className="text-xs font-semibold text-gray-900">Online specijal</p>
+                  </button>
+                  <button
+                    onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
+                    className="text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Detalji
+                  </button>
+                </div>
+
+                {/* Important Notice - Show below Detalji on click */}
+                {showOnlineSpecialReminder && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Važna napomena</p>
+                    <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od vlasnika parkinga.</p>
+                  </div>
+                )}
+
+                <p className="text-lg font-bold text-gray-900">Rezervacija parkinga</p>
+
+                {/* Date, Time and Price Row */}
+                <button
+                  onClick={() => setShowPriceBreakdown(true)}
+                  className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
+                >
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-700 font-semibold">Danas 8:30 - 21:00</p>
+                    <p className="text-sm text-gray-900 mt-1">12 sati, 30 minuta</p>
+                    <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-gray-900">$44.99</p>
+                    <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
+                  </div>
+                </button>
+
+                {/* Grey Box - Reservation Extended */}
+                <div className="bg-gray-200 rounded-lg p-1.5 mt-4">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
+                    <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  </div>
+                </div>
+
+                {/* CTA Button - Between boxes, left-aligned */}
+                <button className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors" style={{ width: 'fit-content' }}>
+                  Book Now
+                </button>
+
+                {/* Green Box */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+                      <span className="text-white text-xs font-bold">✓</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-gray-700 font-semibold">Besplatno otkazivanje</p>
+                      <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+                      <span className="text-white text-xs font-bold">✓</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-gray-700 font-semibold">Garancija Mjesta</p>
+                      <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="pt-2">
+                  <p className="text-xs text-gray-600">Sigurna plaćanja omogućuje Stripe</p>
+                </div>
+
+                {/* Things You Should Know */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowThingsToKnow(!showThingsToKnow)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Things You Should Know</p>
+                  </button>
+                  {showThingsToKnow && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <p>Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.</p>
+                      <p>Procijenjena naknada za prekoračenje od 10 USD dnevno za vozila između 65" i 75" visine i preko 180" duljine, ili bilo koja vozila viša od 75". Te se naknade plaćaju izravno u objektu po izlasku ako ih niste uključili u rezervaciju.</p>
+                      <p>Za egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.</p>
+                      <p>Imajte na umu da se kamioni, kombiji i veliki SUV-ovi smatraju super velikim i podliježu dodatnim naknadama na licu mjesta.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Amenities Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowAmenities(!showAmenities)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Amenities</p>
+                  </button>
+                  {showAmenities && (
+                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
+                      <div className="flex items-center gap-3">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <span>Sobar</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Lock className="w-4 h-4 text-gray-600" />
+                        <span>Garaža - Natkrivena</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <span>Osoblje na licu mjesta</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Zap className="w-4 h-4 text-gray-600" />
+                        <span>EV punjenje</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Accessibility className="w-4 h-4 text-gray-600" />
+                        <span>Pristup invalidskim kolicima</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Access Hours Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowAccessHours(!showAccessHours)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Access Hours</p>
+                  </button>
+                  {showAccessHours && (
+                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
+                      <div className="flex justify-between items-center">
+                        <span>pon – pet</span>
+                        <span>6:00 – 23:00 sata</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>sub – ned</span>
+                        <span>7:00 – 23:00 sata</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kako Radi Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowHowToRedeem(!showHowToRedeem)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Kako Radi</p>
+                  </button>
+                  {showHowToRedeem && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <div className="flex items-start gap-3 justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <span className="flex-shrink-0">1</span>
+                          <span>Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju</span>
+                        </div>
+                        <Ticket className="w-8 h-8 text-gray-600 flex-shrink-0" />
+                      </div>
+                      <div className="flex items-start gap-3 justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <span className="flex-shrink-0">2</span>
+                          <span>Samo uđite ako nema nikoga</span>
+                        </div>
+                        <CheckCircle className="w-8 h-8 text-gray-600 flex-shrink-0" />
+                      </div>
+                      <div className="flex items-start gap-3 justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <span className="flex-shrink-0">3</span>
+                          <span>Odvezite se kad budete spremni otići</span>
+                        </div>
+                        <LogOut className="w-8 h-8 text-gray-600 flex-shrink-0" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Facility Reviews Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowFacilityReviews(!showFacilityReviews)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Facility Reviews</p>
+                  </button>
+                  {showFacilityReviews && (
+                    <div className="space-y-2 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl text-gray-900">4.8</span>
+                        <span>/5</span>
+                      </div>
+                      <p>Izvrsno</p>
+                      <p>Na temelju 265 recenzija.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Getting There Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowGettingThere(!showGettingThere)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Getting There</p>
+                  </button>
+                  {showGettingThere && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <p>Enter this location at 35 Reade St. This is the Roger LLC garage, operated by Parkit. It is located on the southwest/lefthand side of Reade St. (a one-way street) between Elk St. and Broadway. The entrance is marked by a red 'parking' sign with white lettering.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Free Cancellation Policy Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowCancellationPolicy(!showCancellationPolicy)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Free Cancellation Policy</p>
+                  </button>
+                  {showCancellationPolicy && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <p>U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.</p>
+                      <p>Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Guaranteed Parking Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowGuaranteedParking(!showGuaranteedParking)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">Guaranteed Parking by PayParq</p>
+                  </button>
+                  {showGuaranteedParking && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <p>When you park and pay with PayParq, we guarantee you will have a spot to park in at the price you paid or your money back.</p>
+                      <p>If you need help with your reservation, please contact us, and we'll do our best to make it right. Our world-class customer support team is available 7 days a week, 365 days a year.</p>
+                      <p>For specifics, please refer to the PayParq Parking Guarantee.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* 365-Day Customer Support Dropdown */}
+                <div className="pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    onClick={() => setShowCustomerSupport(!showCustomerSupport)}
+                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                    <p className="text-base font-bold text-gray-900">365-Day Customer Support</p>
+                  </button>
+                  {showCustomerSupport && (
+                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
+                      <p>PayParq has your back. If you have any issues while parking, please call our customer support team immediately at <span className="font-semibold">+385 91 596 3139</span>. We're here 365 days a year, Daily, 7am – midnight.</p>
+                      <p>For non-urgent issues shoot us an email at payparq@outlook.com. We'll get back you within 24 hours.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Company Credentials Footer */}
+                <div className="pt-4 mt-4 border-t border-gray-200 text-xs text-gray-600 text-center space-y-1">
+                  <p>✓ Industry Leading Guarantees</p>
+                  <p>✓ PCI DSS Certified • SSL Secure</p>
+                </div>
+              </div>
+            </div>
+
             {/* Vehicle Size Widget */}
             {showVehicleWidget && (
               <div className="flex-shrink-0 px-6 py-6 bg-white border-b border-gray-200 space-y-4">
@@ -1087,34 +1417,37 @@ export function SearchPage() {
               </div>
             )}
 
-            {/* Details - Bottom 1/3 */}
-            <div className="flex-shrink-0 p-6 overflow-y-auto border-t border-gray-200">
-              <p className="text-lg font-bold text-gray-900 mb-4">{selectedListing.address}</p>
+          </div>
+        )}
+
+        {/* Price Breakdown Modal */}
+        {showPriceBreakdown && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
-                  <p className="text-lg font-bold text-gray-900">€{selectedListing.pricePerHour.toFixed(0)}/sat</p>
+                <p className="text-lg font-bold text-gray-900">Price Breakdown</p>
+
+                <div className="space-y-2 border-b border-gray-200 pb-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Međuzbroj</p>
+                    <p className="text-sm font-semibold text-gray-900">€{selectedListing.pricePerHour.toFixed(2)}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Service Fee (5%)</p>
+                    <p className="text-sm font-semibold text-gray-900">€{(selectedListing.pricePerHour * 0.05).toFixed(2)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Rating</p>
-                  <p className="text-sm text-gray-900">{selectedListing.rating} ⭐ ({selectedListing.reviews} reviews)</p>
+
+                <div className="flex justify-between items-center pt-2">
+                  <p className="text-lg font-bold text-gray-900">Total</p>
+                  <p className="text-lg font-bold text-gray-900">€{(selectedListing.pricePerHour * 1.05).toFixed(2)}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Distance</p>
-                  <p className="text-sm text-gray-900">{selectedListing.distance.toFixed(1)} km</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-semibold">Type</p>
-                  <p className="text-sm text-gray-900 capitalize">{selectedListing.type}</p>
-                </div>
+
                 <button
-                  onClick={() => {
-                    setSelectedListing(selectedListing);
-                    setShowBookingModal(true);
-                  }}
-                  className="w-full mt-6 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowPriceBreakdown(false)}
+                  className="w-full mt-6 px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
                 >
-                  Book Now
+                  Close
                 </button>
               </div>
             </div>
