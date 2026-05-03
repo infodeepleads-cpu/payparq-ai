@@ -14,12 +14,10 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname, "..", ".."),
   },
   images: {
-    remotePatterns: supabaseHost
-      ? [
-          { protocol: "https", hostname: supabaseHost, pathname: "/storage/**" },
-          { protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" },
-        ]
-      : [],
+    remotePatterns: [
+      ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/**" }, { protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
   },
   async redirects() {
     return [

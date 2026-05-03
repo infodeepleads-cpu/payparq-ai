@@ -1611,7 +1611,30 @@ serve(async (req: Request) => {
 
     const now = new Date();
     const resolveBerlinTzAbbreviation = (_value: Date): string => "CET";
-    const resolveBerlinOffsetMinutes = (_value: Date): number => 60;
+    const resolveBerlinOffsetMinutes = (value: Date): number => {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Europe/Berlin",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      const parts = formatter.formatToParts(value);
+      const get = (type: string) =>
+        parseInt(parts.find((p) => p.type === type)?.value ?? "0");
+      const berlinAsUtcMs = Date.UTC(
+        get("year"),
+        get("month") - 1,
+        get("day"),
+        get("hour"),
+        get("minute"),
+        get("second"),
+      );
+      return Math.round((berlinAsUtcMs - value.getTime()) / (1000 * 60));
+    };
     const formatBerlinDateTime = (value: Date): string => {
       try {
         const parts = new Intl.DateTimeFormat("en-GB", {

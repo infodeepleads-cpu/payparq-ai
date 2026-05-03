@@ -1233,24 +1233,22 @@ function SuccessContent() {
           )}
 
           {/* 3b — Parking spot info */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                  <rect x="3" y="3" width="8" height="8" rx="1"/>
-                  <rect x="13" y="3" width="8" height="8" rx="1"/>
-                  <rect x="3" y="13" width="8" height="8" rx="1"/>
-                  <rect x="13" y="13" width="8" height="8" rx="1"/>
-                </svg>
+          {summary?.assigned_spot ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
+                    <rect x="3" y="3" width="8" height="8" rx="1"/>
+                    <rect x="13" y="3" width="8" height="8" rx="1"/>
+                    <rect x="3" y="13" width="8" height="8" rx="1"/>
+                    <rect x="13" y="13" width="8" height="8" rx="1"/>
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-black">Parking spot</p>
+                  <p className="text-[11px] text-black/50">Vaš dodijeljeni spot</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-black">Parking spot</p>
-                <p className="text-[11px] text-black/50">
-                  {summary?.assigned_spot ? 'Vaš dodijeljeni spot' : 'Automatski dodjeljujemo slobodan spot'}
-                </p>
-              </div>
-            </div>
-            {summary?.assigned_spot ? (
               <div className="space-y-2">
                 <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1293,58 +1291,58 @@ function SuccessContent() {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
-                <span className="text-[12px] text-[#5F3DFC] font-medium">Spot će biti potvrđen pri dolasku</span>
-                <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">Uskoro</span>
-              </div>
-            )}
-            {premiumSpots.length > 0 && summary?.assigned_spot && (
-              <div className="mt-3 space-y-2">
-                <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
-                {premiumSpots.map((sp) => (
-                  <button
-                    key={sp.id}
-                    type="button"
-                    disabled={spotUpgradeLoading}
-                    onClick={async () => {
-                      setSpotUpgradeLoading(true);
-                      try {
-                        const res = await fetch('/api/stripe/spot-upgrade', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            stripe_session_id: summary.session_id,
-                            new_spot_id: sp.id,
-                            current_spot_id: summary.assigned_spot?.label,
-                            email: summary.email,
-                            location_id: summary.location_id,
-                            location_name: summary.location_name,
-                          }),
-                        });
-                        const d = await res.json().catch(() => null) as { url?: string } | null;
-                        if (d?.url) window.location.href = d.url;
-                      } finally {
-                        setSpotUpgradeLoading(false);
-                      }
-                    }}
-                    className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
-                      <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
-                    </div>
-                    <span className="text-[12px] font-semibold text-[#92400E]">
-                      +{((sp.price_modifier_cents) / 100).toFixed(2)} €
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {premiumSpots.length === 0 && (
-              <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
-            )}
-          </div>
+              {premiumSpots.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
+                  {premiumSpots.map((sp) => (
+                    <button
+                      key={sp.id}
+                      type="button"
+                      disabled={spotUpgradeLoading}
+                      onClick={async () => {
+                        setSpotUpgradeLoading(true);
+                        try {
+                          const res = await fetch('/api/stripe/spot-upgrade', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              stripe_session_id: summary.session_id,
+                              new_spot_id: sp.id,
+                              current_spot_id: summary.assigned_spot?.label,
+                              email: summary.email,
+                              location_id: summary.location_id,
+                              location_name: summary.location_name,
+                            }),
+                          });
+                          const d = await res.json().catch(() => null) as { url?: string } | null;
+                          if (d?.url) window.location.href = d.url;
+                        } finally {
+                          setSpotUpgradeLoading(false);
+                        }
+                      }}
+                      className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
+                        <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
+                      </div>
+                      <span className="text-[12px] font-semibold text-[#92400E]">
+                        +{((sp.price_modifier_cents) / 100).toFixed(2)} €
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {premiumSpots.length === 0 && (
+                <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-black/10 bg-white p-4">
+              <p className="text-[13px] text-black/70">Automatski dodjeljujemo slobodan spot</p>
+              <p className="text-[11px] text-black/50 mt-2">Spot će biti potvrđen pri dolasku</p>
+            </div>
+          )}
 
           {/* 4 — Pozovi vozilo (with credit badges) */}
           {showSummonSection && (
