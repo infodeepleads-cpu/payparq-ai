@@ -86,6 +86,7 @@ export function SearchPage() {
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
   const [showDetailsView, setShowDetailsView] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   const toggleQuickFilter = (filterId: string) => {
     setQuickFilters((prev) =>
@@ -359,6 +360,10 @@ export function SearchPage() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [filterModalOpen]);
+
+  useEffect(() => {
+    setPhotoIndex(0);
+  }, [selectedListing?.id]);
 
   if (loading) {
     return (
@@ -832,44 +837,82 @@ export function SearchPage() {
 
         {/* Details Panel - flex-1 MIDDLE (only in details view) */}
         {showDetailsView && selectedListing && (
-          <div className="flex-1 bg-white border-r border-gray-200 p-6 overflow-y-auto">
-            <button
-              onClick={() => setShowDetailsView(false)}
-              className="text-sm text-gray-600 hover:text-gray-900 mb-4"
-            >
-              ← Back
-            </button>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">{selectedListing.name}</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Address</p>
-                <p className="text-sm text-gray-900">{selectedListing.address}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
-                <p className="text-lg font-bold text-gray-900">€{selectedListing.pricePerHour.toFixed(0)}/sat</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Rating</p>
-                <p className="text-sm text-gray-900">{selectedListing.rating} ⭐ ({selectedListing.reviews} reviews)</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Distance</p>
-                <p className="text-sm text-gray-900">{selectedListing.distance.toFixed(1)} km</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Type</p>
-                <p className="text-sm text-gray-900 capitalize">{selectedListing.type}</p>
-              </div>
+          <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+            {/* Photo Gallery - Top 2/3 */}
+            <div className="flex-1 bg-gray-100 relative overflow-hidden">
+              <img
+                src={selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'}
+                alt={selectedListing.name}
+                className="w-full h-full object-cover"
+              />
+
+              {/* Back Button - Top Left */}
               <button
-                onClick={() => {
-                  setSelectedListing(selectedListing);
-                  setShowBookingModal(true);
-                }}
-                className="w-full mt-6 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setShowDetailsView(false)}
+                className="absolute top-4 left-4 bg-white/90 hover:bg-white text-gray-900 rounded-full p-2 shadow-md transition-all"
               >
-                Book Now
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
+
+              {/* Left Arrow */}
+              <button
+                onClick={() => setPhotoIndex(Math.max(0, photoIndex - 1))}
+                disabled={photoIndex === 0}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Right Arrow */}
+              <button
+                onClick={() => setPhotoIndex(photoIndex + 1)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 rounded-full p-3 shadow-md transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Photo Counter */}
+              <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                {photoIndex + 1}
+              </div>
+            </div>
+
+            {/* Details - Bottom 1/3 */}
+            <div className="flex-shrink-0 p-6 overflow-y-auto border-t border-gray-200">
+              <p className="text-lg font-bold text-gray-900 mb-4">{selectedListing.address}</p>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Price</p>
+                  <p className="text-lg font-bold text-gray-900">€{selectedListing.pricePerHour.toFixed(0)}/sat</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Rating</p>
+                  <p className="text-sm text-gray-900">{selectedListing.rating} ⭐ ({selectedListing.reviews} reviews)</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Distance</p>
+                  <p className="text-sm text-gray-900">{selectedListing.distance.toFixed(1)} km</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Type</p>
+                  <p className="text-sm text-gray-900 capitalize">{selectedListing.type}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedListing(selectedListing);
+                    setShowBookingModal(true);
+                  }}
+                  className="w-full mt-6 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Book Now
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -12,6 +12,7 @@ import {
   Waves,
   ParkingCircle,
   Repeat2,
+  Footprints,
 } from 'lucide-react';
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -55,17 +56,24 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
   return (
     <div
       onClick={() => onSelect(listing)}
-      className={`p-3 rounded-lg border transition-all cursor-pointer h-[143px] flex flex-col overflow-hidden bg-white ${
+      className={`p-3 rounded-2xl border transition-all cursor-pointer h-[155px] flex flex-col overflow-hidden bg-white ${
         isSelected ? 'border-blue-500 bg-blue-500/10 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
       }`}
     >
       {/* Shortest Walk Badge */}
-      <div className="text-[10px] font-semibold text-white bg-black px-2 py-1 rounded w-fit mb-1">Najkraća Šetnja</div>
+      <div className="font-semibold text-white bg-black px-2 rounded w-fit mb-1" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', marginTop: '-12px', marginLeft: '-12px' }}>Najkraća Šetnja</div>
 
       {/* Main Content */}
       <div className="flex flex-row gap-3 flex-1">
-        {/* Photo LEFT */}
-        <div className="relative w-24 h-full rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+        {/* Photo LEFT - Clickable for details */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(listing);
+            onDetails?.();
+          }}
+          className="relative w-24 h-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+        >
         <Image
           src={listing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400'}
           alt={listing.name}
@@ -79,27 +87,29 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails }
       {/* Content RIGHT */}
       <div className="flex-1 flex flex-col relative">
         {/* Price - Top Right */}
-        <div className="absolute top-0 right-0">
-          <span className="text-base font-bold text-gray-900">€{listing.pricePerHour.toFixed(0)}/sat</span>
+        <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
+          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}/sat</span>
+          <span className="text-xs text-gray-500">Subtotal</span>
         </div>
 
-        {/* Name & Address */}
+        {/* Address & Info */}
         <div className="flex-1">
-          <h3 className="font-semibold text-xs text-gray-900 mb-0.5 line-clamp-1">{listing.name}</h3>
-          <div className="flex items-start gap-1 text-xs text-gray-600 mb-1">
-            <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
-            <span className="line-clamp-1">
-              {listing.distance.toFixed(1)} km
-            </span>
-          </div>
+          {/* Address - Bold on top */}
+          <p className="font-semibold text-gray-900 mb-1 overflow-hidden text-ellipsis whitespace-nowrap" style={{ maxWidth: '200px', fontSize: '15px' }}>{listing.address}</p>
 
           {/* Rating */}
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-0.5">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
-            </div>
+          <div className="flex items-center gap-1 mb-1">
+            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+            <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
             <span className="text-xs text-gray-500">({listing.reviews})</span>
+          </div>
+
+          {/* Walking Distance */}
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            <Footprints className="w-3 h-3 flex-shrink-0" />
+            <span>
+              {Math.round(listing.distance * 12)} min ({listing.distance.toFixed(1)} km)
+            </span>
           </div>
         </div>
 
