@@ -1496,10 +1496,12 @@ export function SearchPage() {
                   onClick={() => setSelectedListing(listing)}
                   className="relative w-16 h-20 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Comic speech bubble SVG */}
+                  {/* Comic speech bubble SVG - elliptical */}
                   <svg viewBox="0 0 100 130" className="w-full h-full drop-shadow-md">
-                    {/* Main bubble - rounded rectangle */}
-                    <path d="M 15,15 Q 10,10 20,10 L 80,10 Q 90,10 90,20 L 90,65 Q 90,75 80,75 L 55,75 L 35,95 L 45,75 L 20,75 Q 10,75 10,65 L 10,20 Q 10,10 20,10 Z" fill="white" stroke="black" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+                    {/* Main bubble - ellipse with pointer */}
+                    <ellipse cx="50" cy="35" rx="38" ry="32" fill="white" stroke="black" strokeWidth="2.5"/>
+                    {/* Pointer tail */}
+                    <polygon points="50,67 35,95 65,95" fill="white" stroke="black" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
                   </svg>
                   {/* Price inside */}
                   <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '15px' }}>
