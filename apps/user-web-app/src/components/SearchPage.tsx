@@ -1496,9 +1496,9 @@ export function SearchPage() {
                   onClick={() => setSelectedListing(listing)}
                   className="relative w-20 h-16 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110"
                 >
-                  {/* Cloud SVG */}
-                  <svg viewBox="0 0 100 60" className="w-full h-full drop-shadow-md">
-                    <path d="M15,40 Q15,20 35,20 Q45,5 60,5 Q80,5 85,20 Q95,20 95,35 Q95,50 80,55 L20,55 Q10,55 10,45 Z" fill="white" stroke="black" strokeWidth="1.5"/>
+                  {/* Cloud SVG - Rounded */}
+                  <svg viewBox="0 0 100 70" className="w-full h-full drop-shadow-md">
+                    <path d="M20,50 Q10,50 10,40 Q10,25 22,15 Q28,8 38,8 Q42,2 55,2 Q70,2 78,12 Q88,15 90,28 Q98,30 98,40 Q98,52 88,58 L20,58 Q12,58 12,50 Z" fill="white" stroke="black" strokeWidth="1.5" strokeLinejoin="round"/>
                   </svg>
                   {/* Price inside cloud */}
                   <div className="absolute inset-0 flex items-center justify-center">
