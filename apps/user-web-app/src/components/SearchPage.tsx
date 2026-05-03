@@ -1495,7 +1495,7 @@ export function SearchPage() {
                 <button
                   onClick={() => setSelectedListing(listing)}
                   style={{ transform: 'translate(-50%, -90%)' }}
-                  className="relative w-8 h-10 transition-transform hover:scale-110"
+                  className="relative w-10 h-13 transition-transform hover:scale-110"
                 >
                   {/* Single path speech bubble — oval body + smooth tail */}
                   <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
@@ -1509,7 +1509,7 @@ export function SearchPage() {
                   </svg>
                   {/* Price centered in oval body (oval center is ~33% from top of viewBox) */}
                   <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
-                    <span className="text-xs font-bold text-black leading-none">€{listing.pricePerHour.toFixed(0)}</span>
+                    <span className="text-sm font-bold text-black leading-none">€{listing.pricePerHour.toFixed(0)}</span>
                   </div>
                 </button>
               </OverlayView>
