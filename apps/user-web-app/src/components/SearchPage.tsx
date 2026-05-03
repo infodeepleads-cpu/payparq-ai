@@ -268,7 +268,9 @@ export function SearchPage() {
         if (error) throw error;
 
         if (locations && locations.length > 0) {
+          console.log('Locations fetched:', locations);
           const parkingListings: Parking[] = locations.map((loc: any) => {
+            console.log(`Processing location ${loc.name}:`, { verification_metadata: loc.verification_metadata });
             const features: string[] = [];
 
             // Parse features from addons if available
@@ -301,6 +303,7 @@ export function SearchPage() {
                 ? JSON.parse(loc.verification_metadata)
                 : loc.verification_metadata;
             }
+            console.log(`Parsed metadata for ${loc.name}:`, { metadata, accessHours: metadata.access_hours, amenities: metadata.amenities });
 
             return {
               id: loc.id,
