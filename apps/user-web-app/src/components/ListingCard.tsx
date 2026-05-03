@@ -52,9 +52,14 @@ interface ListingCardProps {
   onBook: () => void;
   onDetails?: () => void;
   badgeText?: string;
+  checkoutUrl?: string;
+  durationHours?: number;
+  showFee?: boolean;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja' }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false }: ListingCardProps) {
+  const subtotal = durationHours * listing.pricePerHour;
+  const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
     <div
       onClick={() => onSelect(listing)}
@@ -93,8 +98,8 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
       <div className="flex-1 flex flex-col relative">
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
-          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{listing.pricePerHour.toFixed(2)}</span>
-          <span className="text-xs text-gray-500">Subtotal</span>
+          <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
+          <span className="text-xs text-gray-500">Ukupno</span>
         </div>
 
         {/* Address & Info */}
@@ -105,8 +110,14 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           {/* Rating */}
           <div className="flex items-center gap-1 mb-1">
             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
-            <span className="text-xs text-gray-500">({listing.reviews})</span>
+            {listing.reviews > 0 ? (
+              <>
+                <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
+                <span className="text-xs text-gray-500">({listing.reviews})</span>
+              </>
+            ) : (
+              <span className="text-xs font-semibold text-gray-500">New Listing</span>
+            )}
           </div>
 
           {/* Walking Distance */}
@@ -120,11 +131,13 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
 
         {/* Bottom Right - CTA Buttons & Spots Widget */}
         <div className="flex gap-2 justify-end items-center" style={{ marginLeft: '-8px' }}>
-          {/* Spots Left Widget */}
-          <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
-            <Info className="w-3.5 h-3.5 text-yellow-700" />
-            <span className="text-xs font-semibold text-gray-900">3 spots left</span>
-          </div>
+          {/* Spots Left Widget - Only show when selected */}
+          {isSelected && (
+            <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
+              <Info className="w-3.5 h-3.5 text-yellow-700" />
+              <span className="text-xs font-semibold text-gray-900">3 spots left</span>
+            </div>
+          )}
 
           <button
             onClick={(e) => {
@@ -136,15 +149,15 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           >
             Detalji
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onBook();
-            }}
+          <a
+            href={checkoutUrl || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.stopPropagation(); if (!checkoutUrl) e.preventDefault(); }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             Rezervirajte sad
-          </button>
+          </a>
         </div>
       </div>
       </div>

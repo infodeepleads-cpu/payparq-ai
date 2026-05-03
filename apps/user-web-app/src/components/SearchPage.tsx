@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
 import { createClient } from '@supabase/supabase-js';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
@@ -10,6 +10,7 @@ import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut } from 'lucide-react';
+import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
@@ -51,6 +52,11 @@ interface Parking {
   seoDescription?: string;
   maxHeight?: number;
   heightRestrictions?: boolean;
+  accessHours?: string;
+  amenities?: string;
+  thingsToKnow?: string;
+  gettingThere?: string;
+  howItWorks?: string;
 }
 
 export function SearchPage() {
@@ -110,7 +116,7 @@ export function SearchPage() {
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showAllParkingOptions, setShowAllParkingOptions] = useState(false);
-  const [showVehicleWidget, setShowVehicleWidget] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
@@ -125,6 +131,55 @@ export function SearchPage() {
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
+
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLng = (lng2 - lng1) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // --- Live pricing helpers ---
+  const durationHours = (() => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diff = end.getTime() - start.getTime();
+    return Math.max(1, Math.ceil(diff / 3_600_000));
+  })();
+
+  const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
+  const serviceFee = parseFloat((subtotal * 0.05).toFixed(2));
+  const totalPrice = parseFloat((showTotalPrice ? subtotal + serviceFee : subtotal).toFixed(2));
+
+  const formatDuration = () => {
+    const h = durationHours;
+    if (h < 24) return `${h} ${h === 1 ? 'sat' : h < 5 ? 'sata' : 'sati'}`;
+    const days = Math.floor(h / 24), rem = h % 24;
+    return rem > 0 ? `${days}d ${rem}h` : `${days} ${days === 1 ? 'dan' : 'dana'}`;
+  };
+
+  const formatTimeRange = () => {
+    const s = new Date(startTime), e = new Date(endTime);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const today = new Date();
+    const isToday = s.toDateString() === today.toDateString();
+    const dateStr = isToday ? 'Danas' : `${s.getDate()}.${s.getMonth() + 1}.`;
+    return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  };
+
+  const buildCheckoutUrl = (listing: Parking) => {
+    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`;
+    const params = new URLSearchParams({
+      location_id: listing.id,
+      type: 'hourly',
+      check_in: new Date(startTime).toISOString(),
+      check_out: new Date(endTime).toISOString(),
+      flow: 'reserve',
+    });
+    return `${base}?${params.toString()}`;
+  };
+  // ---------------------------
 
   const parkingOptions = [
     'All Types',
@@ -188,6 +243,18 @@ export function SearchPage() {
   const [parkingType, setParkingType] = useState<'all' | 'self-park' | 'garage'>('all');
   const [vehicleType, setVehicleType] = useState('compact');
 
+  // Auto-request current location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      setMapCenter({ lat, lng });
+      setSearchLocationPin({ lat, lng });
+      setSearchLocation('Current Location');
+    });
+  }, []);
+
   // Fetch real data from Supabase - Hub locations only
   useEffect(() => {
     const fetchListings = async () => {
@@ -214,22 +281,18 @@ export function SearchPage() {
               if (addons.ev_charging) features.push('ev-charging');
             }
 
-            // Calculate distance from center
-            const userLat = 45.815;
-            const userLng = 15.982;
             const lat = loc.latitude || loc.lat || 45.815;
             const lng = loc.longitude || loc.lng || 15.982;
-            const R = 6371; // km
-            const dLat = (lat - userLat) * (Math.PI / 180);
-            const dLng = (lng - userLng) * (Math.PI / 180);
-            const a =
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(userLat * (Math.PI / 180)) *
-                Math.cos(lat * (Math.PI / 180)) *
-                Math.sin(dLng / 2) *
-                Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
+            const refLat = mapCenter.lat;
+            const refLng = mapCenter.lng;
+            const distance = haversineKm(refLat, refLng, lat, lng);
+
+            const pricePerHour = resolveScannerTruthPriceEuro({
+              rate_per_hour: loc.rate_per_hour,
+              base_price_hourly: loc.base_price_hourly,
+              rate_per_hour_floor: loc.rate_per_hour_floor,
+              rate_per_hour_ceiling: loc.rate_per_hour_ceiling,
+            }, 'hourly');
 
             return {
               id: loc.id,
@@ -237,9 +300,9 @@ export function SearchPage() {
               address: loc.address || '',
               lat: lat,
               lng: lng,
-              pricePerHour: loc.price_per_hour || loc.base_price || 5.0,
-              rating: loc.rating || 4.5,
-              reviews: loc.reviews || Math.floor(Math.random() * 200),
+              pricePerHour,
+              rating: loc.review_score || 4.5,
+              reviews: loc.review_count || 0,
               photo: loc.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400',
               distance: parseFloat(distance.toFixed(1)),
               availability: true,
@@ -247,11 +310,19 @@ export function SearchPage() {
               type: (loc.type || 'self-park') as any,
               maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
+              accessHours: loc.verification_metadata?.access_hours as string | undefined,
+              amenities: loc.verification_metadata?.amenities as string | undefined,
+              thingsToKnow: loc.verification_metadata?.things_to_know as string | undefined,
+              gettingThere: loc.verification_metadata?.getting_there as string | undefined,
+              howItWorks: loc.verification_metadata?.how_it_works as string | undefined,
             };
           });
 
           setListings(parkingListings);
           setFilteredListings(parkingListings);
+          if (parkingListings.length > 0) {
+            setSelectedListing(parkingListings[0]);
+          }
         } else {
           setListings([]);
           setFilteredListings([]);
@@ -272,6 +343,17 @@ export function SearchPage() {
 
     fetchListings();
   }, []);
+
+  // Recalculate distances when search pin moves
+  useEffect(() => {
+    if (!searchLocationPin || listings.length === 0) return;
+    const recalc = (l: Parking) => ({
+      ...l,
+      distance: parseFloat(haversineKm(searchLocationPin.lat, searchLocationPin.lng, l.lat, l.lng).toFixed(1)),
+    });
+    setListings(prev => prev.map(recalc));
+    setFilteredListings(prev => prev.map(recalc));
+  }, [searchLocationPin]);
 
   // Initialize Places service and handle location search
   useEffect(() => {
@@ -426,7 +508,7 @@ export function SearchPage() {
 
   useEffect(() => {
     setPhotoIndex(0);
-    setShowVehicleWidget(false);
+    setShowVehicleModal(false);
     setVehicleInput('');
     setSelectedVehicle(null);
     setVehicleCheckResult(null);
@@ -435,9 +517,13 @@ export function SearchPage() {
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-[#5F3DFC] rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-700 font-medium">Loading parking spaces...</p>
+        <div className="relative flex items-center justify-center w-20 h-20">
+          {/* Rotating white ring */}
+          <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+          {/* Pulsating logo */}
+          <div className="animate-pulse w-12 h-12 rounded-full bg-[#020617] flex items-center justify-center shadow-lg z-10">
+            <span className="text-lg font-black tracking-tight text-white select-none">P</span>
+          </div>
         </div>
       </div>
     );
@@ -556,12 +642,12 @@ export function SearchPage() {
 
             {homeDropdownOpen && (
               <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[200px]">
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg rounded-b-lg">
+                <a href="/members" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
                   Log In / Sign Up
-                </button>
-                <button className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                  Home
-                </button>
+                </a>
+                <a href="https://www.payparq.com" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                  Početna
+                </a>
               </div>
             )}
           </div>
@@ -873,7 +959,7 @@ export function SearchPage() {
       {/* Desktop: Split layout - 2 column (normal) or 3 column (details view) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Parking Lots Cards - 35% (normal) or flex-1 (details) LEFT */}
-        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'}`}>
+        <div className={`flex flex-col overflow-hidden bg-gray-50 border-r border-gray-200 ${showDetailsView ? 'flex-1' : 'w-[35%]'} max-h-[calc(100vh-120px)]`}>
           {/* Sort Dropdown - Top Right */}
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
@@ -919,6 +1005,9 @@ export function SearchPage() {
                     }}
                     onDetails={() => setShowDetailsView(true)}
                     badgeText={badgeText}
+                    checkoutUrl={buildCheckoutUrl(listing)}
+                    durationHours={durationHours}
+                    showFee={showTotalPrice}
                   />
                 );
               })
@@ -929,8 +1018,8 @@ export function SearchPage() {
         {/* Details Panel - flex-1 MIDDLE (only in details view) */}
         {showDetailsView && selectedListing && (
           <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-            {/* Photo Gallery - Top 2/3 */}
-            <div className="flex-1 bg-gray-100 relative overflow-hidden">
+            {/* Photo Gallery - Fixed Height */}
+            <div className="flex-shrink-0 h-64 bg-gray-100 relative overflow-hidden">
               <img
                 src={selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'}
                 alt={selectedListing.name}
@@ -974,14 +1063,16 @@ export function SearchPage() {
               </div>
             </div>
 
-            {/* Vehicle Size Info - Below Photo - Clickable */}
-            <button
-              onClick={() => {
-                setShowVehicleWidget(!showVehicleWidget);
-                setVehicleCheckResult(null);
-              }}
-              className="flex-shrink-0 w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
-            >
+            {/* Scrollable Content Section */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Vehicle Size Info - Below Photo - Clickable */}
+              <button
+                onClick={() => {
+                  setShowVehicleModal(true);
+                  setVehicleCheckResult(null);
+                }}
+                className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200"
+              >
               <div className="flex items-start gap-3 flex-1">
                 <Info className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div className="text-left">
@@ -989,7 +1080,7 @@ export function SearchPage() {
                   <p className="text-xs text-gray-600 mt-1">Add your vehicle details to check if your car fits and view any oversize fees.</p>
                 </div>
               </div>
-              <ChevronRight className={`w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5 transition-transform ${showVehicleWidget ? 'rotate-90' : ''}`} />
+              <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
             </button>
 
             {/* Book Now Suggestion Widget */}
@@ -1062,12 +1153,12 @@ export function SearchPage() {
                   className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
                 >
                   <div className="flex-1">
-                    <p className="text-xs text-gray-700 font-semibold">Danas 8:30 - 21:00</p>
-                    <p className="text-sm text-gray-900 mt-1">12 sati, 30 minuta</p>
+                    <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
+                    <p className="text-sm text-gray-900 mt-1">{formatDuration()}</p>
                     <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">$44.99</p>
+                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                     <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
                   </div>
                 </button>
@@ -1080,10 +1171,15 @@ export function SearchPage() {
                   </div>
                 </div>
 
-                {/* CTA Button - Between boxes, left-aligned */}
-                <button className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors" style={{ width: 'fit-content' }}>
-                  Book Now
-                </button>
+                {/* CTA Button - Stripe checkout */}
+                <a
+                  href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                </a>
 
                 {/* Green Box */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
@@ -1123,10 +1219,9 @@ export function SearchPage() {
                   </button>
                   {showThingsToKnow && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      <p>Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.</p>
-                      <p>Procijenjena naknada za prekoračenje od 10 USD dnevno za vozila između 65" i 75" visine i preko 180" duljine, ili bilo koja vozila viša od 75". Te se naknade plaćaju izravno u objektu po izlasku ako ih niste uključili u rezervaciju.</p>
-                      <p>Za egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.</p>
-                      <p>Imajte na umu da se kamioni, kombiji i veliki SUV-ovi smatraju super velikim i podliježu dodatnim naknadama na licu mjesta.</p>
+                      {selectedListing.thingsToKnow
+                        ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
+                        : <p className="text-gray-400">Nema dostupnih informacija.</p>}
                     </div>
                   )}
                 </div>
@@ -1142,26 +1237,14 @@ export function SearchPage() {
                   </button>
                   {showAmenities && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
-                      <div className="flex items-center gap-3">
-                        <Users className="w-4 h-4 text-gray-600" />
-                        <span>Sobar</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Lock className="w-4 h-4 text-gray-600" />
-                        <span>Garaža - Natkrivena</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Users className="w-4 h-4 text-gray-600" />
-                        <span>Osoblje na licu mjesta</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Zap className="w-4 h-4 text-gray-600" />
-                        <span>EV punjenje</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Accessibility className="w-4 h-4 text-gray-600" />
-                        <span>Pristup invalidskim kolicima</span>
-                      </div>
+                      {selectedListing.amenities
+                        ? selectedListing.amenities.split(',').map((a, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
+                              <span>{a.trim()}</span>
+                            </div>
+                          ))
+                        : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
                     </div>
                   )}
                 </div>
@@ -1177,14 +1260,9 @@ export function SearchPage() {
                   </button>
                   {showAccessHours && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
-                      <div className="flex justify-between items-center">
-                        <span>pon – pet</span>
-                        <span>6:00 – 23:00 sata</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>sub – ned</span>
-                        <span>7:00 – 23:00 sata</span>
-                      </div>
+                      {selectedListing.accessHours
+                        ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{line}</p>)
+                        : <p className="text-gray-400">Nema dostupnih informacija o radnom vremenu.</p>}
                     </div>
                   )}
                 </div>
@@ -1200,27 +1278,11 @@ export function SearchPage() {
                   </button>
                   {showHowToRedeem && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      <div className="flex items-start gap-3 justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <span className="flex-shrink-0">1</span>
-                          <span>Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju</span>
-                        </div>
-                        <Ticket className="w-8 h-8 text-gray-600 flex-shrink-0" />
-                      </div>
-                      <div className="flex items-start gap-3 justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <span className="flex-shrink-0">2</span>
-                          <span>Samo uđite ako nema nikoga</span>
-                        </div>
-                        <CheckCircle className="w-8 h-8 text-gray-600 flex-shrink-0" />
-                      </div>
-                      <div className="flex items-start gap-3 justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          <span className="flex-shrink-0">3</span>
-                          <span>Odvezite se kad budete spremni otići</span>
-                        </div>
-                        <LogOut className="w-8 h-8 text-gray-600 flex-shrink-0" />
-                      </div>
+                      {selectedListing.howItWorks
+                        ? selectedListing.howItWorks.split('\n').map((step, i) => (
+                            <p key={i}>{step}</p>
+                          ))
+                        : <p className="text-gray-400">Nema dostupnih informacija.</p>}
                     </div>
                   )}
                 </div>
@@ -1236,12 +1298,18 @@ export function SearchPage() {
                   </button>
                   {showFacilityReviews && (
                     <div className="space-y-2 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl text-gray-900">4.8</span>
-                        <span>/5</span>
-                      </div>
-                      <p>Izvrsno</p>
-                      <p>Na temelju 265 recenzija.</p>
+                      {selectedListing.reviews > 0 ? (
+                        <>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl text-gray-900">{parseFloat((selectedListing.rating / 2).toFixed(1))}</span>
+                            <span>/5</span>
+                          </div>
+                          <p>{(() => { const s = selectedListing.rating / 2; return s >= 4.5 ? 'Izvrsno' : s >= 4.0 ? 'Vrlo dobro' : s >= 3.5 ? 'Dobro' : 'Prosječno'; })()}</p>
+                          <p>Na temelju {selectedListing.reviews} recenzija.</p>
+                        </>
+                      ) : (
+                        <p className="text-gray-500">Nova lokacija – još nema recenzija.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1257,7 +1325,9 @@ export function SearchPage() {
                   </button>
                   {showGettingThere && (
                     <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      <p>Enter this location at 35 Reade St. This is the Roger LLC garage, operated by Parkit. It is located on the southwest/lefthand side of Reade St. (a one-way street) between Elk St. and Broadway. The entrance is marked by a red 'parking' sign with white lettering.</p>
+                      {selectedListing.gettingThere
+                        ? <p>{selectedListing.gettingThere}</p>
+                        : <p className="text-gray-400">Nema dostupnih uputa za dolazak.</p>}
                     </div>
                   )}
                 </div>
@@ -1321,10 +1391,58 @@ export function SearchPage() {
                 </div>
               </div>
             </div>
+            </div>
 
-            {/* Vehicle Size Widget */}
-            {showVehicleWidget && (
-              <div className="flex-shrink-0 px-6 py-6 bg-white border-b border-gray-200 space-y-4">
+          </div>
+        )}
+
+        {/* Price Breakdown Modal */}
+        {showPriceBreakdown && selectedListing && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
+              <div className="space-y-4">
+                <p className="text-lg font-bold text-gray-900">Pregled cijene</p>
+
+                <div className="space-y-2 border-b border-gray-200 pb-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">{formatDuration()} × €{selectedListing.pricePerHour.toFixed(2)}/h</p>
+                    <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600">Naknada za uslugu (5%)</p>
+                    <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <p className="text-lg font-bold text-gray-900">Ukupno</p>
+                  <p className="text-lg font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
+                </div>
+
+                <a
+                  href={buildCheckoutUrl(selectedListing)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
+                >
+                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                </a>
+                <button
+                  onClick={() => setShowPriceBreakdown(false)}
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Zatvori
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vehicle Modal - Centered Overlay */}
+        {showVehicleModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-y-auto max-h-[90vh]">
+              <div className="p-6 space-y-4">
                 {/* Header */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Add Vehicle</h3>
@@ -1332,20 +1450,20 @@ export function SearchPage() {
                 </div>
 
                 {/* Make and Model Input */}
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <label className="text-sm font-semibold text-gray-900">Make and Model</label>
                   <input
                     type="text"
                     placeholder="Type to Search"
                     value={vehicleInput}
                     onChange={(e) => setVehicleInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
                   />
                   <p className="text-xs text-gray-500">Example: Honda Civic</p>
 
                   {/* Search Results Dropdown */}
                   {vehicleInput && (
-                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" style={{ width: 'calc(100% - 48px)' }}>
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                       {VEHICLE_DATABASE.filter((v) =>
                         `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
                       ).map((vehicle, idx) => (
@@ -1393,7 +1511,7 @@ export function SearchPage() {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => {
-                      setShowVehicleWidget(false);
+                      setShowVehicleModal(false);
                       setVehicleInput('');
                       setSelectedVehicle(null);
                       setVehicleCheckResult(null);
@@ -1405,50 +1523,15 @@ export function SearchPage() {
                   <button
                     onClick={() => {
                       if (selectedVehicle) {
-                        setShowVehicleWidget(false);
+                        setShowVehicleModal(false);
                       }
                     }}
                     disabled={!selectedVehicle}
-                    className="flex-1 px-4 py-2 bg-[#5F3DFC] text-white text-sm font-semibold rounded-lg hover:bg-[#4F2DEC] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Add Vehicle
                   </button>
                 </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* Price Breakdown Modal */}
-        {showPriceBreakdown && selectedListing && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4">
-              <div className="space-y-4">
-                <p className="text-lg font-bold text-gray-900">Price Breakdown</p>
-
-                <div className="space-y-2 border-b border-gray-200 pb-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Međuzbroj</p>
-                    <p className="text-sm font-semibold text-gray-900">€{selectedListing.pricePerHour.toFixed(2)}</p>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Service Fee (5%)</p>
-                    <p className="text-sm font-semibold text-gray-900">€{(selectedListing.pricePerHour * 0.05).toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <p className="text-lg font-bold text-gray-900">Total</p>
-                  <p className="text-lg font-bold text-gray-900">€{(selectedListing.pricePerHour * 1.05).toFixed(2)}</p>
-                </div>
-
-                <button
-                  onClick={() => setShowPriceBreakdown(false)}
-                  className="w-full mt-6 px-4 py-2 bg-gray-200 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
@@ -1458,7 +1541,12 @@ export function SearchPage() {
         <div className={`bg-gray-100 ${showDetailsView ? 'flex-1' : 'w-[65%]'}`}>
           {!isLoaded ? (
             <div className="w-full h-full flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-gray-200 border-t-[#5F3DFC] rounded-full animate-spin" />
+              <div className="relative flex items-center justify-center w-14 h-14">
+                <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+                <div className="animate-pulse w-8 h-8 rounded-full bg-[#020617] flex items-center justify-center z-10">
+                  <span className="text-sm font-black text-white select-none">P</span>
+                </div>
+              </div>
             </div>
           ) : (
           <GoogleMap
@@ -1475,34 +1563,48 @@ export function SearchPage() {
               ],
             }}
           >
+            {/* Parking lot location markers - Cloud with price */}
             {filteredListings.map((listing) => (
-              <Marker
+              <OverlayView
                 key={listing.id}
                 position={{ lat: listing.lat, lng: listing.lng }}
-                onClick={() => setSelectedListing(listing)}
-                icon={{
-                  path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                  fillColor: '#5F3DFC',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 2,
-                  scale: 0.5,
-                }}
-              />
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <button
+                  onClick={() => setSelectedListing(listing)}
+                  style={{ transform: 'translate(-50%, -90%)', width: 'calc(2.5rem + 0.4cm)' }}
+                  className="relative h-13 transition-transform hover:scale-110"
+                >
+                  {/* Single path speech bubble — oval body + smooth tail */}
+                  <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
+                    <path
+                      d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                      fill="white"
+                      stroke="black"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {/* Price centered in oval body (oval center is ~33% from top of viewBox) */}
+                  <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
+                    <span className="text-sm font-bold text-black leading-none">{(() => { const t = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2)); return `€${t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)}`; })()}</span>
+                  </div>
+                </button>
+              </OverlayView>
             ))}
-            {/* Search location marker */}
+
+            {/* Search location marker - Classic Google pin */}
             {searchLocationPin && (
-              <Marker
+              <OverlayView
                 position={searchLocationPin}
-                icon={{
-                  path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                  fillColor: '#FF6B6B',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 2,
-                  scale: 0.5,
-                }}
-              />
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <div className="w-8 h-12 flex items-start justify-center -translate-x-1/2 -translate-y-full">
+                  <svg viewBox="0 0 24 32" className="w-full h-full">
+                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#FF4444" stroke="white" strokeWidth="0.5"/>
+                  </svg>
+                </div>
+              </OverlayView>
             )}
           </GoogleMap>
           )}
