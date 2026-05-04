@@ -713,13 +713,16 @@ export function ListYourLotPanel({
       const token = session.data.session?.access_token;
       if (!token) throw new Error('Niste prijavljeni');
 
+      console.log('Calling ensure-profile with user:', user.id);
       const profileRes = await fetch('/api/ensure-profile', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      const profileData = await profileRes.json();
+      console.log('Profile response:', profileRes.status, profileData);
+
       if (!profileRes.ok) {
-        const err = await profileRes.json();
-        throw new Error(err.error || 'Greška pri kreiranju profila');
+        throw new Error(profileData.error || 'Greška pri kreiranju profila');
       }
 
       const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');

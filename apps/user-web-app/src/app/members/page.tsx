@@ -2065,7 +2065,17 @@ export default function MembersPage() {
             ) : (
               <div className="space-y-2">
                 {ownerListings.map((loc) => (
-                  <div key={loc.id} className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
+                  <button
+                    key={loc.id}
+                    onClick={() => {
+                      if (loc.verification_status === 'verified') {
+                        router.push(`/parking/${loc.id}`);
+                      } else {
+                        router.push(`/list-your-parking?edit=${loc.id}`);
+                      }
+                    }}
+                    className="w-full text-left flex items-center justify-between py-2 px-2 rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all"
+                  >
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
                       <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
@@ -2080,7 +2090,7 @@ export default function MembersPage() {
                         {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
