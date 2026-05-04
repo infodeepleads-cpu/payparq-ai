@@ -16,15 +16,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Neovlašteno' }, { status: 401 });
     }
 
-    // Use service role to ensure profile exists
-    const { error } = await supabaseAdmin.from('profiles').upsert({
-      id: user.id,
-      email: user.email,
-      role: 'user',
-    });
+    // Try insert first (new users)
+    const { error: insertError } = await supabaseAdmin
+      .from('profiles')
+      .insert({ id: user.id, email: user.email, role: 'user' });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    // If insert fails due to conflict, update the existing profile
+    if (insertError && insertError.code === 'PGRST116') {
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ email: user.email, role: 'user' })
+        .eq('id', user.id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 400 });
+      }
+    } else if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });
