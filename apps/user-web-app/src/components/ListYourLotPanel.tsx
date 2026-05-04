@@ -553,11 +553,6 @@ export function ListYourLotPanel({
     return true;
   };
 
-  const completionPercent = Math.round(
-    ((sectionsSaved.section1 ? 1 : 0) +
-     (sectionsSaved.section2 ? 1 : 0) +
-     (sectionsSaved.section3 ? 1 : 0)) / 3 * 100
-  );
 
 
   const handleNext = async () => {
@@ -771,6 +766,12 @@ export function ListYourLotPanel({
     section2: false,
     section3: false,
   });
+
+  const completionPercent = Math.round(
+    ((sectionsSaved.section1 ? 1 : 0) +
+     (sectionsSaved.section2 ? 1 : 0) +
+     (sectionsSaved.section3 ? 1 : 0)) / 3 * 100
+  );
 
   const handleSaveSection = async (section: 1 | 2 | 3) => {
     setSubmitting(true);
