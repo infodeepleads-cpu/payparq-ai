@@ -6,7 +6,7 @@ import { ListYourLotPanel } from '@/components/ListYourLotPanel';
 
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
 type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'vehicleSize' | 'accessControl';
-type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions';
+type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions' | 'review2';
 type Step3Sub = 'photos' | 'streetView' | 'summary';
 
 export default function ListYourParkingPage() {
