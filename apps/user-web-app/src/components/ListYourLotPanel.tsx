@@ -123,7 +123,6 @@ export function ListYourLotPanel({
   const [step1Sub, setStep1SubInternal] = useState<Step1Sub>(propSubStep || 'region');
   const [step2Sub, setStep2SubInternal] = useState<Step2Sub>(propStep2Sub || 'availability');
   const [step3Sub, setStep3SubInternal] = useState<Step3Sub>(propStep3Sub || 'photos');
-  const [viewOnly, setViewOnly] = useState(false);
 
   const currentStepValue = propStep !== undefined ? propStep : step;
   const currentSubStepValue = propSubStep !== undefined ? propSubStep : step1Sub;
@@ -840,8 +839,7 @@ export function ListYourLotPanel({
         if (newId) {
           setListingId(newId);
           setSectionsSaved({ section1: true, section2: false, section3: false });
-          setViewOnly(false);
-          setStep('intro');
+          router.push(`/list-your-parking?edit=${newId}`);
         }
       }
       // Sections 2 & 3: Update existing listing
@@ -875,7 +873,6 @@ export function ListYourLotPanel({
         if (error) throw new Error(error.message);
 
         setSectionsSaved(newStatus);
-        setViewOnly(false);
         setStep('intro');
       }
     } catch (e: any) {
@@ -914,16 +911,16 @@ export function ListYourLotPanel({
                   { n: 2 as MainStep, title: 'Get ready for drivers', sub: 'Bookings, settings, calendar, price', done: sectionsSaved.section2 },
                   { n: 3 as MainStep, title: 'Build the picture', sub: 'Photos and street view', done: sectionsSaved.section3 },
                 ].map(({ n, title, sub, done }) => (
-                  <div
+                  <button
                     key={String(n)}
-                    className={`border rounded-lg p-6 transition-all cursor-pointer ${done ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`}
+                    disabled={done}
                     onClick={() => {
                       setStep(n);
-                      setViewOnly(done);
                       if (n === 1) setStep1Sub('region');
                       if (n === 2) setStep2Sub('availability');
                       if (n === 3) setStep3Sub('photos');
                     }}
+                    className={`w-full border rounded-lg p-6 transition-all text-left ${done ? 'border-green-300 bg-green-50 cursor-not-allowed opacity-60' : 'border-gray-200 hover:shadow-md cursor-pointer hover:bg-gray-50'}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
@@ -935,7 +932,8 @@ export function ListYourLotPanel({
                       </div>
                     </div>
                     <p className="text-sm text-gray-500">{sub}</p>
-                  </div>
+                    {done && <p className="text-xs text-green-600 font-semibold mt-2">✓ Completed & Locked</p>}
+                  </button>
                 ))}
               </>
             )}
@@ -986,14 +984,6 @@ export function ListYourLotPanel({
   return (
     <div className="h-full bg-white flex flex-col w-full">
       <ListingHeader currentStep={currentStepValue} currentSubStep={currentSubStepValue} onBack={handleBack} />
-
-      {/* View Only Indicator */}
-      {viewOnly && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2">
-          <span className="text-amber-700 font-semibold text-sm">👁️ View Only</span>
-          <span className="text-amber-600 text-xs">Edit available after listing is published</span>
-        </div>
-      )}
 
       {/* Section Progress Indicator */}
       {(currentStepValue === 1 || currentStepValue === 2 || currentStepValue === 3) && (
@@ -1264,7 +1254,7 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-base font-semibold">What best describes your parking space?</h3>
+                <h3 className="text-base font-semibold text-gray-900">What best describes your parking space?</h3>
                 <p className="text-sm text-gray-600">Select a type of space</p>
                 <select value={data.type} onChange={(e) => updateData('type', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
                   <option value="">Select a type of space</option>
@@ -1323,7 +1313,7 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold">Koje karakteristike ima vaš prostor?</h3>
+                <h3 className="text-base font-semibold text-gray-900">Koje karakteristike ima vaš prostor?</h3>
                 <p className="text-sm text-gray-600">Odaberite sve primjenjivo</p>
                 <div className="space-y-2">
                   {['EV punjenje', 'Pokriveno', 'Gated', 'Dobro osvijetljen', 'CCTV', 'Pristup invalidskim kolicima', 'Zaštićeno od vremenskih uvjeta', 'Valet usluga', 'Autopraonica', 'Čuvar parkinga'].map((feature) => (
@@ -1373,7 +1363,7 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold">Koje veličine vozila može stati vaše parkirno mjesto?</h3>
+                <h3 className="text-base font-semibold text-gray-900">Koje veličine vozila može stati vaše parkirno mjesto?</h3>
                 <p className="text-sm text-gray-600">Veličina parkirnog mjesta</p>
                 <div className="space-y-3">
                   {[
@@ -1400,7 +1390,7 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold">Postoje li neka ograničenja visine?</h3>
+                <h3 className="text-base font-semibold text-gray-900">Postoje li neka ograničenja visine?</h3>
                 <div className="space-y-3">
                   {[
                     { id: 'yes', label: 'Yes' },
@@ -1465,7 +1455,7 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold">Postoji li kontrola pristupa?</h3>
+                <h3 className="text-base font-semibold text-gray-900">Postoji li kontrola pristupa?</h3>
                 <p className="text-sm text-gray-600">Select if access control is required</p>
                 <div className="space-y-3">
                   {[
