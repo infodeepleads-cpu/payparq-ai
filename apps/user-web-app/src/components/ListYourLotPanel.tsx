@@ -123,6 +123,7 @@ export function ListYourLotPanel({
   const [step1Sub, setStep1SubInternal] = useState<Step1Sub>(propSubStep || 'region');
   const [step2Sub, setStep2SubInternal] = useState<Step2Sub>(propStep2Sub || 'availability');
   const [step3Sub, setStep3SubInternal] = useState<Step3Sub>(propStep3Sub || 'photos');
+  const [viewOnly, setViewOnly] = useState(false);
 
   const currentStepValue = propStep !== undefined ? propStep : step;
   const currentSubStepValue = propSubStep !== undefined ? propSubStep : step1Sub;
@@ -839,8 +840,8 @@ export function ListYourLotPanel({
         if (newId) {
           setListingId(newId);
           setSectionsSaved({ section1: true, section2: false, section3: false });
-          setStep2Sub('availability');
-          setStep(2);
+          setViewOnly(false);
+          setStep('intro');
         }
       }
       // Sections 2 & 3: Update existing listing
@@ -874,15 +875,8 @@ export function ListYourLotPanel({
         if (error) throw new Error(error.message);
 
         setSectionsSaved(newStatus);
-
-        if (section === 2) {
-          setStep3Sub('photos');
-          setStep(3);
-        } else if (section === 3) {
-          // All sections done - navigate to calendar/dashboard
-          await new Promise(resolve => setTimeout(resolve, 500));
-          router.push(`/parking/${listingId}`);
-        }
+        setViewOnly(false);
+        setStep('intro');
       }
     } catch (e: any) {
       setSubmitError(e.message || 'Greška pri spremanju');
@@ -902,28 +896,49 @@ export function ListYourLotPanel({
 
         <div className="grid grid-cols-3 gap-8">
           <div className="col-span-2 space-y-4">
-            {[
-              { n: 1 as MainStep, title: 'Locations, features and more', sub: 'Add location, address and pin it on the map', done: isStep1Complete },
-              { n: 2 as MainStep, title: 'Get ready for drivers', sub: 'Bookings, settings, calendar, price', done: isStep2Complete },
-              { n: 3 as MainStep, title: 'Build the picture', sub: 'Photos and street view', done: isStep3Complete },
-            ].map(({ n, title, sub, done }) => (
-              <div
-                key={String(n)}
-                className={`border rounded-lg p-6 transition-all cursor-pointer ${done ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`}
-                onClick={() => { setStep(n); if (n === 1) setStep1Sub('region'); }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Step {n}</h3>
-                    <p className="text-gray-600">{title}</p>
-                  </div>
-                  <div className={`text-2xl font-bold ${done ? 'text-green-500' : 'text-[#5F3DFC]'}`}>
-                    {done ? '✓' : n}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-500">{sub}</p>
+            {completionPercent === 100 ? (
+              <div className="border-2 border-green-500 bg-green-50 rounded-lg p-6 text-center">
+                <div className="text-4xl font-bold text-green-600 mb-2">✓ 100% Complete!</div>
+                <p className="text-gray-700 font-semibold">Your listing is ready. Manage calendar and pricing below.</p>
+                <button
+                  onClick={() => router.push(`/parking/${listingId}`)}
+                  className="mt-4 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Manage Calendar & Pricing
+                </button>
               </div>
-            ))}
+            ) : (
+              <>
+                {[
+                  { n: 1 as MainStep, title: 'Locations, features and more', sub: 'Add location, address and pin it on the map', done: sectionsSaved.section1 },
+                  { n: 2 as MainStep, title: 'Get ready for drivers', sub: 'Bookings, settings, calendar, price', done: sectionsSaved.section2 },
+                  { n: 3 as MainStep, title: 'Build the picture', sub: 'Photos and street view', done: sectionsSaved.section3 },
+                ].map(({ n, title, sub, done }) => (
+                  <div
+                    key={String(n)}
+                    className={`border rounded-lg p-6 transition-all cursor-pointer ${done ? 'border-green-300 bg-green-50' : 'border-gray-200 hover:shadow-md'}`}
+                    onClick={() => {
+                      setStep(n);
+                      setViewOnly(done);
+                      if (n === 1) setStep1Sub('region');
+                      if (n === 2) setStep2Sub('availability');
+                      if (n === 3) setStep3Sub('photos');
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-1">Step {n} {done && '✓'}</h3>
+                        <p className="text-gray-600">{title}</p>
+                      </div>
+                      <div className={`text-2xl font-bold ${done ? 'text-green-500' : 'text-[#5F3DFC]'}`}>
+                        {done ? '✓' : n}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500">{sub}</p>
+                  </div>
+                ))}
+              </>
+            )}
 
             <button
               onClick={() => { setStep(1); setStep1Sub('region'); }}
@@ -971,6 +986,14 @@ export function ListYourLotPanel({
   return (
     <div className="h-full bg-white flex flex-col w-full">
       <ListingHeader currentStep={currentStepValue} currentSubStep={currentSubStepValue} onBack={handleBack} />
+
+      {/* View Only Indicator */}
+      {viewOnly && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-2">
+          <span className="text-amber-700 font-semibold text-sm">👁️ View Only</span>
+          <span className="text-amber-600 text-xs">Edit available after listing is published</span>
+        </div>
+      )}
 
       {/* Section Progress Indicator */}
       {(currentStepValue === 1 || currentStepValue === 2 || currentStepValue === 3) && (
@@ -2224,7 +2247,7 @@ export function ListYourLotPanel({
               </div>
 
               <button onClick={() => handleSaveSection(2)} disabled={submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                {submitting ? 'Spremanje...' : 'Spremi i nastavi'}
+                {submitting ? 'Spremanje...' : 'Spremi i izlazi'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2692,7 +2715,7 @@ export function ListYourLotPanel({
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
               )}
               <button onClick={() => handleSaveSection(1)} disabled={submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-60">
-                {submitting ? 'Spremanje...' : 'Spremi i nastavi'}
+                {submitting ? 'Spremanje...' : 'Spremi i izlazi'}
               </button>
             </div>
           </div>
