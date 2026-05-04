@@ -60,27 +60,34 @@ export default function ListYourSpace() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight mb-6">
-                  <span className="text-[#5F3DFC]">Join thousands other space owners.</span> <span className="text-black">List today and start earning hundreds from your unused parking spaces</span>
+                  <span className="text-[#5F3DFC]">Join thousands other space owners.</span> <span className="text-black text-2xl md:text-3xl">List today and start earning hundreds from your unused parking spaces</span>
                 </h1>
-                <div className="space-y-3 mb-8">
+                <div className="space-y-4 mb-8">
                   <div className="flex items-start gap-3">
-                    <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
-                    <p className="text-lg text-black">100% free to list</p>
+                    <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white font-bold text-sm">✓</span>
+                    </div>
+                    <p className="text-base font-semibold text-black">100% free to list</p>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
-                    <p className="text-lg text-black">Verified drivers and vehicles</p>
+                    <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white font-bold text-sm">✓</span>
+                    </div>
+                    <p className="text-base font-semibold text-black">Verified drivers and vehicles</p>
                   </div>
                   <div className="flex items-start gap-3">
-                    <span className="text-[#5F3DFC] font-bold text-lg mt-0.5">✓</span>
-                    <p className="text-lg text-black">Set your own prices</p>
+                    <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white font-bold text-sm">✓</span>
+                    </div>
+                    <p className="text-base font-semibold text-black">Set your own prices</p>
                   </div>
                 </div>
                 <Link
-                  href="#get-started"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#5F3DFC] text-white text-base font-bold shadow-lg hover:bg-[#4330c4] transition-colors"
+                  href="/members?redirect=/list-your-parking"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-base font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
                 >
-                  List your parking space
+                  <span>List your parking space</span>
+                  <span className="text-lg">→</span>
                 </Link>
               </div>
 
@@ -122,10 +129,22 @@ export default function ListYourSpace() {
                 <div className="relative w-72">
                   {/* Phone Frame */}
                   <div className="bg-black rounded-3xl p-3 shadow-2xl">
-                    <div className="bg-white rounded-2xl p-6 space-y-6 h-[600px] overflow-y-auto">
+                    <div className="bg-white rounded-2xl overflow-hidden h-[600px] flex flex-col">
+                      {/* Phone Header */}
+                      <div className="bg-black px-6 py-4 space-y-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="relative w-9 h-9">
+                            <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin" style={{ animationDuration: '1s' }} />
+                            <div className="absolute inset-1 rounded-full bg-black flex items-center justify-center">
+                              <span className="text-xs font-black tracking-tight text-white">P</span>
+                            </div>
+                          </div>
+                          <span className="text-sm font-black tracking-tight text-white">payparq</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-white text-center">Calculate earnings</h3>
+                      </div>
                       {/* Phone Content */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-bold text-black text-center">Calculate earnings</h3>
+                      <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
                         <div>
                           <div className="flex justify-between mb-2">
@@ -298,10 +317,11 @@ export default function ListYourSpace() {
               Join thousands of hosts earning passive income with Payparq.
             </p>
             <Link
-              href="/contact"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#5F3DFC] text-white text-sm font-semibold shadow-md hover:bg-[#4330c4] transition-colors"
+              href="/members?redirect=/list-your-parking"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white text-sm font-semibold shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-200 cursor-pointer"
             >
-              List your parking space
+              <span>List your parking space</span>
+              <span className="text-lg">→</span>
             </Link>
           </div>
         </section>

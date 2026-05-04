@@ -375,18 +375,24 @@ export default function Home() {
               <p className="text-sm md:text-lg text-black/70 mb-6 md:mb-8 max-w-lg">
                 Turn your private parking spot into passive income. Go live in 60 minutes.
               </p>
-              <div className="space-y-2 md:space-y-3 mb-6 md:mb-8">
-                <div className="flex items-start gap-2 md:gap-3">
-                  <span className="text-[#5F3DFC] font-bold text-base md:text-lg mt-0.5 flex-shrink-0">✓</span>
-                  <p className="text-sm md:text-base text-black">100% free to list</p>
+              <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <p className="text-sm md:text-base font-semibold text-black">100% free to list</p>
                 </div>
-                <div className="flex items-start gap-2 md:gap-3">
-                  <span className="text-[#5F3DFC] font-bold text-base md:text-lg mt-0.5 flex-shrink-0">✓</span>
-                  <p className="text-sm md:text-base text-black">Verified drivers and vehicles</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <p className="text-sm md:text-base font-semibold text-black">Verified drivers and vehicles</p>
                 </div>
-                <div className="flex items-start gap-2 md:gap-3">
-                  <span className="text-[#5F3DFC] font-bold text-base md:text-lg mt-0.5 flex-shrink-0">✓</span>
-                  <p className="text-sm md:text-base text-black">Set your own prices</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#5F3DFC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white font-bold text-sm">✓</span>
+                  </div>
+                  <p className="text-sm md:text-base font-semibold text-black">Set your own prices</p>
                 </div>
               </div>
               <Link

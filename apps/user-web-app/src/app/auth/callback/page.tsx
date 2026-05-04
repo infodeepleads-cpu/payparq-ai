@@ -26,7 +26,8 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        router.push('/members');
+        const redirectTo = searchParams.get('redirect') || '/members';
+        router.push(redirectTo);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       }

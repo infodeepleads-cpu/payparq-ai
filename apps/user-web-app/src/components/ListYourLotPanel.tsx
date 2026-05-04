@@ -652,6 +652,11 @@ export function ListYourLotPanel({
         setStep3Sub('review3');
         return;
       }
+      if (currentStep3SubValue === 'review3') {
+        console.log('✅ Step 3 review → published, navigating to dashboard');
+        router.push('/members?refresh=listings');
+        return;
+      }
     }
   };
 
@@ -724,6 +729,10 @@ export function ListYourLotPanel({
         return;
       }
     } else if (currentStepValue === 3) {
+      if (currentStep3SubValue === 'review3') {
+        setStep3Sub('summary');
+        return;
+      }
       if (currentStep3SubValue === 'summary') {
         setStep3Sub('streetView');
         return;
@@ -2557,6 +2566,50 @@ export function ListYourLotPanel({
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">You're almost there! Review what to expect once your listing goes live. Your parking space will be visible to drivers based on your availability and booking settings.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 3d: Review Before Publishing ── */}
+      {currentStepValue === 3 && currentStep3SubValue === 'review3' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte podatke prije objavljivanja.</h2>
+                <p className="text-sm text-gray-600">Final review before your listing goes live</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4 text-sm">
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Fotografije</p>
+                  <p className="font-medium text-gray-900">{data.photos?.length || 0} fotografija dodano</p>
+                </div>
+
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Google Street View</p>
+                  <p className="font-medium text-gray-900">Konfiguracija završena</p>
+                </div>
+
+                <div>
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Lokacija & Opis</p>
+                  <p className="font-medium text-gray-900">{data.name || '—'}</p>
+                  <p className="text-gray-600 text-xs mt-1">{data.address || '—'}</p>
+                </div>
+              </div>
+
+              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
+                Objaviti
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Sve je spremno! Vaš parking prostor će biti vidljiv potencijalnim kupcima čim ga objavite.</p>
             </div>
           </div>
         </div>

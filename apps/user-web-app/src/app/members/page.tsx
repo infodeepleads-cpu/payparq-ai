@@ -734,7 +734,8 @@ export default function MembersPage() {
     setLoginNotice("");
 
     try {
-      const redirectTo = "/members";
+      const redirect = searchParams.get('redirect') || '';
+      const redirectTo = redirect || "/members";
       const response = await fetch("/api/auth/magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2723,10 +2724,13 @@ export default function MembersPage() {
                   type="button"
                   onClick={async () => {
                     try {
+                      const redirect = searchParams.get('redirect') || '';
+                      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                      const callbackUrl = redirect ? `${origin}/auth/callback?redirect=${encodeURIComponent(redirect)}` : `${origin}/auth/callback`;
                       await supabase?.auth.signInWithOAuth({
                         provider: 'google',
                         options: {
-                          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`
+                          redirectTo: callbackUrl
                         }
                       });
                     } catch (err) {

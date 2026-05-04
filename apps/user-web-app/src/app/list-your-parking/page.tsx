@@ -119,9 +119,11 @@ export default function ListYourParkingPage() {
     : currentStep === 2 && currentStep2Sub === 'pricing' ? 'Model cijene'
     : currentStep === 2 && currentStep2Sub === 'description' ? 'Vaš opis'
     : currentStep === 2 && currentStep2Sub === 'postBookingInstructions' ? 'Upute nakon rezervacije'
+    : currentStep === 2 && currentStep2Sub === 'review2' ? 'Pregled Korak 2'
     : currentStep === 3 && currentStep3Sub === 'photos' ? 'Fotografije'
     : currentStep === 3 && currentStep3Sub === 'streetView' ? 'Google Street View'
     : currentStep === 3 && currentStep3Sub === 'summary' ? 'Očekivanja'
+    : currentStep === 3 && currentStep3Sub === 'review3' ? 'Pregled Korak 3'
     : 'Pregled';
 
   return (
