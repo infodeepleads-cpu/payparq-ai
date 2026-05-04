@@ -743,8 +743,14 @@ export function ListYourLotPanel({
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [listingId, setListingId] = useState<string | null>(editId || null);
+  const [sectionsSaved, setSectionsSaved] = useState<{ section1: boolean; section2: boolean; section3: boolean }>({
+    section1: false,
+    section2: false,
+    section3: false,
+  });
 
-  const handleSubmit = async () => {
+  const handleSaveSection = async (section: 1 | 2 | 3) => {
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -752,85 +758,111 @@ export function ListYourLotPanel({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niste prijavljeni');
 
-      // Ensure profile row exists via API (service role permission)
+      // Ensure profile exists
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       if (!token) throw new Error('Niste prijavljeni');
 
-      console.log('Calling ensure-profile with user:', user.id);
-      const profileRes = await fetch('/api/ensure-profile', {
+      await fetch('/api/ensure-profile', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      const profileData = await profileRes.json();
-      console.log('Profile response:', profileRes.status, profileData);
 
-      if (!profileRes.ok) {
-        throw new Error(profileData.error || 'Greška pri kreiranju profila');
+      // Section 1: Create new listing
+      if (section === 1 && !listingId) {
+        const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');
+        const capacity = parseInt(data.spaceType) || 1;
+        const displayId = (Date.now() % 90000) + 10000;
+        const nameLower = (data.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        const slugSeed = nameLower.trim() || String(displayId);
+        const canonicalSlug = `${slugSeed}-${displayId}`;
+
+        const { data: newListing, error } = await supabase.from('locations').insert({
+          owner_id: user.id,
+          name: data.name,
+          address,
+          latitude: parseFloat(data.latitude) || 0,
+          longitude: parseFloat(data.longitude) || 0,
+          capacity,
+          total_spots: capacity,
+          occupancy: 0,
+          base_price_hourly: 0,
+          base_price_daily: 0,
+          base_price_monthly: 0,
+          display_id: String(displayId),
+          canonical_slug: canonicalSlug,
+          valet_enabled: false,
+          shuttle_enabled: false,
+          addons_config: {},
+          verification_status: 'unverified',
+          verification_metadata: {
+            listing_status: 'pending',
+            section_status: { section1: true, section2: false, section3: false },
+            type: data.type,
+            features: data.features,
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+            created_at: new Date().toISOString(),
+          },
+        }).select();
+
+        if (error) throw new Error(error.message);
+        const newId = newListing?.[0]?.id;
+        if (newId) {
+          setListingId(newId);
+          setSectionsSaved({ section1: true, section2: false, section3: false });
+          setStep2Sub('availability');
+          setStep(2);
+        }
       }
+      // Sections 2 & 3: Update existing listing
+      else if (listingId && (section === 2 || section === 3)) {
+        const updateData: any = {
+          verification_metadata: {
+            listing_status: 'pending',
+            type: data.type,
+            features: data.features,
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+            acceptMonthlyBookings: data.acceptMonthlyBookings,
+            acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
+            pricingModel: data.pricingModel,
+            additionalDescription: data.additionalDescription,
+            getting_there: data.postBookingInstructions,
+          },
+        };
 
-      const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');
-      const capacity = parseInt(data.spaceType) || 1;
-      const displayId = (Date.now() % 90000) + 10000;
-      const nameLower = (data.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
-      const slugSeed = nameLower.trim() || String(displayId);
-      const canonicalSlug = `${slugSeed}-${displayId}`;
+        const newStatus = { ...sectionsSaved };
+        if (section === 2) newStatus.section2 = true;
+        if (section === 3) newStatus.section3 = true;
+        updateData.verification_metadata.section_status = newStatus;
 
-      const { error } = await supabase.from('locations').insert({
-        owner_id: user.id,
-        name: data.name,
-        address,
-        latitude: parseFloat(data.latitude) || 0,
-        longitude: parseFloat(data.longitude) || 0,
-        capacity,
-        total_spots: capacity,
-        occupancy: 0,
-        base_price_hourly: 0,
-        base_price_daily: 0,
-        base_price_monthly: 0,
-        display_id: String(displayId),
-        canonical_slug: canonicalSlug,
-        valet_enabled: false,
-        shuttle_enabled: false,
-        addons_config: {},
-        verification_status: 'unverified',
-        verification_metadata: {
-          listing_status: 'pending',
-          type: data.type,
-          features: data.features,
-          openTime: data.available24_7 ? '00:00' : data.openTime,
-          closeTime: data.available24_7 ? '24:00' : data.closeTime,
-          available24_7: data.available24_7,
-          daysAvailable: data.daysAvailable,
-          vehicleSize: data.vehicleSize,
-          maxHeight: data.maxHeight,
-          permits: data.permitRequired || 'no',
-          acceptMonthlyBookings: data.acceptMonthlyBookings,
-          acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
-          pricingModel: data.pricingModel,
-          additionalDescription: data.additionalDescription,
-          getting_there: data.postBookingInstructions,
-          created_at: new Date().toISOString(),
-        },
-      });
+        const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
+        if (error) throw new Error(error.message);
 
-      if (error) throw new Error(error.message);
+        setSectionsSaved(newStatus);
 
-      // Wait for DB to persist before navigation
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setStep('intro');
-      setStep1Sub('region');
-      setCitySelected(false);
-      setData((prev) => ({
-        ...prev,
-        name: '', address: '', addressLine2: '', town: '', postalCode: '',
-        latitude: '', longitude: '', spaceType: '', vehicleSize: '', features: [],
-        openTime: '07:00', closeTime: '22:00', photos: [],
-        additionalDescription: '', postBookingInstructions: '',
-      }));
+        if (section === 2) {
+          setStep3Sub('photos');
+          setStep(3);
+        } else if (section === 3) {
+          // All sections done - navigate to calendar/dashboard
+          await new Promise(resolve => setTimeout(resolve, 500));
+          router.push(`/parking/${listingId}`);
+        }
+      }
     } catch (e: any) {
-      setSubmitError(e.message || 'Greška pri objavljivanju');
+      setSubmitError(e.message || 'Greška pri spremanju');
     } finally {
       setSubmitting(false);
     }
@@ -2140,8 +2172,8 @@ export function ListYourLotPanel({
                 />
               </div>
 
-              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Publish
+              <button onClick={() => handleSaveSection(2)} disabled={submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
+                {submitting ? 'Spremanje...' : 'Spremi i nastavi'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2564,8 +2596,8 @@ export function ListYourLotPanel({
               {submitError && (
                 <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
               )}
-              <button onClick={handleSubmit} disabled={submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-60">
-                {submitting ? 'Objavljivanje...' : 'Objavi oglas'}
+              <button onClick={() => handleSaveSection(1)} disabled={submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-60">
+                {submitting ? 'Spremanje...' : 'Spremi i nastavi'}
               </button>
             </div>
           </div>
