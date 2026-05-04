@@ -225,9 +225,10 @@ export function ListYourLotPanel({
   // Load existing listing if editing
   useEffect(() => {
     if (!editId || !supabase) return;
+    const client = supabase;
     const loadListing = async () => {
       try {
-        const { data: listing, error } = await supabase
+        const { data: listing, error } = await client
           .from('locations')
           .select('*')
           .eq('id', editId)
