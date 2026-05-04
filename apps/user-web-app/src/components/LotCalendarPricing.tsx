@@ -210,7 +210,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                   }`}
                 >
                   <p className="font-bold text-gray-900">{date}</p>
-                  <p className="text-[9px] md:text-xs text-gray-700 mt-0.5 md:mt-1 font-medium hidden md:block">{config?.capacity || lotCapacity} {parseInt(config?.capacity || lotCapacity) === 1 ? 'mjesto' : 'mjesta'}</p>
+                  <p className="text-[9px] md:text-xs text-gray-700 mt-0.5 md:mt-1 font-medium hidden md:block">{config?.capacity || lotCapacity} {parseInt(String(config?.capacity || lotCapacity)) === 1 ? 'mjesto' : 'mjesta'}</p>
                   <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1 text-[8px] md:text-xs text-gray-600 hidden md:flex">
                     <Clock className="w-2 h-2 md:w-3 md:h-3" />
                     <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : 'Zatvoreno') : '00:00 - 24:00'}</span>
