@@ -737,14 +737,14 @@ export function ListYourLotPanel({
           <div className="col-span-1">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
               <div className="flex items-start gap-2 mb-3">
-                <p className="text-sm text-gray-700 leading-snug">In your area, we think your spaces could earn</p>
+                <p className="text-sm text-gray-700 leading-snug">U vašem području, prostori mogu zaraditi i do</p>
                 <button className="text-gray-400 hover:text-gray-600 flex-shrink-0">
                   <Info className="w-4 h-4" />
                 </button>
               </div>
               <p className="text-3xl font-bold text-[#5F3DFC]">
-                £6,912.00
-                <span className="text-lg font-normal text-gray-600 block">per year</span>
+                €6,912.00
+                <span className="text-lg font-normal text-gray-600 block">godišnje</span>
               </p>
             </div>
           </div>
