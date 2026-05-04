@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabaseAdmin.from('profiles').upsert({
       id: user.id,
       email: user.email,
+      role: 'user',
     });
 
     if (error) {

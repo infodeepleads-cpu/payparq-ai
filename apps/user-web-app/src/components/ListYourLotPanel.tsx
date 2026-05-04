@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronRight, Info, Clock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
@@ -112,6 +112,8 @@ export function ListYourLotPanel({
   onStep3SubChange
 }: ListYourLotPanelProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get('edit');
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
@@ -219,6 +221,48 @@ export function ListYourLotPanel({
         : [...prev.features, feature],
     }));
   };
+
+  // Load existing listing if editing
+  useEffect(() => {
+    if (!editId || !supabase) return;
+    const loadListing = async () => {
+      try {
+        const { data: listing, error } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('id', editId)
+          .single();
+        if (error) throw error;
+        if (!listing) return;
+
+        const meta = listing.verification_metadata || {};
+        setData((prev) => ({
+          ...prev,
+          name: listing.name || '',
+          address: listing.address || '',
+          latitude: String(listing.latitude || ''),
+          longitude: String(listing.longitude || ''),
+          capacity: String(listing.capacity || ''),
+          type: meta.type || '',
+          features: meta.features || [],
+          openTime: meta.openTime || '07:00',
+          closeTime: meta.closeTime || '22:00',
+          available24_7: meta.available24_7 || false,
+          daysAvailable: meta.daysAvailable || [],
+          vehicleSize: meta.vehicleSize || '',
+          maxHeight: meta.maxHeight || '',
+          acceptMonthlyBookings: meta.acceptMonthlyBookings || false,
+          acceptHourlyDailyBookings: meta.acceptHourlyDailyBookings || false,
+          pricingModel: meta.pricingModel || 'dynamic',
+          additionalDescription: meta.additionalDescription || '',
+          postBookingInstructions: meta.getting_there || '',
+        }));
+      } catch (err) {
+        console.error('Error loading listing:', err);
+      }
+    };
+    loadListing();
+  }, [editId, supabase]);
 
   useEffect(() => {
     if (currentStepValue === 3 && currentStep3SubValue === 'streetView' && streetViewRef.current && isLoaded && data.latitude && data.longitude && window.google?.maps) {
