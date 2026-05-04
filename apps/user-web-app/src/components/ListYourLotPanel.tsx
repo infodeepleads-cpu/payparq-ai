@@ -13,7 +13,7 @@ const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false })
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
 type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'vehicleSize' | 'accessControl';
 type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions' | 'review2';
-type Step3Sub = 'photos' | 'streetView' | 'summary';
+type Step3Sub = 'photos' | 'streetView' | 'summary' | 'review3';
 
 const REGIONS = [
   { id: 'HR', label: 'Croatia', center: [45.815, 15.982] },
@@ -647,8 +647,8 @@ export function ListYourLotPanel({
         return;
       }
       if (currentStep3SubValue === 'summary') {
-        console.log('✅ Step 3c → moving to review');
-        setStep('review');
+        console.log('✅ Step 3c → moving to review3');
+        setStep3Sub('review3');
         return;
       }
     }
