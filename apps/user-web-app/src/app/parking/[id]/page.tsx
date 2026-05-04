@@ -37,6 +37,7 @@ export default function ParkingManagementPage() {
   useEffect(() => {
     const fetchListing = async () => {
       try {
+        if (!supabase) throw new Error('Supabase nije konfiguriran');
         const { data, error: fetchError } = await supabase
           .from('locations')
           .select('*')
@@ -68,6 +69,7 @@ export default function ParkingManagementPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (!supabase) throw new Error('Supabase nije konfiguriran');
       const { error: updateError } = await supabase
         .from('locations')
         .update({
