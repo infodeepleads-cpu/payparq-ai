@@ -237,6 +237,8 @@ export function ListYourLotPanel({
         if (!listing) return;
 
         const meta = listing.verification_metadata || {};
+        setListingId(listing.id);
+        setSectionsSaved(meta.section_status || { section1: false, section2: false, section3: false });
         setData((prev) => ({
           ...prev,
           name: listing.name || '',
@@ -541,11 +543,21 @@ export function ListYourLotPanel({
       if (step1Sub === 'region') return !!(data.region && data.address && citySelected);
       if (step1Sub === 'map') return !!(data.latitude && data.longitude);
       if (step1Sub === 'name') return !!(data.name && data.spaceType && parseInt(data.spaceType) > 0);
+      if (step1Sub === 'type') return !!data.type;
+      if (step1Sub === 'features') return data.features.length > 0;
+      if (step1Sub === 'vehicleSize') return !!data.vehicleSize;
+      if (step1Sub === 'accessControl') return true;
     }
     if (step === 2) return true;
     if (step === 3) return !!data.type;
     return true;
   };
+
+  const completionPercent = Math.round(
+    ((sectionsSaved.section1 ? 1 : 0) +
+     (sectionsSaved.section2 ? 1 : 0) +
+     (sectionsSaved.section3 ? 1 : 0)) / 3 * 100
+  );
 
 
   const handleNext = async () => {
@@ -958,6 +970,34 @@ export function ListYourLotPanel({
   return (
     <div className="h-full bg-white flex flex-col w-full">
       <ListingHeader currentStep={currentStepValue} currentSubStep={currentSubStepValue} onBack={handleBack} />
+
+      {/* Section Progress Indicator */}
+      {(currentStepValue === 1 || currentStepValue === 2 || currentStepValue === 3) && (
+        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                {sectionsSaved.section1 ? '✓' : '1'}
+              </div>
+              <span className="text-sm font-medium text-gray-700">Location</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                {sectionsSaved.section2 ? '✓' : '2'}
+              </div>
+              <span className="text-sm font-medium text-gray-700">Availability</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                {sectionsSaved.section3 ? '✓' : '3'}
+              </div>
+              <span className="text-sm font-medium text-gray-700">Photos</span>
+            </div>
+          </div>
+          <div className="text-sm font-semibold text-gray-600">{completionPercent}% Complete</div>
+        </div>
+      )}
+
       <div className="h-full w-full flex m-0 p-0">
 
       {/* ── STEP 1: Choose Country ── */}
