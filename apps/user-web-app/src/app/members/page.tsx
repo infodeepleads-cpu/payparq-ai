@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FooterBrand } from "@/components/FooterBrand";
 import { OperationsPanel } from "@/components/OperationsPanel";
@@ -259,6 +259,7 @@ function readMemberPlates(currentUser: User | null) {
 
 export default function MembersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1051,7 +1052,7 @@ export default function MembersPage() {
         setOwnerListings(data ?? []);
         setOwnerListingsLoading(false);
       });
-  }, [user]);
+  }, [user, searchParams]);
 
   useEffect(() => {
     if (!hasMemberIdentity || typeof window === "undefined") {

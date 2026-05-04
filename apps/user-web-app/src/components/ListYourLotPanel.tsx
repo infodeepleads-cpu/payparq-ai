@@ -587,7 +587,7 @@ export function ListYourLotPanel({
       }
       if (currentStep2SubValue === 'review2') {
         console.log('✅ Step 2 review → published, navigating to dashboard');
-        router.push('/members');
+        router.push('/members?refresh=listings');
         return;
       }
     }
@@ -708,8 +708,15 @@ export function ListYourLotPanel({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niste prijavljeni');
 
+      // Ensure profile row exists (required by owner_id FK)
+      await supabase.from('profiles').upsert({ id: user.id, email: user.email }, { onConflict: 'id', ignoreDuplicates: true });
+
       const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');
       const capacity = parseInt(data.spaceType) || 1;
+      const displayId = (Date.now() % 90000) + 10000;
+      const nameLower = (data.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+      const slugSeed = nameLower.trim() || String(displayId);
+      const canonicalSlug = `${slugSeed}-${displayId}`;
 
       const { error } = await supabase.from('locations').insert({
         owner_id: user.id,
@@ -723,6 +730,8 @@ export function ListYourLotPanel({
         base_price_hourly: 0,
         base_price_daily: 0,
         base_price_monthly: 0,
+        display_id: String(displayId),
+        canonical_slug: canonicalSlug,
         valet_enabled: false,
         shuttle_enabled: false,
         addons_config: {},
@@ -748,6 +757,9 @@ export function ListYourLotPanel({
       });
 
       if (error) throw new Error(error.message);
+
+      // Wait for DB to persist before navigation
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       setStep('intro');
       setStep1Sub('region');
@@ -916,8 +928,10 @@ export function ListYourLotPanel({
                           console.log('📝 Address changed to:', value);
                         }}
                         autoComplete="off"
-                        spellCheck="false"
-                        inputMode="none"
+                        spellCheck={false}
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        translate="no"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                       />
                     </div>
