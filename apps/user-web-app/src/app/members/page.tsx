@@ -2054,6 +2054,8 @@ export default function MembersPage() {
               <LotCalendarPricing
                 lotId={selectedLotForManagement}
                 lotName={ownerListings.find(l => l.id === selectedLotForManagement)?.name || 'Unknown'}
+                lotAddress={ownerListings.find(l => l.id === selectedLotForManagement)?.address || 'Unknown'}
+                lotCapacity={String(ownerListings.find(l => l.id === selectedLotForManagement)?.capacity || '1')}
                 onBack={() => setSelectedLotForManagement(null)}
               />
             </div>
@@ -2077,21 +2079,23 @@ export default function MembersPage() {
               ) : (
                 <div className="space-y-2">
                   {ownerListings.map((loc) => (
-                    <button
+                    <div
                       key={loc.id}
-                      onClick={() => {
-                        if (loc.verification_status === 'verified') {
-                          setSelectedLotForManagement(loc.id);
-                        } else {
-                          router.push(`/list-your-parking?edit=${loc.id}`);
-                        }
-                      }}
-                      className="w-full text-left flex items-center justify-between py-2 px-2 rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all"
+                      className="w-full flex items-center justify-between py-2 px-2 rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all group"
                     >
-                      <div className="min-w-0">
+                      <button
+                        onClick={() => {
+                          if (loc.verification_status === 'verified') {
+                            setSelectedLotForManagement(loc.id);
+                          } else {
+                            router.push(`/list-your-parking?edit=${loc.id}`);
+                          }
+                        }}
+                        className="flex-1 text-left"
+                      >
                         <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
                         <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
-                      </div>
+                      </button>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
                         <span className="text-[10px] text-black/50">{loc.capacity} mj.</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
@@ -2101,8 +2105,28 @@ export default function MembersPage() {
                         }`}>
                           {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
                         </span>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm(`Sigurno želiš izbrisati "${loc.name}"?`)) return;
+                            try {
+                              if (!supabase) return;
+                              const { error } = await supabase.from('locations').delete().eq('id', loc.id);
+                              if (error) throw error;
+                              setOwnerListings((prev) => prev.filter((l) => l.id !== loc.id));
+                            } catch (err: any) {
+                              setActionError(err.message || 'Greška pri brisanju');
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 transition-all"
+                          title="Obriši lot"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}

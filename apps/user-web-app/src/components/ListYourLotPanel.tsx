@@ -896,13 +896,8 @@ export function ListYourLotPanel({
             {completionPercent === 100 ? (
               <div className="border-2 border-green-500 bg-green-50 rounded-lg p-6 text-center">
                 <div className="text-4xl font-bold text-green-600 mb-2">✓ 100% Complete!</div>
-                <p className="text-gray-700 font-semibold">Your listing is ready. Manage calendar and pricing below.</p>
-                <button
-                  onClick={() => router.push(`/parking/${listingId}`)}
-                  className="mt-4 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                >
-                  Manage Calendar & Pricing
-                </button>
+                <p className="text-gray-700 font-semibold mb-2">Vaš popis je spreman.</p>
+                <p className="text-sm text-gray-600">Upravljajte kalendarom i cijenama u nastavku.</p>
               </div>
             ) : (
               <>

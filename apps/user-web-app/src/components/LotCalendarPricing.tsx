@@ -2,29 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ChevronLeft, Calendar, DollarSign } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 
 interface LotCalendarPricingProps {
   lotId: string;
   lotName: string;
+  lotAddress: string;
+  lotCapacity: string;
   onBack: () => void;
 }
 
-export function LotCalendarPricing({ lotId, lotName, onBack }: LotCalendarPricingProps) {
-  const [tab, setTab] = useState<'calendar' | 'pricing'>('calendar');
+interface DateConfig {
+  date: string;
+  capacity: number;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  priceMode: 'auto' | 'manual';
+  price: number;
+}
+
+export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Calendar state
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [available24_7, setAvailable24_7] = useState(true);
-
-  // Pricing state
-  const [hourlyPrice, setHourlyPrice] = useState('0');
-  const [dailyPrice, setDailyPrice] = useState('0');
-  const [monthlyPrice, setMonthlyPrice] = useState('0');
+  const [calendarDate, setCalendarDate] = useState(() => new Date(2026, 4, 1));
+  const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Load existing data
   useEffect(() => {
@@ -33,20 +35,16 @@ export function LotCalendarPricing({ lotId, lotName, onBack }: LotCalendarPricin
         if (!supabase) return;
         const { data: lot, error: err } = await supabase
           .from('locations')
-          .select('base_price_hourly, base_price_daily, base_price_monthly, availability_calendar, verification_metadata')
+          .select('verification_metadata')
           .eq('id', lotId)
           .single();
 
         if (err) throw err;
-        if (lot) {
-          setHourlyPrice(String(lot.base_price_hourly || 0));
-          setDailyPrice(String(lot.base_price_daily || 0));
-          setMonthlyPrice(String(lot.base_price_monthly || 0));
-          setAvailableDates(lot.availability_calendar?.dates || []);
-          setAvailable24_7(lot.verification_metadata?.available24_7 || true);
+        if (lot?.verification_metadata?.dateConfigs) {
+          setDateConfigs(lot.verification_metadata.dateConfigs);
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to load lot data');
+        console.error('Failed to load lot data:', err.message);
       } finally {
         setLoading(false);
       }
@@ -54,61 +52,95 @@ export function LotCalendarPricing({ lotId, lotName, onBack }: LotCalendarPricin
     loadData();
   }, [lotId]);
 
-  const handleSaveCalendar = async () => {
-    setSaving(true);
-    setError('');
-    setSuccess('');
+  const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayRaw = new Date(year, month, 1).getDay();
+  const emptyBefore = firstDayRaw === 0 ? 6 : firstDayRaw - 1;
+
+  const getDateString = (day: number) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const getDateConfig = (dateStr: string): DateConfig => {
+    return dateConfigs[dateStr] || {
+      date: dateStr,
+      capacity: parseInt(lotCapacity),
+      isOpen: true,
+      openTime: '00:00',
+      closeTime: '23:59',
+      priceMode: 'auto',
+      price: 0,
+    };
+  };
+
+  const handleDateClick = (day: number) => {
+    const dateStr = getDateString(day);
+    setSelectedDate(dateStr);
+  };
+
+  const handleSaveDate = async (config: DateConfig) => {
+    setDateConfigs((prev) => ({
+      ...prev,
+      [config.date]: config,
+    }));
+
     try {
-      if (!supabase) throw new Error('Supabase nije konfiguriran');
-      const { error: err } = await supabase
+      if (!supabase) return;
+      const { data: existing } = await supabase
+        .from('locations')
+        .select('verification_metadata')
+        .eq('id', lotId)
+        .single();
+
+      const meta = existing?.verification_metadata || {};
+      const newConfigs = { ...dateConfigs, [config.date]: config };
+
+      await supabase
         .from('locations')
         .update({
-          availability_calendar: {
-            dates: availableDates,
-            updated_at: new Date().toISOString(),
+          verification_metadata: {
+            ...meta,
+            dateConfigs: newConfigs,
           },
         })
         .eq('id', lotId);
 
-      if (err) throw err;
-      setSuccess('Kalendar je spreman!');
-      setTimeout(() => setSuccess(''), 3000);
+      setSelectedDate(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to save calendar');
-    } finally {
-      setSaving(false);
+      console.error('Failed to save date config:', err.message);
     }
   };
 
-  const handleSavePricing = async () => {
-    setSaving(true);
-    setError('');
-    setSuccess('');
+  const handleCloseDate = async (dateStr: string) => {
+    const newConfigs = { ...dateConfigs };
+    delete newConfigs[dateStr];
+    setDateConfigs(newConfigs);
+
     try {
-      if (!supabase) throw new Error('Supabase nije konfiguriran');
-      const { error: err } = await supabase
+      if (!supabase) return;
+      const { data: existing } = await supabase
+        .from('locations')
+        .select('verification_metadata')
+        .eq('id', lotId)
+        .single();
+
+      const meta = existing?.verification_metadata || {};
+      await supabase
         .from('locations')
         .update({
-          base_price_hourly: parseInt(hourlyPrice) || 0,
-          base_price_daily: parseInt(dailyPrice) || 0,
-          base_price_monthly: parseInt(monthlyPrice) || 0,
+          verification_metadata: {
+            ...meta,
+            dateConfigs: newConfigs,
+          },
         })
         .eq('id', lotId);
 
-      if (err) throw err;
-      setSuccess('Cijene su spremljene!');
-      setTimeout(() => setSuccess(''), 3000);
+      setSelectedDate(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to save pricing');
-    } finally {
-      setSaving(false);
+      console.error('Failed to delete date config:', err.message);
     }
-  };
-
-  const toggleDate = (date: string) => {
-    setAvailableDates((prev) =>
-      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date]
-    );
   };
 
   if (loading) {
@@ -122,195 +154,247 @@ export function LotCalendarPricing({ lotId, lotName, onBack }: LotCalendarPricin
     );
   }
 
+  const selectedDateConfig = selectedDate ? getDateConfig(selectedDate) : null;
+  const selectedDay = selectedDate ? parseInt(selectedDate.split('-')[2]) : null;
+
   return (
-    <div className="h-full bg-white flex flex-col">
+    <div className="h-full bg-white flex flex-col w-full md:p-6 p-3 md:p-4">
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between bg-gray-50">
-        <div className="flex items-center gap-3">
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900">{lotName}</h2>
+        <p className="text-xs md:text-sm text-gray-600">{lotAddress} • Kapacitet: {lotCapacity} mjesta</p>
+      </div>
+
+      {/* Calendar Container */}
+      <div className="flex-1 overflow-auto">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between mb-3 md:mb-6">
           <button
-            onClick={onBack}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Manage: {lotName}</h2>
-            <p className="text-sm text-gray-500">Calendar & Pricing</p>
+            onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
+            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+          >← Prethodna</button>
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
+          <button
+            onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
+            className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-sm md:text-base"
+          >Dalje →</button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="border border-gray-200 rounded-lg p-3 md:p-6">
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
+            {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
+              <div key={day} className="text-center font-semibold text-xs md:text-sm text-gray-700 py-1.5 md:py-3 flex-shrink-0">
+                {day}
+              </div>
+            ))}
+            {[...Array(emptyBefore)].map((_, i) => (
+              <div key={`empty-${i}`} className="aspect-square"></div>
+            ))}
+            {[...Array(daysInMonth)].map((_, i) => {
+              const date = i + 1;
+              const dateStr = getDateString(date);
+              const config = dateConfigs[dateStr];
+              const isSelected = selectedDate === dateStr;
+
+              return (
+                <button
+                  key={date}
+                  onClick={() => handleDateClick(date)}
+                  className={`aspect-square border-2 rounded-lg p-1 md:p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer text-[10px] md:text-sm ${
+                    isSelected
+                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/10 hover:bg-[#5F3DFC]/20'
+                      : config
+                      ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
+                      : 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
+                  }`}
+                >
+                  <p className="font-bold text-gray-900">{date}</p>
+                  <p className="text-[9px] md:text-xs text-gray-700 mt-0.5 md:mt-1 font-medium hidden md:block">{config?.capacity || lotCapacity} {parseInt(config?.capacity || lotCapacity) === 1 ? 'mjesto' : 'mjesta'}</p>
+                  <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1 text-[8px] md:text-xs text-gray-600 hidden md:flex">
+                    <Clock className="w-2 h-2 md:w-3 md:h-3" />
+                    <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : 'Zatvoreno') : '00:00 - 24:00'}</span>
+                  </div>
+                  {config && (
+                    <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">✓ {config.priceMode === 'auto' ? 'Auto' : `${config.price}€`}</p>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 px-6 flex gap-8">
+      {/* Date Config Modal - Responsive */}
+      {selectedDateConfig && selectedDay && (
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
+          <div className="bg-white rounded-t-2xl md:rounded-lg p-4 md:p-6 w-full md:w-96 md:max-h-[90vh] overflow-auto shadow-lg md:shadow-2xl max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4 md:mb-6">
+              <h3 className="text-base md:text-lg font-bold text-gray-900">Postavke za {selectedDay}. {croatianMonths[month]}</h3>
+              <button
+                onClick={() => setSelectedDate(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <DateConfigWidget
+              config={selectedDateConfig}
+              lotCapacity={parseInt(lotCapacity)}
+              onSave={(config) => handleSaveDate(config)}
+              onDelete={() => handleCloseDate(selectedDate!)}
+              onCancel={() => setSelectedDate(null)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DateConfigWidgetProps {
+  config: DateConfig;
+  lotCapacity: number;
+  onSave: (config: DateConfig) => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}
+
+function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: DateConfigWidgetProps) {
+  const [capacity, setCapacity] = useState(config.capacity);
+  const [isOpen, setIsOpen] = useState(config.isOpen);
+  const [openTime, setOpenTime] = useState(config.openTime);
+  const [closeTime, setCloseTime] = useState(config.closeTime);
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(config.priceMode || 'auto');
+  const [price, setPrice] = useState(config.price);
+
+  return (
+    <div className="space-y-3 md:space-y-4">
+      {/* Open/Close Toggle */}
+      <div className="space-y-2">
+        <label className="block text-xs md:text-sm font-medium text-gray-900">Dostupnost</label>
+        <div className="flex gap-2 md:gap-3">
+          {[
+            { id: 'open', label: 'Otvoreno' },
+            { id: 'close', label: 'Zatvoreno' },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setIsOpen(id === 'open')}
+              className="flex-1 px-3 md:px-4 py-2 rounded-lg border-2 text-xs md:text-sm font-medium transition-colors"
+              style={{
+                borderColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#D1D5DB',
+                backgroundColor: (isOpen && id === 'open') || (!isOpen && id === 'close') ? 'rgba(95, 61, 252, 0.05)' : 'white',
+                color: (isOpen && id === 'open') || (!isOpen && id === 'close') ? '#5F3DFC' : '#6B7280',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Capacity */}
+      <div className="space-y-2">
+        <label className="block text-xs md:text-sm font-medium text-gray-900">Kapacitet (mjesta)</label>
+        <input
+          type="number"
+          min="1"
+          max={lotCapacity}
+          value={capacity}
+          onChange={(e) => setCapacity(parseInt(e.target.value) || 1)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs md:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+        />
+      </div>
+
+      {/* Time Range */}
+      {isOpen && (
+        <div className="space-y-2 md:space-y-3">
+          <div className="space-y-2">
+            <label className="block text-xs md:text-sm font-medium text-gray-900">Od</label>
+            <input
+              type="time"
+              value={openTime}
+              onChange={(e) => setOpenTime(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs md:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs md:text-sm font-medium text-gray-900">Do</label>
+            <input
+              type="time"
+              value={closeTime}
+              onChange={(e) => setCloseTime(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs md:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Price */}
+      {isOpen && (
+        <div className="space-y-2 md:space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs md:text-sm font-medium text-gray-900">Cijena</label>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <span className={`text-xs font-medium ${priceMode === 'auto' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Auto</span>
+              <button
+                onClick={() => setPriceMode(priceMode === 'auto' ? 'manual' : 'auto')}
+                className="relative inline-flex h-5 md:h-6 w-10 md:w-11 items-center rounded-full transition-colors"
+                style={{
+                  backgroundColor: priceMode === 'manual' ? '#5F3DFC' : '#D1D5DB',
+                }}
+              >
+                <span
+                  className="inline-block h-3.5 md:h-4 w-3.5 md:w-4 transform rounded-full bg-white transition-transform"
+                  style={{
+                    transform: priceMode === 'manual' ? 'translateX(18px)' : 'translateX(2px)',
+                  }}
+                />
+              </button>
+              <span className={`text-xs font-medium ${priceMode === 'manual' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Ručno</span>
+            </div>
+          </div>
+
+          {priceMode === 'manual' && (
+            <div className="space-y-2">
+              <input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs md:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                placeholder="Unesite cijenu u €"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-2 pt-3 md:pt-4 border-t border-gray-200">
         <button
-          onClick={() => setTab('calendar')}
-          className={`py-4 font-medium text-sm border-b-2 transition-colors ${
-            tab === 'calendar'
-              ? 'border-[#5F3DFC] text-[#5F3DFC]'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+          onClick={onCancel}
+          className="flex-1 px-3 md:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
-          <Calendar className="w-4 h-4 inline-block mr-2" />
-          Calendar
+          Odustani
         </button>
         <button
-          onClick={() => setTab('pricing')}
-          className={`py-4 font-medium text-sm border-b-2 transition-colors ${
-            tab === 'pricing'
-              ? 'border-[#5F3DFC] text-[#5F3DFC]'
-              : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+          onClick={() => onSave({ date: config.date, capacity, isOpen, openTime, closeTime, priceMode, price })}
+          className="flex-1 px-3 md:px-4 py-2 bg-[#5F3DFC] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#4330c4] transition-colors"
         >
-          <DollarSign className="w-4 h-4 inline-block mr-2" />
-          Pricing
+          Spremi
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {/* Error & Success Messages */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
-        )}
-
-        {/* Calendar Tab */}
-        {tab === 'calendar' && (
-          <div className="max-w-2xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Availability</h3>
-
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <label className="flex items-center gap-3 cursor-pointer mb-4">
-                <input
-                  type="checkbox"
-                  checked={available24_7}
-                  onChange={(e) => setAvailable24_7(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-[#5F3DFC]"
-                />
-                <span className="font-medium text-gray-900">Available 24/7</span>
-              </label>
-              <p className="text-sm text-gray-600">
-                {available24_7
-                  ? 'Your parking space is available all day, every day.'
-                  : 'Set specific availability dates below.'}
-              </p>
-            </div>
-
-            {!available24_7 && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  Select dates when your space is available:
-                </p>
-                <div className="grid grid-cols-7 gap-2 mb-6">
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const date = new Date(2026, 4, i + 1);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = availableDates.includes(dateStr);
-                    return (
-                      <button
-                        key={dateStr}
-                        onClick={() => toggleDate(dateStr)}
-                        className={`p-2 text-xs font-medium rounded transition-colors ${
-                          isSelected
-                            ? 'bg-[#5F3DFC] text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {date.getDate()}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-sm text-gray-600">
-                  Selected: {availableDates.length} dates
-                </p>
-              </div>
-            )}
-
-            <button
-              onClick={handleSaveCalendar}
-              disabled={saving}
-              className="mt-6 w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg font-medium hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
-            >
-              {saving ? 'Spremanje...' : 'Spremi Kalendar'}
-            </button>
-          </div>
-        )}
-
-        {/* Pricing Tab */}
-        {tab === 'pricing' && (
-          <div className="max-w-2xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Set Your Prices</h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Hourly Rate (€)
-                </label>
-                <input
-                  type="number"
-                  value={hourlyPrice}
-                  onChange={(e) => setHourlyPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  placeholder="e.g., 5"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Price per hour</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Daily Rate (€)
-                </label>
-                <input
-                  type="number"
-                  value={dailyPrice}
-                  onChange={(e) => setDailyPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  placeholder="e.g., 20"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Price per day (24 hours)</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Monthly Rate (€)
-                </label>
-                <input
-                  type="number"
-                  value={monthlyPrice}
-                  onChange={(e) => setMonthlyPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  placeholder="e.g., 500"
-                  min="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Price per month (30 days)</p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  💡 Tip: Set competitive prices to attract more bookings. You can adjust these anytime.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSavePricing}
-              disabled={saving}
-              className="mt-6 w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg font-medium hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
-            >
-              {saving ? 'Spremanje...' : 'Spremi Cijene'}
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Delete Button */}
+      <button
+        onClick={onDelete}
+        className="w-full px-3 md:px-4 py-2 text-red-600 border border-red-300 rounded-lg text-xs md:text-sm font-medium hover:bg-red-50 transition-colors"
+      >
+        Ukloni postavke
+      </button>
     </div>
   );
 }
