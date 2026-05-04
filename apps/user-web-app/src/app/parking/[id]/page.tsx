@@ -87,20 +87,13 @@ export default function ParkingManagementPage() {
 
       if (updateError) throw updateError;
       setError('');
+      alert('Promjene su spremljene');
     } catch (err: any) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
   };
-
-  // Auto-save on field changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (listing) handleSave();
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [capacity, available24_7, openTime, closeTime, pricingMode, dailyPrice, hourlyPrice]);
 
   if (loading) return <div className="p-4">Učitavanje...</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
@@ -230,21 +223,14 @@ export default function ParkingManagementPage() {
           )}
         </div>
 
-        {/* Auto-save indicator */}
-        <div className="flex items-center justify-center gap-2 py-2">
-          {saving && (
-            <>
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-amber-600">Spremanje...</span>
-            </>
-          )}
-          {!saving && !error && (
-            <>
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs text-green-600">Spremljeno</span>
-            </>
-          )}
-        </div>
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
+        >
+          {saving ? 'Spremanje...' : 'Spremi promjene'}
+        </button>
       </div>
     </div>
   );
