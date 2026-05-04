@@ -302,6 +302,8 @@ export default function MembersPage() {
     user?.email || (devSignedIn ? "dev@local.test" : "Unknown email");
 
   const [homeContext, setHomeContext] = useState<MembersHomeContext | null>(null);
+  const [ownerListings, setOwnerListings] = useState<Array<{id: string; name: string; address: string; verification_status: string; capacity: number; display_id: string}>>([]);
+  const [ownerListingsLoading, setOwnerListingsLoading] = useState(false);
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
   const [loyaltySummary, setLoyaltySummary] = useState<LoyaltySummary | null>(null);
   const [rewardWalletLedger, setRewardWalletLedger] = useState<RewardWalletLedgerRow[]>([]);
@@ -1036,6 +1038,21 @@ export default function MembersPage() {
     }
     void refreshHomeContext();
   }, [hasMemberIdentity, refreshHomeContext]);
+
+  useEffect(() => {
+    if (!user || !supabase) return;
+    setOwnerListingsLoading(true);
+    supabase
+      .from('locations')
+      .select('id, name, address, verification_status, capacity, display_id')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setOwnerListings(data ?? []);
+        setOwnerListingsLoading(false);
+      });
+  }, [user]);
+
   useEffect(() => {
     if (!hasMemberIdentity || typeof window === "undefined") {
       return;
@@ -2026,6 +2043,47 @@ export default function MembersPage() {
               </div>
             );
           })()}
+
+          {/* My Listings widget */}
+          <div className="rounded-xl border border-black/10 bg-white p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
+              <button
+                type="button"
+                onClick={() => router.push('/list-your-parking')}
+                className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
+                title="Dodaj novi prostor"
+              >
+                <span className="text-base leading-none font-bold">+</span>
+              </button>
+            </div>
+            {ownerListingsLoading ? (
+              <p className="text-xs text-black/50">Učitavanje...</p>
+            ) : ownerListings.length === 0 ? (
+              <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[#5F3DFC]">+</span> za dodavanje.</p>
+            ) : (
+              <div className="space-y-2">
+                {ownerListings.map((loc) => (
+                  <div key={loc.id} className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
+                      <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-[10px] text-black/50">{loc.capacity} mj.</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        loc.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
+                        loc.verification_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {actionError && (
             <p className="text-[11px] text-red-600">{actionError}</p>

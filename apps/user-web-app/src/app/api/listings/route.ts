@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get auth from cookies
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: () => {},
-        },
-      }
-    );
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    if (!token || !supabaseAdmin) {
+      return NextResponse.json({ error: 'Neovlašteno' }, { status: 401 });
+    }
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Neovlašteno' }, { status: 401 });
     }
 
     // Parse form data
@@ -34,11 +24,20 @@ export async function POST(req: NextRequest) {
     const longitude = parseFloat(formData.get('longitude') as string);
     const type = formData.get('type') as string;
     const capacity = formData.get('capacity') as string;
-    const features = JSON.parse(formData.get('features') as string);
+    const features = JSON.parse((formData.get('features') as string) || '[]');
     const openTime = formData.get('openTime') as string;
     const closeTime = formData.get('closeTime') as string;
     const smartPricing = formData.get('smartPricing') === 'true';
     const permits = formData.get('permits') as string;
+    const vehicleSize = formData.get('vehicleSize') as string;
+    const maxHeight = formData.get('maxHeight') as string;
+    const available24_7 = formData.get('available24_7') === 'true';
+    const daysAvailable = JSON.parse((formData.get('daysAvailable') as string) || '[]');
+    const acceptMonthlyBookings = formData.get('acceptMonthlyBookings') === 'true';
+    const acceptHourlyDailyBookings = formData.get('acceptHourlyDailyBookings') === 'true';
+    const pricingModel = formData.get('pricingModel') as string;
+    const additionalDescription = formData.get('additionalDescription') as string;
+    const postBookingInstructions = formData.get('postBookingInstructions') as string;
     const photoUrls: string[] = [];
 
     // Validate required fields
@@ -46,14 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Handle photo uploads (for now, just store file names as placeholder)
-    // In production, these would be uploaded to Supabase Storage
     const files = formData.getAll('photos') as File[];
-    if (files.length < 5) {
-      return NextResponse.json({ error: 'At least 5 photos required' }, { status: 400 });
-    }
-
-    // Store photo file names (in production, upload to storage and get URLs)
     for (const file of files) {
       photoUrls.push(file.name);
     }
@@ -78,8 +70,10 @@ export async function POST(req: NextRequest) {
         valet_enabled: false,
         shuttle_enabled: false,
         addons_config: {},
+        capacity: parseInt(capacity) || 1,
+        total_spots: parseInt(capacity) || 1,
         verification_metadata: {
-          listing_status: 'active',
+          listing_status: 'pending',
           type,
           capacity,
           features,
@@ -87,6 +81,15 @@ export async function POST(req: NextRequest) {
           closeTime,
           smartPricing,
           permits,
+          vehicleSize,
+          maxHeight,
+          available24_7,
+          daysAvailable,
+          acceptMonthlyBookings,
+          acceptHourlyDailyBookings,
+          pricingModel,
+          additionalDescription,
+          getting_there: postBookingInstructions,
           photos: photoUrls,
           created_at: new Date().toISOString(),
         },

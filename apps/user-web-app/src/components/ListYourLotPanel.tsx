@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Info, Clock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api';
 import { ListingHeader } from './ListingHeader';
+import { supabase } from '@/lib/supabase';
 
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
 type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'vehicleSize' | 'accessControl';
-type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions';
+type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions' | 'review2';
 type Step3Sub = 'photos' | 'streetView' | 'summary';
 
 const REGIONS = [
@@ -109,6 +111,7 @@ export function ListYourLotPanel({
   onStep2SubChange,
   onStep3SubChange
 }: ListYourLotPanelProps) {
+  const router = useRouter();
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
@@ -150,6 +153,7 @@ export function ListYourLotPanel({
   const streetViewInstanceRef = useRef<any>(null);
   const [citySelected, setCitySelected] = useState(false);
   const [streetViewHeading, setStreetViewHeading] = useState(0);
+  const [calendarDate, setCalendarDate] = useState(() => new Date(2026, 5, 1));
   const [data, setData] = useState<ListingData>({
     region: '',
     name: '',
@@ -577,8 +581,13 @@ export function ListYourLotPanel({
         return;
       }
       if (currentStep2SubValue === 'postBookingInstructions') {
-        console.log('📋 Step 2h → moving to step 3');
-        setStep(3);
+        console.log('📋 Step 2h → moving to section 2 review');
+        setStep2Sub('review2');
+        return;
+      }
+      if (currentStep2SubValue === 'review2') {
+        console.log('✅ Step 2 review → published, navigating to dashboard');
+        router.push('/members');
         return;
       }
     }
@@ -632,6 +641,10 @@ export function ListYourLotPanel({
         return;
       }
     } else if (currentStepValue === 2) {
+      if (currentStep2SubValue === 'review2') {
+        setStep2Sub('postBookingInstructions');
+        return;
+      }
       if (currentStep2SubValue === 'postBookingInstructions') {
         setStep2Sub('description');
         return;
@@ -684,11 +697,73 @@ export function ListYourLotPanel({
     }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
   const handleSubmit = async () => {
-    alert('✅ Section 1 completed! Data saved.');
-    setStep('intro');
-    setStep1Sub('region');
-    setCitySelected(false);
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      if (!supabase) throw new Error('Supabase nije konfiguriran');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niste prijavljeni');
+
+      const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');
+      const capacity = parseInt(data.spaceType) || 1;
+
+      const { error } = await supabase.from('locations').insert({
+        owner_id: user.id,
+        name: data.name,
+        address,
+        latitude: parseFloat(data.latitude) || 0,
+        longitude: parseFloat(data.longitude) || 0,
+        capacity,
+        total_spots: capacity,
+        occupancy: 0,
+        base_price_hourly: 0,
+        base_price_daily: 0,
+        base_price_monthly: 0,
+        valet_enabled: false,
+        shuttle_enabled: false,
+        addons_config: {},
+        verification_status: 'unverified',
+        verification_metadata: {
+          listing_status: 'pending',
+          type: data.type,
+          features: data.features,
+          openTime: data.available24_7 ? '00:00' : data.openTime,
+          closeTime: data.available24_7 ? '24:00' : data.closeTime,
+          available24_7: data.available24_7,
+          daysAvailable: data.daysAvailable,
+          vehicleSize: data.vehicleSize,
+          maxHeight: data.maxHeight,
+          permits: data.permitRequired || 'no',
+          acceptMonthlyBookings: data.acceptMonthlyBookings,
+          acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
+          pricingModel: data.pricingModel,
+          additionalDescription: data.additionalDescription,
+          getting_there: data.postBookingInstructions,
+          created_at: new Date().toISOString(),
+        },
+      });
+
+      if (error) throw new Error(error.message);
+
+      setStep('intro');
+      setStep1Sub('region');
+      setCitySelected(false);
+      setData((prev) => ({
+        ...prev,
+        name: '', address: '', addressLine2: '', town: '', postalCode: '',
+        latitude: '', longitude: '', spaceType: '', vehicleSize: '', features: [],
+        openTime: '07:00', closeTime: '22:00', photos: [],
+        additionalDescription: '', postBookingInstructions: '',
+      }));
+    } catch (e: any) {
+      setSubmitError(e.message || 'Greška pri objavljivanju');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // ─── INTRO ─────────────────────────────────────────────────────────────
@@ -781,7 +856,7 @@ export function ListYourLotPanel({
             <div className="px-6 space-y-5 h-full">
               {/* Welcome message */}
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremimo vas da postanete vlasnik parkinga.</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Bok! Pripremamo vas da postanete vlasnik parkinga.</h2>
               </div>
               {/* Main content area */}
               <div className="space-y-5">
@@ -1070,10 +1145,10 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold">What features does your space have?</h3>
-                <p className="text-sm text-gray-600">Select all that apply</p>
+                <h3 className="text-base font-semibold">Koje karakteristike ima vaš prostor?</h3>
+                <p className="text-sm text-gray-600">Odaberite sve primjenjivo</p>
                 <div className="space-y-2">
-                  {['EV Charging', 'Covered', 'Gated', 'Well-lit', 'CCTV', 'Wheelchair Accessible', 'Weather Protected', 'Valet Service', 'Car Wash', 'Parking Attendant'].map((feature) => (
+                  {['EV punjenje', 'Pokriveno', 'Gated', 'Dobro osvijetljen', 'CCTV', 'Pristup invalidskim kolicima', 'Zaštićeno od vremenskih uvjeta', 'Valet usluga', 'Autopraonica', 'Čuvar parkinga'].map((feature) => (
                     <button
                       key={feature}
                       onClick={() => updateData('features', data.features.includes(feature) ? data.features.filter(f => f !== feature) : [...data.features, feature])}
@@ -1120,14 +1195,14 @@ export function ListYourLotPanel({
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-base font-semibold">What size vehicle does your parking space accommodate?</h3>
-                <p className="text-sm text-gray-600">Size of parking space</p>
+                <h3 className="text-base font-semibold">Koje veličine vozila može stati vaše parkirno mjesto?</h3>
+                <p className="text-sm text-gray-600">Veličina parkirnog mjesta</p>
                 <div className="space-y-3">
                   {[
-                    { id: 'small', label: 'Small parking space' },
-                    { id: 'medium', label: 'Medium parking space' },
-                    { id: 'large', label: 'Large parking space' },
-                    { id: 'commercial', label: 'Commercial vehicle' },
+                    { id: 'small', label: 'Mali parking' },
+                    { id: 'medium', label: 'Srednje parkirno mjesto' },
+                    { id: 'large', label: 'Veliko parkirno mjesto' },
+                    { id: 'commercial', label: 'Komercijalno vozilo (Kombi, kamion)' },
                   ].map(({ id, label }) => (
                     <button
                       key={id}
@@ -1559,74 +1634,89 @@ export function ListYourLotPanel({
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Preview your calendar</h2>
-                <p className="text-sm text-gray-600">You can update your calendar after your space has been published</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte svoj kalendar</h2>
+                <p className="text-sm text-gray-600">Možete ažurirati svoj kalendar nakon što je vaš prostor objavljen</p>
               </div>
 
-              <div className="space-y-6">
-                {/* Calendar Navigation */}
-                <div className="flex items-center justify-between mb-6">
-                  <button className="text-[#5F3DFC] hover:text-[#4330c4] font-medium">← Previous</button>
-                  <h3 className="text-xl font-semibold text-gray-900">June 2026</h3>
-                  <button className="text-[#5F3DFC] hover:text-[#4330c4] font-medium">Next →</button>
-                </div>
+              {(() => {
+                const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
+                const year = calendarDate.getFullYear();
+                const month = calendarDate.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                // getDay() returns 0=Sun..6=Sat; we want Mon=0..Sun=6
+                const firstDayRaw = new Date(year, month, 1).getDay();
+                const emptyBefore = firstDayRaw === 0 ? 6 : firstDayRaw - 1;
+                const isAvailable = data.available24_7 || data.daysAvailable?.length > 0;
+                const hoursText = data.available24_7 ? '00:00 - 24:00' : `${data.openTime} - ${data.closeTime}`;
+                return (
+                  <div className="space-y-6">
+                    {/* Calendar Navigation */}
+                    <div className="flex items-center justify-between mb-6">
+                      <button
+                        onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                      >← Prethodna</button>
+                      <h3 className="text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
+                      <button
+                        onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                      >Dalje →</button>
+                    </div>
 
-                {/* Calendar Grid */}
-                <div className="border border-gray-200 rounded-lg p-6">
-                  <div className="grid grid-cols-7 gap-2">
-                    {/* Day headers */}
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                      <div key={day} className="text-center font-semibold text-sm text-gray-700 py-3">
-                        {day.slice(0, 3)}
+                    {/* Calendar Grid */}
+                    <div className="border border-gray-200 rounded-lg p-6">
+                      <div className="grid grid-cols-7 gap-2">
+                        {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
+                          <div key={day} className="text-center font-semibold text-sm text-gray-700 py-3">
+                            {day}
+                          </div>
+                        ))}
+                        {[...Array(emptyBefore)].map((_, i) => (
+                          <div key={`empty-${i}`} className="aspect-square"></div>
+                        ))}
+                        {[...Array(daysInMonth)].map((_, i) => {
+                          const date = i + 1;
+                          return (
+                            <div
+                              key={date}
+                              className={`aspect-square border-2 rounded-lg p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
+                                isAvailable
+                                  ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
+                                  : 'border-gray-200 bg-gray-50'
+                              }`}
+                            >
+                              <p className="font-bold text-lg text-gray-900">{date}</p>
+                              {isAvailable ? (
+                                <>
+                                  <p className="text-xs text-gray-700 mt-1 font-medium">
+                                    {data.spaceType || '1'} {parseInt(data.spaceType || '1') === 1 ? 'mjesto' : 'mjesta'}
+                                  </p>
+                                  <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{hoursText}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-xs text-gray-400 mt-2">Nedostupno</span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-
-                    {/* Calendar dates - June 2026 starts on Sunday, so we add 6 empty cells for Mon-Sat */}
-                    {/* Empty cells for first week */}
-                    {[...Array(6)].map((_, i) => (
-                      <div key={`empty-${i}`} className="aspect-square"></div>
-                    ))}
-
-                    {/* June dates (1-30) */}
-                    {[...Array(30)].map((_, i) => {
-                      const date = i + 1;
-                      const isAvailable = data.daysAvailable?.length > 0;
-                      const hoursText = data.available24_7 ? '24 hours' : `${data.openTime} - ${data.closeTime}`;
-                      return (
-                        <div
-                          key={date}
-                          className={`aspect-square border-2 rounded-lg p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
-                            isAvailable
-                              ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}
-                        >
-                          <p className="font-bold text-lg text-gray-900">{date}</p>
-                          {isAvailable ? (
-                            <>
-                              <p className="text-xs text-gray-700 mt-1 font-medium">
-                                {data.spaceType} mjesto{parseInt(data.spaceType) > 1 ? 'a' : ''}
-                              </p>
-                              <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
-                                <Clock className="w-3 h-3" />
-                                <span>{hoursText}</span>
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400 mt-2">Unavailable</span>
-                          )}
-                        </div>
-                      );
-                    })}
+                    </div>
                   </div>
-                </div>
+                );
+              })()}
 
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleBack} className="flex-1 px-4 py-3 border-2 border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                  Natrag
+                </button>
+                <button onClick={handleNext} className="flex-1 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
+                  Nastaviti
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-
-              <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
-                <ChevronRight className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -1634,7 +1724,7 @@ export function ListYourLotPanel({
           <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-              <p className="text-xs text-gray-700 leading-relaxed">This is a preview of how your calendar will look. After publishing, you'll be able to adjust availability for specific dates, set blackout dates, and manage your bookings from the dashboard.</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Ovo je pregled kako će vaš kalendar izgledati. Nakon objavljivanja, moći ćete prilagoditi dostupnost za određene datume, postaviti datume zamračenja i</p>
             </div>
           </div>
         </div>
@@ -1978,33 +2068,8 @@ export function ListYourLotPanel({
                 />
               </div>
 
-              {/* Additional Information Question */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold text-gray-900">Do you wish to add additional information which will help the driver find or access your space?</h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'no', label: 'No' },
-                    { id: 'yes', label: 'Yes' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateData('addPostBookingInfo', id === 'yes')}
-                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: (data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {((data.addPostBookingInfo && id === 'yes') || (!data.addPostBookingInfo && id === 'no')) && (
-                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                        )}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
+                Publish
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2015,6 +2080,82 @@ export function ListYourLotPanel({
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">We have generated post-booking instructions for your space on the information you have provided. This is meant to provide instruction to people who have booked your space on how to access and use your space.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2 REVIEW ── */}
+      {currentStepValue === 2 && currentStep2SubValue === 'review2' && (
+        <div className="flex animate-fadeIn h-full w-full">
+          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+            <div className="px-6 space-y-6">
+              <div className="animate-fadeIn mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte Korak 2</h2>
+                <p className="text-sm text-gray-600">Provjera odabranih postavki dostupnosti i cijene.</p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4 text-sm">
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Dostupnost</p>
+                  <p className="font-medium text-gray-900">{data.available24_7 ? '24/7 — uvijek dostupno' : data.daysAvailable.length > 0 ? data.daysAvailable.join(', ') : '—'}</p>
+                  {!data.available24_7 && <p className="text-gray-600 text-xs mt-0.5">{data.openTime || '—'} – {data.closeTime || '—'}</p>}
+                </div>
+
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Početak rezervacija</p>
+                  <p className="font-medium text-gray-900">{data.startTakingBookingsToday ? 'Odmah' : data.bookingStartDate || '—'}</p>
+                </div>
+
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Prozor rezervacija</p>
+                  <p className="font-medium text-gray-900">
+                    {data.bookingWindow === 'this_month' ? 'Ovaj mjesec' :
+                     data.bookingWindow === '3_months' ? '3 mjeseca' :
+                     data.bookingWindow === '6_months' ? '6 mjeseci' :
+                     data.bookingWindow === '1_year' ? '1 godina' :
+                     data.bookingWindow === 'unlimited' ? 'Neograničeno' : '—'}
+                  </p>
+                </div>
+
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Vrste rezervacija</p>
+                  <p className="font-medium text-gray-900">
+                    {[data.acceptMonthlyBookings && 'Mjesečne', data.acceptHourlyDailyBookings && 'Satne i dnevne'].filter(Boolean).join(', ') || '—'}
+                  </p>
+                </div>
+
+                <div className="border-b border-gray-200 pb-3">
+                  <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Model cijena</p>
+                  <p className="font-medium text-gray-900">{data.pricingModel === 'dynamic' ? 'Dinamično' : data.pricingModel === 'static' ? 'Fiksno' : '—'}</p>
+                </div>
+
+                {data.additionalDescription && (
+                  <div className="border-b border-gray-200 pb-3">
+                    <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Opis</p>
+                    <p className="font-medium text-gray-900 text-xs leading-relaxed line-clamp-3">{data.additionalDescription}</p>
+                  </div>
+                )}
+
+                {data.postBookingInstructions && (
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Upute nakon rezervacije</p>
+                    <p className="font-medium text-gray-900 text-xs leading-relaxed line-clamp-3">{data.postBookingInstructions}</p>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
+                Publish
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+            <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Provjeri sve postavke prije nastavka. Korak 3 dodaje fotografije i opis prostora.</p>
             </div>
           </div>
         </div>
@@ -2348,8 +2489,11 @@ export function ListYourLotPanel({
                   <p className="text-gray-600 text-xs">Dozvola potrebna: {data.permitRequired === 'yes' ? 'Da' : 'Ne'}</p>
                 </div>
               </div>
-              <button onClick={handleSubmit} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-                Publish Listing
+              {submitError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</p>
+              )}
+              <button onClick={handleSubmit} disabled={submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-60">
+                {submitting ? 'Objavljivanje...' : 'Objavi oglas'}
               </button>
             </div>
           </div>

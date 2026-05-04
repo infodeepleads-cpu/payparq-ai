@@ -334,7 +334,7 @@ export function SearchPage() {
               maxHeight: loc.max_height ? parseFloat(loc.max_height) : undefined,
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
               accessHours: (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00',
-              amenities: (metadata.amenities as string | undefined) || 'Sobar, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
+              amenities: (metadata.amenities as string | undefined) || 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
               thingsToKnow: (metadata.things_to_know as string | undefined) || 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
               gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
               howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
@@ -1027,15 +1027,21 @@ export function SearchPage() {
                     curr.pricePerHour < min.pricePerHour ? curr : min
                   );
                   badgeMap.set(cheapestListing.id, 'Najbolja Vrijednost');
+                  console.log('Cheapest:', cheapestListing.name, `€${cheapestListing.pricePerHour}`);
                 }
 
                 if (filteredListings.length > 0) {
                   const closestListing = filteredListings.reduce((min, curr) =>
                     curr.distance < min.distance ? curr : min
                   );
+                  console.log('All distances:', filteredListings.map(l => `${l.name}: ${l.distance}km`).join(', '));
+                  console.log('Closest:', closestListing.name, `${closestListing.distance}km`);
                   // Only badge if not already badged (priority: Value > Distance)
                   if (!badgeMap.has(closestListing.id)) {
                     badgeMap.set(closestListing.id, 'Najkraća Šetnja');
+                    console.log('→ Awarded Shortest Walk to', closestListing.name);
+                  } else {
+                    console.log('→ Skipped Shortest Walk (already has badge)');
                   }
                 }
 
