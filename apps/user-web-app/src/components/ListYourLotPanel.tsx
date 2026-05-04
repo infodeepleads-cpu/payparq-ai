@@ -708,8 +708,19 @@ export function ListYourLotPanel({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niste prijavljeni');
 
-      // Ensure profile row exists (required by owner_id FK)
-      await supabase.from('profiles').upsert({ id: user.id, email: user.email }, { onConflict: 'id', ignoreDuplicates: true });
+      // Ensure profile row exists via API (service role permission)
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Niste prijavljeni');
+
+      const profileRes = await fetch('/api/ensure-profile', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!profileRes.ok) {
+        const err = await profileRes.json();
+        throw new Error(err.error || 'Greška pri kreiranju profila');
+      }
 
       const address = `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, '');
       const capacity = parseInt(data.spaceType) || 1;
