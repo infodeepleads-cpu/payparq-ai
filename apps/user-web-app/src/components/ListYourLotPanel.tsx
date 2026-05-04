@@ -932,7 +932,7 @@ export function ListYourLotPanel({
                       </div>
                     </div>
                     <p className="text-sm text-gray-500">{sub}</p>
-                    {done && <p className="text-xs text-green-600 font-semibold mt-2">✓ Completed & Locked</p>}
+                    {done && <p className="text-xs text-green-600 font-semibold mt-2">✓ Dovršeno i zaključano (nakon objave ćete moći ponovno urediti podatke)</p>}
                   </button>
                 ))}
               </>
@@ -2457,9 +2457,8 @@ export function ListYourLotPanel({
                 <p className="text-sm text-gray-900"><span className="font-medium">Recommendation:</span> We recommend uploading at least 3 photos to increase your listing's visibility and attract more drivers.</p>
               </div>
 
-              <button onClick={handleNext} disabled={data.photos.length === 0} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
-                Nastaviti
-                <ChevronRight className="w-4 h-4" />
+              <button onClick={() => handleSaveSection(3)} disabled={data.photos.length === 0 || submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
+                {submitting ? 'Spremanje...' : 'Spremi i izlazi'}
               </button>
             </div>
           </div>
