@@ -304,7 +304,7 @@ export default function MembersPage() {
     user?.email || (devSignedIn ? "dev@local.test" : "Unknown email");
 
   const [homeContext, setHomeContext] = useState<MembersHomeContext | null>(null);
-  const [ownerListings, setOwnerListings] = useState<Array<{id: string; name: string; address: string; verification_status: string; capacity: number; display_id: string}>>([]);
+  const [ownerListings, setOwnerListings] = useState<Array<{id: string; name: string; address: string; verification_status: string; capacity: number; display_id: string; verification_metadata?: any}>>([]);
   const [ownerListingsLoading, setOwnerListingsLoading] = useState(false);
   const [selectedLotForManagement, setSelectedLotForManagement] = useState<string | null>(null);
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
@@ -1048,7 +1048,7 @@ export default function MembersPage() {
     setOwnerListingsLoading(true);
     supabase
       .from('locations')
-      .select('id, name, address, verification_status, capacity, display_id')
+      .select('id, name, address, verification_status, capacity, display_id, verification_metadata')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -2085,7 +2085,13 @@ export default function MembersPage() {
                     >
                       <button
                         onClick={() => {
-                          router.push(`/members/listing/${loc.id}`);
+                          const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
+                          const isComplete = sections.section1 && sections.section2 && sections.section3;
+                          if (!isComplete) {
+                            router.push(`/list-your-parking?edit=${loc.id}`);
+                          } else {
+                            router.push(`/members/listing/${loc.id}`);
+                          }
                         }}
                         className="flex-1 text-left"
                       >
@@ -2116,7 +2122,13 @@ export default function MembersPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/members/edit-listing/${loc.id}`);
+                            const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
+                            const isComplete = sections.section1 && sections.section2 && sections.section3;
+                            if (!isComplete) {
+                              router.push(`/list-your-parking?edit=${loc.id}`);
+                            } else {
+                              router.push(`/members/edit-listing/${loc.id}`);
+                            }
                           }}
                           className="opacity-0 group-hover:opacity-100 p-1 text-blue-500 hover:text-blue-700 transition-all"
                           title="Uredi lot"
