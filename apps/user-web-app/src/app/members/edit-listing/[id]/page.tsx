@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X } from 'lucide-react';
+import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X, ChevronLeft } from 'lucide-react';
+import { ListingHeader } from '@/components/ListingHeader';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
@@ -198,24 +199,50 @@ export default function EditListingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-black/50">Učitavanje...</p>
+        <style>{`
+          @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .logo-spin {
+            animation: rotate 2s linear infinite;
+          }
+        `}</style>
+        <div className="text-center">
+          <div className="logo-spin w-16 h-16 mx-auto mb-4">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#5F3DFC" strokeWidth="2"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke="#5F3DFC" strokeWidth="1" opacity="0.5"/>
+              <path d="M 50 15 Q 70 30 70 50 Q 70 70 50 85 Q 30 70 30 50 Q 30 30 50 15" fill="#5F3DFC" opacity="0.8"/>
+            </svg>
+          </div>
+          <p className="text-black/60 text-sm">Učitavanje...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-black/10 px-4 py-4">
+      {/* Header - Same style as onboarding */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-black">Edit Listing</h1>
-            <p className="text-black/60 text-sm">{formData.name}</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Uredi popis</h1>
+              <p className="text-gray-600 text-sm">{formData.name || 'Parking lot'}</p>
+            </div>
           </div>
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 hover:bg-black/5 rounded-lg transition-colors"
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
