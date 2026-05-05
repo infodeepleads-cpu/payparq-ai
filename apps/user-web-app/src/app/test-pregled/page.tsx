@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import ListYourLotPanel from '@/components/ListYourLotPanel';
+import { ListYourLotPanel } from '@/components/ListYourLotPanel';
 
 export default function TestPregled() {
   const [step, setStep] = useState<'intro' | 1 | 2 | 3 | 'review'>('intro');
