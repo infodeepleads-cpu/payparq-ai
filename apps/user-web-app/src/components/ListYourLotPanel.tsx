@@ -1019,13 +1019,15 @@ export function ListYourLotPanel({
               </>
             )}
 
-            <button
-              onClick={() => { setStep(1); setStep1Sub('region'); }}
-              className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-2"
-            >
-              Start with the basics
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {!sectionsSaved.section1 && (
+              <button
+                onClick={() => { setStep(1); setStep1Sub('region'); }}
+                className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-2"
+              >
+                Start with the basics
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           <div className="col-span-1">
