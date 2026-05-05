@@ -2315,8 +2315,8 @@ export function ListYourLotPanel({
                 )}
               </div>
 
-              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
-                Publish
+              <button onClick={() => handleSaveSection(2)} disabled={submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
+                {submitting ? 'Spremanje...' : 'Spremi i nazad'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -2654,8 +2654,8 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
-                Objaviti
+              <button onClick={() => handleSaveSection(3)} disabled={data.photos.length === 0 || submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                {submitting ? 'Spremanje...' : 'Spremi i nazad'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
