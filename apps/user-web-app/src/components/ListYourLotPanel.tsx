@@ -855,6 +855,7 @@ export function ListYourLotPanel({
             section_status: { section1: true, section2: sectionsSaved.section2, section3: sectionsSaved.section3 },
             type: data.type,
             features: data.features,
+            addOns: data.addOns,
             openTime: data.available24_7 ? '00:00' : data.openTime,
             closeTime: data.available24_7 ? '24:00' : data.closeTime,
             available24_7: data.available24_7,
@@ -862,6 +863,9 @@ export function ListYourLotPanel({
             vehicleSize: data.vehicleSize,
             maxHeight: data.maxHeight,
             permits: data.permitRequired || 'no',
+            town: data.town,
+            postalCode: data.postalCode,
+            region: data.region,
           },
         };
 
@@ -871,13 +875,15 @@ export function ListYourLotPanel({
         setSectionsSaved({ ...sectionsSaved, section1: true });
         setStep('intro');
       }
-      // Sections 2 & 3: Update existing listing
-      else if (listingId && (section === 2 || section === 3)) {
+      // Section 2: Update booking/pricing settings
+      else if (section === 2 && listingId) {
         const updateData: any = {
           verification_metadata: {
             listing_status: 'pending',
+            section_status: { section1: sectionsSaved.section1, section2: true, section3: sectionsSaved.section3 },
             type: data.type,
             features: data.features,
+            addOns: data.addOns,
             openTime: data.available24_7 ? '00:00' : data.openTime,
             closeTime: data.available24_7 ? '24:00' : data.closeTime,
             available24_7: data.available24_7,
@@ -890,18 +896,51 @@ export function ListYourLotPanel({
             pricingModel: data.pricingModel,
             additionalDescription: data.additionalDescription,
             getting_there: data.postBookingInstructions,
+            noticeRequired: data.noticeRequired,
+            bookingWindow: data.bookingWindow,
+            startTakingBookingsToday: data.startTakingBookingsToday,
           },
         };
-
-        const newStatus = { ...sectionsSaved };
-        if (section === 2) newStatus.section2 = true;
-        if (section === 3) newStatus.section3 = true;
-        updateData.verification_metadata.section_status = newStatus;
 
         const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
         if (error) throw new Error(error.message);
 
-        setSectionsSaved(newStatus);
+        setSectionsSaved({ ...sectionsSaved, section2: true });
+        setStep('intro');
+      }
+      // Section 3: Update photos and street view
+      else if (section === 3 && listingId) {
+        const updateData: any = {
+          verification_metadata: {
+            listing_status: 'pending',
+            section_status: { section1: sectionsSaved.section1, section2: sectionsSaved.section2, section3: true },
+            type: data.type,
+            features: data.features,
+            addOns: data.addOns,
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+            acceptMonthlyBookings: data.acceptMonthlyBookings,
+            acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
+            pricingModel: data.pricingModel,
+            additionalDescription: data.additionalDescription,
+            getting_there: data.postBookingInstructions,
+            noticeRequired: data.noticeRequired,
+            bookingWindow: data.bookingWindow,
+            startTakingBookingsToday: data.startTakingBookingsToday,
+            photos_count: data.photos.length,
+            streetview_configured: true,
+          },
+        };
+
+        const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
+        if (error) throw new Error(error.message);
+
+        setSectionsSaved({ ...sectionsSaved, section3: true });
         setStep('intro');
       }
     } catch (e: any) {
