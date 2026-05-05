@@ -894,10 +894,17 @@ export function ListYourLotPanel({
         <div className="grid grid-cols-3 gap-8">
           <div className="col-span-2 space-y-4">
             {completionPercent === 100 ? (
-              <div className="border-2 border-green-500 bg-green-50 rounded-lg p-6 text-center">
-                <div className="text-4xl font-bold text-green-600 mb-2">✓ 100% Complete!</div>
-                <p className="text-gray-700 font-semibold mb-2">Vaš popis je spreman.</p>
-                <p className="text-sm text-gray-600">Upravljajte kalendarom i cijenama u nastavku.</p>
+              <div className="border-2 border-green-700 bg-green-50 rounded-lg p-6 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 bg-green-700 rounded-full flex items-center justify-center">
+                    <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-black mb-2">100% Dovršeno!</div>
+                <p className="text-black font-semibold mb-2">Vaš popis je spreman.</p>
+                <p className="text-sm text-black/70">Upravljajte kalendarom i cijenama u nastavku.</p>
               </div>
             ) : (
               <>
