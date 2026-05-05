@@ -45,6 +45,7 @@ export default function EditListingPage() {
 
   const loadListing = async () => {
     try {
+      if (!supabase) throw new Error('Supabase nije konfiguriran');
       const { data, error } = await supabase
         .from('locations')
         .select('*')
@@ -80,6 +81,7 @@ export default function EditListingPage() {
     setSuccess('');
 
     try {
+      if (!supabase) throw new Error('Supabase nije konfiguriran');
       const { error } = await supabase
         .from('locations')
         .update({
