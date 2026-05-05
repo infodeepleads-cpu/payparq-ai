@@ -74,7 +74,10 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
 
-  hub.name = normalizeLocationName(hub.name);
+  hub.name = normalizeLocationName(hub.name || '');
+  if (!hub.name) {
+    hub.name = 'Parking ' + (hub.display_id || 'Unknown');
+  }
 
   const priceLabel = formatEuroLabel(resolveScannerTruthPriceEuro(hub, "hourly"));
 
@@ -280,7 +283,7 @@ export async function generateStaticParams() {
       if (loc.canonical_slug?.trim()) return [loc.canonical_slug.trim().toLowerCase()];
       // For locations without canonical_slug, build slug from name + display_id
       if (loc.display_id) {
-        const namePart = (loc.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
+        const namePart = String(loc.name || '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
         return [namePart ? `${namePart}-${loc.display_id}` : loc.display_id];
       }
       return [];
