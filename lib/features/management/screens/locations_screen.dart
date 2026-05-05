@@ -615,7 +615,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
   Future<void> _toggleHub(Map<String, dynamic> loc, bool enabled) async {
     final messenger = ScaffoldMessenger.of(context);
     final Map<String, dynamic> meta =
-        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+        Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
     final bool previous = meta['hub_enabled'] == true;
     try {
       await ref
@@ -668,7 +668,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
       Map<String, dynamic> loc, String settlementModel) async {
     final messenger = ScaffoldMessenger.of(context);
     final Map<String, dynamic> meta =
-        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+        Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
     final String previous = _resolveSettlementModel(meta);
     try {
       await ref
@@ -858,7 +858,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             List<String>.from(originalPhotoUrls);
         final List<XFile> newlySelectedPhotos = [];
         final Map<String, dynamic> meta =
-            (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
+            Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
         final bool isHub = meta['hub_enabled'] == true;
         final bool isAgenticSettlement =
             _resolveSettlementModel(meta) == 'agentic';
@@ -908,7 +908,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         final accessHoursCtrl = TextEditingController(
             text: (meta['access_hours'] as String?) ?? 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00');
         final amenitiesCtrl = TextEditingController(
-            text: (meta['amenities'] as String?) ?? 'Sobar, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima');
+            text: (meta['amenities'] as String?) ?? 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima');
         final thingsToKnowCtrl = TextEditingController(
             text: (meta['things_to_know'] as String?) ?? 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.');
         final gettingThereCtrl = TextEditingController(
@@ -1284,7 +1284,9 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     if (coordsChanged && isVerified) {
                       loc['verification_status'] = 'pending';
                       if (loc['verification_metadata'] is Map) {
-                        (loc['verification_metadata'] as Map<String, dynamic>)['hub_enabled'] = false;
+                        final updatedMeta = Map<String, dynamic>.from(loc['verification_metadata'] as Map);
+                        updatedMeta['hub_enabled'] = false;
+                        loc['verification_metadata'] = updatedMeta;
                       }
                     }
                     ref.invalidate(locationsStreamProvider);
@@ -1865,7 +1867,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               Row(children: [
                                 Switch(value: isHub, activeThumbColor: Colors.black,
                                   onChanged: (v) async {
-                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['hub_enabled'] = v; });
+                                    setState(() {
+                                      final meta = Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
+                                      meta['hub_enabled'] = v;
+                                      loc['verification_metadata'] = meta;
+                                    });
                                     await _toggleHub(loc, v);
                                     if (v == true) { try { await launchUrl(Uri.parse(_buildHubLocationUrl(loc))); } catch (_) {} }
                                     if (!dialogContext.mounted) return;
@@ -1880,7 +1886,11 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                                 Text('Company', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),
                                 Switch(value: isAgenticSettlement, activeThumbColor: Colors.black,
                                   onChanged: (v) async {
-                                    setState(() { (loc['verification_metadata'] as Map<String, dynamic>? ?? {})['settlement_model'] = v ? 'agentic' : 'company'; });
+                                    setState(() {
+                                      final meta = Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
+                                      meta['settlement_model'] = v ? 'agentic' : 'company';
+                                      loc['verification_metadata'] = meta;
+                                    });
                                     await ref.read(locationsControllerProvider).updateSettlementModel(loc, v ? 'agentic' : 'company');
                                   }),
                                 Text('Agentic', style: GoogleFonts.inter(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w600)),

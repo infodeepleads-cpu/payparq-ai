@@ -137,9 +137,8 @@ class LocationsController {
   Future<String> updateHubDesignation(
       Map<String, dynamic> loc, bool enabled) async {
     final id = loc['id'].toString();
-    final Map<String, dynamic> meta =
-        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
-    final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
+    final Map<String, dynamic> newMeta =
+        Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
     newMeta['hub_enabled'] = enabled;
     final displayId = (loc['display_id'] ?? '').toString();
     final name = (loc['name'] ?? '').toString().toLowerCase();
@@ -156,9 +155,8 @@ class LocationsController {
   Future<void> updateSettlementModel(
       Map<String, dynamic> loc, String settlementModel) async {
     final id = loc['id'].toString();
-    final Map<String, dynamic> meta =
-        (loc['verification_metadata'] ?? {}) as Map<String, dynamic>;
-    final Map<String, dynamic> newMeta = Map<String, dynamic>.from(meta);
+    final Map<String, dynamic> newMeta =
+        Map<String, dynamic>.from(loc['verification_metadata'] as Map? ?? {});
     final normalized = settlementModel.trim().toLowerCase();
     newMeta['settlement_model'] =
         normalized == 'company' ? 'company' : 'agentic';
