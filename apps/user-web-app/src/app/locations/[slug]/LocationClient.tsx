@@ -569,7 +569,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
       if (_isRegion(p) || _isPostal(p) || _isCountry(p)) continue;
       return _stripAdmin(p);
     }
-    return _stripAdmin(addrParts[0]) || locationName;
+    return (addrParts[0] ? _stripAdmin(addrParts[0]) : '') || locationName;
   })();
   const addressRegion = addrParts.find((p) => _isRegion(p)) || "";
   const addressPostal = addrParts.find((p) => _isPostal(p)) || "";

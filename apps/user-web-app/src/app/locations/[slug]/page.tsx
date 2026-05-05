@@ -143,7 +143,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
       if (_isRegion(p) || _isPostal(p) || _isCountry(p)) continue;
       return _stripAdmin(p);
     }
-    return _stripAdmin(addrParts[0]) || hub.name;
+    return (addrParts[0] ? _stripAdmin(addrParts[0]) : '') || hub.name;
   })();
   const address = hub.address || hub.name;
   const url = `https://payparq.ai/locations/${hub.canonical_slug}`;
