@@ -2155,6 +2155,34 @@ export default function MembersPage() {
             </div>
           )}
 
+          {/* Calendar Widget for Verified Listings */}
+          {ownerListings.some(l => l.verification_status === 'verified') && (
+            <div className="rounded-xl border border-black/10 bg-white p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">📅 Upravljaj kalendarima</p>
+              </div>
+              <div className="space-y-2">
+                {ownerListings
+                  .filter(loc => loc.verification_status === 'verified')
+                  .map((loc) => (
+                    <button
+                      key={loc.id}
+                      onClick={() => router.push(`/members/calendar/${loc.id}`)}
+                      className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-black/10 bg-black/2 hover:bg-purple-50 hover:border-purple-300 transition-all group"
+                    >
+                      <div className="text-left flex-1">
+                        <p className="text-xs font-semibold text-black">{loc.name}</p>
+                        <p className="text-[10px] text-black/50">{loc.capacity} mjesta</p>
+                      </div>
+                      <svg className="w-4 h-4 text-purple-500 group-hover:text-purple-700 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
+                      </svg>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {actionError && (
             <p className="text-[11px] text-red-600">{actionError}</p>
           )}
