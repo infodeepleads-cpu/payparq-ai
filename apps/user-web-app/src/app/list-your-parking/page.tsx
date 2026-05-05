@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { ListYourLotPanel } from '@/components/ListYourLotPanel';
 
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
@@ -11,10 +12,44 @@ type Step3Sub = 'photos' | 'streetView' | 'summary' | 'review3';
 
 export default function ListYourParkingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+
   const [currentStep, setCurrentStep] = useState<MainStep>('intro');
   const [currentSubStep, setCurrentSubStep] = useState<Step1Sub>('region');
   const [currentStep2Sub, setCurrentStep2Sub] = useState<Step2Sub>('availability');
   const [currentStep3Sub, setCurrentStep3Sub] = useState<Step3Sub>('photos');
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (editId && !redirecting) {
+      checkListingStatus();
+    }
+  }, [editId]);
+
+  const checkListingStatus = async () => {
+    try {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('locations')
+        .select('verification_status')
+        .eq('id', editId)
+        .single();
+
+      if (error || !data) return;
+
+      if (data.verification_status === 'verified') {
+        setRedirecting(true);
+        router.push(`/members/edit-listing/${editId}`);
+      }
+    } catch (err) {
+      // Silent fail, continue with normal flow
+    }
+  };
+
+  if (redirecting) {
+    return <div className="flex items-center justify-center min-h-screen"><p className="text-black/50">Redirecting...</p></div>;
+  }
 
   const handleBackButton = () => {
     if (currentStep === 'intro') {

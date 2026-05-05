@@ -2105,6 +2105,20 @@ export default function MembersPage() {
                         }`}>
                           {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
                         </span>
+                        {loc.verification_status === 'verified' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLotForManagement(loc.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
+                            title="Upravljaj kalendarom i cijenama"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
+                            </svg>
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
