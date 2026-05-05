@@ -842,6 +842,35 @@ export function ListYourLotPanel({
           router.push(`/list-your-parking?edit=${newId}`);
         }
       }
+      // Section 1: Update existing listing
+      else if (section === 1 && listingId) {
+        const updateData: any = {
+          name: data.name,
+          address: `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, ''),
+          latitude: parseFloat(data.latitude) || 0,
+          longitude: parseFloat(data.longitude) || 0,
+          capacity: parseInt(data.spaceType) || 1,
+          verification_metadata: {
+            listing_status: 'pending',
+            section_status: { section1: true, section2: sectionsSaved.section2, section3: sectionsSaved.section3 },
+            type: data.type,
+            features: data.features,
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+          },
+        };
+
+        const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
+        if (error) throw new Error(error.message);
+
+        setSectionsSaved({ ...sectionsSaved, section1: true });
+        setStep('intro');
+      }
       // Sections 2 & 3: Update existing listing
       else if (listingId && (section === 2 || section === 3)) {
         const updateData: any = {
