@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X, ChevronLeft } from 'lucide-react';
-import { ListingHeader } from '@/components/ListingHeader';
+import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X } from 'lucide-react';
+import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
@@ -199,22 +199,14 @@ export default function EditListingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <style>{`
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .logo-spin {
-            animation: rotate 2s linear infinite;
-          }
-        `}</style>
         <div className="text-center">
-          <div className="logo-spin w-16 h-16 mx-auto mb-4">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="45" fill="none" stroke="#5F3DFC" strokeWidth="2"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#5F3DFC" strokeWidth="1" opacity="0.5"/>
-              <path d="M 50 15 Q 70 30 70 50 Q 70 70 50 85 Q 30 70 30 50 Q 30 30 50 15" fill="#5F3DFC" opacity="0.8"/>
-            </svg>
+          <div className="relative flex items-center justify-center w-20 h-20 mx-auto mb-4">
+            {/* Rotating white ring */}
+            <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+            {/* Pulsating logo */}
+            <div className="animate-pulse w-12 h-12 rounded-full bg-[#020617] flex items-center justify-center shadow-lg z-10">
+              <span className="text-lg font-black tracking-tight text-white select-none">P</span>
+            </div>
           </div>
           <p className="text-black/60 text-sm">Učitavanje...</p>
         </div>
@@ -224,30 +216,10 @@ export default function EditListingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header - Same style as onboarding */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.back()}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Uredi popis</h1>
-              <p className="text-gray-600 text-sm">{formData.name || 'Parking lot'}</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+      <PayparqPageHeader
+        title="Uredi popis"
+        onBack={() => router.back()}
+      />
 
       {/* Success Message */}
       {success && (
