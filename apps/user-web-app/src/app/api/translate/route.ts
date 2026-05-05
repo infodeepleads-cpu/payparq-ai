@@ -75,6 +75,11 @@ const hrOverrides = new Map<string, string>([
   ["We operate with a founder mindset: high autonomy, clear ownership, and bias toward shipping. Agentic roles, not traditional employment constructs.", "Djelujemo s načinom razmišljanja osnivača: visoka autonomija, jasno vlasništvo. Agentičke uloge, a ne tradicionalni oblici zaposlenja."],
   ["Outcome-aligned model tied to city growth and performance — not salaries or benefits. Build value, share in the upside.", "Model usklađen s rezultatima povezan s rastom i učinkom grada — ne s plaćama ili beneficijama. Izgradite vrijednost, sudjelujte u dobitku."],
   ["Remote-friendly", "Prikladan za daljinski"],
+  // Calendar and booking related
+  ["calendar", "kalendar"],
+  ["Calendar", "Kalendar"],
+  ["Manage calendar and pricing", "Upravljaj kalendarom i cijenama"],
+  ["Manage calendar", "Upravljaj kalendarom"],
 ]);
 
 function normalizeInput(text: unknown) {

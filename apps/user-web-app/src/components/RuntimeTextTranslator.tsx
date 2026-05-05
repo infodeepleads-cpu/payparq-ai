@@ -122,6 +122,11 @@ const localHrOverrides = new Map<string, string>([
   ["Join thousands of hosts earning passive income with Payparq.", "Pridružite se tisućama domaćina koji zarađuju pasivan prihod uz Payparq."],
   ["Secure parking for the modern world", "Pametno parkiranje za moderan svijet"],
   ["Payparq connects parking space owners with verified drivers for frictionless urban mobility.", "PayParq povezuje vlasnike parkirnih mjesta s provjerenim vozačima za jednostavnu urbanu mobilnost."],
+  // Calendar and booking related
+  ["calendar", "kalendar"],
+  ["Calendar", "Kalendar"],
+  ["Manage calendar and pricing", "Upravljaj kalendarom i cijenama"],
+  ["Manage calendar", "Upravljaj kalendarom"],
 ]);
 
 function shouldTranslateText(text: string) {
