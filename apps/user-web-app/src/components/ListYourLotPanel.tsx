@@ -70,6 +70,7 @@ interface ListingData {
   additionalDescription: string;
   postBookingInstructions: string;
   addPostBookingInfo: boolean;
+  addOns: string[];
 }
 
 function InfoWidget({ tip }: { tip: string }) {
@@ -207,6 +208,7 @@ export function ListYourLotPanel({
     additionalDescription: '',
     postBookingInstructions: '',
     addPostBookingInfo: false,
+    addOns: [],
   });
 
   const updateData = (key: keyof ListingData, value: any) => {
