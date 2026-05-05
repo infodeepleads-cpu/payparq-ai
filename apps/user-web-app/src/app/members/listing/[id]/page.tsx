@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
 interface Listing {
   id: string;
@@ -53,7 +54,15 @@ export default function ListingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-black/50">Učitavanje...</p>
+        <div className="text-center">
+          <div className="relative flex items-center justify-center w-20 h-20 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+            <div className="animate-pulse w-12 h-12 rounded-full bg-[#020617] flex items-center justify-center shadow-lg z-10">
+              <span className="text-lg font-black tracking-tight text-white select-none">P</span>
+            </div>
+          </div>
+          <p className="text-black/60 text-sm">Učitavanje...</p>
+        </div>
       </div>
     );
   }
@@ -80,17 +89,16 @@ export default function ListingPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <PayparqPageHeader
+        title={listing.name}
+        onBack={() => router.back()}
+        lineColor="black"
+      />
+
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
-        <button
-          onClick={() => router.back()}
-          className="mb-6 text-blue-600 hover:text-blue-800 text-sm font-medium"
-        >
-          ← Nazad
-        </button>
 
         <div className="bg-white rounded-xl border border-black/10 p-6">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-black mb-2">{listing.name}</h1>
             <p className="text-black/60">{listing.address}</p>
           </div>
 

@@ -5,12 +5,15 @@ import { ChevronLeft } from 'lucide-react';
 interface PayparqPageHeaderProps {
   title: string;
   onBack: () => void;
+  lineColor?: 'violet' | 'black';
 }
 
-export function PayparqPageHeader({ title, onBack }: PayparqPageHeaderProps) {
+export function PayparqPageHeader({ title, onBack, lineColor = 'violet' }: PayparqPageHeaderProps) {
+  const lineClass = lineColor === 'black' ? 'border-black/20' : 'border-[#5F3DFC]';
+
   return (
     <div className="sticky top-0 z-50 bg-white">
-      <div className="px-4 py-4 md:py-5 md:px-6 border-b-2 border-[#5F3DFC]">
+      <div className={`px-4 py-4 md:py-5 md:px-6 border-b-2 ${lineClass}`}>
         <div className="flex items-center justify-between">
           {/* LEFT: Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
