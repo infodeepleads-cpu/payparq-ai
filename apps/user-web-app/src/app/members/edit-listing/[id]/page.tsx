@@ -3,19 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X } from 'lucide-react';
+import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
-  { id: 'space', label: 'Detalji prostora', icon: 'square' },
+  { id: 'space', label: 'Detalji prostora', icon: Square },
   { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
-  { id: 'booking', label: 'Vrste rezervacija', icon: 'calendar' },
+  { id: 'booking', label: 'Vrste rezervacija', icon: Calendar },
   { id: 'pricing', label: 'Cijene', icon: Euro },
-  { id: 'description', label: 'Opis', icon: 'file' },
+  { id: 'description', label: 'Opis', icon: FileText },
   { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
   { id: 'photos', label: 'Fotografije', icon: Camera },
-  { id: 'streetview', label: 'Pogled s ceste', icon: 'map' },
+  { id: 'streetview', label: 'Pogled s ceste', icon: Map },
 ];
 
 export default function EditListingPage() {
@@ -245,11 +245,7 @@ export default function EditListingPage() {
                       : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
-                  {typeof IconComponent === 'string' ? (
-                    <span className="w-5 h-5">•</span>
-                  ) : (
-                    <IconComponent className="w-5 h-5 flex-shrink-0" />
-                  )}
+                  <IconComponent className="w-5 h-5 flex-shrink-0" />
                   <span className="text-left">{section.label}</span>
                 </button>
               );

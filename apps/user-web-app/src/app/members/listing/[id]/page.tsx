@@ -115,14 +115,14 @@ export default function ListingPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-black/60 uppercase mb-1">ID</p>
-              <p className="text-xs font-mono text-black/50">{listing.id.substring(0, 8)}...</p>
+              <p className="text-xs font-mono text-black/50 break-all">{listing.id}</p>
             </div>
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={() => router.push(`/members/calendar/${listing.id}`)}
-              className="flex-1 px-4 py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
@@ -132,7 +132,7 @@ export default function ListingPage() {
 
             <button
               onClick={() => router.push(`/members/edit-listing/${listing.id}`)}
-              className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 bg-white text-[#5F3DFC] border-2 border-[#5F3DFC] rounded-lg font-semibold hover:bg-[#5F3DFC] hover:text-white transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
