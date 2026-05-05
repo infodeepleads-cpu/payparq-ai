@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface ListingData {
   id: string;
@@ -21,7 +21,6 @@ interface ListingData {
 export default function EditListingPage() {
   const params = useParams();
   const router = useRouter();
-  const supabase = createClient();
   const id = params.id as string;
 
   const [listing, setListing] = useState<ListingData | null>(null);
