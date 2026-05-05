@@ -2085,11 +2085,7 @@ export default function MembersPage() {
                     >
                       <button
                         onClick={() => {
-                          if (loc.verification_status === 'verified') {
-                            setSelectedLotForManagement(loc.id);
-                          } else {
-                            router.push(`/list-your-parking?edit=${loc.id}`);
-                          }
+                          router.push(`/members/listing/${loc.id}`);
                         }}
                         className="flex-1 text-left"
                       >
@@ -2109,7 +2105,7 @@ export default function MembersPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedLotForManagement(loc.id);
+                              router.push(`/members/calendar/${loc.id}`);
                             }}
                             className="opacity-0 group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
                             title="Upravljaj kalendarom i cijenama"
