@@ -543,7 +543,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_hourly}
-                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />
@@ -554,7 +554,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_daily}
-                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />
@@ -565,7 +565,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_monthly}
-                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />
