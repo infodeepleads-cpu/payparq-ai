@@ -13,7 +13,6 @@ interface NotificationCenterProps {
 export function NotificationCenter({ userId }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
-  const [requesting, setRequesting] = useState(false);
   const { notifications, unread, markRead } = useNotifications(userId);
 
   useEffect(() => {
@@ -22,50 +21,33 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
     }
   }, []);
 
-  const handleEnable = async () => {
+  const handleTogglePushNotifications = async () => {
     try {
-      setRequesting(true);
-      console.log('1. Requesting notification permission...');
-      const result = await Notification.requestPermission();
-      console.log('2. Permission result:', result);
-      setPermission(result);
-
-      if (result === 'granted') {
-        console.log('3. Initializing Firebase...');
-        await initializeFirebase();
-        console.log('4. Getting FCM token...');
-        const token = await getFCMToken();
-        console.log('5. FCM token received:', token ? `${token.substring(0, 20)}...` : 'null');
-
-        if (token && userId && supabase) {
-          console.log('6. Storing token in Supabase...');
-          const { error } = await supabase.from('device_tokens').upsert(
-            { user_id: userId, token, platform: 'web' },
-            { onConflict: 'user_id,token' }
-          );
-          if (error) {
-            console.error('7. Error storing token:', error);
-          } else {
-            console.log('7. Token stored successfully');
+      if (permission === 'granted') {
+        // Disable: unsubscribe from push
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) await sub.unsubscribe();
+        }
+        setPermission('denied');
+      } else {
+        // Enable: request permission
+        const result = await Notification.requestPermission();
+        setPermission(result);
+        if (result === 'granted') {
+          await initializeFirebase();
+          const token = await getFCMToken();
+          if (token && userId && supabase) {
+            await supabase.from('device_tokens').upsert(
+              { user_id: userId, token, platform: 'web' },
+              { onConflict: 'user_id,token' }
+            );
           }
         }
       }
     } catch (err) {
-      console.error('Permission request failed:', err);
-      alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setRequesting(false);
-    }
-  };
-
-  const handleTest = async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(`/api/test/notify-me?userId=${userId}`);
-      const data = await res.json();
-      alert(`Test sent!\nSupabase: ${data.supabaseNotification ? '✅' : '❌'}\nFirebase: ${data.firebaseSent > 0 ? '✅' : '❌ (check permission)'}`);
-    } catch {
-      alert('Test failed');
+      console.error('Toggle push notifications failed:', err);
     }
   };
 
@@ -74,28 +56,31 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       <div className="flex items-center gap-2">
         {permission === 'default' && (
           <button
-            onClick={handleEnable}
-            disabled={requesting}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60 flex items-center gap-1.5"
+            onClick={handleTogglePushNotifications}
+            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1.5"
           >
             <BellRing className="w-3.5 h-3.5" />
-            {requesting ? 'Enabling...' : 'Enable Notifications'}
+            Enable Notifications
           </button>
-        )}
-        {permission === 'denied' && (
-          <span className="px-2.5 py-1.5 text-xs font-semibold text-white/70 bg-white/10 rounded-lg flex items-center gap-1.5" title="Notifications blocked — reset in browser settings">
-            <BellOff className="w-3.5 h-3.5" />
-            Blocked
-          </span>
         )}
         {permission === 'granted' && (
           <button
-            onClick={handleTest}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-1.5"
-            title="Test push notification"
+            onClick={handleTogglePushNotifications}
+            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5"
+            title="Push notifications enabled"
           >
             <BellRing className="w-3.5 h-3.5" />
-            Test
+            On
+          </button>
+        )}
+        {permission === 'denied' && (
+          <button
+            onClick={handleTogglePushNotifications}
+            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1.5"
+            title="Push notifications disabled"
+          >
+            <BellOff className="w-3.5 h-3.5" />
+            Off
           </button>
         )}
 
