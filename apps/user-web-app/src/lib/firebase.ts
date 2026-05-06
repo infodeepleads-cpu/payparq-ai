@@ -33,8 +33,6 @@ export async function initializeFirebase() {
 
 export async function getFCMToken(): Promise<string | null> {
   try {
-    console.log('[FCM] Starting token generation...');
-
     if (!messaging) {
       await initializeFirebase();
     }
@@ -44,29 +42,20 @@ export async function getFCMToken(): Promise<string | null> {
       return null;
     }
 
-    // Unregister stale service workers and re-register
-    console.log('[FCM] Registering service worker...');
+    // Reuse existing service worker if already registered
     let swRegistration: ServiceWorkerRegistration | undefined;
     try {
-      // Unregister any existing service workers to clear stale push subscriptions
       const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of existingRegistrations) {
-        if (reg.active?.scriptURL.includes('firebase-messaging-sw')) {
-          const sub = await reg.pushManager.getSubscription();
-          if (sub) await sub.unsubscribe();
-          await reg.unregister();
-          console.log('[FCM] Unregistered stale service worker');
-        }
-      }
+      swRegistration = existingRegistrations.find(r => r.active?.scriptURL.includes('firebase-messaging-sw'));
 
-      swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      await navigator.serviceWorker.ready;
-      console.log('[FCM] Service worker registered:', swRegistration.scope);
+      if (!swRegistration) {
+        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
+      }
     } catch (swError) {
       console.error('[FCM] Service worker registration failed:', swError);
     }
 
-    console.log('[FCM] Requesting FCM token...');
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: swRegistration,
@@ -74,8 +63,6 @@ export async function getFCMToken(): Promise<string | null> {
 
     if (token) {
       console.log('[FCM] Token obtained successfully:', token.substring(0, 20) + '...');
-    } else {
-      console.warn('[FCM] No token returned');
     }
 
     return token || null;

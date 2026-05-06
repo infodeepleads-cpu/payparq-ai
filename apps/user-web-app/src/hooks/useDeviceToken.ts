@@ -16,9 +16,10 @@ export function useDeviceToken(userId: string | null) {
           const fcmToken = await getFCMToken();
           if (fcmToken) {
             localStorage.setItem('deviceToken', fcmToken);
-            await supabase!.from('device_tokens').upsert(
-              { user_id: userId, token: fcmToken, platform: 'web' },
-              { onConflict: 'user_id,token' }
+            // Replace all old tokens with the fresh one
+            await supabase!.from('device_tokens').delete().eq('user_id', userId);
+            await supabase!.from('device_tokens').insert(
+              { user_id: userId, token: fcmToken, platform: 'web' }
             );
             return;
           }
