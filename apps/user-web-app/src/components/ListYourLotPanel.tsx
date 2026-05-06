@@ -662,7 +662,13 @@ export function ListYourLotPanel({
         return;
       }
       if (currentStep3SubValue === 'review3') {
-        console.log('✅ Step 3 review → published, navigating to dashboard');
+        console.log('✅ Step 3 review → published, updating verification status');
+        if (listingId && supabase) {
+          await supabase
+            .from('locations')
+            .update({ verification_status: 'pending' })
+            .eq('id', listingId);
+        }
         router.push('/members?refresh=listings');
         return;
       }
