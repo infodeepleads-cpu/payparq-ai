@@ -11,6 +11,7 @@ interface Listing {
   address: string;
   capacity: number;
   verification_status: string;
+  display_id: string | null;
 }
 
 export default function ListingPage() {
@@ -34,7 +35,7 @@ export default function ListingPage() {
 
       const { data, error } = await supabase
         .from('locations')
-        .select('id, name, address, capacity, verification_status')
+        .select('id, name, address, capacity, verification_status, display_id')
         .eq('id', id)
         .single();
 
@@ -115,7 +116,7 @@ export default function ListingPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-black/60 uppercase mb-1">ID</p>
-              <p className="text-xs font-mono text-black/50 break-all">{listing.id}</p>
+              <p className="text-xs font-mono text-black/50 break-all">{listing.display_id ? String(listing.display_id).padStart(5, '0') : listing.id}</p>
             </div>
           </div>
 
