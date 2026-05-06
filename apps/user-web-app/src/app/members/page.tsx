@@ -2822,7 +2822,10 @@ export default function MembersPage() {
                     try {
                       const redirect = searchParams.get('redirect') || '';
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                      const callbackUrl = redirect ? `${origin}/auth/callback?redirect=${encodeURIComponent(redirect)}` : `${origin}/auth/callback`;
+                      if (redirect) {
+                        sessionStorage.setItem('authRedirect', redirect);
+                      }
+                      const callbackUrl = `${origin}/auth/callback`;
                       await supabase?.auth.signInWithOAuth({
                         provider: 'google',
                         options: {

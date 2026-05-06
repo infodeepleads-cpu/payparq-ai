@@ -26,7 +26,10 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        const redirectTo = searchParams.get('redirect') || '/members';
+        const redirectTo = (typeof window !== 'undefined' ? sessionStorage.getItem('authRedirect') : null) || searchParams.get('redirect') || '/members';
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('authRedirect');
+        }
         router.push(redirectTo);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
