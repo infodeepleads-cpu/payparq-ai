@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         firebaseApp = admin.apps[0]!;
         console.log('[CREDS] Using existing Firebase app');
       } else {
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+        const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
         firebaseApp = admin.initializeApp({
           credential: admin.credential.cert({
             projectId: process.env.FIREBASE_PROJECT_ID,
