@@ -38,11 +38,20 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         if (result === 'granted') {
           await initializeFirebase();
           const token = await getFCMToken();
+          console.log('[NC] Token:', token?.substring(0, 20), 'UserId:', userId, 'Supabase:', !!supabase);
           if (token && userId && supabase) {
-            await supabase.from('device_tokens').upsert(
+            console.log('[NC] Saving token to Supabase...');
+            const { error } = await supabase.from('device_tokens').upsert(
               { user_id: userId, token, platform: 'web' },
               { onConflict: 'user_id,token' }
             );
+            if (error) {
+              console.error('[NC] Supabase error:', error);
+            } else {
+              console.log('[NC] Token saved successfully');
+            }
+          } else {
+            console.log('[NC] Missing required data - token:', !!token, 'userId:', !!userId, 'supabase:', !!supabase);
           }
         }
       }
