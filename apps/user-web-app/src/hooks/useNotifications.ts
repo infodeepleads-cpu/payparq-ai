@@ -8,9 +8,10 @@ export function useNotifications(userId: string | null) {
 
   useEffect(() => {
     if (!userId || !supabase) return;
+    const client = supabase;
 
     const loadNotifications = async () => {
-      const { data } = await supabase
+      const { data } = await client
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
@@ -26,7 +27,7 @@ export function useNotifications(userId: string | null) {
 
     loadNotifications();
 
-    const channel = supabase
+    const channel = client
       .channel(`notifications:${userId}`)
       .on(
         'postgres_changes',
@@ -39,7 +40,7 @@ export function useNotifications(userId: string | null) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [userId]);
 
