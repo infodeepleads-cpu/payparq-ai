@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, X, BellOff, BellRing } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { initializeFirebase, getFCMToken } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 interface NotificationCenterProps {
   userId: string | null;
@@ -11,40 +12,79 @@ interface NotificationCenterProps {
 
 export function NotificationCenter({ userId }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [requestingPermission, setRequestingPermission] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [requesting, setRequesting] = useState(false);
   const { notifications, unread, markRead } = useNotifications(userId);
 
-  const handleRequestPermission = async () => {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleEnable = async () => {
     try {
-      setRequestingPermission(true);
-      if ('Notification' in window) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          await initializeFirebase();
-          const token = await getFCMToken();
-          console.log('FCM token obtained:', token);
+      setRequesting(true);
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result === 'granted') {
+        await initializeFirebase();
+        const token = await getFCMToken();
+        if (token && userId && supabase) {
+          await supabase.from('device_tokens').upsert(
+            { user_id: userId, token, platform: 'web' },
+            { onConflict: 'user_id,token' }
+          );
         }
       }
     } catch (err) {
       console.error('Permission request failed:', err);
     } finally {
-      setRequestingPermission(false);
+      setRequesting(false);
+    }
+  };
+
+  const handleTest = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/test/notify-me?userId=${userId}`);
+      const data = await res.json();
+      alert(`Test sent!\nSupabase: ${data.supabaseNotification ? '✅' : '❌'}\nFirebase: ${data.firebaseSent > 0 ? '✅' : '❌ (check permission)'}`);
+    } catch {
+      alert('Test failed');
     }
   };
 
   return (
     <>
       <div className="flex items-center gap-2">
-        {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default' && (
+        {permission === 'default' && (
           <button
-            onClick={handleRequestPermission}
-            disabled={requestingPermission}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60"
-            title="Enable notifications"
+            onClick={handleEnable}
+            disabled={requesting}
+            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60 flex items-center gap-1.5"
           >
-            {requestingPermission ? 'Requesting...' : 'Enable Notifications'}
+            <BellRing className="w-3.5 h-3.5" />
+            {requesting ? 'Enabling...' : 'Enable Notifications'}
           </button>
         )}
+        {permission === 'denied' && (
+          <span className="px-2.5 py-1.5 text-xs font-semibold text-white/70 bg-white/10 rounded-lg flex items-center gap-1.5" title="Notifications blocked — reset in browser settings">
+            <BellOff className="w-3.5 h-3.5" />
+            Blocked
+          </span>
+        )}
+        {permission === 'granted' && (
+          <button
+            onClick={handleTest}
+            className="px-2.5 py-1.5 text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-1.5"
+            title="Test push notification"
+          >
+            <BellRing className="w-3.5 h-3.5" />
+            Test
+          </button>
+        )}
+
         <button
           onClick={() => setIsOpen(true)}
           className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
