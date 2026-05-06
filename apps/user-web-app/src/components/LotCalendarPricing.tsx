@@ -229,9 +229,6 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                       )}
                     </>
                   )}
-                  {isClosed && (
-                    <p className="text-[8px] md:text-xs text-white/80 mt-0.5 md:mt-1">🔒</p>
-                  )}
                 </button>
               );
             })}
@@ -377,7 +374,17 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 type="number"
                 min="0"
                 value={price}
-                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || val === '0') {
+                    setPrice(0);
+                  } else {
+                    const num = parseInt(val);
+                    if (!isNaN(num)) {
+                      setPrice(num);
+                    }
+                  }
+                }}
                 className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
                 placeholder="Unesite cijenu u €"
               />
