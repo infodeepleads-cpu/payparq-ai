@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
             projectId: process.env.FIREBASE_PROJECT_ID,
             privateKey,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
           } as any),
         });
         console.log('[CREDS] Firebase initialized via individual vars');
