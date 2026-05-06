@@ -431,14 +431,22 @@ async function sendOwnerPushNotification(session: Stripe.Checkout.Session, locat
     const accessToken = await getFCMAccessToken(serviceAccountKey);
     if (!accessToken) return;
 
-    // Send to all device tokens
+    // Send to all device tokens, remove invalid ones
     await Promise.all(tokens.map(async (t) => {
       try {
-        await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+        const res = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
           method: "POST",
           headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
           body: JSON.stringify({ message: { token: t.token, notification: { title, body }, data: { type: "payment" } } }),
         });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          const status = err?.error?.status ?? "";
+          if (status === "UNREGISTERED" || status === "INVALID_ARGUMENT") {
+            await admin.from("device_tokens").delete().eq("token", t.token);
+            console.warn("[FCM] Removed invalid token:", t.token.substring(0, 20));
+          }
+        }
       } catch (e) {
         console.warn("[FCM] Send failed:", e);
       }
