@@ -71,18 +71,18 @@ export async function GET(req: NextRequest) {
 
     // Send to all tokens
     const messaging = admin.messaging(firebaseApp);
+    const errors: string[] = [];
     const results = await Promise.all(
       tokens.map((t) =>
         messaging.send({
           token: t.token,
           notification: { title: 'Test', body: 'Firebase is working!' },
         }).catch((e) => {
-          console.error('Send failed:', e.message);
+          errors.push(e.message);
           return null;
         })
       )
     );
-
     const sent = results.filter(r => r).length;
     const tokenPreviews = tokens.map(t => t.token.substring(0, 20) + '...');
     return NextResponse.json({
@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
       firebaseTotal: tokens.length,
       tokens: tokenPreviews,
       isFakeToken: tokens.some(t => t.token.startsWith('web_')),
+      errors: errors.length ? errors : undefined,
       status: sent > 0 ? 'Firebase push sent!' : 'Check token — may be fake (web_xxx)'
     });
   } catch (err) {
