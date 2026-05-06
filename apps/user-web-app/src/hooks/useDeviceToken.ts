@@ -8,34 +8,35 @@ export function useDeviceToken(userId: string | null) {
 
     const storeToken = async () => {
       try {
-        if (!supabase) return;
+        if (typeof window === 'undefined') return;
 
-        // Request notification permission first
-        if ('Notification' in window && Notification.permission === 'default') {
-          await Notification.requestPermission();
-        }
-
-        // Initialize Firebase and get FCM token
-        await initializeFirebase();
-        let token = await getFCMToken();
-
-        // Fallback to local token if FCM not available
-        if (!token) {
-          token = localStorage.getItem('deviceToken');
-          if (!token) {
-            token = 'web_' + Math.random().toString(36).substr(2, 9) + Date.now();
+        // If permission already granted, register FCM immediately
+        if ('Notification' in window && Notification.permission === 'granted') {
+          await initializeFirebase();
+          const fcmToken = await getFCMToken();
+          if (fcmToken) {
+            await supabase!.from('device_tokens').upsert(
+              { user_id: userId, token: fcmToken, platform: 'web' },
+              { onConflict: 'user_id,token' }
+            );
+            localStorage.setItem('deviceToken', fcmToken);
+            return;
           }
         }
 
-        localStorage.setItem('deviceToken', token);
+        // Fallback to stored token
+        const stored = localStorage.getItem('deviceToken');
+        if (stored && !stored.startsWith('web_')) return; // already a real FCM token
 
-        // Store in database
-        await supabase
-          .from('device_tokens')
-          .upsert(
-            { user_id: userId, token, platform: 'web' },
+        // Generate placeholder if nothing stored
+        if (!stored) {
+          const placeholder = 'web_' + Math.random().toString(36).substr(2, 9) + Date.now();
+          localStorage.setItem('deviceToken', placeholder);
+          await supabase!.from('device_tokens').upsert(
+            { user_id: userId, token: placeholder, platform: 'web' },
             { onConflict: 'user_id,token' }
           );
+        }
       } catch (err) {
         console.error('Failed to store device token:', err);
       }

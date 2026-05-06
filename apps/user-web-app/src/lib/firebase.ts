@@ -1,6 +1,6 @@
 'use client';
 
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -10,22 +10,23 @@ const firebaseConfig = {
   storageBucket: 'payparq-d-6rex95.firebasestorage.app',
   messagingSenderId: '913890552108',
   appId: '1:913890552108:web:064f8b527aa71887986489',
-  measurementId: 'G-2FHJVX51E4',
 };
 
-let app: any = null;
+const VAPID_KEY = 'BBivN-xqjRD52mFXWci9qxl6DOonvFPlME_XCmoVGMkhJqda8HkMN6AKqvkK69TrPxnqOBxzbOkQj-n-4_cxjho';
+
 let messaging: any = null;
 
 export async function initializeFirebase() {
-  if (app) return app;
   try {
-    app = initializeApp(firebaseConfig);
-    if (await isSupported()) {
+    const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+    const supported = await isSupported();
+    console.log('[FCM] Messaging supported:', supported);
+    if (supported) {
       messaging = getMessaging(app);
     }
     return app;
   } catch (error) {
-    console.error('Firebase initialization error:', error);
+    console.error('[FCM] Init error:', error);
     return null;
   }
 }
@@ -33,20 +34,39 @@ export async function initializeFirebase() {
 export async function getFCMToken(): Promise<string | null> {
   try {
     console.log('[FCM] Starting token generation...');
+
     if (!messaging) {
-      console.log('[FCM] Messaging not initialized, initializing now...');
       await initializeFirebase();
     }
+
     if (!messaging) {
-      console.log('[FCM] Messaging still null after init');
+      console.error('[FCM] Messaging not available');
       return null;
     }
 
-    console.log('[FCM] Calling getToken with VAPID key...');
+    // Register service worker explicitly
+    console.log('[FCM] Registering service worker...');
+    let swRegistration: ServiceWorkerRegistration | undefined;
+    try {
+      swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.ready;
+      console.log('[FCM] Service worker registered:', swRegistration.scope);
+    } catch (swError) {
+      console.error('[FCM] Service worker registration failed:', swError);
+    }
+
+    console.log('[FCM] Requesting FCM token...');
     const token = await getToken(messaging, {
-      vapidKey: 'BBivN-xqjRD52mFXWci9qxl6DOonvFPlME_XCmoVGMkhJqda8HkMN6AKqvkK69TrPxnqOBxzbOkQj-n-4_cxjho',
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swRegistration,
     });
-    console.log('[FCM] Token received:', token ? 'success' : 'empty');
+
+    if (token) {
+      console.log('[FCM] Token obtained successfully:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('[FCM] No token returned');
+    }
+
     return token || null;
   } catch (error) {
     console.error('[FCM] Error getting token:', error);
@@ -61,6 +81,7 @@ export async function onMessageListener() {
       return;
     }
     onMessage(messaging, (payload) => {
+      console.log('[FCM] Foreground message received:', payload);
       resolve(payload);
     });
   });
