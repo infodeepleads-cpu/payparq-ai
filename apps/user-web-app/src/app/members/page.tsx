@@ -2404,48 +2404,77 @@ export default function MembersPage() {
               Manage saved cards that can be charged for future sessions.
             </p>
           </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-black/70">
-              Saved payment methods
-            </p>
-            {paymentMethodsLoading && (
-              <p className="text-sm text-black/60">Loading payment methods...</p>
-            )}
-            {paymentMethods.length === 0 && (
-              <p className="text-sm text-black/60">
-                No payment methods added yet.
+          {/* PAYMENTS SECTION */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-black">Payments</h3>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-black/70">
+                Saved payment methods
               </p>
-            )}
-            {paymentMethods.length > 0 && (
-              <ul className="space-y-2 text-sm text-black/80">
-                {paymentMethods.map((method) => (
-                  <li
-                    key={method.id}
-                    className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2"
-                  >
-                    <span>
-                      {method.brand.toUpperCase()} •••• {method.last4}
-                      {method.expMonth && method.expYear ? ` · ${method.expMonth}/${method.expYear}` : ""}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-black/50">
-                        {method.isDefault ? "Default card" : "Card on file"}
+              {paymentMethodsLoading && (
+                <p className="text-sm text-black/60">Loading payment methods...</p>
+              )}
+              {paymentMethods.length === 0 && (
+                <p className="text-sm text-black/60">
+                  No payment methods added yet.
+                </p>
+              )}
+              {paymentMethods.length > 0 && (
+                <ul className="space-y-2 text-sm text-black/80">
+                  {paymentMethods.map((method) => (
+                    <li
+                      key={method.id}
+                      className="flex items-center justify-between rounded-lg border border-black/10 bg-white px-3 py-2"
+                    >
+                      <span>
+                        {method.brand.toUpperCase()} •••• {method.last4}
+                        {method.expMonth && method.expYear ? ` · ${method.expMonth}/${method.expYear}` : ""}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => void handleRemovePaymentMethod(method.id)}
-                        className="text-[11px] underline underline-offset-2 text-black/60 hover:text-black"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-black/50">
+                          {method.isDefault ? "Default card" : "Card on file"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleRemovePaymentMethod(method.id)}
+                          className="text-[11px] underline underline-offset-2 text-black/60 hover:text-black"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-black/70">
+                Add a payment method
+              </p>
+              <div className="flex flex-col md:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddPaymentMethod}
+                  disabled={!!actionProcessing}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
+                >
+                  Add payment method
+                </button>
+              </div>
+              <p className="text-[11px] text-black/60">
+                Opens secure Stripe setup and stores cards on your customer profile.
+              </p>
+              {actionError && (
+                <p className="text-[11px] text-red-600">{actionError}</p>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+
+          {/* PAYOUTS SECTION */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-black">Payouts</h3>
+            <div className="space-y-2">
+              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
               <button
                 type="button"
                 onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
@@ -2507,45 +2536,22 @@ export default function MembersPage() {
                 </div>
               )}
             </div>
-          </div>
-          <div className="space-y-2">
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <p className="text-sm font-semibold text-black mb-3">Prihodi i isplate</p>
+              <p className="text-sm font-semibold text-black mb-3">Revenue & Payouts</p>
               <div className="space-y-2.5">
                 <div>
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Ukupni prihodi</p>
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Total Revenue</p>
                   <p className="text-2xl font-bold text-green-700">€0.00</p>
                 </div>
                 <div className="border-t border-green-200 pt-2.5">
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Na čekanju</p>
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Pending</p>
                   <p className="text-lg font-semibold text-orange-600">€0.00</p>
                 </div>
                 <button className="w-full mt-2 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
-                  Detaljno
+                  View Details
                 </button>
               </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-black/70">
-              Add a payment method
-            </p>
-            <div className="flex flex-col md:flex-row gap-2">
-              <button
-                type="button"
-                onClick={handleAddPaymentMethod}
-                disabled={!!actionProcessing}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-black text-white text-xs font-semibold shadow-md hover:bg-gray-900 transition-colors disabled:opacity-60"
-              >
-                Add payment method
-              </button>
-            </div>
-            <p className="text-[11px] text-black/60">
-              Opens secure Stripe setup and stores cards on your customer profile.
-            </p>
-            {actionError && (
-              <p className="text-[11px] text-red-600">{actionError}</p>
-            )}
           </div>
         </div>
       );
