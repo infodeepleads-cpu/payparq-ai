@@ -25,20 +25,34 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   const handleEnable = async () => {
     try {
       setRequesting(true);
+      console.log('1. Requesting notification permission...');
       const result = await Notification.requestPermission();
+      console.log('2. Permission result:', result);
       setPermission(result);
+
       if (result === 'granted') {
+        console.log('3. Initializing Firebase...');
         await initializeFirebase();
+        console.log('4. Getting FCM token...');
         const token = await getFCMToken();
+        console.log('5. FCM token received:', token ? `${token.substring(0, 20)}...` : 'null');
+
         if (token && userId && supabase) {
-          await supabase.from('device_tokens').upsert(
+          console.log('6. Storing token in Supabase...');
+          const { error } = await supabase.from('device_tokens').upsert(
             { user_id: userId, token, platform: 'web' },
             { onConflict: 'user_id,token' }
           );
+          if (error) {
+            console.error('7. Error storing token:', error);
+          } else {
+            console.log('7. Token stored successfully');
+          }
         }
       }
     } catch (err) {
       console.error('Permission request failed:', err);
+      alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setRequesting(false);
     }

@@ -32,17 +32,24 @@ export async function initializeFirebase() {
 
 export async function getFCMToken(): Promise<string | null> {
   try {
+    console.log('[FCM] Starting token generation...');
     if (!messaging) {
+      console.log('[FCM] Messaging not initialized, initializing now...');
       await initializeFirebase();
     }
-    if (!messaging) return null;
+    if (!messaging) {
+      console.log('[FCM] Messaging still null after init');
+      return null;
+    }
 
+    console.log('[FCM] Calling getToken with VAPID key...');
     const token = await getToken(messaging, {
       vapidKey: 'BBivN-xqjRD52mFXWci9qxl6DOonvFPlME_XCmoVGMkhJqda8HkMN6AKqvkK69TrPxnqOBxzbOkQj-n-4_cxjho',
     });
+    console.log('[FCM] Token received:', token ? 'success' : 'empty');
     return token || null;
   } catch (error) {
-    console.error('Failed to get FCM token:', error);
+    console.error('[FCM] Error getting token:', error);
     return null;
   }
 }
