@@ -280,6 +280,8 @@ export default function MembersPage() {
   const [plateMessage, setPlateMessage] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRow[]>([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [isStripeConnectExpanded, setIsStripeConnectExpanded] = useState(false);
+  const [isStripeConnectConnected, setIsStripeConnectConnected] = useState(false);
   const [actionProcessing, setActionProcessing] = useState<ActionProcessing | null>(null);
   const [actionError, setActionError] = useState("");
   const [activityLoading, setActivityLoading] = useState(false);
@@ -1056,6 +1058,20 @@ export default function MembersPage() {
         setOwnerListingsLoading(false);
       });
   }, [user, searchParams]);
+
+  useEffect(() => {
+    if (!user || !supabase) return;
+    supabase
+      .from('stripe_accounts')
+      .select('stripe_account_id, is_connected')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.is_connected) {
+          setIsStripeConnectConnected(true);
+        }
+      });
+  }, [user]);
 
   useEffect(() => {
     if (!hasMemberIdentity || typeof window === "undefined") {
@@ -2422,6 +2438,63 @@ export default function MembersPage() {
                 ))}
               </ul>
             )}
+          </div>
+          <div className="space-y-2">
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+              <button
+                type="button"
+                onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#7C3AED] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.5 1.5H2.75A1.25 1.25 0 001.5 2.75v14.5A1.25 1.25 0 002.75 18.5h14.5a1.25 1.25 0 001.25-1.25V9.5m-15-4h12m-12 6h12m-8-8v16" strokeWidth="1.5" stroke="currentColor" fill="none"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-sm font-semibold text-black">Stripe Connect</h3>
+                    <p className="text-[11px] text-black/60">
+                      {isStripeConnectConnected ? "Povezan račun" : "Poveži svoju bankovnu račun"}
+                    </p>
+                  </div>
+                </div>
+                <svg
+                  className={`w-5 h-5 text-[#7C3AED] transition-transform ${isStripeConnectExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+              {isStripeConnectExpanded && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm text-black/70">
+                    Poveži Stripe račun kako bi prihvatio plaćanja i upravlyao transakcijama.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (user?.id) {
+                          window.location.href = `/api/stripe/connect?user_id=${user.id}`;
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] transition-colors"
+                    >
+                      Poveži Stripe račun
+                    </button>
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded-lg border border-[#7C3AED] text-[#7C3AED] text-sm font-semibold hover:bg-purple-50 transition-colors"
+                    >
+                      Poveži isti račun s PayParq-a
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-semibold text-black/70">
