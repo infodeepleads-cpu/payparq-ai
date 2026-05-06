@@ -4,12 +4,13 @@ import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
 const firebaseConfig = {
-  projectId: 'payparq-d-6rex95',
-  appId: '1:105869582839721996226:web:placeholder',
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  apiKey: 'AIzaSyAaEjvkpPSwcJhOOTViVbiRMW3sQq9sgSI',
   authDomain: 'payparq-d-6rex95.firebaseapp.com',
-  messagingSenderId: '105869582839721996226',
-  storageBucket: 'payparq-d-6rex95.appspot.com',
+  projectId: 'payparq-d-6rex95',
+  storageBucket: 'payparq-d-6rex95.firebasestorage.app',
+  messagingSenderId: '913890552108',
+  appId: '1:913890552108:web:064f8b527aa71887986489',
+  measurementId: 'G-2FHJVX51E4',
 };
 
 let app: any = null;
@@ -37,7 +38,7 @@ export async function getFCMToken(): Promise<string | null> {
     if (!messaging) return null;
 
     const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      vapidKey: 'BBivN-xqjRD52mFXWci9qxl6DOonvFPlME_XCmoVGMkhJqda8HkMN6AKqvkK69TrPxnqOBxzbOkQj-n-4_cxjho',
     });
     return token || null;
   } catch (error) {
