@@ -359,7 +359,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value === "" ? "" : parseInt(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     min="1"
                   />
@@ -456,12 +456,24 @@ export default function EditListingPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Karakteristike</label>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.features.map((feature, idx) => (
-                      <span key={idx} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold">
-                        {feature}
-                      </span>
+                  <label className="block text-xs font-semibold text-black/60 mb-3 uppercase">Karakteristike</label>
+                  <div className="space-y-2">
+                    {['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging'].map((feature) => (
+                      <label key={feature} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.features.includes(feature)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({ ...formData, features: [...formData.features, feature] });
+                            } else {
+                              setFormData({ ...formData, features: formData.features.filter(f => f !== feature) });
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-black/20 accent-[#7C3AED]"
+                        />
+                        <span className="text-sm text-black">{feature}</span>
+                      </label>
                     ))}
                   </div>
                 </div>
@@ -531,7 +543,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_hourly}
-                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />
@@ -542,7 +554,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_daily}
-                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />
@@ -553,7 +565,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.base_price_monthly}
-                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value === "" ? "" : parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     step="0.01"
                   />

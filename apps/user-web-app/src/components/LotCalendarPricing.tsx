@@ -166,7 +166,11 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       {/* Header */}
       <div className="mb-4 md:mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">{lotName}</h2>
-        <p className="text-xs md:text-sm text-gray-600">{lotAddress} • Kapacitet: {lotCapacity} mjesta</p>
+        <div className="text-xs md:text-sm text-gray-600 flex flex-col md:flex-row md:gap-2">
+          <span>{lotAddress}</span>
+          <span className="hidden md:inline">•</span>
+          <span>Kapacitet: {lotCapacity} mjesta</span>
+        </div>
       </div>
 
       {/* Calendar Container */}
