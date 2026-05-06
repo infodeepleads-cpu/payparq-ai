@@ -317,7 +317,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           onChange={(e) => {
             const val = e.target.value;
             if (val === '') {
-              setCapacity(1);
+              setCapacity(0);
             } else {
               const num = parseInt(val);
               if (!isNaN(num) && num >= 1 && num <= lotCapacity) {
@@ -325,7 +325,8 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
               }
             }
           }}
-          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+          className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
         />
       </div>
 
@@ -386,16 +387,17 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 value={price}
                 onChange={(e) => {
                   const val = e.target.value;
-                  if (val === '' || val === '0') {
+                  if (val === '') {
                     setPrice(0);
                   } else {
                     const num = parseInt(val);
-                    if (!isNaN(num)) {
+                    if (!isNaN(num) && num >= 0) {
                       setPrice(num);
                     }
                   }
                 }}
-                className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
+                className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                 placeholder="Unesite cijenu u €"
               />
             </div>
@@ -410,6 +412,12 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border border-gray-300 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors"
         >
           Odustani
+        </button>
+        <button
+          onClick={() => onDelete()}
+          className="px-3 md:px-4 py-2.5 md:py-3 border border-red-300 text-red-600 rounded-lg text-xs md:text-sm font-medium hover:bg-red-50 transition-colors"
+        >
+          Obriši
         </button>
         <button
           onClick={() => onSave({ date: config.date, capacity, isOpen, openTime, closeTime, priceMode, price })}
