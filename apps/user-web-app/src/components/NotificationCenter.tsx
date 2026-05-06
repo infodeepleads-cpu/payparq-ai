@@ -133,7 +133,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                       {notif.title}
                     </p>
                     <p className="text-xs text-black/60 mt-1">
-                      {new Date(notif.created_at).toLocaleString()}
+                      {new Date(notif.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}
                     </p>
                   </button>
                 ))
