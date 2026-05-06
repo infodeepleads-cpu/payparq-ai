@@ -364,6 +364,90 @@ function buildCustomerEmail(params: {
 </body></html>`;
 }
 
+async function getFCMAccessToken(serviceAccountKey: string): Promise<string | null> {
+  try {
+    const sa = JSON.parse(serviceAccountKey);
+    const now = Math.floor(Date.now() / 1000);
+    const header = btoa(JSON.stringify({ alg: "RS256", typ: "JWT" })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const claims = btoa(JSON.stringify({
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now,
+    })).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const pemKey = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g, "");
+    const keyData = Uint8Array.from(atob(pemKey), (c) => c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey("pkcs8", keyData, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+    const signingInput = `${header}.${claims}`;
+    const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, new TextEncoder().encode(signingInput));
+    const sig = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${signingInput}.${sig}`,
+    });
+    const tokenData = await tokenRes.json();
+    return tokenData.access_token ?? null;
+  } catch (e) {
+    console.error("[FCM] Failed to get access token:", e);
+    return null;
+  }
+}
+
+async function sendOwnerPushNotification(session: Stripe.Checkout.Session, locationId: string, locationName: string): Promise<void> {
+  try {
+    const serviceAccountKey = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY") ?? "";
+    if (!serviceAccountKey) return;
+
+    const sa = JSON.parse(serviceAccountKey);
+    const projectId = sa.project_id;
+
+    // Get location owner
+    const { data: loc } = await admin.from("locations").select("owner_id").eq("id", locationId).maybeSingle();
+    if (!loc?.owner_id) return;
+
+    // Get device tokens
+    const { data: tokens } = await admin.from("device_tokens").select("token").eq("user_id", loc.owner_id);
+    if (!tokens?.length) return;
+
+    // Build notification content
+    const amount = Number(session.amount_total ?? 0);
+    const amountStr = amount > 0 ? `€${(amount / 100).toFixed(2)}` : "Free";
+    const metadata = session.metadata ?? {};
+    const plate = metadata.plate || session.custom_fields?.find((f: any) => f.key === "plate_number")?.text?.value || null;
+    const title = `New booking — ${locationName}`;
+    const body = [plate ? `Plate: ${plate}` : null, `Amount: ${amountStr}`].filter(Boolean).join(" · ");
+
+    // Save to notifications table
+    await admin.from("notifications").insert({
+      user_id: loc.owner_id,
+      type: "payment",
+      title,
+      data: { location: locationName, amount, plate, body, customerEmail: session.customer_details?.email },
+    });
+
+    // Get FCM access token
+    const accessToken = await getFCMAccessToken(serviceAccountKey);
+    if (!accessToken) return;
+
+    // Send to all device tokens
+    await Promise.all(tokens.map(async (t) => {
+      try {
+        await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ message: { token: t.token, notification: { title, body }, data: { type: "payment" } } }),
+        });
+      } catch (e) {
+        console.warn("[FCM] Send failed:", e);
+      }
+    }));
+  } catch (e) {
+    console.error("[FCM] sendOwnerPushNotification error:", e);
+  }
+}
+
 async function sendPaymentNotification(session: Stripe.Checkout.Session, locationDisplay: string): Promise<void> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
   if (!resendApiKey) return;
@@ -632,6 +716,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
     const updated = await updateSessionWithSchemaFallback(session.id, insertData);
     if (updated.ok) {
       await sendCustomerConfirmation();
+      await sendOwnerPushNotification(session, resolvedLocation.id, locationDisplay);
       return { ok: true };
     }
     console.error(`[V19] Update failed: ${updated.message}`);
@@ -643,6 +728,7 @@ async function persistCheckoutSession(session: Stripe.Checkout.Session): Promise
   if (inserted.ok) {
     console.log(`[V19] Insert successful`);
     await sendCustomerConfirmation();
+    await sendOwnerPushNotification(session, resolvedLocation.id, locationDisplay);
     return { ok: true };
   }
   console.error(`[V19] Insert failed: ${inserted.message}`);
