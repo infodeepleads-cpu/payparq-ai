@@ -7,6 +7,8 @@ export function useDeviceToken(userId: string | null) {
 
     const storeToken = async () => {
       try {
+        if (!supabase) return;
+
         // Generate or retrieve device token
         let token = localStorage.getItem('deviceToken');
         if (!token) {
