@@ -10,7 +10,6 @@ const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
   { id: 'space', label: 'Detalji prostora', icon: Square },
   { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
-  { id: 'booking', label: 'Vrste rezervacija', icon: Calendar },
   { id: 'pricing', label: 'Cijene', icon: Euro },
   { id: 'description', label: 'Opis', icon: FileText },
   { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
@@ -62,16 +61,6 @@ export default function EditListingPage() {
     smartPricing: false,
     permits: 'None required',
 
-    // Booking Options
-    allowOvernightBookings: true,
-    noticeRequired: '0 hours',
-    startTakingBookingsToday: true,
-    bookingStartDate: '2026-05-05',
-    bookingWindow: '90 days',
-    acceptMonthlyBookings: true,
-    acceptHourlyDailyBookings: true,
-    availablePlan: 'Premium',
-    pricingModel: 'Fixed pricing',
 
     // Pricing
     base_price_hourly: '5.50',
@@ -170,15 +159,6 @@ export default function EditListingPage() {
         daysAvailable: data.verification_metadata?.daysAvailable || [],
         smartPricing: data.verification_metadata?.smartPricing || false,
         permits: data.verification_metadata?.permits || '',
-        allowOvernightBookings: data.verification_metadata?.allowOvernightBookings || false,
-        noticeRequired: data.verification_metadata?.noticeRequired || '',
-        startTakingBookingsToday: data.verification_metadata?.startTakingBookingsToday || false,
-        bookingStartDate: data.verification_metadata?.bookingStartDate || '',
-        bookingWindow: data.verification_metadata?.bookingWindow || '',
-        acceptMonthlyBookings: data.verification_metadata?.acceptMonthlyBookings || false,
-        acceptHourlyDailyBookings: data.verification_metadata?.acceptHourlyDailyBookings || false,
-        availablePlan: data.verification_metadata?.availablePlan || '',
-        pricingModel: data.verification_metadata?.pricingModel || '',
         base_price_hourly: String(data.base_price_hourly || 0),
         base_price_daily: String(data.base_price_daily || 0),
         base_price_monthly: String(data.base_price_monthly || 0),
@@ -186,8 +166,8 @@ export default function EditListingPage() {
         additionalDescription: data.verification_metadata?.additionalDescription || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
-        photos: [],
-        streetView: '',
+        photos: data.verification_metadata?.photos || [],
+        streetView: data.verification_metadata?.streetView || '',
       });
     } catch (err) {
       console.error('Error loading listing:', err);
@@ -535,127 +515,10 @@ export default function EditListingPage() {
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Days Available</label>
                   <p className="text-sm text-black">{formData.daysAvailable.join(', ')}</p>
                 </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.allowOvernightBookings}
-                      onChange={(e) => setFormData({ ...formData, allowOvernightBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Allow Overnight Bookings</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Notice Required</label>
-                  <input
-                    type="text"
-                    value={formData.noticeRequired}
-                    onChange={(e) => setFormData({ ...formData, noticeRequired: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Booking Window</label>
-                  <input
-                    type="text"
-                    value={formData.bookingWindow}
-                    onChange={(e) => setFormData({ ...formData, bookingWindow: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.startTakingBookingsToday}
-                      onChange={(e) => setFormData({ ...formData, startTakingBookingsToday: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Start Taking Bookings Today</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Booking Start Date</label>
-                  <input
-                    type="date"
-                    value={formData.bookingStartDate}
-                    onChange={(e) => setFormData({ ...formData, bookingStartDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Available Plan</label>
-                  <input
-                    type="text"
-                    value={formData.availablePlan}
-                    onChange={(e) => setFormData({ ...formData, availablePlan: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
               </div>
             </div>
 
-            {/* SECTION 4: BOOKING TYPES */}
-            <div id="booking" className="scroll-mt-24 pt-6 border-t border-black/10">
-              <h2 className="text-2xl font-bold text-black mb-4">Booking Types & Options</h2>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptMonthlyBookings}
-                      onChange={(e) => setFormData({ ...formData, acceptMonthlyBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Accept Monthly Bookings</span>
-                  </label>
-                </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptHourlyDailyBookings}
-                      onChange={(e) => setFormData({ ...formData, acceptHourlyDailyBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Accept Hourly & Daily Bookings</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Pricing Model</label>
-                  <input
-                    type="text"
-                    value={formData.pricingModel}
-                    onChange={(e) => setFormData({ ...formData, pricingModel: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.smartPricing}
-                      onChange={(e) => setFormData({ ...formData, smartPricing: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Smart Pricing</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 5: PRICING */}
+            {/* SECTION 4: PRICING */}
             <div id="pricing" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Euro className="w-5 h-5 text-black" />
@@ -698,7 +561,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 6: DESCRIPTION */}
+            {/* SECTION 5: DESCRIPTION */}
             <div id="description" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Description</h2>
               <textarea
@@ -709,7 +572,7 @@ export default function EditListingPage() {
               />
             </div>
 
-            {/* SECTION 7: ADDITIONAL INFO */}
+            {/* SECTION 6: ADDITIONAL INFO */}
             <div id="additional" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Additional Information</h2>
 
@@ -756,7 +619,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 8: PHOTOS */}
+            {/* SECTION 7: PHOTOS */}
             <div id="photos" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
@@ -791,7 +654,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 9: STREET VIEW */}
+            {/* SECTION 8: STREET VIEW */}
             <div id="streetview" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
