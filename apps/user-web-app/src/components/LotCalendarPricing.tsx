@@ -314,7 +314,17 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           min="1"
           max={lotCapacity}
           value={capacity}
-          onChange={(e) => setCapacity(parseInt(e.target.value) || 1)}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '') {
+              setCapacity(1);
+            } else {
+              const num = parseInt(val);
+              if (!isNaN(num) && num >= 1 && num <= lotCapacity) {
+                setCapacity(num);
+              }
+            }
+          }}
           className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto"
         />
       </div>
