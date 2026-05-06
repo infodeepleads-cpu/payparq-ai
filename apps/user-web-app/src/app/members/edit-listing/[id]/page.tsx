@@ -359,7 +359,7 @@ export default function EditListingPage() {
                   <input
                     type="number"
                     value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value === "" ? "" : parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                     className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
                     min="1"
                   />
