@@ -44,10 +44,21 @@ export async function getFCMToken(): Promise<string | null> {
       return null;
     }
 
-    // Register service worker explicitly
+    // Unregister stale service workers and re-register
     console.log('[FCM] Registering service worker...');
     let swRegistration: ServiceWorkerRegistration | undefined;
     try {
+      // Unregister any existing service workers to clear stale push subscriptions
+      const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of existingRegistrations) {
+        if (reg.active?.scriptURL.includes('firebase-messaging-sw')) {
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) await sub.unsubscribe();
+          await reg.unregister();
+          console.log('[FCM] Unregistered stale service worker');
+        }
+      }
+
       swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
       await navigator.serviceWorker.ready;
       console.log('[FCM] Service worker registered:', swRegistration.scope);
