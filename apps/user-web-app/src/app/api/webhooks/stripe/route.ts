@@ -40,14 +40,33 @@ try {
   console.error('Firebase initialization error:', err);
 }
 
-async function sendPaymentNotification(ownerId: string, amount: number, location: string) {
+interface SessionData {
+  location: string;
+  amount: number;
+  plate?: string | null;
+  customerEmail?: string | null;
+  startDate?: string | null;
+  startTime?: string | null;
+  duration?: string | null;
+}
+
+async function sendPaymentNotification(ownerId: string, session: SessionData) {
   try {
+    const amountStr = session.amount > 0 ? `€${(session.amount / 100).toFixed(2)}` : 'Free';
+    const title = `New booking — ${session.location}`;
+    const body = [
+      session.plate ? `Plate: ${session.plate}` : null,
+      session.startDate ? `Date: ${session.startDate}` : null,
+      session.duration ? `Duration: ${session.duration}h` : null,
+      `Amount: ${amountStr}`,
+    ].filter(Boolean).join(' · ');
+
     // Save to notifications table
     await supabase.from('notifications').insert({
       user_id: ownerId,
       type: 'payment',
-      title: `Payment received €${(amount / 100).toFixed(2)}`,
-      data: { location, amount, timestamp: new Date().toISOString() },
+      title,
+      data: { ...session, body },
     });
 
     // Get device tokens
@@ -64,12 +83,9 @@ async function sendPaymentNotification(ownerId: string, amount: number, location
       tokens.map((t) =>
         messaging.send({
           token: t.token,
-          notification: {
-            title: 'Payment Received',
-            body: `€${(amount / 100).toFixed(2)} at ${location}`,
-          },
-          data: { type: 'payment', location },
-        }).catch(() => null) // Ignore failed sends
+          notification: { title, body },
+          data: { type: 'payment', location: session.location },
+        }).catch(() => null)
       )
     );
   } catch (err) {
@@ -109,6 +125,10 @@ export async function POST(request: NextRequest) {
           startTime,
           duration,
           pricePerHour,
+          plate,
+          plateNumber,
+          customerEmail,
+          customer_email,
         } = session.metadata || {};
 
         if (!listingId || !startDate || !startTime || !duration) {
@@ -151,11 +171,15 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (location?.owner_id) {
-          await sendPaymentNotification(
-            location.owner_id,
-            session.amount_total || 0,
-            location.name || 'Parking lot'
-          );
+          await sendPaymentNotification(location.owner_id, {
+            location: location.name || 'Parking lot',
+            amount: session.amount_total || 0,
+            plate: plate || plateNumber || session.customer_details?.email || null,
+            customerEmail: customerEmail || customer_email || session.customer_details?.email || null,
+            startDate: startDate || null,
+            startTime: startTime || null,
+            duration: duration || null,
+          });
         }
 
         console.log('Booking created successfully:', listingId);

@@ -132,7 +132,10 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                     <p className={`text-sm font-semibold ${notif.read ? 'text-black/70' : 'text-black'}`}>
                       {notif.title}
                     </p>
-                    <p className="text-xs text-black/60 mt-1">
+                    {notif.data?.body && (
+                      <p className="text-xs text-black/70 mt-0.5">{notif.data.body}</p>
+                    )}
+                    <p className="text-xs text-black/40 mt-1">
                       {new Date(notif.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}
                     </p>
                   </button>
