@@ -17,9 +17,15 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 // Initialize Firebase
 let firebaseApp: admin.app.App | null = null;
 try {
-  if (admin.apps.length === 0 && process.env.FIREBASE_PROJECT_ID) {
+  if (admin.apps.length > 0) {
+    firebaseApp = admin.apps[0]!;
+  } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
     firebaseApp = admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID,
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      } as any),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
   }

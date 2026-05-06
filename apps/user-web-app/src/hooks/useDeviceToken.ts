@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { initializeFirebase, getFCMToken } from '@/lib/firebase';
 
 export function useDeviceToken(userId: string | null) {
   useEffect(() => {
@@ -9,12 +10,24 @@ export function useDeviceToken(userId: string | null) {
       try {
         if (!supabase) return;
 
-        // Generate or retrieve device token
-        let token = localStorage.getItem('deviceToken');
-        if (!token) {
-          token = 'web_' + Math.random().toString(36).substr(2, 9) + Date.now();
-          localStorage.setItem('deviceToken', token);
+        // Request notification permission first
+        if ('Notification' in window && Notification.permission === 'default') {
+          await Notification.requestPermission();
         }
+
+        // Initialize Firebase and get FCM token
+        await initializeFirebase();
+        let token = await getFCMToken();
+
+        // Fallback to local token if FCM not available
+        if (!token) {
+          token = localStorage.getItem('deviceToken');
+          if (!token) {
+            token = 'web_' + Math.random().toString(36).substr(2, 9) + Date.now();
+          }
+        }
+
+        localStorage.setItem('deviceToken', token);
 
         // Store in database
         await supabase
@@ -23,11 +36,6 @@ export function useDeviceToken(userId: string | null) {
             { user_id: userId, token, platform: 'web' },
             { onConflict: 'user_id,token' }
           );
-
-        // Request push notification permission
-        if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
       } catch (err) {
         console.error('Failed to store device token:', err);
       }
