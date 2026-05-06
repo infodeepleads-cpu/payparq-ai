@@ -22,12 +22,19 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const hasServiceAccountKey = !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    console.log('[CREDS] SERVICE_ACCOUNT_KEY:', hasServiceAccountKey ? '✓' : '✗');
+
     // Try to initialize Firebase
     let firebaseApp = null;
     try {
       if (admin.apps.length > 0) {
         firebaseApp = admin.apps[0]!;
         console.log('[CREDS] Using existing Firebase app');
+      } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        firebaseApp = admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        console.log('[CREDS] Firebase initialized via SERVICE_ACCOUNT_KEY');
       } else {
         const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
         firebaseApp = admin.initializeApp({
@@ -37,7 +44,7 @@ export async function GET(req: NextRequest) {
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           } as any),
         });
-        console.log('[CREDS] Firebase app initialized successfully');
+        console.log('[CREDS] Firebase initialized via individual vars');
       }
     } catch (initErr) {
       console.error('[CREDS] Firebase init failed:', initErr);

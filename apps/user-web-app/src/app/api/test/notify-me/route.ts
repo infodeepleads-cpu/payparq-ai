@@ -10,8 +10,13 @@ const supabase = createClient(
 let firebaseApp: admin.app.App | null = null;
 try {
   if (admin.apps.length > 0) {
-    // Firebase already initialized
     firebaseApp = admin.apps[0]!;
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    firebaseApp = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    });
   } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
     firebaseApp = admin.initializeApp({
