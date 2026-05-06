@@ -12,7 +12,7 @@ const firebaseConfig = {
   appId: '1:913890552108:web:064f8b527aa71887986489',
 };
 
-const VAPID_KEY = 'BBivN-xqjRD52mFXWci9qxl6DOonvFPlME_XCmoVGMkhJqda8HkMN6AKqvkK69TrPxnqOBxzbOkQj-n-4_cxjho';
+const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BK1A-3JT3V9L3wF5k7xi7T8GFrj_bbTps4PyPMp90_LUHp3nRqC6o-rXjj9w7ep3jsoKGIm2GcstFYpL-Q-8vN4';
 
 let messaging: any = null;
 
