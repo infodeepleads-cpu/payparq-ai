@@ -2476,9 +2476,16 @@ export default function MembersPage() {
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (user?.id) {
-                          window.location.href = `/api/stripe/connect?user_id=${user.id}`;
+                      onClick={async () => {
+                        if (!supabase) return;
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-connect-account');
+                          if (error) throw error;
+                          if (data?.url) {
+                            window.location.href = data.url;
+                          }
+                        } catch (err) {
+                          console.error('Stripe Connect error:', err);
                         }
                       }}
                       className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] transition-colors"
