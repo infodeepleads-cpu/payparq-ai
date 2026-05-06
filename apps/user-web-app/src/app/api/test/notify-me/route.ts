@@ -84,11 +84,14 @@ export async function GET(req: NextRequest) {
     );
 
     const sent = results.filter(r => r).length;
+    const tokenPreviews = tokens.map(t => t.token.substring(0, 20) + '...');
     return NextResponse.json({
       supabaseNotification: !notifError,
       firebaseSent: sent,
       firebaseTotal: tokens.length,
-      status: 'Test notification sent - check app bell icon for Supabase notification'
+      tokens: tokenPreviews,
+      isFakeToken: tokens.some(t => t.token.startsWith('web_')),
+      status: sent > 0 ? 'Firebase push sent!' : 'Check token — may be fake (web_xxx)'
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
