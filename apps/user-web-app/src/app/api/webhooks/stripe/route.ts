@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import * as admin from 'firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -12,6 +13,56 @@ const supabase = createClient(
 );
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// Initialize Firebase
+let firebaseApp: admin.app.App | null = null;
+try {
+  if (admin.apps.length === 0 && process.env.FIREBASE_PROJECT_ID) {
+    firebaseApp = admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    });
+  }
+} catch (err) {
+  console.error('Firebase initialization error:', err);
+}
+
+async function sendPaymentNotification(ownerId: string, amount: number, location: string) {
+  try {
+    // Save to notifications table
+    await supabase.from('notifications').insert({
+      user_id: ownerId,
+      type: 'payment',
+      title: `Payment received €${(amount / 100).toFixed(2)}`,
+      data: { location, amount, timestamp: new Date().toISOString() },
+    });
+
+    // Get device tokens
+    const { data: tokens } = await supabase
+      .from('device_tokens')
+      .select('token')
+      .eq('user_id', ownerId);
+
+    if (!tokens || tokens.length === 0 || !firebaseApp) return;
+
+    // Send Firebase push
+    const messaging = admin.messaging(firebaseApp);
+    await Promise.all(
+      tokens.map((t) =>
+        messaging.send({
+          token: t.token,
+          notification: {
+            title: 'Payment Received',
+            body: `€${(amount / 100).toFixed(2)} at ${location}`,
+          },
+          data: { type: 'payment', location },
+        }).catch(() => null) // Ignore failed sends
+      )
+    );
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -77,6 +128,21 @@ export async function POST(request: NextRequest) {
 
         if (bookingError) {
           throw bookingError;
+        }
+
+        // Get lot owner and send notification
+        const { data: location } = await supabase
+          .from('locations')
+          .select('owner_id, name')
+          .eq('id', listingId)
+          .single();
+
+        if (location?.owner_id) {
+          await sendPaymentNotification(
+            location.owner_id,
+            session.amount_total || 0,
+            location.name || 'Parking lot'
+          );
         }
 
         console.log('Booking created successfully:', listingId);

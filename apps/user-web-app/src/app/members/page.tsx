@@ -10,7 +10,9 @@ import { ManagementPanel } from "@/components/ManagementPanel";
 import { CampaignsPanel } from "@/components/CampaignsPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { LotCalendarPricing } from "@/components/LotCalendarPricing";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { useDeviceToken } from "@/hooks/useDeviceToken";
 import type { User } from "@supabase/supabase-js";
 
 type NavItemId =
@@ -560,6 +562,9 @@ export default function MembersPage() {
       cancelled = true;
     };
   }, []);
+
+  // Store device token for push notifications
+  useDeviceToken(user?.id ?? null);
 
   useEffect(() => {
     if (!isSignedIn || !user) {
@@ -2504,6 +2509,24 @@ export default function MembersPage() {
             </div>
           </div>
           <div className="space-y-2">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="text-sm font-semibold text-black mb-3">Prihodi i isplate</p>
+              <div className="space-y-2.5">
+                <div>
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Ukupni prihodi</p>
+                  <p className="text-2xl font-bold text-green-700">€0.00</p>
+                </div>
+                <div className="border-t border-green-200 pt-2.5">
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Na čekanju</p>
+                  <p className="text-lg font-semibold text-orange-600">€0.00</p>
+                </div>
+                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                  Detaljno
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
             <p className="text-xs font-semibold text-black/70">
               Add a payment method
             </p>
@@ -2972,8 +2995,9 @@ export default function MembersPage() {
                     Platform workspace
                   </p>
                 </div>
-                <div className="text-[11px] text-white/80 text-right flex flex-col items-end gap-1">
-                  <div>
+                <div className="text-[11px] text-white/80 text-right flex items-center gap-3">
+                  <NotificationCenter userId={user?.id ?? null} />
+                  <div className="flex flex-col items-end gap-1">
                     <p>Signed in as</p>
                     <p className="font-semibold truncate max-w-[180px]">
                       {displayEmail}
