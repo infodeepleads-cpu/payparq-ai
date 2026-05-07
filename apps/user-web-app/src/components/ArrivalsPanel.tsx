@@ -98,7 +98,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
       .select('*')
       .in('location_id', locationIds)
       .order('entry_time', { ascending: false })
-      .limit(500);
+      .limit(2000);
 
     setSessions(data || []);
     setLastRefresh(new Date());
@@ -112,23 +112,27 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
   }, [fetchSessions]);
 
   const now = new Date();
-  const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
 
-  const withNames = sessions.map(s => ({ ...s, location_name: locationNames[s.location_id ?? ''] ?? s.location_id }));
+  const withNames = sessions.map(s => {
+    const entry = s.entry_time ? new Date(s.entry_time) : null;
+    // Calculate exit_time: entry_time + duration (quantity in minutes)
+    const exit = entry && s.duration_minutes ? new Date(entry.getTime() + s.duration_minutes * 60000) : null;
+    return { ...s, location_name: locationNames[s.location_id ?? ''] ?? s.location_id, calculated_exit: exit };
+  });
 
   const live = withNames.filter(s => {
     const entry = s.entry_time ? new Date(s.entry_time) : null;
-    const exit = s.exit_time ? new Date(s.exit_time) : null;
-    return entry && exit && entry <= now && exit >= now;
+    const exit = s.calculated_exit;
+    return entry && entry <= now && (exit ? exit >= now : true);
   });
 
   const upcoming = withNames.filter(s => {
     const entry = s.entry_time ? new Date(s.entry_time) : null;
-    return entry && entry > now && entry <= todayEnd;
+    return entry && entry > now;
   });
 
   const history = withNames.filter(s => {
-    const exit = s.exit_time ? new Date(s.exit_time) : null;
+    const exit = s.calculated_exit;
     return exit && exit < now;
   });
 
@@ -146,7 +150,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
     <div className="flex flex-col h-full">
       {/* Tabs */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-        {([['live', `Live (${live.length})`, 'bg-green-500'], ['upcoming', `Today (${upcoming.length})`, 'bg-blue-500'], ['history', `History (${history.length})`, 'bg-gray-500']] as const).map(([id, label, color]) => (
+        {([['live', `Live (${live.length})`, 'bg-green-500'], ['upcoming', `Upcoming (${upcoming.length})`, 'bg-blue-500'], ['history', `History (${history.length})`, 'bg-gray-500']] as const).map(([id, label, color]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -180,7 +184,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
           <div className="flex items-center justify-center h-40 text-white/40 text-sm">Loading...</div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2 text-white/40">
-            <p className="text-sm">{tab === 'live' ? 'No active sessions' : tab === 'upcoming' ? 'No upcoming sessions today' : 'No history found'}</p>
+            <p className="text-sm">{tab === 'live' ? 'No active sessions' : tab === 'upcoming' ? 'No upcoming sessions' : 'No history found'}</p>
           </div>
         ) : (
           <table className="w-full text-xs">
@@ -202,7 +206,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
                   <td className="px-4 py-2.5 font-mono font-bold text-white">{s.plate || '—'}</td>
                   <td className="px-4 py-2.5 text-white/70">{s.location_name || '—'}</td>
                   <td className="px-4 py-2.5 text-white/60">{fmt(s.entry_time)}</td>
-                  <td className="px-4 py-2.5 text-white/60">{fmt(s.exit_time)}</td>
+                  <td className="px-4 py-2.5 text-white/60">{fmt(s.calculated_exit?.toISOString() || null)}</td>
                   <td className="px-4 py-2.5 text-white/60">{fmtDuration(s.duration_minutes)}</td>
                   <td className="px-4 py-2.5 font-semibold text-white/80">{fmtAmount(s.price, s.currency)}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} paymentStatus={s.payment_status} /></td>
