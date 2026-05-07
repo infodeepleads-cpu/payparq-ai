@@ -18,6 +18,10 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   const { notifications, unread, markRead } = useNotifications(userId);
 
   useEffect(() => {
+    checkPermission();
+  }, []);
+
+  const checkPermission = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission);
       // Check if actually subscribed
@@ -30,7 +34,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         });
       }
     }
-  }, []);
+  };
 
   const handleEnable = async () => {
     try {
@@ -54,6 +58,12 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
     } catch (err) {
       console.error('Enable notifications failed:', err);
     }
+  };
+
+  const handleSettingsHintDismiss = () => {
+    setShowSettingsHint(false);
+    // Re-check permission in case user changed browser settings
+    setTimeout(checkPermission, 500);
   };
 
   const handleDisable = async () => {
@@ -120,14 +130,14 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
 
       {/* Browser-level blocked hint */}
       {showSettingsHint && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSettingsHint(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleSettingsHintDismiss}>
           <div className="bg-white rounded-xl w-full max-w-sm mx-4 p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-black">Obavijesti su blokirane</h3>
             <p className="text-sm text-black/70">
               Vaš preglednik blokira obavijesti za ovu stranicu. Da biste ih omogućili, otvorite postavke preglednika i dopustite obavijesti za payparq.com.
             </p>
             <button
-              onClick={() => setShowSettingsHint(false)}
+              onClick={handleSettingsHintDismiss}
               className="w-full px-4 py-2 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition-colors"
             >
               Razumijem
