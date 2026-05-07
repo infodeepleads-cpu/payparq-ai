@@ -133,15 +133,43 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleSettingsHintDismiss}>
           <div className="bg-white rounded-xl w-full max-w-sm mx-4 p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-black">Obavijesti su blokirane</h3>
-            <p className="text-sm text-black/70">
-              Vaš preglednik blokira obavijesti za ovu stranicu. Da biste ih omogućili, otvorite postavke preglednika i dopustite obavijesti za payparq.com.
-            </p>
-            <button
-              onClick={handleSettingsHintDismiss}
-              className="w-full px-4 py-2 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition-colors"
-            >
-              Razumijem
-            </button>
+            <p className="text-sm text-black/70 font-medium">Kako omogućiti:</p>
+            {/iPhone|iPad|iPod/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') ? (
+              <ol className="text-sm text-black/70 space-y-1 list-decimal list-inside">
+                <li>Otvorite <strong>Postavke</strong> na iPhoneu</li>
+                <li>Idite na <strong>Safari → Obavijesti</strong></li>
+                <li>Pronađite <strong>payparq.com</strong> i odaberite <strong>Dopusti</strong></li>
+                <li>Vratite se ovdje i pokušajte ponovo</li>
+              </ol>
+            ) : /Android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') ? (
+              <ol className="text-sm text-black/70 space-y-1 list-decimal list-inside">
+                <li>Kliknite na <strong>ikonicu zaključavanja</strong> pored URL-a</li>
+                <li>Odaberite <strong>Dozvole → Obavijesti</strong></li>
+                <li>Uključite <strong>Dopusti</strong></li>
+                <li>Osvježite stranicu</li>
+              </ol>
+            ) : (
+              <ol className="text-sm text-black/70 space-y-1 list-decimal list-inside">
+                <li>Kliknite na <strong>ikonicu brave</strong> pored URL-a</li>
+                <li>Odaberite <strong>Dozvole za stranicu</strong></li>
+                <li>Kod <strong>Obavijesti</strong> odaberite <strong>Dopusti</strong></li>
+                <li>Osvježite stranicu</li>
+              </ol>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleSettingsHintDismiss}
+                className="flex-1 px-4 py-2 rounded-full border border-black/20 text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
+              >
+                Zatvori
+              </button>
+              <button
+                onClick={() => { handleSettingsHintDismiss(); setTimeout(handleEnable, 600); }}
+                className="flex-1 px-4 py-2 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition-colors"
+              >
+                Pokušaj ponovo
+              </button>
+            </div>
           </div>
         </div>
       )}
