@@ -75,7 +75,7 @@ interface ListingData {
 
 function InfoWidget({ tip }: { tip: string }) {
   return (
-    <div className="col-span-1">
+    <div className="hidden md:col-span-1 md:block">
       <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
         <div className="flex items-start gap-2 mb-3">
           <p className="text-sm text-gray-700 leading-snug">Korisne Informacije</p>
@@ -1030,7 +1030,7 @@ export function ListYourLotPanel({
           <p className="text-gray-600">Now let's get some details about your space so you can publish your listing.</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
           <div className="col-span-2 space-y-4">
             {completionPercent === 100 ? (
               <>
@@ -1139,28 +1139,28 @@ export function ListYourLotPanel({
 
       {/* Section Progress Indicator */}
       {(currentStepValue === 1 || currentStepValue === 2 || currentStepValue === 3) && (
-        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="bg-gray-50 px-4 md:px-6 py-3 border-b border-gray-200 flex items-center justify-center md:justify-between">
+          <div className="flex items-center gap-2 md:gap-4">
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section1 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section1 ? '✓' : '1'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Location</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Location</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section2 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section2 ? '✓' : '2'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Availability</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Availability</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section3 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section3 ? '✓' : '3'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Photos</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Photos</span>
             </div>
           </div>
-          <div className="text-sm font-semibold text-gray-600">{completionPercent}% Complete</div>
+          <div className="hidden md:block text-sm font-semibold text-gray-600">{completionPercent}% Complete</div>
         </div>
       )}
 
@@ -1168,9 +1168,9 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1: Choose Country ── */}
       {currentStepValue === 1 && currentSubStepValue === 'region' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left white sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full">
             <div className="px-6 space-y-5 h-full">
               {/* Welcome message */}
               <div className="animate-fadeIn mb-6">
@@ -1277,7 +1277,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right white sector with widget */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
@@ -1289,9 +1289,9 @@ export function ListYourLotPanel({
 
       {/* ── STEP 2: Verify Location ── */}
       {currentStepValue === 1 && currentSubStepValue === 'map' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full flex flex-col overflow-hidden">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full flex flex-col overflow-hidden">
             <div className="px-6 space-y-3 h-full flex flex-col overflow-hidden">
               <div className="animate-fadeIn flex-shrink-0">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pritisnite kartu kako biste označili točan ulaz na svoje parkirno mjesto.</h2>
@@ -1326,7 +1326,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
@@ -1338,7 +1338,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 3: Name Your Space ── */}
       {currentStepValue === 1 && currentSubStepValue === 'name' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-5">
@@ -1379,7 +1379,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6 space-y-4">
                 <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
@@ -1397,7 +1397,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1d: Parking Type ── */}
       {currentStepValue === 1 && currentSubStepValue === 'type' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1426,7 +1426,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="space-y-4">
               <p className="text-sm font-medium text-gray-900">Here are a few examples:</p>
 
@@ -1456,7 +1456,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1e: Features/Add-ons ── */}
       {currentStepValue === 1 && currentSubStepValue === 'features' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1494,7 +1494,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Select features that make your parking space stand out. These help drivers find exactly what they need." />
@@ -1506,7 +1506,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1f: Vehicle Size & Height ── */}
       {currentStepValue === 1 && currentSubStepValue === 'vehicleSize' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1586,7 +1586,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Be clear about vehicle size limitations. This helps drivers find parking that fits their vehicle." />
@@ -1598,7 +1598,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1g: Access Control ── */}
       {currentStepValue === 1 && currentSubStepValue === 'accessControl' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1690,7 +1690,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Clearly specify how drivers will access your parking space to avoid confusion." />
@@ -1702,7 +1702,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2a: Availability Settings ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'availability' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1851,7 +1851,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">In this step, we want to understand what your basic availability settings should be. Once your space has been listed, you'll have even more control with our new advanced availability settings.</p>
@@ -1862,7 +1862,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2b: Booking Start Date ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingStart' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1932,7 +1932,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 space-y-4">
               <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
@@ -1949,9 +1949,9 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2c: Calendar Preview ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'calendarPreview' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte svoj kalendar</h2>
@@ -1971,21 +1971,21 @@ export function ListYourLotPanel({
                 return (
                   <div className="space-y-6">
                     {/* Calendar Navigation */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4 md:mb-6">
                       <button
                         onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-xs md:text-base"
                       >← Prethodna</button>
-                      <h3 className="text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
+                      <h3 className="text-sm md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
                       <button
                         onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-xs md:text-base"
                       >Dalje →</button>
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="border border-gray-200 rounded-lg p-6">
-                      <div className="grid grid-cols-7 gap-2">
+                    <div className="border border-gray-200 rounded-lg p-3 md:p-6">
+                      <div className="grid grid-cols-7 gap-1 md:gap-2">
                         {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
                           <div key={day} className="text-center font-semibold text-sm text-gray-700 py-3">
                             {day}
@@ -1999,25 +1999,25 @@ export function ListYourLotPanel({
                           return (
                             <div
                               key={date}
-                              className={`aspect-square border-2 rounded-lg p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
+                              className={`aspect-square border-2 rounded-lg p-1 md:p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
                                 isAvailable
                                   ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
                                   : 'border-gray-200 bg-gray-50'
                               }`}
                             >
-                              <p className="font-bold text-lg text-gray-900">{date}</p>
+                              <p className="font-bold text-sm md:text-lg text-gray-900">{date}</p>
                               {isAvailable ? (
                                 <>
-                                  <p className="text-xs text-gray-700 mt-1 font-medium">
+                                  <p className="text-[10px] md:text-xs text-gray-700 mt-0.5 md:mt-1 font-medium hidden md:block">
                                     {data.spaceType || '1'} {parseInt(data.spaceType || '1') === 1 ? 'mjesto' : 'mjesta'}
                                   </p>
-                                  <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
-                                    <Clock className="w-3 h-3" />
+                                  <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1 text-[9px] md:text-xs text-gray-600 hidden md:flex">
+                                    <Clock className="w-2 h-2 md:w-3 md:h-3" />
                                     <span>{hoursText}</span>
                                   </div>
                                 </>
                               ) : (
-                                <span className="text-xs text-gray-400 mt-2">Nedostupno</span>
+                                <span className="text-[9px] md:text-xs text-gray-400 mt-1 md:mt-2 hidden md:block">Nedostupno</span>
                               )}
                             </div>
                           );
@@ -2041,7 +2041,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Ovo je pregled kako će vaš kalendar izgledati. Nakon objavljivanja, moći ćete prilagoditi dostupnost za određene datume, postaviti datume zamračenja i</p>
@@ -2052,7 +2052,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2d: Booking Window ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingWindow' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2100,7 +2100,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Booking Window</p>
               <p className="text-xs text-gray-700 leading-relaxed">
@@ -2117,7 +2117,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2e: Booking Types ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingTypes' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2197,7 +2197,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Choosing to accept both monthly bookings along with hourly and daily bookings will typically maximise your earning potential.</p>
@@ -2208,7 +2208,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2f: Pricing Model ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'pricing' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2265,7 +2265,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 space-y-4">
               {/* Dynamic Pricing Info */}
               <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
@@ -2291,7 +2291,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2g: Your Description ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'description' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2357,7 +2357,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">The description is meant to be a brief overview of your parking space to assist drivers in their understanding of its location, features and suitability, prior to booking.</p>
@@ -2368,7 +2368,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2h: Post-Booking Instructions ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'postBookingInstructions' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2396,7 +2396,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">We have generated post-booking instructions for your space on the information you have provided. This is meant to provide instruction to people who have booked your space on how to access and use your space.</p>
@@ -2407,7 +2407,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2 REVIEW ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'review2' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
@@ -2472,7 +2472,7 @@ export function ListYourLotPanel({
             </div>
           </div>
 
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Provjeri sve postavke prije nastavka. Korak 3 dodaje fotografije i opis prostora.</p>
@@ -2483,7 +2483,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3a: Upload Photos ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'photos' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2617,7 +2617,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Good quality photos are essential to attract drivers to your parking space. Show the entrance, parking area, and any distinctive features that help drivers identify your space.</p>
@@ -2628,7 +2628,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3b: Google Street View ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'streetView' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2692,7 +2692,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Street View helps drivers understand exactly where your parking space is located. Adjust the view to show the entrance and any distinguishing features that help drivers find you. Make sure the view is oriented toward the street and parking area, not into buildings.</p>
@@ -2703,7 +2703,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3c: Summary & Expectations ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'summary' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2768,7 +2768,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">You're almost there! Review what to expect once your listing goes live. Your parking space will be visible to drivers based on your availability and booking settings.</p>
@@ -2779,7 +2779,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3d: Review Before Publishing ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'review3' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
@@ -2812,7 +2812,7 @@ export function ListYourLotPanel({
             </div>
           </div>
 
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Sve je spremno! Vaš parking prostor će biti vidljiv potencijalnim kupcima čim ga objavite.</p>
@@ -2823,9 +2823,9 @@ export function ListYourLotPanel({
 
       {/* ── REVIEW ── */}
       {currentStepValue === 'review' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full">
             <div className="px-6 space-y-4">
               <div className="animate-fadeIn mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte podatke prije objavljivanja.</h2>
@@ -2862,7 +2862,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Review all details before publishing. You can edit after going live." />

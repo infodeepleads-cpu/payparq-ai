@@ -311,7 +311,7 @@ export default function MembersPage() {
   const [devSignedIn, setDevSignedIn] = useState(false);
 
   const isLocalDevOverrideEnabled =
-    process.env.NODE_ENV === "development" && !isSupabaseConfigured;
+    process.env.NODE_ENV === "development" && (!isSupabaseConfigured || searchParams.get('dev') === 'true');
 
   const displayEmail =
     user?.email || (devSignedIn ? "dev@local.test" : "Unknown email");
@@ -2625,11 +2625,11 @@ export default function MembersPage() {
       return <CampaignsPanel />;
     }
 
-    if (activeItem === "arrivals" && user) {
-      return <ArrivalsPanel userId={user.id} />;
+    if (activeItem === "arrivals" && (user || devSignedIn)) {
+      return user ? <ArrivalsPanel userId={user.id} /> : <div className="text-sm text-black/70">Arrivals panel</div>;
     }
 
-    if (activeItem === "payouts" && user) {
+    if (activeItem === "payouts" && (user || devSignedIn)) {
       return (
         <div className="space-y-4">
           <div className="space-y-2">
@@ -2725,7 +2725,7 @@ export default function MembersPage() {
       );
     }
 
-    if (activeItem === "calendars" && user) {
+    if (activeItem === "calendars" && (user || devSignedIn)) {
       return (
         <div className="space-y-6">
           <div>
@@ -2787,7 +2787,7 @@ export default function MembersPage() {
       );
     }
 
-    if (activeItem === "moji-prostori" && user) {
+    if (activeItem === "moji-prostori" && (user || devSignedIn)) {
       return (
         <div className="space-y-6">
           <div>
@@ -3067,18 +3067,18 @@ export default function MembersPage() {
 
           {isSignedIn && (
             <div className="min-h-0 flex-1 flex flex-col bg-[#05020A] overflow-hidden">
-              <div className="bg-[#5F3DFC] px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+              <div className="bg-[#5F3DFC] px-3 md:px-6 py-3 flex items-center justify-between gap-2 md:gap-4">
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="md:hidden inline-flex items-center justify-center w-6 h-6 text-white hover:bg-white/20 rounded transition-colors"
+                  className="md:hidden inline-flex items-center justify-center w-5 h-5 text-white hover:bg-white/20 rounded transition-colors flex-shrink-0"
                   title="Toggle sidebar"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <div>
+                <div className="hidden md:block">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">
                     Members
                   </p>
@@ -3086,9 +3086,9 @@ export default function MembersPage() {
                     Platform workspace
                   </p>
                 </div>
-                <div className="text-[11px] text-white/80 text-right flex items-center gap-3">
+                <div className="text-[11px] text-white/80 text-right flex items-center gap-0 md:gap-3 flex-shrink-0">
                   <NotificationCenter userId={user?.id ?? null} />
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="hidden md:flex flex-col items-end gap-1">
                     <p>Signed in as</p>
                     <p className="font-semibold truncate max-w-[180px]">
                       {displayEmail}
@@ -3097,193 +3097,35 @@ export default function MembersPage() {
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    className="md:hidden inline-flex items-center px-3 py-1.5 rounded-full border border-white/30 text-[11px] font-semibold text-white/90 hover:bg-white/10 transition-colors"
+                    className="md:hidden inline-flex items-center justify-center w-5 h-5 text-white hover:bg-white/20 rounded transition-colors flex-shrink-0"
+                    title="Log out"
                   >
-                    Log out
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
                   </button>
                 </div>
               </div>
 
-              <div className="md:hidden border-t border-white/10 bg-[#05020A] overflow-x-auto">
-                <div className="flex items-center gap-2 px-4 py-2 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("home")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "home"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Home</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("permits")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "permits"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Permits & Subs</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("activity")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "activity"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Activity</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("payment")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "payment"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Payment</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("vehicles")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "vehicles"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Vehicles</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("promotions")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "promotions"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Promotions</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("rewards")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "rewards"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Rewards</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("reviews")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "reviews"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Recenzije</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItem("help")}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                      activeItem === "help"
-                        ? "bg-white text-black border-white"
-                        : "border-white/20 text-white/80"
-                    }`}
-                  >
-                    <span>Help</span>
-                  </button>
-                  {isAdmin && (
-                    <Link
-                      href="/resources"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 text-xs font-semibold whitespace-nowrap text-white/90 hover:bg-white/10 transition-colors"
-                    >
-                      <span>Resources</span>
-                    </Link>
-                  )}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("operations")}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                        activeItem === "operations"
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white/80"
-                      }`}
-                    >
-                      <span>Operations</span>
-                    </button>
-                  )}
-                  {isManager && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("management")}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                        activeItem === "management"
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white/80"
-                      }`}
-                    >
-                      <span>Management</span>
-                    </button>
-                  )}
-                  {(isAdmin || isManager) && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("arrivals")}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                        activeItem === "arrivals"
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white/80"
-                      }`}
-                    >
-                      <span>Arrivals</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => router.push('/list-your-parking')}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap border-white/20 text-white/80 hover:bg-white/10 transition-colors`}
-                  >
-                    <span>List your parking</span>
-                  </button>
-                  {role === "super_admin" && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("campaigns")}
-                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
-                        activeItem === "campaigns"
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white/80"
-                      }`}
-                    >
-                      <span>Campaigns</span>
-                    </button>
-                  )}
-                </div>
-              </div>
+              <div className="md:hidden h-1 bg-[#05020A] border-t border-white/10" />
 
               {sidebarOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />}
               <div className="min-h-0 flex-1 flex bg-[#05020A] overflow-hidden">
-                <aside className={`${sidebarOpen ? 'fixed md:static' : 'hidden md:flex'} md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col z-40 md:z-0 h-full md:h-auto left-0 top-0 pt-16 md:pt-0`}>
-                  <nav className="px-2 pt-4 pb-4 space-y-4 text-[12px] flex-1">
+                <aside className={`${sidebarOpen ? 'fixed md:static' : 'hidden md:flex'} md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col z-40 md:z-0 h-full md:h-auto left-0 top-0 pt-16 md:pt-0 overflow-y-auto md:overflow-hidden`}>
+                  <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0 border-b border-white/10">
+                    <div className="w-7 h-7 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
+                        <span className="text-[10px] font-semibold tracking-tight leading-none text-white">P</span>
+                      </div>
+                    </div>
+                    <div className="text-sm font-black tracking-tight text-white select-none">payparq</div>
+                  </div>
+                  <nav className="px-2 py-0 space-y-0 text-[12px] flex-1 overflow-y-auto flex flex-col">
                     {/* HOME */}
                     <button
                       type="button"
                       onClick={() => setActiveItem("home")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                      className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                         activeItem === "home"
                           ? "bg-white text-black"
                           : "text-white/70 hover:bg-white/5"
@@ -3295,20 +3137,20 @@ export default function MembersPage() {
                       <span>Home</span>
                     </button>
 
-                    {/* VLASNIK SECTION */}
-                    <div className="space-y-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Vlasnik</p>
+                    {/* HOST SECTION */}
+                    <div className="space-y-0.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-0">Host / Domaćin</p>
                         <button
                           type="button"
                           onClick={() => setActiveItem("moji-prostori")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                             activeItem === "moji-prostori"
                               ? "bg-white text-black"
                               : "text-white/70 hover:bg-white/5"
                           }`}
                         >
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            🏢
+                            M
                           </span>
                           <span>Moji prostori</span>
                         </button>
@@ -3324,42 +3166,42 @@ export default function MembersPage() {
                         <button
                           type="button"
                           onClick={() => setActiveItem("arrivals")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                             activeItem === "arrivals"
                               ? "bg-white text-black"
                               : "text-white/70 hover:bg-white/5"
                           }`}
                         >
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            ↓
+                            A
                           </span>
                           <span>Arrivals</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveItem("calendars")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                             activeItem === "calendars"
                               ? "bg-white text-black"
                               : "text-white/70 hover:bg-white/5"
                           }`}
                         >
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            📅
+                            C
                           </span>
                           <span>Upravljaj kalendarima</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setActiveItem("payouts")}
-                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                             activeItem === "payouts"
                               ? "bg-white text-black"
                               : "text-white/70 hover:bg-white/5"
                           }`}
                         >
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                            💰
+                            $
                           </span>
                           <span>Payouts</span>
                         </button>
@@ -3367,7 +3209,7 @@ export default function MembersPage() {
                           <button
                             type="button"
                             onClick={() => setActiveItem("operations")}
-                            className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                            className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                               activeItem === "operations"
                                 ? "bg-white text-black"
                                 : "text-white/70 hover:bg-white/5"
@@ -3393,12 +3235,12 @@ export default function MembersPage() {
                       </div>
 
                     {/* KORISNIK SECTION */}
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Korisnik</p>
                       <button
                         type="button"
                         onClick={() => setActiveItem("permits")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "permits"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3412,7 +3254,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("activity")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "activity"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3426,7 +3268,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("payment")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "payment"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3440,7 +3282,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("vehicles")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "vehicles"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3454,7 +3296,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("promotions")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "promotions"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3468,7 +3310,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("reviews")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "reviews"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3482,7 +3324,7 @@ export default function MembersPage() {
                       <button
                         type="button"
                         onClick={() => setActiveItem("help")}
-                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                        className={`flex w-full items-center gap-2 px-3 py-1 rounded-xl text-left transition-colors ${
                           activeItem === "help"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
@@ -3494,44 +3336,45 @@ export default function MembersPage() {
                         <span>Pomoć</span>
                       </button>
                     </div>
-                  </nav>
-                  <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
-                    <div className="space-y-1 text-[11px] text-white/70">
-                      <p className="font-semibold">
-                        Account overview
-                      </p>
-                      <p className="truncate">
-                        {displayEmail}
-                      </p>
-                      {role && (
-                        <p className="text-white/50 uppercase tracking-wide text-[10px] font-semibold">
-                          {role.replace(/_/g, " ")}
+                    <div className="flex-1" />
+                    <div className="border-t border-white/10 px-4 py-0 space-y-0.5 flex-shrink-0">
+                      <div className="space-y-1 text-[11px] text-white/70">
+                        <p className="font-semibold">
+                          Account overview
                         </p>
-                      )}
+                        <p className="truncate">
+                          {displayEmail}
+                        </p>
+                        {role && (
+                          <p className="text-white/50 uppercase tracking-wide text-[10px] font-semibold">
+                            {role.replace(/_/g, " ")}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("account")}
+                        className={`w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors ${
+                          activeItem === "account"
+                            ? "bg-white text-black"
+                            : "bg-white/5 text-white hover:bg-white/10"
+                        }`}
+                      >
+                        Account Settings
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl border border-white/20 text-[11px] font-semibold text-white/80 hover:bg-white/5 transition-colors"
+                      >
+                        Log out
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("account")}
-                      className={`w-full inline-flex items-center justify-center px-3 py-2 rounded-xl text-[11px] font-semibold shadow-sm transition-colors ${
-                        activeItem === "account"
-                          ? "bg-white text-black"
-                          : "bg-white/5 text-white hover:bg-white/10"
-                      }`}
-                    >
-                      Account Settings
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSignOut}
-                      className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl border border-white/20 text-[11px] font-semibold text-white/80 hover:bg-white/5 transition-colors"
-                    >
-                      Log out
-                    </button>
-                  </div>
+                  </nav>
                 </aside>
 
-                <div className="min-h-0 flex-1 bg-[#F5F5F7] text-black overflow-hidden">
-                  <div className="min-h-0 h-full p-6 md:p-8 flex flex-col gap-4 overflow-hidden">
+                <div className="min-h-0 flex-1 bg-[#F5F5F7] text-black overflow-x-hidden overflow-y-auto flex items-start justify-center">
+                  <div className="min-h-0 h-full w-full max-w-6xl p-6 md:p-8 flex flex-col gap-4 overflow-hidden">
                     <div className="text-[11px] uppercase tracking-[0.24em] text-black/50">
                       {activeItem === "account"
                         ? "Account settings"
