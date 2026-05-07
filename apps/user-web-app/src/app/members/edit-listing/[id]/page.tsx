@@ -45,13 +45,13 @@ export default function EditListingPage() {
     // Space Details
     spaceType: 'Outdoor Lot',
     vehicleSize: 'All vehicles',
-    heightRestrictions: 'Yes',
-    maxHeight: '2.5m',
-    accessControl: 'Gate with code',
+    hasAccessControl: true,
     accessControlType: 'Electronic keypad',
-    permitRequired: 'No',
+    hasHeightRestrictions: true,
+    maxHeight: '2.5m',
+    requiresPermit: false,
     spaceAllocated: 'Marked spaces',
-    features: ['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging'],
+    features: [] as string[],
 
     // Availability & Pricing
     available24_7: true,
@@ -146,11 +146,11 @@ export default function EditListingPage() {
         description: data.description || '',
         spaceType: data.verification_metadata?.spaceType || '',
         vehicleSize: data.verification_metadata?.vehicleSize || '',
-        heightRestrictions: data.verification_metadata?.heightRestrictions || '',
-        maxHeight: data.verification_metadata?.maxHeight || '',
-        accessControl: data.verification_metadata?.accessControl || '',
-        accessControlType: data.verification_metadata?.accessControlType || '',
-        permitRequired: data.verification_metadata?.permitRequired || '',
+        hasHeightRestrictions: data.verification_metadata?.hasHeightRestrictions ?? true,
+        maxHeight: data.verification_metadata?.maxHeight || '2.5m',
+        hasAccessControl: data.verification_metadata?.hasAccessControl ?? true,
+        accessControlType: data.verification_metadata?.accessControlType || 'Electronic keypad',
+        requiresPermit: data.verification_metadata?.requiresPermit ?? false,
         spaceAllocated: data.verification_metadata?.spaceAllocated || '',
         features: data.verification_metadata?.features || [],
         available24_7: data.verification_metadata?.available24_7 || false,
@@ -257,7 +257,7 @@ export default function EditListingPage() {
             <div id="location" className="scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Location Details</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Location Details</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -397,52 +397,102 @@ export default function EditListingPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Ograničenja visine</label>
-                  <input
-                    type="text"
-                    value={formData.heightRestrictions}
-                    onChange={(e) => setFormData({ ...formData, heightRestrictions: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Maksimalna visina</label>
-                  <input
-                    type="text"
-                    value={formData.maxHeight}
-                    onChange={(e) => setFormData({ ...formData, maxHeight: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.hasHeightRestrictions}
+                        onChange={() => setFormData({ ...formData, hasHeightRestrictions: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.hasHeightRestrictions}
+                        onChange={() => setFormData({ ...formData, hasHeightRestrictions: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
+                  {formData.hasHeightRestrictions && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Maksimalna visina</label>
+                      <input
+                        type="text"
+                        placeholder="npr. 2.5m"
+                        value={formData.maxHeight}
+                        onChange={(e) => setFormData({ ...formData, maxHeight: e.target.value })}
+                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Kontrola pristupa</label>
-                  <input
-                    type="text"
-                    value={formData.accessControl}
-                    onChange={(e) => setFormData({ ...formData, accessControl: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip kontrole pristupa</label>
-                  <input
-                    type="text"
-                    value={formData.accessControlType}
-                    onChange={(e) => setFormData({ ...formData, accessControlType: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.hasAccessControl}
+                        onChange={() => setFormData({ ...formData, hasAccessControl: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.hasAccessControl}
+                        onChange={() => setFormData({ ...formData, hasAccessControl: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
+                  {formData.hasAccessControl && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip kontrole pristupa</label>
+                      <select
+                        value={formData.accessControlType}
+                        onChange={(e) => setFormData({ ...formData, accessControlType: e.target.value })}
+                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                      >
+                        <option value="Electronic keypad">Electronic keypad</option>
+                        <option value="Gate with code">Gate with code</option>
+                        <option value="RFID card">RFID card</option>
+                        <option value="Mobile app">Mobile app</option>
+                        <option value="Manual entry">Manual entry</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Dozvola obavezna</label>
-                  <input
-                    type="text"
-                    value={formData.permitRequired}
-                    onChange={(e) => setFormData({ ...formData, permitRequired: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.requiresPermit}
+                        onChange={() => setFormData({ ...formData, requiresPermit: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.requiresPermit}
+                        onChange={() => setFormData({ ...formData, requiresPermit: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -458,7 +508,7 @@ export default function EditListingPage() {
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-black/60 mb-3 uppercase">Karakteristike</label>
                   <div className="space-y-2">
-                    {['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging'].map((feature) => (
+                    {['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging', 'WiFi', 'Covered Parking', 'Valet Service', 'Car Wash', 'Phone Charging', 'Accessible for Disabled'].map((feature) => (
                       <label key={feature} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -484,7 +534,7 @@ export default function EditListingPage() {
             <div id="availability" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Availability & Hours</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Availability & Hours</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -534,7 +584,7 @@ export default function EditListingPage() {
             <div id="pricing" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Euro className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Pricing</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Pricing</h2>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -635,7 +685,7 @@ export default function EditListingPage() {
             <div id="photos" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Photos</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Photos</h2>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -670,7 +720,7 @@ export default function EditListingPage() {
             <div id="streetview" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Street View</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Street View</h2>
               </div>
 
               <div className="rounded-lg overflow-hidden border border-black/10">

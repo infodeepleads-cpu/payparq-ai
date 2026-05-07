@@ -30,7 +30,7 @@ export function PayparqPageHeader({ title, onBack, lineColor = 'violet' }: Paypa
           </div>
 
           {/* MIDDLE: Title */}
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 absolute left-1/2 transform -translate-x-1/2">
+          <h1 className="hidden md:block text-xl md:text-2xl font-bold text-gray-900 absolute left-1/2 transform -translate-x-1/2">
             {title}
           </h1>
 

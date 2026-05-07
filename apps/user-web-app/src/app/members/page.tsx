@@ -179,7 +179,10 @@ function normalizeRole(value: unknown) {
   if (normalized.startsWith("officer")) {
     return "officer";
   }
-  return "officer";
+  if (normalized.startsWith("member")) {
+    return "member";
+  }
+  return "member";
 }
 
 function parseActivityDate(value: unknown) {
@@ -436,14 +439,14 @@ export default function MembersPage() {
       );
       setRole(role);
       setIsAdmin(role === "admin" || role === "super_admin" || role === "officer");
-      setIsManager(role === "admin" || role === "super_admin");
+      setIsManager(role === "manager" || role === "admin" || role === "super_admin");
     } catch {
       const fallbackRole = normalizeRole(
         currentUser.user_metadata?.role ?? currentUser.app_metadata?.role
       );
       setRole(fallbackRole);
       setIsAdmin(fallbackRole === "admin" || fallbackRole === "super_admin" || fallbackRole === "officer");
-      setIsManager(fallbackRole === "admin" || fallbackRole === "super_admin");
+      setIsManager(fallbackRole === "manager" || fallbackRole === "admin" || fallbackRole === "super_admin");
     }
   }
 
@@ -3243,8 +3246,7 @@ export default function MembersPage() {
                     </button>
 
                     {/* VLASNIK SECTION */}
-                    {(isAdmin || isManager) && (
-                      <div className="space-y-1">
+                    <div className="space-y-1">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Vlasnik</p>
                         <button
                           type="button"
@@ -3325,7 +3327,6 @@ export default function MembersPage() {
                           </Link>
                         )}
                       </div>
-                    )}
 
                     {/* KORISNIK SECTION */}
                     <div className="space-y-1">
@@ -3438,6 +3439,11 @@ export default function MembersPage() {
                       <p className="truncate">
                         {displayEmail}
                       </p>
+                      {role && (
+                        <p className="text-white/50 uppercase tracking-wide text-[10px] font-semibold">
+                          {role.replace(/_/g, " ")}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"

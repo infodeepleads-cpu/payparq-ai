@@ -95,7 +95,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
 
     const { data } = await supabase
       .from('parking_sessions')
-      .select('id,plate,email,location_id,type,status,payment_status,price,currency,entry_time,exit_time,duration_minutes,quantity,created_at')
+      .select('*')
       .in('location_id', locationIds)
       .order('entry_time', { ascending: false })
       .limit(500);
