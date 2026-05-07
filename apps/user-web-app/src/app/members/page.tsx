@@ -284,6 +284,7 @@ export default function MembersPage() {
   const [verificationNotice, setVerificationNotice] = useState("");
 
   const [activeItem, setActiveItem] = useState<NavItemId>("home");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plates, setPlates] = useState<string[]>([]);
   const [newPlate, setNewPlate] = useState("");
   const [plateSaving, setPlateSaving] = useState(false);
@@ -3051,6 +3052,16 @@ export default function MembersPage() {
           {isSignedIn && (
             <div className="min-h-0 flex-1 flex flex-col bg-[#05020A] overflow-hidden">
               <div className="bg-[#5F3DFC] px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="md:hidden inline-flex items-center justify-center w-6 h-6 text-white hover:bg-white/20 rounded transition-colors"
+                  title="Toggle sidebar"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">
                     Members
@@ -3248,8 +3259,9 @@ export default function MembersPage() {
                 </div>
               </div>
 
+              {sidebarOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setSidebarOpen(false)} />}
               <div className="min-h-0 flex-1 flex bg-[#05020A] overflow-hidden">
-                <aside className="hidden md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col">
+                <aside className={`${sidebarOpen ? 'fixed md:static' : 'hidden md:flex'} md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col z-40 md:z-0 h-full md:h-auto left-0 top-0 pt-16 md:pt-0`}>
                   <nav className="px-2 pt-4 pb-4 space-y-4 text-[12px] flex-1">
                     {/* HOME */}
                     <button
