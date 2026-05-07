@@ -8,7 +8,7 @@ export function useServiceWorkerRegistration(scope: string) {
 
     const registerServiceWorker = async () => {
       try {
-        // Only register if not already registered for this scope
+        // Register immediately — do not wait for load event so SW is ready before beforeinstallprompt fires
         const registrations = await navigator.serviceWorker.getRegistrations();
         const alreadyRegistered = registrations.some(r => r.scope === `${window.location.origin}${scope}`);
 

@@ -55,7 +55,7 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){if(r.scope===window.location.origin+'/'){r.unregister();}});}).catch(function(){});}})();",
+              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){var s=r.scope;var o=window.location.origin;var isScoped=s===o+'/members/'||s===o+'/search/'||s.indexOf('firebase')>-1||s.indexOf('messaging')>-1;if(!isScoped&&s===o+'/'){r.unregister();}});}).catch(function(){});}})();",
           }}
         />
         <LocaleProvider initialLocale={locale}>

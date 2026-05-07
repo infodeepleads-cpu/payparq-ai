@@ -34,7 +34,7 @@ export default function SearchLayout({
     <>
       <SearchPWAInit />
       {children}
-      <PWAInstallPrompt />
+      <PWAInstallPrompt storageKey="pwa_dismissed_search" appName="Payparq" themeColor="#3B82F6" />
     </>
   );
 }

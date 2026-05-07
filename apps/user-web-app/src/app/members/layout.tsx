@@ -15,7 +15,7 @@ export default function MembersLayout({ children }: { children: React.ReactNode 
     <>
       <MembersPWAInit />
       {children}
-      <PWAInstallPrompt />
+      <PWAInstallPrompt storageKey="pwa_dismissed_members" appName="Payparq Host" themeColor="#5F3DFC" />
     </>
   );
 }
