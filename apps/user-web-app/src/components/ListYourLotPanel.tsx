@@ -49,6 +49,7 @@ interface ListingData {
   smartPricing: boolean;
   permits: string;
   photos: File[];
+  photoUrls: string[];
   type: string;
   capacity: string;
   features: string[];
@@ -179,6 +180,7 @@ export function ListYourLotPanel({
     smartPricing: true,
     permits: '',
     photos: [],
+    photoUrls: [],
     type: '',
     capacity: '',
     features: [],
@@ -248,11 +250,12 @@ export function ListYourLotPanel({
           latitude: String(listing.latitude || ''),
           longitude: String(listing.longitude || ''),
           capacity: String(listing.capacity || ''),
+          spaceType: String(listing.capacity || ''),
           type: meta.type || '',
           features: meta.features || [],
           openTime: meta.openTime || '07:00',
           closeTime: meta.closeTime || '22:00',
-          available24_7: meta.available24_7 || false,
+          available24_7: meta.available24_7 !== undefined ? meta.available24_7 : false,
           daysAvailable: meta.daysAvailable || [],
           vehicleSize: meta.vehicleSize || '',
           maxHeight: meta.maxHeight || '',
@@ -260,7 +263,19 @@ export function ListYourLotPanel({
           acceptHourlyDailyBookings: meta.acceptHourlyDailyBookings || false,
           pricingModel: meta.pricingModel || 'dynamic',
           additionalDescription: meta.additionalDescription || '',
-          postBookingInstructions: meta.getting_there || '',
+          postBookingInstructions: meta.postBookingInstructions || meta.getting_there || '',
+          region: meta.region || '',
+          town: meta.town || '',
+          postalCode: meta.postalCode || '',
+          addressLine2: meta.addressLine2 || '',
+          accessControl: meta.accessControl || '',
+          accessControlType: meta.accessControlType || '',
+          permitRequired: meta.permits || '',
+          noticeRequired: meta.noticeRequired || '0',
+          bookingWindow: meta.bookingWindow || 'this_month',
+          startTakingBookingsToday: meta.startTakingBookingsToday !== undefined ? meta.startTakingBookingsToday : true,
+          addOns: meta.addOns || [],
+          photoUrls: meta.photo_urls || [],
         }));
       } catch (err) {
         console.error('Error loading listing:', err);
@@ -871,6 +886,7 @@ export function ListYourLotPanel({
 
           setListingId(newId);
           setSectionsSaved({ section1: true, section2: false, section3: false });
+          setStep('intro');
           router.push(`/list-your-parking?edit=${newId}`);
         }
       }
@@ -969,6 +985,20 @@ export function ListYourLotPanel({
       }
       // Section 3: Update photos and street view
       else if (section === 3 && listingId) {
+        // Upload new File photos to Supabase Storage
+        const uploadedUrls: string[] = [...data.photoUrls];
+        for (const file of data.photos) {
+          const ext = file.name.split('.').pop() || 'jpg';
+          const path = `${listingId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from('listing-photos')
+            .upload(path, file, { upsert: true });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path);
+            if (urlData?.publicUrl) uploadedUrls.push(urlData.publicUrl);
+          }
+        }
+
         const updateData: any = {
           verification_metadata: {
             listing_status: 'pending',
@@ -1003,13 +1033,16 @@ export function ListYourLotPanel({
             noticeRequired: data.noticeRequired,
             bookingWindow: data.bookingWindow,
             startTakingBookingsToday: data.startTakingBookingsToday,
-            photos_count: data.photos.length,
+            photo_urls: uploadedUrls,
+            photos_count: uploadedUrls.length,
             streetview_configured: true,
           },
         };
 
         const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
         if (error) throw new Error(error.message);
+        // Update local state so photos show immediately after save
+        setData((prev) => ({ ...prev, photoUrls: uploadedUrls, photos: [] }));
 
         setSectionsSaved({ ...sectionsSaved, section3: true });
         setStep('intro');
@@ -1255,7 +1288,7 @@ export function ListYourLotPanel({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Poštanski broj</label>
                       <input
                         type="text"
                         value={data.postalCode}
@@ -1366,7 +1399,10 @@ export function ListYourLotPanel({
                   min="1"
                   max="999"
                   value={data.spaceType ? String(data.spaceType) : ''}
-                  onChange={(e) => updateData('spaceType', e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateData('spaceType', v === '' ? '' : String(parseInt(v) || ''));
+                  }}
                   placeholder="npr. 1, 5, 10..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                 />
@@ -1634,14 +1670,14 @@ export function ListYourLotPanel({
               {data.accessControl === 'yes' && (
                 <div className="space-y-4 border-t border-gray-200 pt-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type of Access Control</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Kod (Vrsta Pristupa)</label>
                     <select value={data.accessControlType} onChange={(e) => updateData('accessControlType', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
-                      <option value="">Select access type</option>
-                      <option value="gate">Gate</option>
-                      <option value="key">Key</option>
-                      <option value="code">Code</option>
-                      <option value="keycard">Keycard</option>
-                      <option value="remote">Remote</option>
+                      <option value="">Odaberite vrstu pristupa</option>
+                      <option value="gate">Kapija/Vrata</option>
+                      <option value="key">Ključ</option>
+                      <option value="code">Kod</option>
+                      <option value="keycard">Kartica</option>
+                      <option value="remote">Daljinska</option>
                     </select>
                   </div>
                 </div>
@@ -2122,72 +2158,81 @@ export function ListYourLotPanel({
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">What type of booking do you want to accept?</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Koje vrste rezervacija prihvaćate?</h2>
               </div>
 
-              {/* Monthly Bookings */}
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-900">I would like to receive monthly bookings</h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'no', label: 'No' },
-                    { id: 'yes', label: 'Yes' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateData('acceptMonthlyBookings', id === 'yes')}
-                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {((data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no')) && (
-                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                        )}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
+              {data.pricingModel === 'dynamic' ? (
+                <div className="bg-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-5 space-y-2">
+                  <p className="text-sm font-semibold text-gray-900">Dinamično cijene — sve vrste automatski uključene</p>
+                  <p className="text-sm text-gray-600">Uz automatsko određivanje cijena, vaš prostor prihvaća satne, dnevne i mjesečne rezervacije. Sustav optimizira cijene za sve vrste.</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Monthly Bookings */}
+                  <div className="space-y-4">
+                    <h3 className="text-base font-semibold text-gray-900">Primam mjesečne rezervacije</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'no', label: 'Ne' },
+                        { id: 'yes', label: 'Da' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('acceptMonthlyBookings', id === 'yes')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Hourly & Daily Bookings */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold text-gray-900">I would like to receive hourly & daily bookings</h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'no', label: 'No' },
-                    { id: 'yes', label: 'Yes' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateData('acceptHourlyDailyBookings', id === 'yes')}
-                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                  {/* Hourly & Daily Bookings */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6">
+                    <h3 className="text-base font-semibold text-gray-900">Primam satne i dnevne rezervacije</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'no', label: 'Ne' },
+                        { id: 'yes', label: 'Da' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('acceptHourlyDailyBookings', id === 'yes')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Available Plans */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6">
+                    <label className="block text-sm font-medium text-gray-700">Dostupni planovi</label>
+                    <select
+                      value={data.availablePlan}
+                      onChange={(e) => updateData('availablePlan', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      style={{colorScheme: 'light'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {((data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no')) && (
-                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                        )}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Available Plans */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <label className="block text-sm font-medium text-gray-700">Available plans</label>
-                <select
-                  value={data.availablePlan}
-                  onChange={(e) => updateData('availablePlan', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  style={{colorScheme: 'light'}}
-                >
-                  <option value="monday_to_sunday">Monday to Sunday</option>
-                  <option value="monday_to_friday">Monday to Friday</option>
-                </select>
-              </div>
+                      <option value="monday_to_sunday">Ponedjeljak do nedjelje</option>
+                      <option value="monday_to_friday">Ponedjeljak do petka</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
                 Nastaviti
@@ -2200,7 +2245,11 @@ export function ListYourLotPanel({
           <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-              <p className="text-xs text-gray-700 leading-relaxed">Choosing to accept both monthly bookings along with hourly and daily bookings will typically maximise your earning potential.</p>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {data.pricingModel === 'dynamic'
+                  ? 'Dinamično određivanje cijena automatski optimizira sve vrste rezervacija — nema potrebe za ručnim odabirom.'
+                  : 'Prihvaćanje i mjesečnih i satnih/dnevnih rezervacija obično maksimizira zaradu.'}
+              </p>
             </div>
           </div>
         </div>
@@ -2309,19 +2358,6 @@ export function ListYourLotPanel({
                   rows={8}
                   placeholder="Edit the description..."
                 />
-              </div>
-
-              {/* Override Nearby Locations */}
-              <div className="space-y-3 border-t border-gray-200 pt-6">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.overrideNearbyLocations}
-                    onChange={(e) => updateData('overrideNearbyLocations', e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#5F3DFC] focus:ring-[#5F3DFC]"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Override nearby locations</span>
-                </label>
               </div>
 
               {/* Additional Information */}
@@ -2494,28 +2530,26 @@ export function ListYourLotPanel({
 
               {/* Upload Widget */}
               <div className="space-y-4">
-                <label className="flex items-center justify-center w-full">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-[#5F3DFC]/30 rounded-lg p-8 cursor-pointer hover:border-[#5F3DFC] hover:bg-[#5F3DFC]/5 transition-all text-center"
-                  >
-                    <div className="space-y-2">
-                      <svg className="w-10 h-10 mx-auto text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <p className="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                    </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  ref={fileInputRef}
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-[#5F3DFC]/30 rounded-lg p-8 cursor-pointer hover:border-[#5F3DFC] hover:bg-[#5F3DFC]/5 transition-all text-center"
+                >
+                  <div className="space-y-2">
+                    <svg className="w-10 h-10 mx-auto text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <p className="text-sm font-medium text-gray-900">Kliknite za učitavanje ili povucite i ispustite</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF do 10MB</p>
                   </div>
-                </label>
+                </div>
               </div>
 
               {/* Guidance Text */}
@@ -2525,26 +2559,26 @@ export function ListYourLotPanel({
               </div>
 
               {/* Uploaded Photos */}
-              {data.photos.length > 0 && (
+              {(data.photoUrls.length > 0 || data.photos.length > 0) && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Uploaded Photos ({data.photos.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Fotografije ({data.photoUrls.length + data.photos.length})</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    {data.photos.map((photo, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(photo)}
-                          alt={`Uploaded photo ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
+                    {data.photoUrls.map((url, index) => (
+                      <div key={`url-${index}`} className="relative group">
+                        <img src={url} alt={`Foto ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
                         <button
-                          onClick={() => setData((prev) => ({
-                            ...prev,
-                            photos: prev.photos.filter((_, i) => i !== index)
-                          }))}
+                          onClick={() => setData((prev) => ({ ...prev, photoUrls: prev.photoUrls.filter((_, i) => i !== index) }))}
                           className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          ✕
-                        </button>
+                        >✕</button>
+                      </div>
+                    ))}
+                    {data.photos.map((photo, index) => (
+                      <div key={`file-${index}`} className="relative group">
+                        <img src={URL.createObjectURL(photo)} alt={`Novo ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                        <button
+                          onClick={() => setData((prev) => ({ ...prev, photos: prev.photos.filter((_, i) => i !== index) }))}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >✕</button>
                       </div>
                     ))}
                   </div>
@@ -2609,7 +2643,7 @@ export function ListYourLotPanel({
                 <p className="text-sm text-gray-900"><span className="font-medium">Recommendation:</span> We recommend uploading at least 3 photos to increase your listing's visibility and attract more drivers.</p>
               </div>
 
-              <button onClick={handleNext} disabled={data.photos.length === 0} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
+              <button onClick={handleNext} disabled={data.photos.length === 0 && data.photoUrls.length === 0} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
                 Nastaviti
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -2620,7 +2654,7 @@ export function ListYourLotPanel({
           <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-              <p className="text-xs text-gray-700 leading-relaxed">Good quality photos are essential to attract drivers to your parking space. Show the entrance, parking area, and any distinctive features that help drivers identify your space.</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Kvalitetne fotografije su ključne za privlačenje vozača. Pokažite ulaz, parking prostor i sve prepoznatljive značajke.</p>
             </div>
           </div>
         </div>
@@ -2805,7 +2839,7 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <button onClick={() => handleSaveSection(3)} disabled={data.photos.length === 0 || submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+              <button onClick={() => handleSaveSection(3)} disabled={(data.photos.length === 0 && data.photoUrls.length === 0) || submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
                 {submitting ? 'Spremanje...' : 'Spremi i nazad'}
                 <ChevronRight className="w-4 h-4" />
               </button>
