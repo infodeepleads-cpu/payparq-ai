@@ -1,6 +1,5 @@
 {
   "name": "Payparq",
-  "short_name": "Park",
   "description": "Search and book verified parking spaces in your area",
   "start_url": "/search",
   "scope": "/search",

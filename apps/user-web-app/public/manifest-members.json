@@ -1,6 +1,5 @@
 {
   "name": "Payparq Host",
-  "short_name": "Host",
   "description": "Manage your parking properties, track earnings, and get real-time notifications",
   "start_url": "/members",
   "scope": "/members",
