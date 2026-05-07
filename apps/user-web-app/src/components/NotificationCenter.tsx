@@ -13,83 +13,94 @@ interface NotificationCenterProps {
 export function NotificationCenter({ userId }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [subscribed, setSubscribed] = useState(false);
+  const [showSettingsHint, setShowSettingsHint] = useState(false);
   const { notifications, unread, markRead } = useNotifications(userId);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission);
+      // Check if actually subscribed
+      if (Notification.permission === 'granted') {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          const checks = regs.map((r) => r.pushManager.getSubscription());
+          Promise.all(checks).then((subs) => {
+            setSubscribed(subs.some(Boolean));
+          });
+        });
+      }
     }
   }, []);
 
-  const handleTogglePushNotifications = async () => {
+  const handleEnable = async () => {
     try {
-      if (permission === 'granted') {
-        // Disable: unsubscribe from push
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          const sub = await reg.pushManager.getSubscription();
-          if (sub) await sub.unsubscribe();
+      setShowSettingsHint(false);
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result === 'granted') {
+        await initializeFirebase();
+        const token = await getFCMToken();
+        if (token && userId && supabase) {
+          await supabase.from('device_tokens').upsert(
+            { user_id: userId, token, platform: 'web' },
+            { onConflict: 'user_id,token' }
+          );
         }
-        setPermission('denied');
-      } else {
-        // Enable: request permission
-        const result = await Notification.requestPermission();
-        setPermission(result);
-        if (result === 'granted') {
-          await initializeFirebase();
-          const token = await getFCMToken();
-          console.log('[NC] Token:', token?.substring(0, 20), 'UserId:', userId, 'Supabase:', !!supabase);
-          if (token && userId && supabase) {
-            console.log('[NC] Saving token to Supabase...');
-            const { error } = await supabase.from('device_tokens').upsert(
-              { user_id: userId, token, platform: 'web' },
-              { onConflict: 'user_id,token' }
-            );
-            if (error) {
-              console.error('[NC] Supabase error:', error);
-            } else {
-              console.log('[NC] Token saved successfully');
-            }
-          } else {
-            console.log('[NC] Missing required data - token:', !!token, 'userId:', !!userId, 'supabase:', !!supabase);
-          }
-        }
+        setSubscribed(true);
+      } else if (result === 'denied') {
+        // Browser-level denied — user must go to settings
+        setShowSettingsHint(true);
       }
     } catch (err) {
-      console.error('Toggle push notifications failed:', err);
+      console.error('Enable notifications failed:', err);
     }
   };
 
+  const handleDisable = async () => {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+      }
+      setSubscribed(false);
+    } catch (err) {
+      console.error('Disable notifications failed:', err);
+    }
+  };
+
+  const isEnabled = permission === 'granted' && subscribed;
+  const isBrowserDenied = permission === 'denied';
+
   return (
     <>
-      <div className="flex items-center gap-2">
-        {permission === 'default' && (
+      <div className="flex items-center gap-1 md:gap-2">
+        {isBrowserDenied ? (
           <button
-            onClick={handleTogglePushNotifications}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1.5"
+            onClick={() => setShowSettingsHint(true)}
+            className="px-2 py-1 text-[11px] font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1"
+            title="Notifications blocked — open browser settings to enable"
           >
-            <BellRing className="w-3.5 h-3.5" />
-            Enable Notifications
+            <BellOff className="w-3 h-3" />
+            <span className="hidden md:inline">Blokirano</span>
           </button>
-        )}
-        {permission === 'granted' && (
+        ) : isEnabled ? (
           <button
-            onClick={handleTogglePushNotifications}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1.5"
-            title="Push notifications enabled"
+            onClick={handleDisable}
+            className="px-2 py-1 text-[11px] font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
+            title="Disable notifications"
           >
-            <BellRing className="w-3.5 h-3.5" />
-            On
+            <BellRing className="w-3 h-3" />
+            <span className="hidden md:inline">Uključeno</span>
           </button>
-        )}
-        {permission === 'denied' && (
+        ) : (
           <button
-            onClick={handleTogglePushNotifications}
-            className="px-2.5 py-1.5 text-xs font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1.5"
-            title="Push notifications disabled"
+            onClick={handleEnable}
+            className="px-2 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1"
+            title="Enable notifications"
           >
-            <BellOff className="w-3.5 h-3.5" />
-            Off
+            <BellRing className="w-3 h-3" />
+            <span className="hidden md:inline">Omogući obavijesti</span>
           </button>
         )}
 
@@ -106,6 +117,24 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           )}
         </button>
       </div>
+
+      {/* Browser-level blocked hint */}
+      {showSettingsHint && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSettingsHint(false)}>
+          <div className="bg-white rounded-xl w-full max-w-sm mx-4 p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-black">Obavijesti su blokirane</h3>
+            <p className="text-sm text-black/70">
+              Vaš preglednik blokira obavijesti za ovu stranicu. Da biste ih omogućili, otvorite postavke preglednika i dopustite obavijesti za payparq.com.
+            </p>
+            <button
+              onClick={() => setShowSettingsHint(false)}
+              className="w-full px-4 py-2 rounded-full bg-black text-white text-sm font-semibold hover:bg-gray-900 transition-colors"
+            >
+              Razumijem
+            </button>
+          </div>
+        </div>
+      )}
 
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsOpen(false)}>

@@ -14,8 +14,13 @@ export function useInstallPrompt(storageKey: string) {
     setIsIOS(ios);
     setIsInstalled(standalone);
 
-    const dismissed = localStorage.getItem(storageKey);
-    if (dismissed || standalone) return;
+    if (standalone) return;
+
+    // App not installed — clear persistent dismissed flag so prompt can reappear
+    localStorage.removeItem(storageKey);
+
+    // iOS: use sessionStorage so prompt only shows once per browser session
+    if (ios && sessionStorage.getItem(storageKey)) return;
 
     if (ios) {
       // iOS: show custom instructions after short delay
@@ -46,7 +51,13 @@ export function useInstallPrompt(storageKey: string) {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(storageKey, 'true');
+    // iOS: session-only dismissal; Android: localStorage (browser controls re-firing)
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (ios) {
+      sessionStorage.setItem(storageKey, '1');
+    } else {
+      localStorage.setItem(storageKey, '1');
+    }
     setShowPrompt(false);
   };
 
