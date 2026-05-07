@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
+import { SearchPWAInit } from '@/components/SearchPWAInit';
 
 export const metadata: Metadata = {
   title: 'Find Parking | PayParq - Book Secure Parking Spaces',
@@ -31,6 +32,7 @@ export default function SearchLayout({
 }) {
   return (
     <>
+      <SearchPWAInit />
       {children}
       <PWAInstallPrompt />
     </>

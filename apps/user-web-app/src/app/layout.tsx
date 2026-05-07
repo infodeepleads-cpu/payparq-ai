@@ -55,7 +55,7 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});}if('caches' in window){window.caches.keys().then(function(keys){keys.forEach(function(k){window.caches.delete(k);});}).catch(function(){});}})();",
+              "(function(){if(typeof window==='undefined')return;var n=window.navigator;if(n&&'serviceWorker' in n){n.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){if(r.scope===window.location.origin+'/'){r.unregister();}});}).catch(function(){});}})();",
           }}
         />
         <LocaleProvider initialLocale={locale}>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { MembersPWAInit } from "@/components/MembersPWAInit";
 
 export const metadata: Metadata = {
   title: "Payparq Members | Parking Loyalty & Subscriptions",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function MembersLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <MembersPWAInit />
       {children}
       <PWAInstallPrompt />
     </>
