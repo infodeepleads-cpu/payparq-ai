@@ -113,28 +113,14 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
 
   const now = new Date();
 
-  const withNames = sessions.map(s => {
-    const entry = s.entry_time ? new Date(s.entry_time) : null;
-    // Calculate exit_time: entry_time + duration (quantity in minutes)
-    const exit = entry && s.duration_minutes ? new Date(entry.getTime() + s.duration_minutes * 60000) : null;
-    return { ...s, location_name: locationNames[s.location_id ?? ''] ?? s.location_id, calculated_exit: exit };
-  });
+  const withNames = sessions.map(s => ({
+    ...s,
+    location_name: locationNames[s.location_id ?? ''] ?? s.location_id,
+  }));
 
-  const live = withNames.filter(s => {
-    const entry = s.entry_time ? new Date(s.entry_time) : null;
-    const exit = s.calculated_exit;
-    return entry && entry <= now && (exit ? exit >= now : true);
-  });
-
-  const upcoming = withNames.filter(s => {
-    const entry = s.entry_time ? new Date(s.entry_time) : null;
-    return entry && entry > now;
-  });
-
-  const history = withNames.filter(s => {
-    const exit = s.calculated_exit;
-    return exit && exit < now;
-  });
+  const live = withNames.filter(s => s.status === 'active');
+  const upcoming = withNames.filter(s => s.status === 'scheduled' || s.status === 'pending');
+  const history = withNames.filter(s => s.status === 'completed' || s.status === 'expired' || (!s.status && s.exit_time));
 
   const filtered = (tab === 'live' ? live : tab === 'upcoming' ? upcoming : history).filter(s => {
     if (!search) return true;
