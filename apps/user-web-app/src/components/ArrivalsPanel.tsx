@@ -203,14 +203,14 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
             <tbody>
               {filtered.map((s, i) => (
                 <tr key={s.id} className={`border-t border-white/5 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                  <td className="px-4 py-2.5 font-mono font-bold text-white">{s.plate || '—'}</td>
-                  <td className="px-4 py-2.5 text-white/70">{s.location_name || '—'}</td>
-                  <td className="px-4 py-2.5 text-white/60">{fmt(s.entry_time)}</td>
-                  <td className="px-4 py-2.5 text-white/60">{fmt(s.exit_time)}</td>
-                  <td className="px-4 py-2.5 text-white/60">{fmtDuration(s.duration_minutes)}</td>
-                  <td className="px-4 py-2.5 font-semibold text-white/80">{fmtAmount(s.price, s.currency)}</td>
+                  <td className="px-4 py-2.5 font-mono font-bold text-cyan-300">{s.plate || '—'}</td>
+                  <td className="px-4 py-2.5 text-lime-300 font-semibold">{s.location_name || '—'}</td>
+                  <td className="px-4 py-2.5 text-yellow-300 font-medium">{fmt(s.entry_time)}</td>
+                  <td className="px-4 py-2.5 text-orange-300 font-medium">{fmt(s.exit_time)}</td>
+                  <td className="px-4 py-2.5 text-pink-300 font-semibold">{fmtDuration(s.duration_minutes)}</td>
+                  <td className="px-4 py-2.5 font-semibold text-green-400">{fmtAmount(s.price, s.currency)}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} paymentStatus={s.payment_status} /></td>
-                  <td className="px-4 py-2.5 text-white/40 truncate max-w-[140px]">{s.email || '—'}</td>
+                  <td className="px-4 py-2.5 text-blue-300 truncate max-w-[140px]">{s.email || '—'}</td>
                 </tr>
               ))}
             </tbody>
