@@ -1,0 +1,39 @@
+{
+  "name": "Payparq Members",
+  "short_name": "Members",
+  "description": "Manage your parking properties, track earnings, and get real-time notifications",
+  "start_url": "/members",
+  "scope": "/members",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5F3DFC",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}

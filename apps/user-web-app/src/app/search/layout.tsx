@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 
 export const metadata: Metadata = {
   title: 'Find Parking | PayParq - Book Secure Parking Spaces',
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://payparq.ai/search',
   },
+  manifest: '/manifest-search.json',
 };
 
 export default function SearchLayout({
@@ -27,5 +29,10 @@ export default function SearchLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <PWAInstallPrompt />
+    </>
+  );
 }

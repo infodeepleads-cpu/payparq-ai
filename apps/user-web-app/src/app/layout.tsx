@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   description:
     "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
   applicationName: "Payparq",
-  manifest: "/manifest.json",
   openGraph: {
     title: "Payparq | Frictionless Parking and Urban Mobility",
     description:
