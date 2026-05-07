@@ -2608,11 +2608,11 @@ export default function MembersPage() {
       return <CampaignsPanel />;
     }
 
-    if (activeItem === "arrivals" && (isAdmin || isManager) && user) {
+    if (activeItem === "arrivals" && user) {
       return <ArrivalsPanel userId={user.id} />;
     }
 
-    if (activeItem === "payouts" && (isAdmin || isManager)) {
+    if (activeItem === "payouts" && user) {
       return (
         <div className="space-y-4">
           <div className="space-y-2">
@@ -2708,7 +2708,7 @@ export default function MembersPage() {
       );
     }
 
-    if (activeItem === "calendars" && (isAdmin || isManager)) {
+    if (activeItem === "calendars" && user) {
       return (
         <div className="space-y-6">
           <div>
@@ -2770,7 +2770,7 @@ export default function MembersPage() {
       );
     }
 
-    if (activeItem === "moji-prostori" && (isAdmin || isManager)) {
+    if (activeItem === "moji-prostori" && user) {
       return (
         <div className="space-y-6">
           <div>

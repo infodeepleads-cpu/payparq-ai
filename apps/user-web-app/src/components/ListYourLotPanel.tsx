@@ -861,17 +861,9 @@ export function ListYourLotPanel({
           // Promote user to manager role when creating first location
           try {
             if (user?.id) {
-              // Update user role via RPC or profiles table
-              const { error: roleError } = await supabase
+              await supabase
                 .from('profiles')
-                .update({ role: 'manager' })
-                .eq('id', user.id)
-                .is('role', null)
-                .or('role.eq.member');
-
-              if (!roleError) {
-                console.log('✓ User promoted to manager role');
-              }
+                .upsert({ id: user.id, role: 'manager' }, { onConflict: 'id', ignoreDuplicates: false });
             }
           } catch (err) {
             console.warn('Failed to promote user to manager:', err);
