@@ -13,6 +13,21 @@ export function useServiceWorkerRegistration(scope: string) {
         const alreadyRegistered = registrations.some(r => r.scope === `${window.location.origin}${scope}`);
 
         if (alreadyRegistered) {
+          // Still check for updates on existing registration
+          registrations.forEach(r => {
+            if (r.scope === `${window.location.origin}${scope}`) {
+              r.update();
+              r.addEventListener('updatefound', () => {
+                if (r.installing) {
+                  r.installing.addEventListener('statechange', () => {
+                    if (r.installing?.state === 'installed' && navigator.serviceWorker.controller) {
+                      console.log('✓ New SW update available - refresh to apply');
+                    }
+                  });
+                }
+              });
+            }
+          });
           return;
         }
 
@@ -21,6 +36,17 @@ export function useServiceWorkerRegistration(scope: string) {
         });
 
         console.log(`✓ Service Worker registered for scope: ${scope}`, registration);
+
+        // Listen for updates
+        registration.addEventListener('updatefound', () => {
+          if (registration.installing) {
+            registration.installing.addEventListener('statechange', () => {
+              if (registration.installing?.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('✓ New SW update available - refresh to apply');
+              }
+            });
+          }
+        });
 
         // Check for updates periodically
         const checkInterval = setInterval(() => {
