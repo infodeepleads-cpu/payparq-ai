@@ -133,74 +133,75 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
   });
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Tabs */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-        {([['live', `Live (${live.length})`, 'bg-green-500'], ['upcoming', `Upcoming (${upcoming.length})`, 'bg-blue-500'], ['history', `History (${history.length})`, 'bg-gray-500']] as const).map(([id, label, color]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${tab === id ? `${color} text-white` : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
-          >
-            {label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-white/30">Updated {fmtTime(lastRefresh.toISOString())}</span>
-          <button onClick={fetchSessions} className="text-[10px] text-white/50 hover:text-white/80 px-2 py-1 rounded border border-white/10">↻</button>
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Dolasci</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-black/40">Ažurirano {fmtTime(lastRefresh.toISOString())}</span>
+            <button onClick={fetchSessions} className="text-[10px] text-black/40 hover:text-black px-2 py-0.5 rounded border border-black/10 transition-colors">↻</button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-2">
+          {([
+            ['live', `Uživo (${live.length})`, 'bg-[#5F3DFC] text-white', 'text-[#5F3DFC] border border-[#5F3DFC]/30'],
+            ['upcoming', `Nadolazeće (${upcoming.length})`, 'bg-[#5F3DFC] text-white', 'text-[#5F3DFC] border border-[#5F3DFC]/30'],
+            ['history', `Povijest (${history.length})`, 'bg-black text-white', 'text-black/60 border border-black/15'],
+          ] as const).map(([id, label, activeClass, inactiveClass]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${tab === id ? activeClass : `bg-transparent ${inactiveClass} hover:bg-black/5`}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Search */}
       {tab === 'history' && (
-        <div className="px-4 py-2 border-b border-white/10">
+        <div className="px-4 py-2">
           <input
             type="text"
-            placeholder="Search plate, email, location..."
+            placeholder="Pretraži tablicu, email, lokaciju..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-white/10 text-white text-xs placeholder-white/30 rounded-lg px-3 py-2 outline-none border border-white/10 focus:border-white/30"
+            className="w-full bg-black/5 text-black text-xs placeholder-black/30 rounded-lg px-3 py-2 outline-none border border-black/10 focus:border-[#5F3DFC]/50"
           />
         </div>
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {loading ? (
-          <div className="flex items-center justify-center h-40 text-white/40 text-sm">Loading...</div>
+          <div className="flex items-center justify-center h-40 text-black/40 text-sm">Učitavanje...</div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 gap-2 text-white/40">
-            <p className="text-sm">{tab === 'live' ? 'No active sessions' : tab === 'upcoming' ? 'No upcoming sessions' : 'No history found'}</p>
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-black/40">
+            <p className="text-sm">{tab === 'live' ? 'Nema aktivnih sesija' : tab === 'upcoming' ? 'Nema nadolazećih sesija' : 'Nema povijesti'}</p>
           </div>
         ) : (
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-[#05020A]">
-              <tr className="text-white/40 text-left">
-                <th className="px-4 py-2 font-medium">Plate</th>
-                <th className="px-4 py-2 font-medium">Location</th>
-                <th className="px-4 py-2 font-medium">Check-in</th>
-                <th className="px-4 py-2 font-medium">Check-out</th>
-                <th className="px-4 py-2 font-medium">Duration</th>
-                <th className="px-4 py-2 font-medium">Amount</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Email</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s, i) => (
-                <tr key={s.id} className={`border-t border-white/5 hover:bg-white/5 transition-colors ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
-                  <td className="px-4 py-2.5 font-mono font-bold text-violet-300">{s.plate || '—'}</td>
-                  <td className="px-4 py-2.5 text-white font-semibold">{s.location_name || '—'}</td>
-                  <td className="px-4 py-2.5 text-violet-300 font-medium">{fmt(s.entry_time)}</td>
-                  <td className="px-4 py-2.5 text-violet-300 font-medium">{fmt(s.exit_time)}</td>
-                  <td className="px-4 py-2.5 text-violet-300 font-semibold">{fmtDuration(s.duration_minutes)}</td>
-                  <td className="px-4 py-2.5 font-semibold text-violet-300">{fmtAmount(s.price, s.currency)}</td>
-                  <td className="px-4 py-2.5"><StatusBadge status={s.status} paymentStatus={s.payment_status} /></td>
-                  <td className="px-4 py-2.5 text-white truncate max-w-[140px]">{s.email || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="space-y-2 mt-2">
+            {filtered.map((s) => (
+              <div key={s.id} className="rounded-xl border border-black/10 bg-white p-3 hover:border-[#5F3DFC]/30 hover:bg-[#5F3DFC]/5 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-mono font-bold text-sm text-[#5F3DFC]">{s.plate || '—'}</span>
+                  <StatusBadge status={s.status} paymentStatus={s.payment_status} />
+                </div>
+                <p className="text-xs font-semibold text-black truncate">{s.location_name || '—'}</p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                  <span className="text-[10px] text-black/50">Ulaz: <span className="text-black font-medium">{fmt(s.entry_time)}</span></span>
+                  {s.exit_time && <span className="text-[10px] text-black/50">Izlaz: <span className="text-black font-medium">{fmt(s.exit_time)}</span></span>}
+                  {s.duration_minutes && <span className="text-[10px] text-black/50">Trajanje: <span className="text-[#5F3DFC] font-semibold">{fmtDuration(s.duration_minutes)}</span></span>}
+                  {s.price !== null && <span className="text-[10px] text-black/50">Iznos: <span className="text-black font-semibold">{fmtAmount(s.price, s.currency)}</span></span>}
+                  {s.email && <span className="text-[10px] text-black/50 truncate max-w-[180px]">Email: <span className="text-black/70">{s.email}</span></span>}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
