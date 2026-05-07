@@ -11,6 +11,7 @@ import { CampaignsPanel } from "@/components/CampaignsPanel";
 import { ShuttleReservationCard } from "@/components/ShuttleReservationCard";
 import { LotCalendarPricing } from "@/components/LotCalendarPricing";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { ArrivalsPanel } from "@/components/ArrivalsPanel";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { useDeviceToken } from "@/hooks/useDeviceToken";
 import type { User } from "@supabase/supabase-js";
@@ -29,6 +30,9 @@ type NavItemId =
   | "operations"
   | "management"
   | "campaigns"
+  | "arrivals"
+  | "moji-prostori"
+  | "payouts"
   | "list-lot";
 type FlowType = "park_now" | "monthly" | "reserve";
 type HomeWidgetId = "insurance" | "ride" | "extend" | "invoice";
@@ -2068,155 +2072,6 @@ export default function MembersPage() {
               </div>
             );
           })()}
-
-          {/* My Listings widget or Calendar/Pricing Management */}
-          {selectedLotForManagement ? (
-            <div className="rounded-xl border border-black/10 bg-white overflow-hidden" style={{ height: '600px' }}>
-              <LotCalendarPricing
-                lotId={selectedLotForManagement}
-                lotName={ownerListings.find(l => l.id === selectedLotForManagement)?.name || 'Unknown'}
-                lotAddress={ownerListings.find(l => l.id === selectedLotForManagement)?.address || 'Unknown'}
-                lotCapacity={String(ownerListings.find(l => l.id === selectedLotForManagement)?.capacity || '1')}
-                onBack={() => setSelectedLotForManagement(null)}
-              />
-            </div>
-          ) : (
-            <div className="rounded-xl border border-black/10 bg-white p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
-                <button
-                  type="button"
-                  onClick={() => router.push('/list-your-parking')}
-                  className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
-                  title="Dodaj novi prostor"
-                >
-                  <span className="text-base leading-none font-bold">+</span>
-                </button>
-              </div>
-              {ownerListingsLoading ? (
-                <p className="text-xs text-black/50">Učitavanje...</p>
-              ) : ownerListings.length === 0 ? (
-                <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[#5F3DFC]">+</span> za dodavanje.</p>
-              ) : (
-                <div className="space-y-2">
-                  {ownerListings.map((loc) => (
-                    <div
-                      key={loc.id}
-                      className="w-full flex items-center justify-between py-2 px-2 rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all group"
-                    >
-                      <button
-                        onClick={() => {
-                          const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
-                          const isComplete = sections.section1 && sections.section2 && sections.section3;
-                          if (!isComplete) {
-                            router.push(`/list-your-parking?edit=${loc.id}`);
-                          } else {
-                            router.push(`/members/listing/${loc.id}`);
-                          }
-                        }}
-                        className="flex-1 text-left"
-                      >
-                        <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
-                        <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
-                      </button>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="text-[10px] text-black/50">{loc.capacity} mj.</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                          loc.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
-                          loc.verification_status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/members/calendar/${loc.id}`);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
-                          title="Upravljaj kalendarom i cijenama"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
-                            const isComplete = sections.section1 && sections.section2 && sections.section3;
-                            if (!isComplete) {
-                              router.push(`/list-your-parking?edit=${loc.id}`);
-                            } else {
-                              router.push(`/members/edit-listing/${loc.id}`);
-                            }
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-blue-500 hover:text-blue-700 transition-all"
-                          title="Uredi lot"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!confirm(`Sigurno želiš izbrisati "${loc.name}"?`)) return;
-                            try {
-                              if (!supabase) return;
-                              const { error } = await supabase.from('locations').delete().eq('id', loc.id);
-                              if (error) throw error;
-                              setOwnerListings((prev) => prev.filter((l) => l.id !== loc.id));
-                            } catch (err: any) {
-                              setActionError(err.message || 'Greška pri brisanju');
-                            }
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 transition-all"
-                          title="Obriši lot"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Calendar Widget for Verified Listings */}
-          {ownerListings.some(l => l.verification_status === 'verified') && (
-            <div className="rounded-xl border border-black/10 bg-white p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">📅 Upravljaj kalendarima</p>
-              </div>
-              <div className="space-y-2">
-                {ownerListings
-                  .filter(loc => loc.verification_status === 'verified')
-                  .map((loc) => (
-                    <button
-                      key={loc.id}
-                      onClick={() => router.push(`/members/calendar/${loc.id}`)}
-                      className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-black/10 bg-black/2 hover:bg-purple-50 hover:border-purple-300 transition-all group"
-                    >
-                      <div className="text-left flex-1">
-                        <p className="text-xs font-semibold text-black">{loc.name}</p>
-                        <p className="text-[10px] text-black/50">{loc.capacity} mjesta</p>
-                      </div>
-                      <svg className="w-4 h-4 text-purple-500 group-hover:text-purple-700 transition-colors" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
-                      </svg>
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {actionError && (
-            <p className="text-[11px] text-red-600">{actionError}</p>
-          )}
         </div>
       );
     }
@@ -2468,91 +2323,6 @@ export default function MembersPage() {
                 <p className="text-[11px] text-red-600">{actionError}</p>
               )}
             </div>
-          </div>
-
-          {/* PAYOUTS SECTION */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-black">Payouts</h3>
-            <div className="space-y-2">
-              <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
-              <button
-                type="button"
-                onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
-                className="w-full flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#7C3AED] flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.5 1.5H2.75A1.25 1.25 0 001.5 2.75v14.5A1.25 1.25 0 002.75 18.5h14.5a1.25 1.25 0 001.25-1.25V9.5m-15-4h12m-12 6h12m-8-8v16" strokeWidth="1.5" stroke="currentColor" fill="none"/>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-sm font-semibold text-black">Stripe Connect</h3>
-                    <p className="text-[11px] text-black/60">
-                      {isStripeConnectConnected ? "Povezan račun" : "Poveži svoju bankovnu račun"}
-                    </p>
-                  </div>
-                </div>
-                <svg
-                  className={`w-5 h-5 text-[#7C3AED] transition-transform ${isStripeConnectExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-              </button>
-              {isStripeConnectExpanded && (
-                <div className="mt-4 space-y-3">
-                  <p className="text-sm text-black/70">
-                    Poveži Stripe račun kako bi prihvatio plaćanja i upravlyao transakcijama.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!supabase) return;
-                        try {
-                          const { data, error } = await supabase.functions.invoke('create-connect-account');
-                          if (error) throw error;
-                          if (data?.url) {
-                            window.location.href = data.url;
-                          }
-                        } catch (err) {
-                          console.error('Stripe Connect error:', err);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] transition-colors"
-                    >
-                      Poveži Stripe račun
-                    </button>
-                    <button
-                      type="button"
-                      className="px-4 py-2 rounded-lg border border-[#7C3AED] text-[#7C3AED] text-sm font-semibold hover:bg-purple-50 transition-colors"
-                    >
-                      Poveži isti račun s PayParq-a
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <p className="text-sm font-semibold text-black mb-3">Revenue & Payouts</p>
-              <div className="space-y-2.5">
-                <div>
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-700">€0.00</p>
-                </div>
-                <div className="border-t border-green-200 pt-2.5">
-                  <p className="text-[11px] text-black/60 uppercase font-semibold">Pending</p>
-                  <p className="text-lg font-semibold text-orange-600">€0.00</p>
-                </div>
-                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
-                  View Details
-                </button>
-              </div>
-            </div>
-          </div>
           </div>
         </div>
       );
@@ -2832,6 +2602,268 @@ export default function MembersPage() {
 
     if (activeItem === "campaigns" && role === "super_admin") {
       return <CampaignsPanel />;
+    }
+
+    if (activeItem === "arrivals" && (isAdmin || isManager) && user) {
+      return <ArrivalsPanel userId={user.id} />;
+    }
+
+    if (activeItem === "payouts" && (isAdmin || isManager)) {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Payouts
+            </h2>
+            <p className="text-sm text-black/70">
+              Manage Stripe Connect and view your revenue.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+              <button
+                type="button"
+                onClick={() => setIsStripeConnectExpanded(!isStripeConnectExpanded)}
+                className="w-full flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#7C3AED] flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.5 1.5H2.75A1.25 1.25 0 001.5 2.75v14.5A1.25 1.25 0 002.75 18.5h14.5a1.25 1.25 0 001.25-1.25V9.5m-15-4h12m-12 6h12m-8-8v16" strokeWidth="1.5" stroke="currentColor" fill="none"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-sm font-semibold text-black">Stripe Connect</h3>
+                    <p className="text-[11px] text-black/60">
+                      {isStripeConnectConnected ? "Povezan račun" : "Poveži svoju bankovnu račun"}
+                    </p>
+                  </div>
+                </div>
+                <svg
+                  className={`w-5 h-5 text-[#7C3AED] transition-transform ${isStripeConnectExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+              </button>
+              {isStripeConnectExpanded && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm text-black/70">
+                    Poveži Stripe račun kako bi prihvatio plaćanja i upravlyao transakcijama.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!supabase) return;
+                        try {
+                          const { data, error } = await supabase.functions.invoke('create-connect-account');
+                          if (error) throw error;
+                          if (data?.url) {
+                            window.location.href = data.url;
+                          }
+                        } catch (err) {
+                          console.error('Stripe Connect error:', err);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-sm font-semibold hover:bg-[#6D28D9] transition-colors"
+                    >
+                      Poveži Stripe račun
+                    </button>
+                    <button
+                      type="button"
+                      className="px-4 py-2 rounded-lg border border-[#7C3AED] text-[#7C3AED] text-sm font-semibold hover:bg-purple-50 transition-colors"
+                    >
+                      Poveži isti račun s PayParq-a
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="text-sm font-semibold text-black mb-3">Revenue & Payouts</p>
+              <div className="space-y-2.5">
+                <div>
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Total Revenue</p>
+                  <p className="text-2xl font-bold text-green-700">€0.00</p>
+                </div>
+                <div className="border-t border-green-200 pt-2.5">
+                  <p className="text-[11px] text-black/60 uppercase font-semibold">Pending</p>
+                  <p className="text-lg font-semibold text-orange-600">€0.00</p>
+                </div>
+                <button className="w-full mt-2 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                  View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeItem === "moji-prostori" && (isAdmin || isManager)) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-black">
+              Moji prostori
+            </h2>
+            <p className="text-sm text-black/70">Upravljaj svojim parkiralištima.</p>
+          </div>
+
+          {/* My Listings widget or Calendar/Pricing Management */}
+          {selectedLotForManagement ? (
+            <div className="rounded-xl border border-black/10 bg-white overflow-hidden" style={{ height: '600px' }}>
+              <LotCalendarPricing
+                lotId={selectedLotForManagement}
+                lotName={ownerListings.find(l => l.id === selectedLotForManagement)?.name || 'Unknown'}
+                lotAddress={ownerListings.find(l => l.id === selectedLotForManagement)?.address || 'Unknown'}
+                lotCapacity={String(ownerListings.find(l => l.id === selectedLotForManagement)?.capacity || '1')}
+                onBack={() => setSelectedLotForManagement(null)}
+              />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-black/10 bg-white p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
+                <button
+                  type="button"
+                  onClick={() => router.push('/list-your-parking')}
+                  className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
+                  title="Dodaj novi prostor"
+                >
+                  <span className="text-base leading-none font-bold">+</span>
+                </button>
+              </div>
+              {ownerListingsLoading ? (
+                <p className="text-xs text-black/50">Učitavanje...</p>
+              ) : ownerListings.length === 0 ? (
+                <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[#5F3DFC]">+</span> za dodavanje.</p>
+              ) : (
+                <div className="space-y-2">
+                  {ownerListings.map((loc) => (
+                    <div
+                      key={loc.id}
+                      className="w-full flex items-center justify-between py-2 px-2 rounded-lg border border-transparent hover:border-black/10 hover:bg-black/2 transition-all group"
+                    >
+                      <button
+                        onClick={() => {
+                          const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
+                          const isComplete = sections.section1 && sections.section2 && sections.section3;
+                          if (!isComplete) {
+                            router.push(`/list-your-parking?edit=${loc.id}`);
+                          } else {
+                            router.push(`/members/listing/${loc.id}`);
+                          }
+                        }}
+                        className="flex-1 text-left"
+                      >
+                        <p className="text-xs font-semibold text-black truncate">{loc.name || '—'}</p>
+                        <p className="text-[10px] text-black/50 truncate">{loc.address || '—'}</p>
+                      </button>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-[10px] text-black/50">{loc.capacity} mj.</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                          loc.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
+                          loc.verification_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {loc.verification_status === 'verified' ? 'Aktivno' : loc.verification_status === 'pending' ? 'Na čekanju' : 'Neverificirano'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/members/calendar/${loc.id}`);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-purple-500 hover:text-purple-700 transition-all"
+                          title="Upravljaj kalendarom i cijenama"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
+                            const isComplete = sections.section1 && sections.section2 && sections.section3;
+                            if (!isComplete) {
+                              router.push(`/list-your-parking?edit=${loc.id}`);
+                            } else {
+                              router.push(`/members/edit-listing/${loc.id}`);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-blue-500 hover:text-blue-700 transition-all"
+                          title="Uredi lot"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm(`Sigurno želiš izbrisati "${loc.name}"?`)) return;
+                            try {
+                              if (!supabase) return;
+                              const { error } = await supabase.from('locations').delete().eq('id', loc.id);
+                              if (error) throw error;
+                              setOwnerListings((prev) => prev.filter((l) => l.id !== loc.id));
+                            } catch (err: any) {
+                              setActionError(err.message || 'Greška pri brisanju');
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-700 transition-all"
+                          title="Obriši lot"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Calendar Widget for Verified Listings */}
+          {ownerListings.some(l => l.verification_status === 'verified') && (
+            <div className="rounded-xl border border-black/10 bg-white p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">📅 Upravljaj kalendarima</p>
+              </div>
+              <div className="space-y-2">
+                {ownerListings
+                  .filter(loc => loc.verification_status === 'verified')
+                  .map((loc) => (
+                    <button
+                      key={loc.id}
+                      onClick={() => router.push(`/members/calendar/${loc.id}`)}
+                      className="w-full flex items-center justify-between py-2 px-3 rounded-lg border border-black/10 bg-black/2 hover:bg-purple-50 hover:border-purple-300 transition-all group"
+                    >
+                      <div className="text-left flex-1">
+                        <p className="text-xs font-semibold text-black">{loc.name}</p>
+                        <p className="text-[10px] text-black/50">{loc.capacity} mjesta</p>
+                      </div>
+                      <svg className="w-4 h-4 text-purple-500 group-hover:text-purple-700 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6 2a1 1 0 00-1 1v2H4a2 2 0 00-2 2v2h16V7a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v2H7V3a1 1 0 00-1-1zm0 5H4v9a2 2 0 002 2h12a2 2 0 002-2V7h-2v1a1 1 0 11-2 0V7H9v1a1 1 0 11-2 0V7H6v1a1 1 0 11-2 0V7z" />
+                      </svg>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {actionError && (
+            <p className="text-[11px] text-red-600">{actionError}</p>
+          )}
+        </div>
+      );
     }
 
     return (
@@ -3155,6 +3187,19 @@ export default function MembersPage() {
                       <span>Management</span>
                     </button>
                   )}
+                  {(isAdmin || isManager) && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveItem("arrivals")}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full border text-xs font-semibold whitespace-nowrap ${
+                        activeItem === "arrivals"
+                          ? "bg-white text-black border-white"
+                          : "border-white/20 text-white/80"
+                      }`}
+                    >
+                      <span>Arrivals</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => router.push('/list-your-parking')}
@@ -3180,7 +3225,8 @@ export default function MembersPage() {
 
               <div className="min-h-0 flex-1 flex bg-[#05020A] overflow-hidden">
                 <aside className="hidden md:flex w-72 border-r border-white/10 bg-[#05020A] flex-col">
-                  <nav className="px-2 pt-4 pb-4 space-y-1 text-[12px] flex-1">
+                  <nav className="px-2 pt-4 pb-4 space-y-4 text-[12px] flex-1">
+                    {/* HOME */}
                     <button
                       type="button"
                       onClick={() => setActiveItem("home")}
@@ -3195,187 +3241,194 @@ export default function MembersPage() {
                       </span>
                       <span>Home</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("permits")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "permits"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        P
-                      </span>
-                      <span>Permits & Subs</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("activity")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "activity"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        A
-                      </span>
-                      <span>Activity</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("payment")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "payment"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        $
-                      </span>
-                      <span>Payment</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("vehicles")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "vehicles"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        V
-                      </span>
-                      <span>Vehicles</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("promotions")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "promotions"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        %
-                      </span>
-                      <span>Promotions</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("rewards")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "rewards"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        R
-                      </span>
-                      <span>Rewards</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("reviews")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "reviews"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        ★
-                      </span>
-                      <span>Recenzije</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveItem("help")}
-                      className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                        activeItem === "help"
-                          ? "bg-white text-black"
-                          : "text-white/70 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        ?
-                      </span>
-                      <span>Help</span>
-                    </button>
-                    {isAdmin && (
-                      <Link
-                        href="/resources"
-                        className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
-                      >
-                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                          S
-                        </span>
-                        <span>Resources</span>
-                      </Link>
+
+                    {/* VLASNIK SECTION */}
+                    {(isAdmin || isManager) && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Vlasnik</p>
+                        <button
+                          type="button"
+                          onClick={() => setActiveItem("moji-prostori")}
+                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                            activeItem === "moji-prostori"
+                              ? "bg-white text-black"
+                              : "text-white/70 hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                            🏢
+                          </span>
+                          <span>Moji prostori</span>
+                        </button>
+                        <Link
+                          href="/list-your-parking"
+                          className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
+                        >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                            +
+                          </span>
+                          <span>Navedite svoje parkiralište</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setActiveItem("arrivals")}
+                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                            activeItem === "arrivals"
+                              ? "bg-white text-black"
+                              : "text-white/70 hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                            ↓
+                          </span>
+                          <span>Arrivals</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveItem("payouts")}
+                          className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                            activeItem === "payouts"
+                              ? "bg-white text-black"
+                              : "text-white/70 hover:bg-white/5"
+                          }`}
+                        >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                            💰
+                          </span>
+                          <span>Payouts</span>
+                        </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveItem("operations")}
+                            className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                              activeItem === "operations"
+                                ? "bg-white text-black"
+                                : "text-white/70 hover:bg-white/5"
+                            }`}
+                          >
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                              O
+                            </span>
+                            <span>Operacije</span>
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <Link
+                            href="/resources"
+                            className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
+                          >
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                              S
+                            </span>
+                            <span>Resursi</span>
+                          </Link>
+                        )}
+                      </div>
                     )}
-                    {isAdmin && (
+
+                    {/* KORISNIK SECTION */}
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40 px-3 pt-2">Korisnik</p>
                       <button
                         type="button"
-                        onClick={() => setActiveItem("operations")}
+                        onClick={() => setActiveItem("permits")}
                         className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                          activeItem === "operations"
+                          activeItem === "permits"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
                         }`}
                       >
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                          O
+                          P
                         </span>
-                        <span>Operations</span>
+                        <span>Permits & Subs</span>
                       </button>
-                    )}
-                    {isManager && (
                       <button
                         type="button"
-                        onClick={() => setActiveItem("management")}
+                        onClick={() => setActiveItem("activity")}
                         className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                          activeItem === "management"
+                          activeItem === "activity"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
                         }`}
                       >
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                          M
+                          A
                         </span>
-                        <span>Management</span>
+                        <span>Aktivnost</span>
                       </button>
-                    )}
-                    {role === "super_admin" && (
                       <button
                         type="button"
-                        onClick={() => setActiveItem("campaigns")}
+                        onClick={() => setActiveItem("payment")}
                         className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                          activeItem === "campaigns"
+                          activeItem === "payment"
                             ? "bg-white text-black"
                             : "text-white/70 hover:bg-white/5"
                         }`}
                       >
                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                          C
+                          $
                         </span>
-                        <span>Campaigns</span>
+                        <span>Plaćanje</span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => router.push('/list-your-parking')}
-                      className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
-                        +
-                      </span>
-                      <span>List your parking</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("vehicles")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "vehicles"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          V
+                        </span>
+                        <span>Vozila</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("promotions")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "promotions"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          %
+                        </span>
+                        <span>Promocije</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("reviews")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "reviews"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          ★
+                        </span>
+                        <span>Recenzije</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveItem("help")}
+                        className={`flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                          activeItem === "help"
+                            ? "bg-white text-black"
+                            : "text-white/70 hover:bg-white/5"
+                        }`}
+                      >
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
+                          ?
+                        </span>
+                        <span>Pomoć</span>
+                      </button>
+                    </div>
                   </nav>
                   <div className="border-t border-white/10 px-4 py-4 mt-auto space-y-3">
                     <div className="space-y-1 text-[11px] text-white/70">
