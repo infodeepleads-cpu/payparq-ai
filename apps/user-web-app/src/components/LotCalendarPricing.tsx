@@ -319,10 +319,11 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           max={lotCapacity}
           value={capacity}
           onChange={(e) => {
-            const val = e.target.value;
+            let val = e.target.value;
             if (val === '') {
               setCapacity(0);
             } else {
+              val = val.replace(/^0+/, '') || '0';
               const num = parseInt(val);
               if (!isNaN(num) && num >= 1 && num <= lotCapacity) {
                 setCapacity(num);
@@ -390,10 +391,11 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 min="0"
                 value={price}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  let val = e.target.value;
                   if (val === '') {
                     setPrice(0);
                   } else {
+                    val = val.replace(/^0+/, '') || '0';
                     const num = parseInt(val);
                     if (!isNaN(num) && num >= 0) {
                       setPrice(num);
