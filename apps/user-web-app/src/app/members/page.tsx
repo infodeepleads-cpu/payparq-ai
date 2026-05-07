@@ -543,6 +543,19 @@ export default function MembersPage() {
         }
         if (cancelled) return;
         if (error) {
+          // Check if user is already logged in despite the error
+          const { data: sessionData } = await client.auth.getUser();
+          if (sessionData.user) {
+            setUser(sessionData.user);
+            void resolveIsAdmin(sessionData.user);
+            setLoginNotice("");
+            const cleaned = new URL(window.location.href);
+            cleaned.searchParams.delete("token_hash");
+            cleaned.searchParams.delete("type");
+            cleaned.searchParams.delete("code");
+            window.history.replaceState({}, "", `${cleaned.pathname}${cleaned.search}${cleaned.hash}`);
+            return;
+          }
           setAuthError(formatOtpError(error.message));
           setLoginNotice("");
           return;
