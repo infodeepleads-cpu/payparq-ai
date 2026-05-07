@@ -247,8 +247,8 @@ export function ListYourLotPanel({
           ...prev,
           name: listing.name || '',
           address: listing.address || '',
-          latitude: String(listing.latitude || ''),
-          longitude: String(listing.longitude || ''),
+          latitude: listing.latitude != null && listing.latitude !== 0 ? String(listing.latitude) : '',
+          longitude: listing.longitude != null && listing.longitude !== 0 ? String(listing.longitude) : '',
           capacity: String(listing.capacity || ''),
           spaceType: String(listing.capacity || ''),
           type: meta.type || '',
@@ -284,49 +284,55 @@ export function ListYourLotPanel({
     loadListing();
   }, [editId, supabase]);
 
+  const initStreetView = (lat: number, lng: number) => {
+    if (!streetViewRef.current || !window.google?.maps) return;
+    const location = new window.google.maps.LatLng(lat, lng);
+    if (!streetViewInstanceRef.current) {
+      streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+        position: location,
+        pov: { heading: streetViewHeading, pitch: 0 },
+        zoom: 1,
+        motionTracking: false,
+        motionTrackingControl: true,
+        panControl: true,
+        zoomControl: true,
+      });
+      streetViewInstanceRef.current.addListener('pov_changed', () => {
+        const pov = streetViewInstanceRef.current.getPov();
+        setStreetViewHeading(pov.heading);
+      });
+    } else {
+      streetViewInstanceRef.current.setPosition(location);
+      streetViewInstanceRef.current.setPov({ heading: streetViewHeading, pitch: 0 });
+    }
+  };
+
   useEffect(() => {
-    if (currentStepValue === 3 && currentStep3SubValue === 'streetView' && streetViewRef.current && isLoaded && data.latitude && data.longitude && window.google?.maps) {
-      try {
-        const lat = parseFloat(data.latitude);
-        const lng = parseFloat(data.longitude);
+    if (currentStepValue !== 3 || currentStep3SubValue !== 'streetView' || !isLoaded || !window.google?.maps) return;
 
-        if (isNaN(lat) || isNaN(lng)) {
-          console.error('Invalid coordinates:', lat, lng);
-          return;
-        }
-
-        const location = new window.google.maps.LatLng(lat, lng);
-
-        if (!streetViewInstanceRef.current) {
-          streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(
-            streetViewRef.current,
-            {
-              position: location,
-              pov: {
-                heading: streetViewHeading,
-                pitch: 0,
-              },
-              zoom: 1,
-              motionTracking: false,
-              motionTrackingControl: true,
-              panControl: true,
-              zoomControl: true,
-            }
-          );
-
-          streetViewInstanceRef.current.addListener('pov_changed', () => {
-            const pov = streetViewInstanceRef.current.getPov();
-            setStreetViewHeading(pov.heading);
-          });
-
-          console.log('Street View initialized at:', lat, lng);
-        } else {
-          streetViewInstanceRef.current.setPosition(location);
-          streetViewInstanceRef.current.setPov({ heading: streetViewHeading, pitch: 0 });
-        }
-      } catch (error) {
-        console.error('Street View initialization error:', error);
+    if (data.latitude && data.longitude) {
+      const lat = parseFloat(data.latitude);
+      const lng = parseFloat(data.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        initStreetView(lat, lng);
+        return;
       }
+    }
+
+    // No coords — geocode from address as fallback
+    if (data.address && data.town) {
+      const geocoder = new window.google.maps.Geocoder();
+      const fullAddress = [data.address, data.town, data.region].filter(Boolean).join(', ');
+      geocoder.geocode({ address: fullAddress }, (results: any, status: any) => {
+        if (status === 'OK' && results?.[0]) {
+          const loc = results[0].geometry.location;
+          const lat = loc.lat();
+          const lng = loc.lng();
+          updateData('latitude', String(lat));
+          updateData('longitude', String(lng));
+          initStreetView(lat, lng);
+        }
+      });
     }
   }, [currentStepValue, currentStep3SubValue, isLoaded, data.latitude, data.longitude]);
 
