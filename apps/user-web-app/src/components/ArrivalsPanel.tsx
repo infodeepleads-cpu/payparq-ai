@@ -19,7 +19,6 @@ type Session = {
   duration_minutes: number | null;
   quantity: number | null;
   created_at: string | null;
-  calculated_exit?: Date | null;
 };
 
 function fmt(iso: string | null): string {
@@ -116,16 +115,8 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
 
   const withNames = sessions.map(s => {
     const entry = s.entry_time ? new Date(s.entry_time) : null;
-    let durationMinutes = s.duration_minutes ?? 0;
-
-    // Calculate duration from quantity based on type if duration_minutes not set
-    if (durationMinutes === 0 && s.quantity && s.type) {
-      if (s.type === 'hourly') durationMinutes = s.quantity * 60;
-      else if (s.type === 'daily') durationMinutes = s.quantity * 24 * 60;
-      else if (s.type === 'monthly') durationMinutes = s.quantity * 30 * 24 * 60;
-    }
-
-    const exit = entry && durationMinutes > 0 ? new Date(entry.getTime() + durationMinutes * 60000) : null;
+    // Calculate exit_time: entry_time + duration (quantity in minutes)
+    const exit = entry && s.duration_minutes ? new Date(entry.getTime() + s.duration_minutes * 60000) : null;
     return { ...s, location_name: locationNames[s.location_id ?? ''] ?? s.location_id, calculated_exit: exit };
   });
 
