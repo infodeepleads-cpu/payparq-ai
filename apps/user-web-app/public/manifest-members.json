@@ -1,11 +1,11 @@
 {
-  "name": "Payparq Members",
-  "short_name": "Members",
+  "name": "Payparq Host",
+  "short_name": "Host",
   "description": "Manage your parking properties, track earnings, and get real-time notifications",
   "start_url": "/members",
   "scope": "/members",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#0a0a0a",
   "theme_color": "#5F3DFC",
   "orientation": "portrait-primary",
   "icons": [

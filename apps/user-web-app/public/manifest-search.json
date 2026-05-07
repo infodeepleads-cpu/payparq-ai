@@ -1,12 +1,12 @@
 {
-  "name": "Payparq Search",
-  "short_name": "Search",
+  "name": "Payparq",
+  "short_name": "Park",
   "description": "Search and book verified parking spaces in your area",
   "start_url": "/search",
   "scope": "/search",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#5F3DFC",
+  "background_color": "#0a0a0a",
+  "theme_color": "#3B82F6",
   "orientation": "portrait-primary",
   "icons": [
     {
