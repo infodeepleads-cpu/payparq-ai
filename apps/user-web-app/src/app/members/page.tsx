@@ -543,6 +543,9 @@ export default function MembersPage() {
         }
         if (cancelled) return;
         if (error) {
+          // Wait for session cookie to be set (OAuth redirect timing)
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           // Check if user is already logged in despite the error
           const { data: sessionData } = await client.auth.getUser();
           if (sessionData.user) {
