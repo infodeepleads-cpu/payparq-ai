@@ -206,7 +206,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
                   <td className="px-4 py-2.5 font-mono font-bold text-white">{s.plate || '—'}</td>
                   <td className="px-4 py-2.5 text-white/70">{s.location_name || '—'}</td>
                   <td className="px-4 py-2.5 text-white/60">{fmt(s.entry_time)}</td>
-                  <td className="px-4 py-2.5 text-white/60">{fmt(s.calculated_exit?.toISOString() || null)}</td>
+                  <td className="px-4 py-2.5 text-white/60">{fmt(s.exit_time)}</td>
                   <td className="px-4 py-2.5 text-white/60">{fmtDuration(s.duration_minutes)}</td>
                   <td className="px-4 py-2.5 font-semibold text-white/80">{fmtAmount(s.price, s.currency)}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} paymentStatus={s.payment_status} /></td>
