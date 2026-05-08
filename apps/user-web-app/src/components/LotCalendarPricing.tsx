@@ -329,7 +329,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
             if (val === '') { setCapacity(''); return; }
             const stripped = val.replace(/^0+/, '') || '0';
             const num = parseInt(stripped);
-            if (!isNaN(num) && num >= 1 && num <= parseInt(lotCapacity)) setCapacity(String(num));
+            if (!isNaN(num) && num >= 1 && num <= lotCapacity) setCapacity(String(num));
           }}
           className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
