@@ -388,7 +388,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           {priceMode === 'manual' && (
             <div className="grid grid-cols-3 gap-2 md:gap-3">
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Po satu (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Sat (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -405,7 +405,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Po danu (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Dan (€)</label>
                 <input
                   type="number"
                   min="0"
@@ -422,7 +422,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-xs md:text-sm font-medium text-gray-700">Po mjesecu (€)</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Mjesec (€)</label>
                 <input
                   type="number"
                   min="0"
