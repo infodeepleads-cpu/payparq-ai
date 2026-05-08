@@ -375,9 +375,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
                 }}
               >
                 <span
-                  className="inline-block h-4 md:h-5 w-4 md:w-5 transform rounded-full bg-white transition-transform"
+                  className="inline-block h-4 md:h-5 w-4 md:w-5 transform rounded-full bg-white transition-transform duration-300"
                   style={{
-                    transform: priceMode === 'manual' ? 'translateX(20px)' : 'translateX(2px)',
+                    transform: priceMode === 'manual' ? 'translateX(28px)' : 'translateX(4px)',
                   }}
                 />
               </button>
