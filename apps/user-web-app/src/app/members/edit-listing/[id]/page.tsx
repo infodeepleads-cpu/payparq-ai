@@ -408,12 +408,17 @@ export default function EditListingPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip prostora</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.spaceType}
                     onChange={(e) => setFormData({ ...formData, spaceType: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black bg-white"
+                  >
+                    <option value="">Odaberite tip</option>
+                    <option value="private_driveway">Privatni prilaz</option>
+                    <option value="commercial_carpark">Komercijalni parking</option>
+                    <option value="residential_carpark">Stambeni parking</option>
+                    <option value="lockup_garage">Garaža</option>
+                  </select>
                 </div>
 
                 <div>
