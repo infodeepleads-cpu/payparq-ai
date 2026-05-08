@@ -14,34 +14,15 @@ export default function AuthCallbackPage() {
       searchParams.get('redirect') ||
       '/members';
 
-    const finish = () => {
-      if (typeof window !== 'undefined') sessionStorage.removeItem('authRedirect');
-      router.replace(redirectTo);
-    };
-
     const handleCallback = async () => {
       const code = searchParams.get('code');
-
-      if (!code) {
-        finish();
-        return;
-      }
-
-      // Try exchange with retries
-      for (let attempt = 0; attempt < 3; attempt++) {
+      if (code) {
         try {
-          const { error } = await supabase!.auth.exchangeCodeForSession(code);
-          if (!error) break; // Success
-        } catch (_) {
-          // ignore
-        }
-        if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+          await supabase!.auth.exchangeCodeForSession(code);
+        } catch (_) {}
       }
-
-      // Wait for session to propagate in cookies
-      await new Promise(r => setTimeout(r, 1000));
-
-      finish();
+      if (typeof window !== 'undefined') sessionStorage.removeItem('authRedirect');
+      router.replace(redirectTo);
     };
 
     handleCallback();
