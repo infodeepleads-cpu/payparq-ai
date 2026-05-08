@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, X, BellOff, BellRing } from 'lucide-react';
+import { Bell, X, BellOff, BellRing, Loader2 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { initializeFirebase, getFCMToken } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
@@ -14,60 +14,103 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
+  const [enableError, setEnableError] = useState<string | null>(null);
   const { notifications, unread, markRead } = useNotifications(userId);
 
   useEffect(() => {
-    checkPermission();
-  }, []);
+    checkStatus();
+  }, [userId]);
 
-  const checkPermission = () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission);
-      // Check if actually subscribed
-      if (Notification.permission === 'granted') {
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-          const checks = regs.map((r) => r.pushManager.getSubscription());
-          Promise.all(checks).then((subs) => {
-            setSubscribed(subs.some(Boolean));
-          });
-        });
-      }
+  const checkStatus = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    setPermission(Notification.permission);
+    if (Notification.permission !== 'granted' || !userId || !supabase) {
+      setSubscribed(false);
+      return;
     }
+    // Subscribed = we have a saved device token for this user
+    const { data } = await supabase
+      .from('device_tokens')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('platform', 'web')
+      .limit(1);
+    setSubscribed(!!(data && data.length > 0));
   };
 
   const handleEnable = async () => {
+    setEnableError(null);
+    setLoading(true);
     try {
       setShowSettingsHint(false);
       const result = await Notification.requestPermission();
       setPermission(result);
-      if (result === 'granted') {
-        await initializeFirebase();
-        const token = await getFCMToken();
-        if (token && userId && supabase) {
-          await supabase.from('device_tokens').upsert(
-            { user_id: userId, token, platform: 'web' },
-            { onConflict: 'user_id,token' }
-          );
-        }
-        setSubscribed(true);
-      } else if (result === 'denied') {
-        // Browser-level denied — user must go to settings
+
+      if (result === 'denied') {
         setShowSettingsHint(true);
+        return;
       }
-    } catch (err) {
-      console.error('Enable notifications failed:', err);
+
+      if (result !== 'granted') return;
+
+      // Init Firebase
+      await initializeFirebase();
+
+      // Get FCM token — register fresh service worker
+      let swReg: ServiceWorkerRegistration | undefined;
+      try {
+        // Unregister stale firebase SW and re-register fresh
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) {
+          if (r.active?.scriptURL.includes('firebase-messaging-sw')) {
+            await r.unregister();
+          }
+        }
+        swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        await navigator.serviceWorker.ready;
+      } catch (swErr) {
+        console.error('[FCM] SW registration failed:', swErr);
+        setEnableError('Greška pri registraciji servisnog radnika.');
+        return;
+      }
+
+      const token = await getFCMToken();
+      if (!token) {
+        setEnableError('Nije moguće dobiti FCM token. Provjeri postavke preglednika.');
+        return;
+      }
+
+      if (userId && supabase) {
+        const { error: upsertError } = await supabase.from('device_tokens').upsert(
+          { user_id: userId, token, platform: 'web' },
+          { onConflict: 'user_id,token' }
+        );
+        if (upsertError) {
+          console.error('[FCM] Upsert error:', upsertError);
+          setEnableError('Greška pri spremanju tokena.');
+          return;
+        }
+      }
+
+      setSubscribed(true);
+    } catch (err: any) {
+      console.error('[FCM] Enable failed:', err);
+      setEnableError(err?.message || 'Nepoznata greška.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSettingsHintDismiss = () => {
-    setShowSettingsHint(false);
-    // Re-check permission in case user changed browser settings
-    setTimeout(checkPermission, 500);
-  };
-
   const handleDisable = async () => {
+    setLoading(true);
     try {
+      // Remove device token from DB
+      if (userId && supabase) {
+        await supabase.from('device_tokens').delete().eq('user_id', userId).eq('platform', 'web');
+      }
+      // Unsubscribe push
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const reg of registrations) {
         const sub = await reg.pushManager.getSubscription();
@@ -75,8 +118,15 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       }
       setSubscribed(false);
     } catch (err) {
-      console.error('Disable notifications failed:', err);
+      console.error('[FCM] Disable failed:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSettingsHintDismiss = () => {
+    setShowSettingsHint(false);
+    setTimeout(checkStatus, 500);
   };
 
   const isEnabled = permission === 'granted' && subscribed;
@@ -85,11 +135,15 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
   return (
     <>
       <div className="flex items-center gap-1 md:gap-2">
-        {isBrowserDenied ? (
+        {loading ? (
+          <div className="px-2 py-1 flex items-center gap-1">
+            <Loader2 className="w-3 h-3 text-white animate-spin" />
+          </div>
+        ) : isBrowserDenied ? (
           <button
             onClick={() => setShowSettingsHint(true)}
             className="px-2 py-1 text-[11px] font-semibold text-white bg-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1"
-            title="Notifications blocked — open browser settings to enable"
+            title="Notifications blocked"
           >
             <BellOff className="w-3 h-3" />
             <span className="hidden md:inline">Blokirano</span>
@@ -98,7 +152,6 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           <button
             onClick={handleDisable}
             className="px-2 py-1 text-[11px] font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
-            title="Disable notifications"
           >
             <BellRing className="w-3 h-3" />
             <span className="hidden md:inline">Uključeno</span>
@@ -107,7 +160,6 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           <button
             onClick={handleEnable}
             className="px-2 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-1"
-            title="Enable notifications"
           >
             <BellRing className="w-3 h-3" />
             <span className="hidden md:inline">Omogući obavijesti</span>
@@ -117,7 +169,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         <button
           onClick={() => setIsOpen(true)}
           className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
-          title="Notifications"
+          title="Obavijesti"
         >
           <Bell className="w-5 h-5 text-white" />
           {unread > 0 && (
@@ -127,6 +179,14 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
           )}
         </button>
       </div>
+
+      {/* Error toast */}
+      {enableError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+          {enableError}
+          <button onClick={() => setEnableError(null)} className="ml-1 font-bold">×</button>
+        </div>
+      )}
 
       {/* Browser-level blocked hint */}
       {showSettingsHint && (
@@ -139,21 +199,19 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                 <li>Otvorite <strong>Postavke</strong> na iPhoneu</li>
                 <li>Idite na <strong>Safari → Obavijesti</strong></li>
                 <li>Pronađite <strong>payparq.com</strong> i odaberite <strong>Dopusti</strong></li>
-                <li>Vratite se ovdje i pokušajte ponovo</li>
+                <li>Vratite se ovdje i kliknite <strong>Pokušaj ponovo</strong></li>
               </ol>
             ) : /Android/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') ? (
               <ol className="text-sm text-black/70 space-y-1 list-decimal list-inside">
-                <li>Kliknite na <strong>ikonicu zaključavanja</strong> pored URL-a</li>
-                <li>Odaberite <strong>Dozvole → Obavijesti</strong></li>
-                <li>Uključite <strong>Dopusti</strong></li>
-                <li>Osvježite stranicu</li>
+                <li>Kliknite na <strong>ikonicu zaključavanja</strong> u URL traci</li>
+                <li>Odaberite <strong>Dozvole → Obavijesti → Dopusti</strong></li>
+                <li>Kliknite <strong>Pokušaj ponovo</strong> ispod</li>
               </ol>
             ) : (
               <ol className="text-sm text-black/70 space-y-1 list-decimal list-inside">
-                <li>Kliknite na <strong>ikonicu brave</strong> pored URL-a</li>
-                <li>Odaberite <strong>Dozvole za stranicu</strong></li>
-                <li>Kod <strong>Obavijesti</strong> odaberite <strong>Dopusti</strong></li>
-                <li>Osvježite stranicu</li>
+                <li>Kliknite <strong>ikonu brave</strong> pored URL-a</li>
+                <li>Odaberite <strong>Dozvole za stranicu → Obavijesti → Dopusti</strong></li>
+                <li>Kliknite <strong>Pokušaj ponovo</strong> ispod</li>
               </ol>
             )}
             <div className="flex gap-2 pt-1">
@@ -178,15 +236,14 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsOpen(false)}>
           <div className="bg-white rounded-xl w-full max-w-md h-96 flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
-              <h3 className="font-semibold text-black">Notifications</h3>
-              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors" title="Close">
+              <h3 className="font-semibold text-black">Obavijesti</h3>
+              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-black" />
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto space-y-1 p-2">
               {notifications.length === 0 ? (
-                <p className="text-sm text-black/60 p-4 text-center">No notifications yet</p>
+                <p className="text-sm text-black/60 p-4 text-center">Nema obavijesti</p>
               ) : (
                 notifications.map((notif) => (
                   <button
@@ -199,11 +256,9 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
                     <p className={`text-sm font-semibold ${notif.read ? 'text-black/70' : 'text-black'}`}>
                       {notif.title}
                     </p>
-                    {notif.data?.body && (
-                      <p className="text-xs text-black/70 mt-0.5">{notif.data.body}</p>
-                    )}
+                    {notif.data?.body && <p className="text-xs text-black/70 mt-0.5">{notif.data.body}</p>}
                     <p className="text-xs text-black/40 mt-1">
-                      {new Date(notif.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}
+                      {new Date(notif.created_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                     </p>
                   </button>
                 ))
