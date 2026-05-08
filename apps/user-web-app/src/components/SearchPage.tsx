@@ -1897,23 +1897,34 @@ export function SearchPage() {
                 mapContainerStyle={{ width: '100%', height: '100%' }}
               >
                 {filteredListings.map((listing) => (
-                  <Marker
+                  <OverlayView
                     key={listing.id}
                     position={{ lat: listing.lat, lng: listing.lng }}
-                    onClick={() => {
-                      setSelectedListing(listing);
-                      setShowMobileMap(false);
-                      setShowMobileDetails(true);
-                    }}
-                    icon={{
-                      path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                      fillColor: '#5F3DFC',
-                      fillOpacity: 1,
-                      strokeColor: '#fff',
-                      strokeWeight: 2,
-                      scale: 0.5,
-                    }}
-                  />
+                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  >
+                    <button
+                      onClick={() => {
+                        setSelectedListing(listing);
+                        setShowMobileMap(false);
+                        setShowMobileDetails(true);
+                      }}
+                      style={{ transform: 'translate(-50%, -90%)', width: 'calc(2.5rem + 0.4cm)' }}
+                      className="relative h-13 transition-transform hover:scale-110"
+                    >
+                      <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
+                        <path
+                          d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                          fill="white"
+                          stroke="black"
+                          strokeWidth="2"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
+                        <span className="text-sm font-bold text-black leading-none">{(() => { const t = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2)); return `€${t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)}`; })()}</span>
+                      </div>
+                    </button>
+                  </OverlayView>
                 ))}
               </GoogleMap>
             )}
