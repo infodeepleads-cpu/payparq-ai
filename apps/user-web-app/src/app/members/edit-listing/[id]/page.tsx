@@ -48,9 +48,15 @@ export default function EditListingPage() {
     spaceAllocated: '',
     features: [] as string[],
     available24_7: false,
-    openTime: '00:00',
-    closeTime: '23:59',
-    daysAvailable: [] as string[],
+    schedule: {
+      Ponedjeljak: { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Utorak:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Srijeda:     { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Četvrtak:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Petak:       { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Subota:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Nedjelja:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
+    } as Record<string, { enabled: boolean; openTime: string; closeTime: string }>,
     smartPricing: false,
     permits: '',
     addAdditionalInfo: false,
@@ -98,9 +104,7 @@ export default function EditListingPage() {
             spaceAllocated: formData.spaceAllocated,
             features: formData.features,
             available24_7: formData.available24_7,
-            openTime: formData.openTime,
-            closeTime: formData.closeTime,
-            daysAvailable: formData.daysAvailable,
+            schedule: formData.schedule,
             smartPricing: formData.smartPricing,
             permits: formData.permits,
             additionalDescription: formData.additionalDescription,
@@ -182,9 +186,18 @@ export default function EditListingPage() {
         spaceAllocated: data.verification_metadata?.spaceAllocated || '',
         features: data.verification_metadata?.features || [],
         available24_7: data.verification_metadata?.available24_7 || false,
-        openTime: data.verification_metadata?.openTime || '00:00',
-        closeTime: data.verification_metadata?.closeTime || '23:59',
-        daysAvailable: data.verification_metadata?.daysAvailable || [],
+        schedule: (() => {
+          const days = ['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'];
+          const saved = data.verification_metadata?.schedule;
+          const oldOpen = data.verification_metadata?.openTime || '00:00';
+          const oldClose = data.verification_metadata?.closeTime || '23:59';
+          const oldDays: string[] = data.verification_metadata?.daysAvailable || days;
+          return Object.fromEntries(days.map(d => [d, saved?.[d] ?? {
+            enabled: oldDays.includes(d),
+            openTime: oldOpen,
+            closeTime: oldClose,
+          }]));
+        })(),
         smartPricing: data.verification_metadata?.smartPricing || false,
         permits: data.verification_metadata?.permits || '',
         addAdditionalInfo: !!data.verification_metadata?.additionalDescription,
@@ -552,49 +565,57 @@ export default function EditListingPage() {
             <div id="availability" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-black" />
-                <h2 className="hidden md:block text-2xl font-bold text-black">Availability & Hours</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Dostupnost i radno vrijeme</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.available24_7}
-                      onChange={(e) => setFormData({ ...formData, available24_7: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Available 24/7</span>
-                  </label>
-                </div>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 mb-4">
+                  <input
+                    type="checkbox"
+                    checked={formData.available24_7}
+                    onChange={(e) => setFormData({ ...formData, available24_7: e.target.checked })}
+                    className="rounded border-black/20"
+                  />
+                  <span className="text-sm font-semibold text-black">Dostupan 24/7</span>
+                </label>
 
-                {!formData.available24_7 && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Opens At</label>
-                      <input
-                        type="time"
-                        value={formData.openTime}
-                        onChange={(e) => setFormData({ ...formData, openTime: e.target.value })}
-                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                      />
+                {['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'].map(day => {
+                  const d = formData.schedule[day] ?? { enabled: true, openTime: '00:00', closeTime: '23:59' };
+                  return (
+                    <div key={day} className="flex items-center gap-3">
+                      <div className="w-28 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={d.enabled}
+                          onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, enabled: e.target.checked } } })}
+                          className="rounded border-black/20"
+                        />
+                        <span className="text-xs font-semibold text-black">{day}</span>
+                      </div>
+                      {d.enabled && !formData.available24_7 ? (
+                        <>
+                          <input
+                            type="time"
+                            value={d.openTime}
+                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, openTime: e.target.value } } })}
+                            className="px-2 py-1 border border-black/20 rounded-lg text-xs text-black w-24"
+                          />
+                          <span className="text-xs text-black/40">–</span>
+                          <input
+                            type="time"
+                            value={d.closeTime}
+                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, closeTime: e.target.value } } })}
+                            className="px-2 py-1 border border-black/20 rounded-lg text-xs text-black w-24"
+                          />
+                        </>
+                      ) : d.enabled ? (
+                        <span className="text-xs text-black/40">00:00 – 24:00</span>
+                      ) : (
+                        <span className="text-xs text-black/30 italic">Zatvoreno</span>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Closes At</label>
-                      <input
-                        type="time"
-                        value={formData.closeTime}
-                        onChange={(e) => setFormData({ ...formData, closeTime: e.target.value })}
-                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Days Available</label>
-                  <p className="text-sm text-black">{formData.daysAvailable.join(', ')}</p>
-                </div>
+                  );
+                })}
               </div>
             </div>
 
