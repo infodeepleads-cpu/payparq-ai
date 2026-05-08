@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
@@ -26,6 +26,8 @@ export default function EditListingPage() {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('location');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const streetViewRef = useRef<HTMLDivElement>(null);
+  const streetViewInstanceRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -140,6 +142,26 @@ export default function EditListingPage() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    if (!formData.latitude || !formData.longitude || !streetViewRef.current) return;
+    if (!window.google?.maps) return;
+    const lat = parseFloat(formData.latitude);
+    const lng = parseFloat(formData.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
+    const location = new window.google.maps.LatLng(lat, lng);
+    if (!streetViewInstanceRef.current) {
+      streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+        position: location,
+        pov: { heading: 0, pitch: 0 },
+        zoom: 1,
+        addressControl: false,
+        fullscreenControl: false,
+      });
+    } else {
+      streetViewInstanceRef.current.setPosition(location);
+    }
+  }, [formData.latitude, formData.longitude]);
 
   useEffect(() => {
     if (id) {
@@ -704,14 +726,14 @@ export default function EditListingPage() {
                 <h2 className="hidden md:block text-2xl font-bold text-black">Street View</h2>
               </div>
 
-              <div className="rounded-lg overflow-hidden border border-black/10">
-                <img
-                  src={formData.streetView}
-                  alt="Street view"
-                  className="w-full h-80 object-cover"
-                />
-              </div>
-              <p className="text-xs text-black/50 mt-2">📍 Street view from coordinates: {formData.latitude}, {formData.longitude}</p>
+              {formData.latitude && formData.longitude ? (
+                <div ref={streetViewRef} className="rounded-lg overflow-hidden border border-black/10 w-full h-80" />
+              ) : (
+                <div className="rounded-lg border border-black/10 w-full h-80 flex items-center justify-center bg-black/5">
+                  <p className="text-xs text-black/40">Nema koordinata za prikaz Street Viewa</p>
+                </div>
+              )}
+              <p className="text-xs text-black/50 mt-2">📍 Koordinate: {formData.latitude}, {formData.longitude}</p>
             </div>
           </div>
         </div>
