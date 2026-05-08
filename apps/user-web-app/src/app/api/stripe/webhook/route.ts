@@ -20,7 +20,7 @@ try {
 
 async function sendOwnerPushNotification(locationId: string, sessionData: { plate: string; amount: number; email: string; entryTime?: string }) {
   try {
-    if (!firebaseApp) return;
+    if (!firebaseApp || !supabaseAdmin) return;
     const { data: location } = await supabaseAdmin.from('locations').select('owner_id, name').eq('id', locationId).single();
     if (!location?.owner_id) return;
 
