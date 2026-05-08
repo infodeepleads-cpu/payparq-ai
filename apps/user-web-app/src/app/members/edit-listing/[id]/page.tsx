@@ -28,61 +28,97 @@ export default function EditListingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [formData, setFormData] = useState({
-    // Basic Info
-    name: 'Downtown Premium Parking',
+    name: '',
     region: 'HR',
-    address: '123 Main Street',
-    addressLine2: 'Building B, Ground Floor',
-    town: 'Zagreb',
-    postalCode: '10000',
-    latitude: '45.8150',
-    longitude: '15.9819',
-    type: 'Outdoor Lot',
-    description: 'Secure parking in the heart of downtown. Well-lit, 24/7 access with CCTV monitoring and security guard on premises.',
-
-    // Space Details
-    spaceType: 'Outdoor Lot',
-    vehicleSize: 'All vehicles',
-    hasAccessControl: true,
-    accessControlType: 'Electronic keypad',
-    hasHeightRestrictions: true,
-    maxHeight: '2.5m',
+    address: '',
+    addressLine2: '',
+    town: '',
+    postalCode: '',
+    latitude: '',
+    longitude: '',
+    type: '',
+    description: '',
+    spaceType: '',
+    vehicleSize: '',
+    hasAccessControl: false,
+    accessControlType: '',
+    hasHeightRestrictions: false,
+    maxHeight: '',
     requiresPermit: false,
-    spaceAllocated: 'Marked spaces',
+    spaceAllocated: '',
     features: [] as string[],
-
-    // Availability & Pricing
-    available24_7: true,
+    available24_7: false,
     openTime: '00:00',
     closeTime: '23:59',
-    daysAvailable: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    daysAvailable: [] as string[],
     smartPricing: false,
-    permits: 'None required',
-
-
-    // Additional Info
-    addAdditionalInfo: true,
-    additionalDescription: 'Free Wi-Fi available in waiting area. Reserved spaces for handicapped. Covered parking available for additional fee.',
-    postBookingInstructions: 'Upon arrival, use gate code: 1234. Reserved spot marked with your license plate. Contact security at +385 1 234 5678 for assistance.',
-    addPostBookingInfo: true,
-
-    // Photos (simulated)
-    photos: [
-      { id: 1, name: 'parking-entrance.jpg', url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=500&h=500&fit=crop' },
-      { id: 2, name: 'parking-spaces.jpg', url: 'https://images.unsplash.com/photo-1597045866519-bf8eb5537877?w=500&h=500&fit=crop' },
-      { id: 3, name: 'parking-night.jpg', url: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=500&h=500&fit=crop' },
-    ],
-
-    // Street View
-    streetView: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&h=600&fit=crop',
+    permits: '',
+    addAdditionalInfo: false,
+    additionalDescription: '',
+    postBookingInstructions: '',
+    addPostBookingInfo: false,
+    photos: [] as { id: number; name: string; url: string }[],
+    streetView: '',
   });
 
   const handleSave = async () => {
+    if (!supabase) return;
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSuccess(true);
-    setSaving(false);
-    setTimeout(() => setSuccess(false), 3000);
+    try {
+      const { data: existing } = await supabase
+        .from('locations')
+        .select('verification_metadata')
+        .eq('id', id)
+        .single();
+
+      const meta = existing?.verification_metadata || {};
+
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          name: formData.name,
+          address: formData.address,
+          description: formData.description,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          verification_metadata: {
+            ...meta,
+            region: formData.region,
+            addressLine2: formData.addressLine2,
+            town: formData.town,
+            postalCode: formData.postalCode,
+            type: formData.type,
+            spaceType: formData.spaceType,
+            vehicleSize: formData.vehicleSize,
+            hasAccessControl: formData.hasAccessControl,
+            accessControlType: formData.accessControlType,
+            hasHeightRestrictions: formData.hasHeightRestrictions,
+            maxHeight: formData.maxHeight,
+            requiresPermit: formData.requiresPermit,
+            spaceAllocated: formData.spaceAllocated,
+            features: formData.features,
+            available24_7: formData.available24_7,
+            openTime: formData.openTime,
+            closeTime: formData.closeTime,
+            daysAvailable: formData.daysAvailable,
+            smartPricing: formData.smartPricing,
+            permits: formData.permits,
+            additionalDescription: formData.additionalDescription,
+            postBookingInstructions: formData.postBookingInstructions,
+            photos: formData.photos,
+            streetView: formData.streetView,
+          },
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Save failed:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemovePhoto = (id: number) => {
