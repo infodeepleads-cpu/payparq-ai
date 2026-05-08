@@ -153,7 +153,7 @@ class LocationsRepository {
             'hub_enabled': false,
             'hub_slug': slugSeed,
             'access_hours': 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00',
-            'amenities': 'Sobar, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
+            'amenities': 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
             'things_to_know': 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
             'getting_there': 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
             'how_it_works': '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
