@@ -171,7 +171,7 @@ export default function EditListingPage() {
         latitude: data.latitude != null && data.latitude !== 0 ? String(data.latitude) : '',
         longitude: data.longitude != null && data.longitude !== 0 ? String(data.longitude) : '',
         type: data.verification_metadata?.type || '',
-        description: data.description || '',
+        description: data.verification_metadata?.additionalDescription || data.description || '',
         spaceType: data.verification_metadata?.spaceType || '',
         vehicleSize: data.verification_metadata?.vehicleSize || '',
         hasHeightRestrictions: data.verification_metadata?.hasHeightRestrictions ?? true,
@@ -191,8 +191,12 @@ export default function EditListingPage() {
         additionalDescription: data.verification_metadata?.additionalDescription || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
-        photos: data.verification_metadata?.photos || [],
-        streetView: data.verification_metadata?.streetView || '',
+        photos: (data.verification_metadata?.photo_urls || []).map((url: string, i: number) => ({
+          id: i + 1,
+          name: `photo-${i + 1}.jpg`,
+          url,
+        })),
+        streetView: data.verification_metadata?.photo_urls?.[0] || '',
       });
     } catch (err) {
       console.error('Error loading listing:', err);
