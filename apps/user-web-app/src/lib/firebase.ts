@@ -12,7 +12,11 @@ const firebaseConfig = {
   appId: '1:913890552108:web:064f8b527aa71887986489',
 };
 
-const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BK1A-3JT3V9L3wF5k7xi7T8GFrj_bbTps4PyPMp90_LUHp3nRqC6o-rXjj9w7ep3jsoKGIm2GcstFYpL-Q-8vN4';
+const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+if (!VAPID_KEY && typeof window !== 'undefined') {
+  console.error('[FCM] NEXT_PUBLIC_VAPID_PUBLIC_KEY env var is missing — notifications will not work');
+}
 
 let messaging: any = null;
 
@@ -42,15 +46,27 @@ export async function getFCMToken(): Promise<string | null> {
       return null;
     }
 
-    // Reuse existing service worker if already registered
     let swRegistration: ServiceWorkerRegistration | undefined;
     try {
       const existingRegistrations = await navigator.serviceWorker.getRegistrations();
-      swRegistration = existingRegistrations.find(r => r.active?.scriptURL.includes('firebase-messaging-sw'));
+      swRegistration = existingRegistrations.find(r =>
+        r.active?.scriptURL.includes('firebase-messaging-sw')
+      );
 
       if (!swRegistration) {
-        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        await navigator.serviceWorker.ready;
+        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        // Wait for this specific registration to become active
+        swRegistration = await new Promise<ServiceWorkerRegistration>((resolve) => {
+          if (reg.active) { resolve(reg); return; }
+          const sw = reg.installing ?? reg.waiting;
+          if (!sw) { resolve(reg); return; }
+          sw.addEventListener('statechange', function handler(this: ServiceWorker) {
+            if (this.state === 'activated') {
+              sw.removeEventListener('statechange', handler);
+              resolve(reg);
+            }
+          });
+        });
       }
     } catch (swError) {
       console.error('[FCM] Service worker registration failed:', swError);
