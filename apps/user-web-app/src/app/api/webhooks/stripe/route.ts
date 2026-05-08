@@ -52,6 +52,7 @@ interface SessionData {
 
 async function sendPaymentNotification(ownerId: string, session: SessionData) {
   try {
+    console.log('[webhook] Sending notification for owner:', ownerId);
     const amountStr = session.amount > 0 ? `€${(session.amount / 100).toFixed(2)}` : 'Free';
     const title = `New booking — ${session.location}`;
     const body = [
@@ -68,28 +69,38 @@ async function sendPaymentNotification(ownerId: string, session: SessionData) {
       title,
       data: { ...session, body },
     });
+    console.log('[webhook] Notification saved to DB');
 
     // Get device tokens
-    const { data: tokens } = await supabase
+    const { data: tokens, error: tokensError } = await supabase
       .from('device_tokens')
       .select('token')
       .eq('user_id', ownerId);
 
-    if (!tokens || tokens.length === 0 || !firebaseApp) return;
+    console.log('[webhook] Device tokens found:', tokens?.length ?? 0, 'error:', tokensError?.message);
+
+    if (!tokens || tokens.length === 0 || !firebaseApp) {
+      console.log('[webhook] Skipping FCM send - no tokens, firebaseApp, or tokens empty');
+      return;
+    }
 
     // Send Firebase push
     const messaging = admin.messaging(firebaseApp);
-    await Promise.all(
+    const results = await Promise.all(
       tokens.map((t) =>
         messaging.send({
           token: t.token,
           notification: { title, body },
           data: { type: 'payment', location: session.location },
-        }).catch(() => null)
+        }).catch((err) => {
+          console.error('[webhook] FCM send failed for token:', err);
+          return null;
+        })
       )
     );
+    console.log('[webhook] FCM sent to', results.filter(Boolean).length, 'devices');
   } catch (err) {
-    console.error('Notification error:', err);
+    console.error('[webhook] Notification error:', err);
   }
 }
 
