@@ -38,7 +38,7 @@ export default function EditListingPage() {
     postalCode: '10000',
     latitude: '45.8150',
     longitude: '15.9819',
-    capacity: '5',
+    capacity: '',
     type: 'Outdoor Lot',
     description: 'Secure parking in the heart of downtown. Well-lit, 24/7 access with CCTV monitoring and security guard on premises.',
 
