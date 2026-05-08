@@ -109,8 +109,6 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
-  const now = new Date();
-
   const withNames = sessions.map(s => ({
     ...s,
     location_name: locationNames[s.location_id ?? ''] ?? s.location_id,
