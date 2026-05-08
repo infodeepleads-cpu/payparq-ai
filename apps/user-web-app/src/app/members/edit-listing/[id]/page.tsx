@@ -639,26 +639,6 @@ export default function EditListingPage() {
                   <label className="flex items-center gap-2 mb-3">
                     <input
                       type="checkbox"
-                      checked={formData.addAdditionalInfo}
-                      onChange={(e) => setFormData({ ...formData, addAdditionalInfo: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Add Additional Information</span>
-                  </label>
-                  {formData.addAdditionalInfo && (
-                    <textarea
-                      value={formData.additionalDescription}
-                      onChange={(e) => setFormData({ ...formData, additionalDescription: e.target.value })}
-                      className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black min-h-[100px]"
-                      placeholder="E.g., Free Wi-Fi, handicapped accessible, covered parking..."
-                    />
-                  )}
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 mb-3">
-                    <input
-                      type="checkbox"
                       checked={formData.addPostBookingInfo}
                       onChange={(e) => setFormData({ ...formData, addPostBookingInfo: e.target.checked })}
                       className="rounded border-black/20"
