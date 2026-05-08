@@ -5,6 +5,40 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { supabase } from '@/lib/supabase';
+import * as admin from 'firebase-admin';
+
+let firebaseApp: admin.app.App | null = null;
+try {
+  if (admin.apps.length > 0) {
+    firebaseApp = admin.apps[0]!;
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    firebaseApp = admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+    });
+  }
+} catch {}
+
+async function sendOwnerPushNotification(locationId: string, sessionData: { plate: string; amount: number; email: string }) {
+  try {
+    if (!firebaseApp) return;
+    const { data: location } = await supabaseAdmin.from('locations').select('owner_id, name').eq('id', locationId).single();
+    if (!location?.owner_id) return;
+
+    const { data: tokens } = await supabaseAdmin.from('device_tokens').select('token').eq('user_id', location.owner_id);
+    if (!tokens?.length) return;
+
+    const amountStr = sessionData.amount > 0 ? `€${(sessionData.amount / 100).toFixed(2)}` : 'Free';
+    const title = `Nova rezervacija — ${location.name || locationId}`;
+    const body = [sessionData.plate ? `Tablica: ${sessionData.plate}` : null, amountStr].filter(Boolean).join(' · ');
+
+    await supabaseAdmin.from('notifications').insert({ user_id: location.owner_id, type: 'payment', title, data: { body } });
+
+    const messaging = admin.messaging(firebaseApp);
+    await Promise.all(tokens.map(t => messaging.send({ token: t.token, notification: { title, body } }).catch(() => null)));
+  } catch (err) {
+    console.error('[webhook] push notification failed:', err);
+  }
+}
 
 function resolveStripeSecretKey(): string | null {
   const candidates = [
@@ -1195,6 +1229,11 @@ export async function POST(req: Request) {
 
     console.log('✨ Successfully inserted parking session!');
     await sendBookingConfirmation(session, client);
+    await sendOwnerPushNotification(location_id, {
+      plate: plate_number || 'Unknown',
+      amount: session.amount_total || 0,
+      email: email || '',
+    });
 
     // 4. AUTO-ASSIGN SPOT (best effort)
     try {
