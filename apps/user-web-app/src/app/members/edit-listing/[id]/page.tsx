@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
@@ -20,6 +21,10 @@ export default function EditListingPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -61,12 +66,9 @@ export default function EditListingPage() {
     } as Record<string, { enabled: boolean; openTime: string; closeTime: string }>,
     smartPricing: false,
     permits: '',
-    addAdditionalInfo: false,
-    additionalDescription: '',
     postBookingInstructions: '',
     addPostBookingInfo: false,
     photos: [] as { id: number; name: string; url: string }[],
-    streetView: '',
   });
 
   const handleSave = async () => {
@@ -109,10 +111,8 @@ export default function EditListingPage() {
             schedule: formData.schedule,
             smartPricing: formData.smartPricing,
             permits: formData.permits,
-            additionalDescription: formData.additionalDescription,
             postBookingInstructions: formData.postBookingInstructions,
             photos: formData.photos,
-            streetView: formData.streetView,
           },
         })
         .eq('id', id);
@@ -144,7 +144,7 @@ export default function EditListingPage() {
   };
 
   useEffect(() => {
-    if (!formData.latitude || !formData.longitude || !streetViewRef.current) return;
+    if (!isLoaded || !formData.latitude || !formData.longitude || !streetViewRef.current) return;
     if (!window.google?.maps) return;
     const lat = parseFloat(formData.latitude);
     const lng = parseFloat(formData.longitude);
@@ -161,7 +161,7 @@ export default function EditListingPage() {
     } else {
       streetViewInstanceRef.current.setPosition(location);
     }
-  }, [formData.latitude, formData.longitude]);
+  }, [isLoaded, formData.latitude, formData.longitude]);
 
   useEffect(() => {
     if (id) {
@@ -222,8 +222,6 @@ export default function EditListingPage() {
         })(),
         smartPricing: data.verification_metadata?.smartPricing || false,
         permits: data.verification_metadata?.permits || '',
-        addAdditionalInfo: !!data.verification_metadata?.additionalDescription,
-        additionalDescription: data.verification_metadata?.additionalDescription || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
         photos: (data.verification_metadata?.photo_urls || []).map((url: string, i: number) => ({
@@ -231,7 +229,6 @@ export default function EditListingPage() {
           name: `photo-${i + 1}.jpg`,
           url,
         })),
-        streetView: data.verification_metadata?.photo_urls?.[0] || '',
       });
     } catch (err) {
       console.error('Error loading listing:', err);
