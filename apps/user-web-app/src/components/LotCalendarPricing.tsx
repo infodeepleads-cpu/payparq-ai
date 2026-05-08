@@ -19,7 +19,9 @@ interface DateConfig {
   openTime: string;
   closeTime: string;
   priceMode: 'auto' | 'manual';
-  price: number;
+  priceHourly: number;
+  priceDaily: number;
+  priceMonthly: number;
 }
 
 export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
@@ -71,7 +73,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       openTime: '00:00',
       closeTime: '23:59',
       priceMode: 'auto',
-      price: 0,
+      priceHourly: 0,
+      priceDaily: 0,
+      priceMonthly: 0,
     };
   };
 
@@ -277,12 +281,14 @@ interface DateConfigWidgetProps {
 }
 
 function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: DateConfigWidgetProps) {
-  const [capacity, setCapacity] = useState(config.capacity);
+  const [capacity, setCapacity] = useState(config.capacity ? String(config.capacity) : '');
   const [isOpen, setIsOpen] = useState(config.isOpen);
   const [openTime, setOpenTime] = useState(config.openTime);
   const [closeTime, setCloseTime] = useState(config.closeTime);
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(config.priceMode || 'auto');
-  const [price, setPrice] = useState(config.price);
+  const [priceHourly, setPriceHourly] = useState(config.priceHourly ? String(config.priceHourly) : '');
+  const [priceDaily, setPriceDaily] = useState(config.priceDaily ? String(config.priceDaily) : '');
+  const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly ? String(config.priceMonthly) : '');
 
   return (
     <div className="space-y-4 md:space-y-5">
@@ -319,16 +325,11 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           max={lotCapacity}
           value={capacity}
           onChange={(e) => {
-            let val = e.target.value;
-            if (val === '') {
-              setCapacity(0);
-            } else {
-              val = val.replace(/^0+/, '') || '0';
-              const num = parseInt(val);
-              if (!isNaN(num) && num >= 1 && num <= lotCapacity) {
-                setCapacity(num);
-              }
-            }
+            const val = e.target.value;
+            if (val === '') { setCapacity(''); return; }
+            const stripped = val.replace(/^0+/, '') || '0';
+            const num = parseInt(stripped);
+            if (!isNaN(num) && num >= 1 && num <= parseInt(lotCapacity)) setCapacity(String(num));
           }}
           className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
@@ -363,7 +364,7 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
       {isOpen && (
         <div className="space-y-3 md:space-y-4">
           <div className="flex items-center justify-between">
-            <label className="block text-sm md:text-base font-semibold text-gray-900">Cijena</label>
+            <label className="block text-sm md:text-base font-semibold text-gray-900">Cijene</label>
             <div className="flex items-center gap-2 md:gap-3">
               <span className={`text-sm md:text-base font-medium ${priceMode === 'auto' ? 'text-[#5F3DFC]' : 'text-gray-500'}`}>Auto</span>
               <button
@@ -385,27 +386,58 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           </div>
 
           {priceMode === 'manual' && (
-            <div className="space-y-2">
-              <input
-                type="number"
-                min="0"
-                value={price}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (val === '') {
-                    setPrice(0);
-                  } else {
-                    val = val.replace(/^0+/, '') || '0';
-                    const num = parseInt(val);
-                    if (!isNaN(num) && num >= 0) {
-                      setPrice(num);
-                    }
-                  }
-                }}
-                className="w-full border border-gray-300 rounded-lg px-3 md:px-4 py-3 md:py-2.5 text-sm md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 min-h-[44px] md:min-h-auto [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
-                placeholder="Unesite cijenu u €"
-              />
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Po satu (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceHourly}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceHourly(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceHourly(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Po danu (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceDaily}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceDaily(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceDaily(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700">Po mjesecu (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceMonthly}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') { setPriceMonthly(''); return; }
+                    const stripped = val.replace(/^0+/, '') || '0';
+                    const num = parseFloat(stripped);
+                    if (!isNaN(num) && num >= 0) setPriceMonthly(stripped);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-2 md:px-3 py-2 md:py-2.5 text-xs md:text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -426,7 +458,17 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
           Obriši
         </button>
         <button
-          onClick={() => onSave({ date: config.date, capacity, isOpen, openTime, closeTime, priceMode, price })}
+          onClick={() => onSave({
+            date: config.date,
+            capacity: capacity === '' ? 0 : parseInt(capacity),
+            isOpen,
+            openTime,
+            closeTime,
+            priceMode,
+            priceHourly: priceHourly === '' ? 0 : parseFloat(priceHourly),
+            priceDaily: priceDaily === '' ? 0 : parseFloat(priceDaily),
+            priceMonthly: priceMonthly === '' ? 0 : parseFloat(priceMonthly),
+          })}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-[#5F3DFC] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#4330c4] transition-colors"
         >
           Spremi
