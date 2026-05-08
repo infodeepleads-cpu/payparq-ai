@@ -18,7 +18,7 @@ try {
   }
 } catch {}
 
-async function sendOwnerPushNotification(locationId: string, sessionData: { plate: string; amount: number; email: string }) {
+async function sendOwnerPushNotification(locationId: string, sessionData: { plate: string; amount: number; email: string; entryTime?: string }) {
   try {
     if (!firebaseApp) return;
     const { data: location } = await supabaseAdmin.from('locations').select('owner_id, name').eq('id', locationId).single();
@@ -29,7 +29,8 @@ async function sendOwnerPushNotification(locationId: string, sessionData: { plat
 
     const amountStr = sessionData.amount > 0 ? `€${(sessionData.amount / 100).toFixed(2)}` : 'Free';
     const title = `Nova rezervacija — ${location.name || locationId}`;
-    const body = [sessionData.plate ? `Tablica: ${sessionData.plate}` : null, amountStr].filter(Boolean).join(' · ');
+    const entryTimeStr = sessionData.entryTime ? new Date(sessionData.entryTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const body = [sessionData.plate ? `Tablica: ${sessionData.plate}` : null, entryTimeStr, amountStr].filter(Boolean).join(' · ');
 
     await supabaseAdmin.from('notifications').insert({ user_id: location.owner_id, type: 'payment', title, data: { body } });
 
@@ -1233,6 +1234,7 @@ export async function POST(req: Request) {
       plate: plate_number || 'Unknown',
       amount: session.amount_total || 0,
       email: email || '',
+      entryTime,
     });
 
     // 4. AUTO-ASSIGN SPOT (best effort)
