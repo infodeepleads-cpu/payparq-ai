@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
+import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
   { id: 'space', label: 'Detalji prostora', icon: Square },
   { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
-  { id: 'pricing', label: 'Cijene', icon: Euro },
   { id: 'description', label: 'Opis', icon: FileText },
   { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
   { id: 'photos', label: 'Fotografije', icon: Camera },
@@ -38,7 +37,6 @@ export default function EditListingPage() {
     postalCode: '10000',
     latitude: '45.8150',
     longitude: '15.9819',
-    capacity: '',
     type: 'Outdoor Lot',
     description: 'Secure parking in the heart of downtown. Well-lit, 24/7 access with CCTV monitoring and security guard on premises.',
 
@@ -61,11 +59,6 @@ export default function EditListingPage() {
     smartPricing: false,
     permits: 'None required',
 
-
-    // Pricing
-    base_price_hourly: '5.50',
-    base_price_daily: '18.00',
-    base_price_monthly: '350.00',
 
     // Additional Info
     addAdditionalInfo: true,
@@ -141,7 +134,6 @@ export default function EditListingPage() {
         postalCode: data.verification_metadata?.postalCode || '',
         latitude: data.verification_metadata?.latitude || '',
         longitude: data.verification_metadata?.longitude || '',
-        capacity: data.capacity != null && data.capacity !== 0 ? String(data.capacity) : '',
         type: data.verification_metadata?.type || '',
         description: data.description || '',
         spaceType: data.verification_metadata?.spaceType || '',
@@ -159,9 +151,6 @@ export default function EditListingPage() {
         daysAvailable: data.verification_metadata?.daysAvailable || [],
         smartPricing: data.verification_metadata?.smartPricing || false,
         permits: data.verification_metadata?.permits || '',
-        base_price_hourly: data.base_price_hourly != null ? String(data.base_price_hourly) : '',
-        base_price_daily: data.base_price_daily != null ? String(data.base_price_daily) : '',
-        base_price_monthly: data.base_price_monthly != null ? String(data.base_price_monthly) : '',
         addAdditionalInfo: !!data.verification_metadata?.additionalDescription,
         additionalDescription: data.verification_metadata?.additionalDescription || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
@@ -354,17 +343,6 @@ export default function EditListingPage() {
               <h2 className="text-2xl font-bold text-black mb-4">Detalji prostora</h2>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Kapacitet (mjesta)</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    min="1"
-                  />
-                </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip parkinga</label>
                   <input
@@ -580,50 +558,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 4: PRICING */}
-            <div id="pricing" className="scroll-mt-24 pt-6 border-t border-black/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Euro className="w-5 h-5 text-black" />
-                <h2 className="hidden md:block text-2xl font-bold text-black">Pricing</h2>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Hourly Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_hourly}
-                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Daily Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_daily}
-                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Monthly Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_monthly}
-                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 5: DESCRIPTION */}
+            {/* SECTION 4: DESCRIPTION */}
             <div id="description" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Description</h2>
               <textarea
@@ -634,7 +569,7 @@ export default function EditListingPage() {
               />
             </div>
 
-            {/* SECTION 6: ADDITIONAL INFO */}
+            {/* SECTION 5: ADDITIONAL INFO */}
             <div id="additional" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Additional Information</h2>
 
@@ -681,7 +616,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 7: PHOTOS */}
+            {/* SECTION 6: PHOTOS */}
             <div id="photos" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
@@ -716,7 +651,7 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 8: STREET VIEW */}
+            {/* SECTION 7: STREET VIEW */}
             <div id="streetview" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
