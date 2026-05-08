@@ -23,17 +23,23 @@ export default function AuthCallbackPage() {
       const code = searchParams.get('code');
 
       if (!code) {
-        // No code in URL — session may already be set (e.g. iOS redirect back to PWA)
         finish();
         return;
       }
 
-      // Try code exchange; ignore error — onAuthStateChange on /members will handle it
-      try {
-        await supabase!.auth.exchangeCodeForSession(code);
-      } catch (_) {
-        // ignore
+      // Try exchange with retries
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const { error } = await supabase!.auth.exchangeCodeForSession(code);
+          if (!error) break; // Success
+        } catch (_) {
+          // ignore
+        }
+        if (attempt < 2) await new Promise(r => setTimeout(r, 500));
       }
+
+      // Wait for session to propagate in cookies
+      await new Promise(r => setTimeout(r, 1000));
 
       finish();
     };
