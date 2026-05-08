@@ -14,14 +14,14 @@ interface LotCalendarPricingProps {
 
 interface DateConfig {
   date: string;
-  capacity: number;
+  capacity: number | null;
   isOpen: boolean;
   openTime: string;
   closeTime: string;
   priceMode: 'auto' | 'manual';
-  priceHourly: number;
-  priceDaily: number;
-  priceMonthly: number;
+  priceHourly: number | null;
+  priceDaily: number | null;
+  priceMonthly: number | null;
 }
 
 export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, onBack }: LotCalendarPricingProps) {
@@ -73,9 +73,9 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
       openTime: '00:00',
       closeTime: '23:59',
       priceMode: 'auto',
-      priceHourly: 0,
-      priceDaily: 0,
-      priceMonthly: 0,
+      priceHourly: null,
+      priceDaily: null,
+      priceMonthly: null,
     };
   };
 
@@ -286,9 +286,9 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
   const [openTime, setOpenTime] = useState(config.openTime);
   const [closeTime, setCloseTime] = useState(config.closeTime);
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>(config.priceMode || 'auto');
-  const [priceHourly, setPriceHourly] = useState(config.priceHourly ? String(config.priceHourly) : '');
-  const [priceDaily, setPriceDaily] = useState(config.priceDaily ? String(config.priceDaily) : '');
-  const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly ? String(config.priceMonthly) : '');
+  const [priceHourly, setPriceHourly] = useState(config.priceHourly != null ? String(config.priceHourly) : '');
+  const [priceDaily, setPriceDaily] = useState(config.priceDaily != null ? String(config.priceDaily) : '');
+  const [priceMonthly, setPriceMonthly] = useState(config.priceMonthly != null ? String(config.priceMonthly) : '');
 
   return (
     <div className="space-y-4 md:space-y-5">
@@ -460,14 +460,14 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: D
         <button
           onClick={() => onSave({
             date: config.date,
-            capacity: capacity === '' ? 0 : parseInt(capacity),
+            capacity: capacity === '' ? null : parseInt(capacity),
             isOpen,
             openTime,
             closeTime,
             priceMode,
-            priceHourly: priceHourly === '' ? 0 : parseFloat(priceHourly),
-            priceDaily: priceDaily === '' ? 0 : parseFloat(priceDaily),
-            priceMonthly: priceMonthly === '' ? 0 : parseFloat(priceMonthly),
+            priceHourly: priceHourly === '' ? null : parseFloat(priceHourly),
+            priceDaily: priceDaily === '' ? null : parseFloat(priceDaily),
+            priceMonthly: priceMonthly === '' ? null : parseFloat(priceMonthly),
           })}
           className="flex-1 px-3 md:px-4 py-2.5 md:py-3 bg-[#5F3DFC] text-white rounded-lg text-xs md:text-sm font-medium hover:bg-[#4330c4] transition-colors"
         >
