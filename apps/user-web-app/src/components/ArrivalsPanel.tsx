@@ -53,12 +53,10 @@ function fmtAmount(price: number | null, currency: string | null): string {
   return `€${price.toFixed(2)}`;
 }
 
-function StatusBadge({ status, paymentStatus }: { status: string | null; paymentStatus: string | null }) {
-  if (status === 'active') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Active</span>;
-  if (status === 'scheduled') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">Upcoming</span>;
-  if (status === 'expired' || status === 'completed') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">Completed</span>;
-  if (status === 'pending') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700">Pending</span>;
-  return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">{status || '—'}</span>;
+function StatusBadge({ computedStatus }: { computedStatus: 'active' | 'upcoming' | 'expired' }) {
+  if (computedStatus === 'active') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Uživo</span>;
+  if (computedStatus === 'upcoming') return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">Nadolazeće</span>;
+  return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">Završeno</span>;
 }
 
 interface ArrivalsPanelProps {
@@ -118,9 +116,28 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
     location_name: locationNames[s.location_id ?? ''] ?? s.location_id,
   }));
 
-  const live = withNames.filter(s => s.status === 'active');
-  const upcoming = withNames.filter(s => s.status === 'scheduled' || s.status === 'pending');
-  const history = withNames.filter(s => s.status === 'completed' || s.status === 'expired' || (!s.status && s.exit_time));
+  const now = new Date();
+
+  const getExitTime = (s: typeof withNames[0]): Date | null => {
+    if (s.exit_time) return new Date(s.exit_time);
+    if (s.entry_time && s.duration_minutes) {
+      return new Date(new Date(s.entry_time).getTime() + s.duration_minutes * 60000);
+    }
+    return null;
+  };
+
+  const getComputedStatus = (s: typeof withNames[0]): 'active' | 'upcoming' | 'expired' => {
+    const entry = s.entry_time ? new Date(s.entry_time) : null;
+    const exit = getExitTime(s);
+    if (!entry) return 'expired';
+    if (entry > now) return 'upcoming';
+    if (exit && exit <= now) return 'expired';
+    return 'active';
+  };
+
+  const live = withNames.filter(s => getComputedStatus(s) === 'active');
+  const upcoming = withNames.filter(s => getComputedStatus(s) === 'upcoming');
+  const history = withNames.filter(s => getComputedStatus(s) === 'expired');
 
   const filtered = (tab === 'live' ? live : tab === 'upcoming' ? upcoming : history).filter(s => {
     if (!search) return true;
@@ -189,7 +206,7 @@ export function ArrivalsPanel({ userId }: ArrivalsPanelProps) {
               <div key={s.id} className="rounded-xl border border-black/10 bg-white p-3 hover:border-[#5F3DFC]/30 hover:bg-[#5F3DFC]/5 transition-all">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-mono font-bold text-sm text-[#5F3DFC]">{s.plate || '—'}</span>
-                  <StatusBadge status={s.status} paymentStatus={s.payment_status} />
+                  <StatusBadge computedStatus={getComputedStatus(s)} />
                 </div>
                 <p className="text-xs font-semibold text-black truncate">{s.location_name || '—'}</p>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
