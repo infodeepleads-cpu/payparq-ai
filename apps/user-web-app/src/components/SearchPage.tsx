@@ -9,7 +9,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
@@ -107,6 +107,8 @@ export function SearchPage() {
   const homeDropdownRef = useRef<HTMLDivElement>(null);
   const [showTotalPrice, setShowTotalPrice] = useState(false);
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
+  const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
   const allParkingDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [quickFilters, setQuickFilters] = useState<string[]>([]);
@@ -684,92 +686,153 @@ export function SearchPage() {
 
       {/* Mobile Header */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between mb-3">
+        {/* Logo Row */}
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-6 h-6 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
-                <span className="text-[10px] font-semibold tracking-tight leading-none text-white">
+            <div className="w-8 h-8 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
+                <span className="text-xs font-semibold tracking-tight leading-none text-white">
                   P
                 </span>
               </div>
             </div>
-            <div className="text-sm font-black tracking-tight text-black select-none">
+            <div className="text-base font-black tracking-tight text-black select-none">
               payparq
             </div>
           </div>
-          <button
-            onClick={() => setShowMobileMap(!showMobileMap)}
-            className="text-xs font-medium text-gray-600 hover:text-gray-900"
-          >
-            {showMobileMap ? '← Back to List' : 'Map'}
-          </button>
         </div>
-        {!showMobileMap && (
-          <div className="space-y-2">
-            <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center focus-within:border-black gap-0 overflow-visible">
-              <div className="flex-1 flex flex-col justify-center">
-                <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Vrsta rezervacije</label>
-                <select
-                  value={reservationType}
-                  onChange={(e) => setReservationType(e.target.value)}
-                  className="bg-white border-none text-sm font-medium text-gray-900 p-0 pr-6 focus:outline-none cursor-pointer w-full leading-none -ml-1"
-                >
-                  <option value="Satna/dnevna">Satna/dnevna</option>
-                  <option value="Mjesecna">Mjesecna</option>
-                </select>
+
+        {/* Search Widget (4/5) + Menu/Map (1/5) */}
+        <div className="flex gap-2 h-12">
+          {/* Search Widget - Clickable Summary */}
+          <button
+            onClick={() => setShowMobileSearchEdit(true)}
+            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC] px-3 py-1 text-left flex flex-col justify-center"
+          >
+            <div className="text-xs text-gray-600 font-semibold truncate max-w-28">{searchLocation || 'Gdje ideš?'}</div>
+            {startTime && endTime && (
+              <div className="text-xs text-gray-700 font-medium">
+                {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
               </div>
+            )}
+          </button>
 
-              <div className="h-8 w-px bg-gray-300 mx-2"></div>
-
-              <div className="flex-1 flex flex-col justify-center relative">
-                <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Kamo ideš?</label>
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Search location..."
-                    value={searchLocation}
-                    onChange={(e) => setSearchLocation(e.target.value)}
-                    onFocus={() => setShowPredictions(true)}
-                    className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
-                  />
+          {/* Right side - Menu + Map */}
+          <div className="flex gap-1.5 flex-shrink-0">
+            {/* Menu Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setHomeDropdownOpen(!homeDropdownOpen)}
+                className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="w-4 h-px bg-gray-600"></div>
+                  <div className="w-4 h-px bg-gray-600"></div>
+                  <div className="w-4 h-px bg-gray-600"></div>
                 </div>
-                {/* Predictions dropdown */}
-                {showPredictions && (
-                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-300 rounded-md shadow-xl z-50 max-h-80 overflow-y-auto">
-                    {/* Current Location */}
-                    <button
-                      onClick={handleCurrentLocation}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
-                    >
-                      <MapPin className="w-4 h-4 text-gray-600" />
-                      Use current location
-                    </button>
-                    {/* Predictions */}
-                    {predictions.map((prediction) => (
-                      <button
-                        key={prediction.place_id}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowPredictions(false);
-                          handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
-                      >
-                        <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
-                          <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              </button>
+              {homeDropdownOpen && (
+                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[140px]">
+                  <a href="/" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
+                    Home
+                  </a>
+                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                    Log In
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Map Button */}
+            <button
+              onClick={() => setShowMobileMap(true)}
+              className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center flex-shrink-0"
+            >
+              <MapPin className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Search Edit Modal */}
+      {showMobileSearchEdit && (
+        <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 py-4 border-b border-gray-200">
+            <button
+              onClick={() => setShowMobileSearchEdit(false)}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              ← Nazad
+            </button>
+            <h2 className="text-lg font-bold text-gray-900">Uredi pretragu</h2>
+            <div className="w-12"></div>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            {/* Reservation Type */}
+            <div>
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Vrsta rezervacije</label>
+              <select
+                value={reservationType}
+                onChange={(e) => setReservationType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+              >
+                <option value="Satna/dnevna">Satna/dnevna</option>
+                <option value="Mjesecna">Mjesecna</option>
+              </select>
+            </div>
+
+            {/* Location Search */}
+            <div>
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-[#5F3DFC]">
+                <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search location..."
+                  value={searchLocation}
+                  onChange={(e) => setSearchLocation(e.target.value)}
+                  onFocus={() => setShowPredictions(true)}
+                  className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
+                />
               </div>
+              {/* Predictions */}
+              {showPredictions && (
+                <div className="mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <button
+                    onClick={handleCurrentLocation}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900"
+                  >
+                    <MapPin className="w-4 h-4 text-gray-600" />
+                    Use current location
+                  </button>
+                  {predictions.map((prediction) => (
+                    <button
+                      key={prediction.place_id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowPredictions(false);
+                        handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
+                    >
+                      <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
+                        <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              <div className="h-8 w-px bg-gray-300 mx-2"></div>
-
+            {/* Date/Time Pickers */}
+            <div>
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Vrijeme</label>
               {reservationType === 'Mjesečna' ? (
                 <MonthlyDatePickerDropdown
                   startDate={monthlyStartDate}
@@ -785,8 +848,24 @@ export function SearchPage() {
               )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Footer */}
+          <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 flex gap-2">
+            <button
+              onClick={() => setShowMobileSearchEdit(false)}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
+            >
+              Odustani
+            </button>
+            <button
+              onClick={() => setShowMobileSearchEdit(false)}
+              className="flex-1 px-4 py-2 bg-[#5F3DFC] text-white text-sm font-semibold rounded-lg hover:bg-[#4330c4]"
+            >
+              Primijeni
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Subheader - Filter widgets */}
       <div className="hidden md:block bg-white border-b border-gray-200 py-3 px-6">
@@ -1691,97 +1770,95 @@ export function SearchPage() {
         </div>
       </div>
 
-      {/* Mobile: List first with map toggle */}
+      {/* Mobile: List view with filters */}
       <div className="md:hidden flex flex-1 flex-col overflow-hidden">
-        {/* Top section: Results count + toggle */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <span className="text-sm font-medium text-gray-700">{filteredListings.length} results</span>
-          <button
-            onClick={() => setShowMobileMap(!showMobileMap)}
-            className="flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200"
-          >
-            <MapPin className="w-4 h-4" />
-            Map
-          </button>
+        {/* Mobile Filters - Horizontal scrollable */}
+        <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto">
+          <div className="flex gap-2 px-4 py-3">
+            <button
+              onClick={() => setFilterModalOpen(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 text-xs font-medium hover:border-gray-400 flex-shrink-0"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filtri
+            </button>
+            {reservationType !== 'Mjesecna' && (
+              <button
+                onClick={() => toggleQuickFilter('instant-access')}
+                className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
+                  quickFilters.includes('instant-access')
+                    ? 'bg-[#5F3DFC] text-white'
+                    : 'border border-gray-300 text-gray-900 hover:border-gray-400'
+                }`}
+              >
+                Instant
+              </button>
+            )}
+            <button
+              onClick={() => toggleQuickFilter('covered-garage')}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
+                quickFilters.includes('covered-garage')
+                  ? 'bg-[#5F3DFC] text-white'
+                  : 'border border-gray-300 text-gray-900 hover:border-gray-400'
+              }`}
+            >
+              Garaža
+            </button>
+            <button
+              onClick={() => toggleQuickFilter('self-park')}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
+                quickFilters.includes('self-park')
+                  ? 'bg-[#5F3DFC] text-white'
+                  : 'border border-gray-300 text-gray-900 hover:border-gray-400'
+              }`}
+            >
+              Self Park
+            </button>
+          </div>
         </div>
 
-        {showMobileMap ? (
-          /* Mobile Map */
-          <div className="flex-1 bg-gray-100 relative">
-            <GoogleMap
-              zoom={16}
-              center={mapCenter}
-              mapContainerStyle={{ width: '100%', height: '100%' }}
-            >
-              {filteredListings.map((listing) => (
-                <Marker
-                  key={listing.id}
-                  position={{ lat: listing.lat, lng: listing.lng }}
-                  onClick={() => {
-                    setSelectedListing(listing);
-                    setShowMobileMap(false);
-                  }}
-                  icon={{
-                    path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                    fillColor: '#5F3DFC',
-                    fillOpacity: 1,
-                    strokeColor: '#fff',
-                    strokeWeight: 2,
-                    scale: 0.5,
-                  }}
-                />
-              ))}
-              {/* Search location marker */}
-              {searchLocationPin && (
-                <Marker
-                  position={searchLocationPin}
-                  icon={{
-                    path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                    fillColor: '#5F3DFC',
-                    fillOpacity: 1,
-                    strokeColor: '#fff',
-                    strokeWeight: 2,
-                    scale: 0.5,
-                  }}
-                />
-              )}
-            </GoogleMap>
-          </div>
-        ) : (
-          /* Mobile List */
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="overflow-y-auto p-4 space-y-3">
-              {filteredListings.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center">
-                  <div>
-                    <p className="text-gray-600 font-medium">No parking spaces found</p>
-                    <p className="text-sm text-gray-500 mt-1">Try adjusting your filters</p>
-                  </div>
-                </div>
-              ) : (
-                filteredListings.map((listing, index) => {
-                  const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
-                  const badgeText = index < badges.length ? badges[index] : undefined;
-                  return (
-                    <ListingCard
-                      key={listing.id}
-                      listing={listing}
-                      isSelected={selectedListing?.id === listing.id}
-                      onSelect={setSelectedListing}
-                      onBook={() => {
-                        setSelectedListing(listing);
-                        setShowBookingModal(true);
-                      }}
-                      badgeText={badgeText}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
+        {/* Results count */}
+        <div className="flex-shrink-0 px-4 py-2 text-xs text-gray-600 border-b border-gray-200">
+          {filteredListings.length} rezultata
+        </div>
 
-        {/* Filters bottom sheet would go here on mobile - for now, simplified */}
+        {/* Mobile List */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-3">
+            {filteredListings.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center">
+                <div>
+                  <p className="text-gray-600 font-medium">Nema pronađenih parkirnih mjesta</p>
+                  <p className="text-sm text-gray-500 mt-1">Pokušajte prilagoditi svoje filtre</p>
+                </div>
+              </div>
+            ) : (
+              filteredListings.map((listing, index) => {
+                const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
+                const badgeText = index < badges.length ? badges[index] : undefined;
+                return (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    isSelected={selectedListing?.id === listing.id}
+                    onSelect={() => {
+                      setSelectedListing(listing);
+                      setShowMobileDetails(true);
+                    }}
+                    onBook={() => {
+                      setSelectedListing(listing);
+                      setShowMobileDetails(true);
+                    }}
+                    badgeText={badgeText}
+                    hideDetailsButton={true}
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Booking Modal */}
@@ -1794,6 +1871,292 @@ export function SearchPage() {
             setShowBookingModal(false);
           }}
         />
+      )}
+
+      {/* Mobile Full-Screen Map */}
+      {showMobileMap && (
+        <div className="md:hidden fixed inset-0 bg-gray-100 z-40 flex flex-col">
+          {/* Header */}
+          <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <button
+              onClick={() => setShowMobileMap(false)}
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              ← Nazad
+            </button>
+            <h2 className="text-lg font-bold text-gray-900">Karta</h2>
+            <div className="w-12"></div>
+          </div>
+
+          {/* Map */}
+          <div className="flex-1 overflow-hidden">
+            {isLoaded && (
+              <GoogleMap
+                zoom={15}
+                center={mapCenter}
+                mapContainerStyle={{ width: '100%', height: '100%' }}
+              >
+                {filteredListings.map((listing) => (
+                  <Marker
+                    key={listing.id}
+                    position={{ lat: listing.lat, lng: listing.lng }}
+                    onClick={() => {
+                      setSelectedListing(listing);
+                      setShowMobileMap(false);
+                      setShowMobileDetails(true);
+                    }}
+                    icon={{
+                      path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
+                      fillColor: '#5F3DFC',
+                      fillOpacity: 1,
+                      strokeColor: '#fff',
+                      strokeWeight: 2,
+                      scale: 0.5,
+                    }}
+                  />
+                ))}
+              </GoogleMap>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Details Bottom Sheet - Exact Desktop Layout */}
+      {showMobileDetails && selectedListing && (
+        <div className="md:hidden fixed inset-0 bg-black/50 z-40 flex items-end">
+          <div className="w-full bg-white rounded-t-3xl max-h-[95vh] overflow-y-auto">
+            {/* Drag Handle */}
+            <div className="flex justify-center py-3 sticky top-0 bg-white rounded-t-3xl z-20">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div className="px-4 pb-6 space-y-0">
+              {/* Photo Carousel */}
+              {selectedListing.photos && selectedListing.photos.length > 0 && (
+                <div className="relative -mx-4 mb-4">
+                  <div className="bg-gray-100 h-56">
+                    <img
+                      src={selectedListing.photos[photoIndex] || selectedListing.photo}
+                      alt={selectedListing.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {selectedListing.photos.length > 1 && (
+                    <div className="flex gap-1 mt-2 px-4">
+                      {selectedListing.photos.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setPhotoIndex(idx)}
+                          className={`flex-1 h-1 rounded-full transition-colors ${
+                            idx === photoIndex ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Location Information Widget */}
+              <div className="w-full bg-white border-b border-gray-200 mb-4 px-0 -mx-4">
+                <div className="font-bold text-white bg-black px-4 py-1.5 flex items-center justify-start text-sm rounded-r-lg w-fit">
+                  Lokacija
+                </div>
+                <div className="px-4 py-3 space-y-2">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{selectedListing.address}</p>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
+                    <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-gray-600">
+                    <Footprints className="w-3 h-3 flex-shrink-0" />
+                    <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reservation Details Widget */}
+              <div className="w-full bg-white border-b border-gray-200 mb-4 px-0 -mx-4">
+                <div className="px-4 py-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <button className="inline-block bg-gray-200 px-2 py-1 rounded text-xs font-semibold text-gray-900">
+                      Online specijal
+                    </button>
+                    <button
+                      onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-800"
+                    >
+                      Detalji
+                    </button>
+                  </div>
+
+                  {showOnlineSpecialReminder && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5">
+                      <p className="text-xs font-semibold text-yellow-900 mb-1">⚠️ Važna napomena</p>
+                      <p className="text-xs text-yellow-800 leading-tight">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka.</p>
+                    </div>
+                  )}
+
+                  <p className="text-base font-bold text-gray-900">Rezervacija parkinga</p>
+
+                  <button
+                    onClick={() => setShowPriceBreakdown(true)}
+                    className="w-full text-left hover:opacity-70 transition-opacity pb-3 border-b border-gray-200 flex items-start justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
+                      <p className="text-sm text-gray-900 mt-0.5">{formatDuration()}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Nema ulaza i izlaza</p>
+                    </div>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <p className="text-xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Međuzbroj</p>
+                    </div>
+                  </button>
+
+                  <div className="bg-gray-200 rounded-lg p-2 mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
+                      <Info className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5 mt-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+                      <p className="text-xs text-green-900 font-semibold">Besplatno otkazivanje</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+                      <p className="text-xs text-green-900 font-semibold">Garancija Mjesta</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-600 pt-2">Sigurna plaćanja omogućuje Stripe</p>
+                </div>
+              </div>
+
+              {/* Things You Should Know */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowThingsToKnow(!showThingsToKnow)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showThingsToKnow ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Things You Should Know</p>
+                </button>
+                {showThingsToKnow && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    {selectedListing.thingsToKnow
+                      ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
+                      : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Amenities */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowAmenities(!showAmenities)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showAmenities ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Amenities</p>
+                </button>
+                {showAmenities && (
+                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
+                    {selectedListing.amenities
+                      ? selectedListing.amenities.split(',').map((a, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                            <span>{a.trim()}</span>
+                          </div>
+                        ))
+                      : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Access Hours */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowAccessHours(!showAccessHours)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showAccessHours ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Access Hours</p>
+                </button>
+                {showAccessHours && (
+                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
+                    {selectedListing.accessHours
+                      ? selectedListing.accessHours.split('\n').map((line, i) => <p key={i}>{line}</p>)
+                      : <p className="text-gray-400">Nema dostupnih informacija o radnom vremenu.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Kako Radi */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowHowToRedeem(!showHowToRedeem)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showHowToRedeem ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Kako Radi</p>
+                </button>
+                {showHowToRedeem && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    {selectedListing.howItWorks
+                      ? selectedListing.howItWorks.split('\n').map((step, i) => <p key={i}>{step}</p>)
+                      : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* 365-Day Customer Support */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowCustomerSupport(!showCustomerSupport)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showCustomerSupport ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">365-Day Customer Support</p>
+                </button>
+                {showCustomerSupport && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    <p>PayParq has your back. If you have any issues while parking, please call our customer support team immediately at <span className="font-semibold">+385 91 596 3139</span>. We're here 365 days a year, Daily, 7am – midnight.</p>
+                    <p>For non-urgent issues shoot us an email at payparq@outlook.com. We'll get back you within 24 hours.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Company Credentials Footer */}
+              <div className="pt-3 border-t border-gray-200 text-xs text-gray-600 text-center space-y-0.5 px-4 mb-4">
+                <p>✓ Industry Leading Guarantees</p>
+                <p>✓ PCI DSS Certified • SSL Secure</p>
+              </div>
+            </div>
+
+            {/* Sticky Footer - Book Now Button */}
+            <div className="sticky bottom-0 px-4 py-3 border-t border-gray-200 bg-white space-y-2">
+              <a
+                href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
+              >
+                Rezervirajte sad — €{totalPrice.toFixed(2)}
+              </a>
+              <button
+                onClick={() => setShowMobileDetails(false)}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
+              >
+                Zatvori
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

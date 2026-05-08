@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import * as admin from 'firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -12,6 +13,85 @@ const supabase = createClient(
 );
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// Initialize Firebase
+let firebaseApp: admin.app.App | null = null;
+try {
+  if (admin.apps.length > 0) {
+    firebaseApp = admin.apps[0]!;
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    firebaseApp = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    });
+  } else if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    firebaseApp = admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+      } as any),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    });
+  }
+} catch (err) {
+  console.error('Firebase initialization error:', err);
+}
+
+interface SessionData {
+  location: string;
+  amount: number;
+  plate?: string | null;
+  customerEmail?: string | null;
+  startDate?: string | null;
+  startTime?: string | null;
+  duration?: string | null;
+}
+
+async function sendPaymentNotification(ownerId: string, session: SessionData) {
+  try {
+    const amountStr = session.amount > 0 ? `€${(session.amount / 100).toFixed(2)}` : 'Free';
+    const title = `New booking — ${session.location}`;
+    const body = [
+      session.plate ? `Plate: ${session.plate}` : null,
+      session.startDate ? `Date: ${session.startDate}` : null,
+      session.duration ? `Duration: ${session.duration}h` : null,
+      `Amount: ${amountStr}`,
+    ].filter(Boolean).join(' · ');
+
+    // Save to notifications table
+    await supabase.from('notifications').insert({
+      user_id: ownerId,
+      type: 'payment',
+      title,
+      data: { ...session, body },
+    });
+
+    // Get device tokens
+    const { data: tokens } = await supabase
+      .from('device_tokens')
+      .select('token')
+      .eq('user_id', ownerId);
+
+    if (!tokens || tokens.length === 0 || !firebaseApp) return;
+
+    // Send Firebase push
+    const messaging = admin.messaging(firebaseApp);
+    await Promise.all(
+      tokens.map((t) =>
+        messaging.send({
+          token: t.token,
+          notification: { title, body },
+          data: { type: 'payment', location: session.location },
+        }).catch(() => null)
+      )
+    );
+  } catch (err) {
+    console.error('Notification error:', err);
+  }
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -45,6 +125,10 @@ export async function POST(request: NextRequest) {
           startTime,
           duration,
           pricePerHour,
+          plate,
+          plateNumber,
+          customerEmail,
+          customer_email,
         } = session.metadata || {};
 
         if (!listingId || !startDate || !startTime || !duration) {
@@ -77,6 +161,25 @@ export async function POST(request: NextRequest) {
 
         if (bookingError) {
           throw bookingError;
+        }
+
+        // Get lot owner and send notification
+        const { data: location } = await supabase
+          .from('locations')
+          .select('owner_id, name')
+          .eq('id', listingId)
+          .single();
+
+        if (location?.owner_id) {
+          await sendPaymentNotification(location.owner_id, {
+            location: location.name || 'Parking lot',
+            amount: session.amount_total || 0,
+            plate: plate || plateNumber || session.customer_details?.email || null,
+            customerEmail: customerEmail || customer_email || session.customer_details?.email || null,
+            startDate: startDate || null,
+            startTime: startTime || null,
+            duration: duration || null,
+          });
         }
 
         console.log('Booking created successfully:', listingId);

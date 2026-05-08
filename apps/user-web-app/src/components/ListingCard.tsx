@@ -55,9 +55,10 @@ interface ListingCardProps {
   checkoutUrl?: string;
   durationHours?: number;
   showFee?: boolean;
+  hideDetailsButton?: boolean;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
   const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
@@ -105,7 +106,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
         {/* Address & Info */}
         <div className="flex-1">
           {/* Address - Bold on top */}
-          <p className="font-semibold text-gray-900 mb-1 overflow-hidden text-ellipsis whitespace-nowrap" style={{ maxWidth: '200px', fontSize: '15px' }}>{listing.address}</p>
+          <p className="font-semibold text-gray-900 mb-1 overflow-hidden text-ellipsis whitespace-nowrap" style={{ maxWidth: '140px', fontSize: '15px' }}>{listing.address}</p>
 
           {/* Rating */}
           <div className="flex items-center gap-1 mb-1">
@@ -131,24 +132,24 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
 
         {/* Bottom Right - CTA Buttons & Spots Widget */}
         <div className="flex gap-2 justify-end items-center" style={{ marginLeft: '-8px' }}>
-          {/* Spots Left Widget - Only show when selected */}
-          {isSelected && (
-            <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
-              <Info className="w-3.5 h-3.5 text-yellow-700" />
-              <span className="text-xs font-semibold text-gray-900">3 spots left</span>
-            </div>
-          )}
+          {/* Spots Left Widget - Always show */}
+          <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
+            <Info className="w-3.5 h-3.5 text-yellow-700" />
+            <span className="text-xs font-semibold text-gray-900">3 mjesta</span>
+          </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(listing);
-              onDetails?.();
-            }}
-            className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap"
-          >
-            Detalji
-          </button>
+          {!hideDetailsButton && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(listing);
+                onDetails?.();
+              }}
+              className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors whitespace-nowrap"
+            >
+              Detalji
+            </button>
+          )}
           <a
             href={checkoutUrl || '#'}
             target="_blank"

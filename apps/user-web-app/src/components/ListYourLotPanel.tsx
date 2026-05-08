@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 const DynamicMap = dynamic(() => import('./ParkingLocationMap'), { ssr: false });
 
 type MainStep = 'intro' | 1 | 2 | 3 | 'review';
-type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'vehicleSize' | 'accessControl';
+type Step1Sub = 'region' | 'map' | 'name' | 'type' | 'features' | 'addOns' | 'vehicleSize' | 'accessControl';
 type Step2Sub = 'availability' | 'bookingStart' | 'calendarPreview' | 'bookingWindow' | 'bookingTypes' | 'pricing' | 'description' | 'postBookingInstructions' | 'review2';
 type Step3Sub = 'photos' | 'streetView' | 'summary' | 'review3';
 
@@ -49,6 +49,7 @@ interface ListingData {
   smartPricing: boolean;
   permits: string;
   photos: File[];
+  photoUrls: string[];
   type: string;
   capacity: string;
   features: string[];
@@ -70,11 +71,12 @@ interface ListingData {
   additionalDescription: string;
   postBookingInstructions: string;
   addPostBookingInfo: boolean;
+  addOns: string[];
 }
 
 function InfoWidget({ tip }: { tip: string }) {
   return (
-    <div className="col-span-1">
+    <div className="hidden md:col-span-1 md:block">
       <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-6">
         <div className="flex items-start gap-2 mb-3">
           <p className="text-sm text-gray-700 leading-snug">Korisne Informacije</p>
@@ -178,6 +180,7 @@ export function ListYourLotPanel({
     smartPricing: true,
     permits: '',
     photos: [],
+    photoUrls: [],
     type: '',
     capacity: '',
     features: [],
@@ -207,6 +210,7 @@ export function ListYourLotPanel({
     additionalDescription: '',
     postBookingInstructions: '',
     addPostBookingInfo: false,
+    addOns: [],
   });
 
   const updateData = (key: keyof ListingData, value: any) => {
@@ -243,14 +247,15 @@ export function ListYourLotPanel({
           ...prev,
           name: listing.name || '',
           address: listing.address || '',
-          latitude: String(listing.latitude || ''),
-          longitude: String(listing.longitude || ''),
+          latitude: listing.latitude != null && listing.latitude !== 0 ? String(listing.latitude) : '',
+          longitude: listing.longitude != null && listing.longitude !== 0 ? String(listing.longitude) : '',
           capacity: String(listing.capacity || ''),
+          spaceType: String(listing.capacity || ''),
           type: meta.type || '',
           features: meta.features || [],
           openTime: meta.openTime || '07:00',
           closeTime: meta.closeTime || '22:00',
-          available24_7: meta.available24_7 || false,
+          available24_7: meta.available24_7 !== undefined ? meta.available24_7 : false,
           daysAvailable: meta.daysAvailable || [],
           vehicleSize: meta.vehicleSize || '',
           maxHeight: meta.maxHeight || '',
@@ -258,7 +263,19 @@ export function ListYourLotPanel({
           acceptHourlyDailyBookings: meta.acceptHourlyDailyBookings || false,
           pricingModel: meta.pricingModel || 'dynamic',
           additionalDescription: meta.additionalDescription || '',
-          postBookingInstructions: meta.getting_there || '',
+          postBookingInstructions: meta.postBookingInstructions || meta.getting_there || '',
+          region: meta.region || '',
+          town: meta.town || '',
+          postalCode: meta.postalCode || '',
+          addressLine2: meta.addressLine2 || '',
+          accessControl: meta.accessControl || '',
+          accessControlType: meta.accessControlType || '',
+          permitRequired: meta.permits || '',
+          noticeRequired: meta.noticeRequired || '0',
+          bookingWindow: meta.bookingWindow || 'this_month',
+          startTakingBookingsToday: meta.startTakingBookingsToday !== undefined ? meta.startTakingBookingsToday : true,
+          addOns: meta.addOns || [],
+          photoUrls: meta.photo_urls || [],
         }));
       } catch (err) {
         console.error('Error loading listing:', err);
@@ -267,49 +284,55 @@ export function ListYourLotPanel({
     loadListing();
   }, [editId, supabase]);
 
+  const initStreetView = (lat: number, lng: number) => {
+    if (!streetViewRef.current || !window.google?.maps) return;
+    const location = new window.google.maps.LatLng(lat, lng);
+    if (!streetViewInstanceRef.current) {
+      streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+        position: location,
+        pov: { heading: streetViewHeading, pitch: 0 },
+        zoom: 1,
+        motionTracking: false,
+        motionTrackingControl: true,
+        panControl: true,
+        zoomControl: true,
+      });
+      streetViewInstanceRef.current.addListener('pov_changed', () => {
+        const pov = streetViewInstanceRef.current.getPov();
+        setStreetViewHeading(pov.heading);
+      });
+    } else {
+      streetViewInstanceRef.current.setPosition(location);
+      streetViewInstanceRef.current.setPov({ heading: streetViewHeading, pitch: 0 });
+    }
+  };
+
   useEffect(() => {
-    if (currentStepValue === 3 && currentStep3SubValue === 'streetView' && streetViewRef.current && isLoaded && data.latitude && data.longitude && window.google?.maps) {
-      try {
-        const lat = parseFloat(data.latitude);
-        const lng = parseFloat(data.longitude);
+    if (currentStepValue !== 3 || currentStep3SubValue !== 'streetView' || !isLoaded || !window.google?.maps) return;
 
-        if (isNaN(lat) || isNaN(lng)) {
-          console.error('Invalid coordinates:', lat, lng);
-          return;
-        }
-
-        const location = new window.google.maps.LatLng(lat, lng);
-
-        if (!streetViewInstanceRef.current) {
-          streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(
-            streetViewRef.current,
-            {
-              position: location,
-              pov: {
-                heading: streetViewHeading,
-                pitch: 0,
-              },
-              zoom: 1,
-              motionTracking: false,
-              motionTrackingControl: true,
-              panControl: true,
-              zoomControl: true,
-            }
-          );
-
-          streetViewInstanceRef.current.addListener('pov_changed', () => {
-            const pov = streetViewInstanceRef.current.getPov();
-            setStreetViewHeading(pov.heading);
-          });
-
-          console.log('Street View initialized at:', lat, lng);
-        } else {
-          streetViewInstanceRef.current.setPosition(location);
-          streetViewInstanceRef.current.setPov({ heading: streetViewHeading, pitch: 0 });
-        }
-      } catch (error) {
-        console.error('Street View initialization error:', error);
+    if (data.latitude && data.longitude) {
+      const lat = parseFloat(data.latitude);
+      const lng = parseFloat(data.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        initStreetView(lat, lng);
+        return;
       }
+    }
+
+    // No coords — geocode from address as fallback
+    if (data.address && data.town) {
+      const geocoder = new window.google.maps.Geocoder();
+      const fullAddress = [data.address, data.town, data.region].filter(Boolean).join(', ');
+      geocoder.geocode({ address: fullAddress }, (results: any, status: any) => {
+        if (status === 'OK' && results?.[0]) {
+          const loc = results[0].geometry.location;
+          const lat = loc.lat();
+          const lng = loc.lng();
+          updateData('latitude', String(lat));
+          updateData('longitude', String(lng));
+          initStreetView(lat, lng);
+        }
+      });
     }
   }, [currentStepValue, currentStep3SubValue, isLoaded, data.latitude, data.longitude]);
 
@@ -660,7 +683,13 @@ export function ListYourLotPanel({
         return;
       }
       if (currentStep3SubValue === 'review3') {
-        console.log('✅ Step 3 review → published, navigating to dashboard');
+        console.log('✅ Step 3 review → published, updating verification status');
+        if (listingId && supabase) {
+          await supabase
+            .from('locations')
+            .update({ verification_status: 'pending' })
+            .eq('id', listingId);
+        }
         router.push('/members?refresh=listings');
         return;
       }
@@ -823,6 +852,19 @@ export function ListYourLotPanel({
             section_status: { section1: true, section2: false, section3: false },
             type: data.type,
             features: data.features,
+            accessControl: data.accessControl || 'no',
+            accessControlType: data.accessControlType || '',
+            requiresPermit: data.permitRequired === 'yes',
+            spaceAllocated: data.spaceAllocated || '',
+            addressLine2: data.addressLine2 || '',
+            description: '',
+            additionalDescription: data.additionalDescription || '',
+            postBookingInstructions: data.postBookingInstructions || '',
+            photos: [],
+            streetView: '',
+            hasHeightRestrictions: data.heightRestrictions === 'yes',
+            hasAccessControl: data.accessControl === 'yes',
+            spaceType: data.spaceType || '',
             openTime: data.available24_7 ? '00:00' : data.openTime,
             closeTime: data.available24_7 ? '24:00' : data.closeTime,
             available24_7: data.available24_7,
@@ -837,18 +879,50 @@ export function ListYourLotPanel({
         if (error) throw new Error(error.message);
         const newId = newListing?.[0]?.id;
         if (newId) {
+          // Promote user to manager role when creating first location
+          try {
+            if (user?.id) {
+              await supabase
+                .from('profiles')
+                .upsert({ id: user.id, role: 'manager' }, { onConflict: 'id', ignoreDuplicates: false });
+            }
+          } catch (err) {
+            console.warn('Failed to promote user to manager:', err);
+          }
+
           setListingId(newId);
           setSectionsSaved({ section1: true, section2: false, section3: false });
+          setStep('intro');
           router.push(`/list-your-parking?edit=${newId}`);
         }
       }
-      // Sections 2 & 3: Update existing listing
-      else if (listingId && (section === 2 || section === 3)) {
+      // Section 1: Update existing listing
+      else if (section === 1 && listingId) {
         const updateData: any = {
+          name: data.name,
+          address: `${data.address}${data.addressLine2 ? ', ' + data.addressLine2 : ''}, ${data.town}, ${data.postalCode}`.replace(/^,\s*|,\s*$/g, ''),
+          latitude: parseFloat(data.latitude) || 0,
+          longitude: parseFloat(data.longitude) || 0,
+          capacity: parseInt(data.spaceType) || 1,
           verification_metadata: {
             listing_status: 'pending',
+            section_status: { section1: true, section2: sectionsSaved.section2, section3: sectionsSaved.section3 },
             type: data.type,
             features: data.features,
+            addOns: data.addOns,
+            accessControl: data.accessControl || 'no',
+            accessControlType: data.accessControlType || '',
+            requiresPermit: data.permitRequired === 'yes',
+            spaceAllocated: data.spaceAllocated || '',
+            addressLine2: data.addressLine2 || '',
+            description: '',
+            additionalDescription: data.additionalDescription || '',
+            postBookingInstructions: data.postBookingInstructions || '',
+            photos: [],
+            streetView: '',
+            hasHeightRestrictions: data.heightRestrictions === 'yes',
+            hasAccessControl: data.accessControl === 'yes',
+            spaceType: data.spaceType || '',
             openTime: data.available24_7 ? '00:00' : data.openTime,
             closeTime: data.available24_7 ? '24:00' : data.closeTime,
             available24_7: data.available24_7,
@@ -856,23 +930,127 @@ export function ListYourLotPanel({
             vehicleSize: data.vehicleSize,
             maxHeight: data.maxHeight,
             permits: data.permitRequired || 'no',
-            acceptMonthlyBookings: data.acceptMonthlyBookings,
-            acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
-            pricingModel: data.pricingModel,
-            additionalDescription: data.additionalDescription,
-            getting_there: data.postBookingInstructions,
+            town: data.town,
+            postalCode: data.postalCode,
+            region: data.region,
           },
         };
-
-        const newStatus = { ...sectionsSaved };
-        if (section === 2) newStatus.section2 = true;
-        if (section === 3) newStatus.section3 = true;
-        updateData.verification_metadata.section_status = newStatus;
 
         const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
         if (error) throw new Error(error.message);
 
-        setSectionsSaved(newStatus);
+        setSectionsSaved({ ...sectionsSaved, section1: true });
+        setStep('intro');
+      }
+      // Section 2: Update booking/pricing settings
+      else if (section === 2 && listingId) {
+        const updateData: any = {
+          verification_metadata: {
+            listing_status: 'pending',
+            section_status: { section1: sectionsSaved.section1, section2: true, section3: sectionsSaved.section3 },
+            type: data.type,
+            features: data.features,
+            addOns: data.addOns,
+            accessControl: data.accessControl || 'no',
+            accessControlType: data.accessControlType || '',
+            requiresPermit: data.permitRequired === 'yes',
+            spaceAllocated: data.spaceAllocated || '',
+            addressLine2: data.addressLine2 || '',
+            description: '',
+            additionalDescription: data.additionalDescription || '',
+            postBookingInstructions: data.postBookingInstructions || '',
+            photos: [],
+            streetView: '',
+            hasHeightRestrictions: data.heightRestrictions === 'yes',
+            hasAccessControl: data.accessControl === 'yes',
+            spaceType: data.spaceType || '',
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+            town: data.town,
+            postalCode: data.postalCode,
+            region: data.region,
+            acceptMonthlyBookings: data.acceptMonthlyBookings,
+            acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
+            pricingModel: data.pricingModel,
+            noticeRequired: data.noticeRequired,
+            bookingWindow: data.bookingWindow,
+            startTakingBookingsToday: data.startTakingBookingsToday,
+          },
+        };
+
+        const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
+        if (error) throw new Error(error.message);
+
+        setSectionsSaved({ ...sectionsSaved, section2: true });
+        setStep('intro');
+      }
+      // Section 3: Update photos and street view
+      else if (section === 3 && listingId) {
+        // Upload new File photos to Supabase Storage
+        const uploadedUrls: string[] = [...data.photoUrls];
+        for (const file of data.photos) {
+          const ext = file.name.split('.').pop() || 'jpg';
+          const path = `${listingId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from('listing-photos')
+            .upload(path, file, { upsert: true });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(path);
+            if (urlData?.publicUrl) uploadedUrls.push(urlData.publicUrl);
+          }
+        }
+
+        const updateData: any = {
+          verification_metadata: {
+            listing_status: 'pending',
+            section_status: { section1: sectionsSaved.section1, section2: sectionsSaved.section2, section3: true },
+            type: data.type,
+            features: data.features,
+            addOns: data.addOns,
+            accessControl: data.accessControl || 'no',
+            accessControlType: data.accessControlType || '',
+            requiresPermit: data.permitRequired === 'yes',
+            spaceAllocated: data.spaceAllocated || '',
+            addressLine2: data.addressLine2 || '',
+            description: '',
+            additionalDescription: data.additionalDescription || '',
+            postBookingInstructions: data.postBookingInstructions || '',
+            hasHeightRestrictions: data.heightRestrictions === 'yes',
+            hasAccessControl: data.accessControl === 'yes',
+            spaceType: data.spaceType || '',
+            openTime: data.available24_7 ? '00:00' : data.openTime,
+            closeTime: data.available24_7 ? '24:00' : data.closeTime,
+            available24_7: data.available24_7,
+            daysAvailable: data.daysAvailable,
+            vehicleSize: data.vehicleSize,
+            maxHeight: data.maxHeight,
+            permits: data.permitRequired || 'no',
+            town: data.town,
+            postalCode: data.postalCode,
+            region: data.region,
+            acceptMonthlyBookings: data.acceptMonthlyBookings,
+            acceptHourlyDailyBookings: data.acceptHourlyDailyBookings,
+            pricingModel: data.pricingModel,
+            noticeRequired: data.noticeRequired,
+            bookingWindow: data.bookingWindow,
+            startTakingBookingsToday: data.startTakingBookingsToday,
+            photo_urls: uploadedUrls,
+            photos_count: uploadedUrls.length,
+            streetview_configured: true,
+          },
+        };
+
+        const { error } = await supabase.from('locations').update(updateData).eq('id', listingId);
+        if (error) throw new Error(error.message);
+        // Update local state so photos show immediately after save
+        setData((prev) => ({ ...prev, photoUrls: uploadedUrls, photos: [] }));
+
+        setSectionsSaved({ ...sectionsSaved, section3: true });
         setStep('intro');
       }
     } catch (e: any) {
@@ -891,21 +1069,30 @@ export function ListYourLotPanel({
           <p className="text-gray-600">Now let's get some details about your space so you can publish your listing.</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
           <div className="col-span-2 space-y-4">
             {completionPercent === 100 ? (
-              <div className="border-2 border-green-700 bg-green-50 rounded-lg p-6 text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 bg-green-700 rounded-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+              <>
+                <div className="border-2 border-green-700 bg-green-50 rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="w-16 h-16 bg-green-700 rounded-full flex items-center justify-center">
+                      <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
+                  <div className="text-2xl font-bold text-black mb-2">100% Dovršeno!</div>
+                  <p className="text-black font-semibold mb-2">Vaš popis je spreman.</p>
+                  <p className="text-sm text-black/70">Upravljajte kalendarom i cijenama u nastavku.</p>
                 </div>
-                <div className="text-2xl font-bold text-black mb-2">100% Dovršeno!</div>
-                <p className="text-black font-semibold mb-2">Vaš popis je spreman.</p>
-                <p className="text-sm text-black/70">Upravljajte kalendarom i cijenama u nastavku.</p>
-              </div>
+                <button
+                  onClick={() => router.push('/members?refresh=listings')}
+                  className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  Idi na upravljanje
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
             ) : (
               <>
                 {[
@@ -940,13 +1127,15 @@ export function ListYourLotPanel({
               </>
             )}
 
-            <button
-              onClick={() => { setStep(1); setStep1Sub('region'); }}
-              className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-2"
-            >
-              Start with the basics
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {!sectionsSaved.section1 && (
+              <button
+                onClick={() => { setStep(1); setStep1Sub('region'); }}
+                className="w-full px-6 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-2"
+              >
+                Start with the basics
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           <div className="col-span-1">
@@ -989,28 +1178,28 @@ export function ListYourLotPanel({
 
       {/* Section Progress Indicator */}
       {(currentStepValue === 1 || currentStepValue === 2 || currentStepValue === 3) && (
-        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="bg-gray-50 px-4 md:px-6 py-3 border-b border-gray-200 flex items-center justify-center md:justify-between">
+          <div className="flex items-center gap-2 md:gap-4">
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section1 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section1 ? '✓' : '1'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Location</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Location</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section2 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section2 ? '✓' : '2'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Availability</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Availability</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section3 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${sectionsSaved.section3 ? 'bg-green-500 text-white' : 'bg-[#5F3DFC] text-white'}`}>
                 {sectionsSaved.section3 ? '✓' : '3'}
               </div>
-              <span className="text-sm font-medium text-gray-700">Photos</span>
+              <span className="hidden md:block text-sm font-medium text-gray-700">Photos</span>
             </div>
           </div>
-          <div className="text-sm font-semibold text-gray-600">{completionPercent}% Complete</div>
+          <div className="hidden md:block text-sm font-semibold text-gray-600">{completionPercent}% Complete</div>
         </div>
       )}
 
@@ -1018,9 +1207,9 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1: Choose Country ── */}
       {currentStepValue === 1 && currentSubStepValue === 'region' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left white sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full">
             <div className="px-6 space-y-5 h-full">
               {/* Welcome message */}
               <div className="animate-fadeIn mb-6">
@@ -1105,7 +1294,7 @@ export function ListYourLotPanel({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Poštanski broj</label>
                       <input
                         type="text"
                         value={data.postalCode}
@@ -1127,7 +1316,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right white sector with widget */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
@@ -1139,9 +1328,9 @@ export function ListYourLotPanel({
 
       {/* ── STEP 2: Verify Location ── */}
       {currentStepValue === 1 && currentSubStepValue === 'map' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full flex flex-col overflow-hidden">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full flex flex-col overflow-hidden">
             <div className="px-6 space-y-3 h-full flex flex-col overflow-hidden">
               <div className="animate-fadeIn flex-shrink-0">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pritisnite kartu kako biste označili točan ulaz na svoje parkirno mjesto.</h2>
@@ -1176,7 +1365,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
@@ -1188,7 +1377,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 3: Name Your Space ── */}
       {currentStepValue === 1 && currentSubStepValue === 'name' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-5">
@@ -1216,7 +1405,10 @@ export function ListYourLotPanel({
                   min="1"
                   max="999"
                   value={data.spaceType ? String(data.spaceType) : ''}
-                  onChange={(e) => updateData('spaceType', e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateData('spaceType', v === '' ? '' : String(parseInt(v) || ''));
+                  }}
                   placeholder="npr. 1, 5, 10..."
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
                 />
@@ -1229,7 +1421,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6 space-y-4">
                 <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
@@ -1247,7 +1439,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1d: Parking Type ── */}
       {currentStepValue === 1 && currentSubStepValue === 'type' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1276,7 +1468,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="space-y-4">
               <p className="text-sm font-medium text-gray-900">Here are a few examples:</p>
 
@@ -1306,7 +1498,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1e: Features/Add-ons ── */}
       {currentStepValue === 1 && currentSubStepValue === 'features' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1336,7 +1528,7 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <button onClick={handleNext} disabled={!canProceed()} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
                 Nastaviti
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1344,7 +1536,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Select features that make your parking space stand out. These help drivers find exactly what they need." />
@@ -1356,7 +1548,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1f: Vehicle Size & Height ── */}
       {currentStepValue === 1 && currentSubStepValue === 'vehicleSize' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1436,7 +1628,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Be clear about vehicle size limitations. This helps drivers find parking that fits their vehicle." />
@@ -1448,7 +1640,7 @@ export function ListYourLotPanel({
 
       {/* ── STEP 1g: Access Control ── */}
       {currentStepValue === 1 && currentSubStepValue === 'accessControl' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1484,14 +1676,14 @@ export function ListYourLotPanel({
               {data.accessControl === 'yes' && (
                 <div className="space-y-4 border-t border-gray-200 pt-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type of Access Control</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Kod (Vrsta Pristupa)</label>
                     <select value={data.accessControlType} onChange={(e) => updateData('accessControlType', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40" style={{colorScheme: 'light'}}>
-                      <option value="">Select access type</option>
-                      <option value="gate">Gate</option>
-                      <option value="key">Key</option>
-                      <option value="code">Code</option>
-                      <option value="keycard">Keycard</option>
-                      <option value="remote">Remote</option>
+                      <option value="">Odaberite vrstu pristupa</option>
+                      <option value="gate">Kapija/Vrata</option>
+                      <option value="key">Ključ</option>
+                      <option value="code">Kod</option>
+                      <option value="keycard">Kartica</option>
+                      <option value="remote">Daljinska</option>
                     </select>
                   </div>
                 </div>
@@ -1540,7 +1732,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Clearly specify how drivers will access your parking space to avoid confusion." />
@@ -1552,7 +1744,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2a: Availability Settings ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'availability' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1701,7 +1893,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">In this step, we want to understand what your basic availability settings should be. Once your space has been listed, you'll have even more control with our new advanced availability settings.</p>
@@ -1712,7 +1904,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2b: Booking Start Date ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingStart' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1782,7 +1974,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 space-y-4">
               <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
@@ -1799,9 +1991,9 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2c: Calendar Preview ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'calendarPreview' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte svoj kalendar</h2>
@@ -1821,21 +2013,21 @@ export function ListYourLotPanel({
                 return (
                   <div className="space-y-6">
                     {/* Calendar Navigation */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4 md:mb-6">
                       <button
                         onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-xs md:text-base"
                       >← Prethodna</button>
-                      <h3 className="text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
+                      <h3 className="text-sm md:text-xl font-semibold text-gray-900">{croatianMonths[month]} {year}</h3>
                       <button
                         onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium"
+                        className="text-[#5F3DFC] hover:text-[#4330c4] font-medium text-xs md:text-base"
                       >Dalje →</button>
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="border border-gray-200 rounded-lg p-6">
-                      <div className="grid grid-cols-7 gap-2">
+                    <div className="border border-gray-200 rounded-lg p-3 md:p-6">
+                      <div className="grid grid-cols-7 gap-1 md:gap-2">
                         {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
                           <div key={day} className="text-center font-semibold text-sm text-gray-700 py-3">
                             {day}
@@ -1849,25 +2041,25 @@ export function ListYourLotPanel({
                           return (
                             <div
                               key={date}
-                              className={`aspect-square border-2 rounded-lg p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
+                              className={`aspect-square border-2 rounded-lg p-1 md:p-3 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
                                 isAvailable
                                   ? 'border-[#5F3DFC] bg-[#5F3DFC]/5 hover:bg-[#5F3DFC]/10'
                                   : 'border-gray-200 bg-gray-50'
                               }`}
                             >
-                              <p className="font-bold text-lg text-gray-900">{date}</p>
+                              <p className="font-bold text-sm md:text-lg text-gray-900">{date}</p>
                               {isAvailable ? (
                                 <>
-                                  <p className="text-xs text-gray-700 mt-1 font-medium">
+                                  <p className="text-[10px] md:text-xs text-gray-700 mt-0.5 md:mt-1 font-medium hidden md:block">
                                     {data.spaceType || '1'} {parseInt(data.spaceType || '1') === 1 ? 'mjesto' : 'mjesta'}
                                   </p>
-                                  <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
-                                    <Clock className="w-3 h-3" />
+                                  <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 md:mt-1 text-[9px] md:text-xs text-gray-600 hidden md:flex">
+                                    <Clock className="w-2 h-2 md:w-3 md:h-3" />
                                     <span>{hoursText}</span>
                                   </div>
                                 </>
                               ) : (
-                                <span className="text-xs text-gray-400 mt-2">Nedostupno</span>
+                                <span className="text-[9px] md:text-xs text-gray-400 mt-1 md:mt-2 hidden md:block">Nedostupno</span>
                               )}
                             </div>
                           );
@@ -1891,7 +2083,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Ovo je pregled kako će vaš kalendar izgledati. Nakon objavljivanja, moći ćete prilagoditi dostupnost za određene datume, postaviti datume zamračenja i</p>
@@ -1902,7 +2094,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2d: Booking Window ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingWindow' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -1950,7 +2142,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Booking Window</p>
               <p className="text-xs text-gray-700 leading-relaxed">
@@ -1967,77 +2159,86 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2e: Booking Types ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'bookingTypes' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">What type of booking do you want to accept?</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Koje vrste rezervacija prihvaćate?</h2>
               </div>
 
-              {/* Monthly Bookings */}
-              <div className="space-y-4">
-                <h3 className="text-base font-semibold text-gray-900">I would like to receive monthly bookings</h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'no', label: 'No' },
-                    { id: 'yes', label: 'Yes' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateData('acceptMonthlyBookings', id === 'yes')}
-                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
-                    >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {((data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no')) && (
-                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                        )}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
+              {data.pricingModel === 'dynamic' ? (
+                <div className="bg-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-5 space-y-2">
+                  <p className="text-sm font-semibold text-gray-900">Dinamično cijene — sve vrste automatski uključene</p>
+                  <p className="text-sm text-gray-600">Uz automatsko određivanje cijena, vaš prostor prihvaća satne, dnevne i mjesečne rezervacije. Sustav optimizira cijene za sve vrste.</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Monthly Bookings */}
+                  <div className="space-y-4">
+                    <h3 className="text-base font-semibold text-gray-900">Primam mjesečne rezervacije</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'no', label: 'Ne' },
+                        { id: 'yes', label: 'Da' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('acceptMonthlyBookings', id === 'yes')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.acceptMonthlyBookings && id === 'yes') || (!data.acceptMonthlyBookings && id === 'no')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Hourly & Daily Bookings */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <h3 className="text-base font-semibold text-gray-900">I would like to receive hourly & daily bookings</h3>
-                <div className="space-y-3">
-                  {[
-                    { id: 'no', label: 'No' },
-                    { id: 'yes', label: 'Yes' },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      onClick={() => updateData('acceptHourlyDailyBookings', id === 'yes')}
-                      className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
-                      style={{borderColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                  {/* Hourly & Daily Bookings */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6">
+                    <h3 className="text-base font-semibold text-gray-900">Primam satne i dnevne rezervacije</h3>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'no', label: 'Ne' },
+                        { id: 'yes', label: 'Da' },
+                      ].map(({ id, label }) => (
+                        <button
+                          key={id}
+                          onClick={() => updateData('acceptHourlyDailyBookings', id === 'yes')}
+                          className="w-full flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors text-left"
+                          style={{borderColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#D1D5DB', backgroundColor: (data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? 'rgba(95, 61, 252, 0.05)' : 'white'}}
+                        >
+                          <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
+                            {((data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no')) && (
+                              <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
+                            )}
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Available Plans */}
+                  <div className="space-y-4 border-t border-gray-200 pt-6">
+                    <label className="block text-sm font-medium text-gray-700">Dostupni planovi</label>
+                    <select
+                      value={data.availablePlan}
+                      onChange={(e) => updateData('availablePlan', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
+                      style={{colorScheme: 'light'}}
                     >
-                      <div className="flex items-center justify-center flex-shrink-0" style={{width: '20px', height: '20px', borderRadius: '50%', border: `2px solid ${(data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no') ? '#5F3DFC' : '#9CA3AF'}`, transition: 'all 0.2s'}}>
-                        {((data.acceptHourlyDailyBookings && id === 'yes') || (!data.acceptHourlyDailyBookings && id === 'no')) && (
-                          <div style={{width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#5F3DFC'}}></div>
-                        )}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Available Plans */}
-              <div className="space-y-4 border-t border-gray-200 pt-6">
-                <label className="block text-sm font-medium text-gray-700">Available plans</label>
-                <select
-                  value={data.availablePlan}
-                  onChange={(e) => updateData('availablePlan', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]/40"
-                  style={{colorScheme: 'light'}}
-                >
-                  <option value="monday_to_sunday">Monday to Sunday</option>
-                  <option value="monday_to_friday">Monday to Friday</option>
-                </select>
-              </div>
+                      <option value="monday_to_sunday">Ponedjeljak do nedjelje</option>
+                      <option value="monday_to_friday">Ponedjeljak do petka</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               <button onClick={handleNext} disabled={false} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-medium hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 mt-6">
                 Nastaviti
@@ -2047,10 +2248,14 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-              <p className="text-xs text-gray-700 leading-relaxed">Choosing to accept both monthly bookings along with hourly and daily bookings will typically maximise your earning potential.</p>
+              <p className="text-xs text-gray-700 leading-relaxed">
+                {data.pricingModel === 'dynamic'
+                  ? 'Dinamično određivanje cijena automatski optimizira sve vrste rezervacija — nema potrebe za ručnim odabirom.'
+                  : 'Prihvaćanje i mjesečnih i satnih/dnevnih rezervacija obično maksimizira zaradu.'}
+              </p>
             </div>
           </div>
         </div>
@@ -2058,7 +2263,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2f: Pricing Model ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'pricing' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2115,7 +2320,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 space-y-4">
               {/* Dynamic Pricing Info */}
               <div className="bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
@@ -2141,7 +2346,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2g: Your Description ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'description' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2159,19 +2364,6 @@ export function ListYourLotPanel({
                   rows={8}
                   placeholder="Edit the description..."
                 />
-              </div>
-
-              {/* Override Nearby Locations */}
-              <div className="space-y-3 border-t border-gray-200 pt-6">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.overrideNearbyLocations}
-                    onChange={(e) => updateData('overrideNearbyLocations', e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#5F3DFC] focus:ring-[#5F3DFC]"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Override nearby locations</span>
-                </label>
               </div>
 
               {/* Additional Information */}
@@ -2207,7 +2399,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">The description is meant to be a brief overview of your parking space to assist drivers in their understanding of its location, features and suitability, prior to booking.</p>
@@ -2218,7 +2410,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2h: Post-Booking Instructions ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'postBookingInstructions' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2246,7 +2438,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">We have generated post-booking instructions for your space on the information you have provided. This is meant to provide instruction to people who have booked your space on how to access and use your space.</p>
@@ -2257,7 +2449,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 2 REVIEW ── */}
       {currentStepValue === 2 && currentStep2SubValue === 'review2' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
@@ -2315,14 +2507,14 @@ export function ListYourLotPanel({
                 )}
               </div>
 
-              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
-                Publish
+              <button onClick={() => handleSaveSection(2)} disabled={submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
+                {submitting ? 'Spremanje...' : 'Spremi i nazad'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Provjeri sve postavke prije nastavka. Korak 3 dodaje fotografije i opis prostora.</p>
@@ -2333,7 +2525,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3a: Upload Photos ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'photos' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2344,28 +2536,26 @@ export function ListYourLotPanel({
 
               {/* Upload Widget */}
               <div className="space-y-4">
-                <label className="flex items-center justify-center w-full">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-[#5F3DFC]/30 rounded-lg p-8 cursor-pointer hover:border-[#5F3DFC] hover:bg-[#5F3DFC]/5 transition-all text-center"
-                  >
-                    <div className="space-y-2">
-                      <svg className="w-10 h-10 mx-auto text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <p className="text-sm font-medium text-gray-900">Click to upload or drag and drop</p>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                    </div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  ref={fileInputRef}
+                />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-[#5F3DFC]/30 rounded-lg p-8 cursor-pointer hover:border-[#5F3DFC] hover:bg-[#5F3DFC]/5 transition-all text-center"
+                >
+                  <div className="space-y-2">
+                    <svg className="w-10 h-10 mx-auto text-[#5F3DFC]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <p className="text-sm font-medium text-gray-900">Kliknite za učitavanje ili povucite i ispustite</p>
+                    <p className="text-xs text-gray-500">PNG, JPG, GIF do 10MB</p>
                   </div>
-                </label>
+                </div>
               </div>
 
               {/* Guidance Text */}
@@ -2375,26 +2565,26 @@ export function ListYourLotPanel({
               </div>
 
               {/* Uploaded Photos */}
-              {data.photos.length > 0 && (
+              {(data.photoUrls.length > 0 || data.photos.length > 0) && (
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Uploaded Photos ({data.photos.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Fotografije ({data.photoUrls.length + data.photos.length})</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    {data.photos.map((photo, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(photo)}
-                          alt={`Uploaded photo ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
+                    {data.photoUrls.map((url, index) => (
+                      <div key={`url-${index}`} className="relative group">
+                        <img src={url} alt={`Foto ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
                         <button
-                          onClick={() => setData((prev) => ({
-                            ...prev,
-                            photos: prev.photos.filter((_, i) => i !== index)
-                          }))}
+                          onClick={() => setData((prev) => ({ ...prev, photoUrls: prev.photoUrls.filter((_, i) => i !== index) }))}
                           className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          ✕
-                        </button>
+                        >✕</button>
+                      </div>
+                    ))}
+                    {data.photos.map((photo, index) => (
+                      <div key={`file-${index}`} className="relative group">
+                        <img src={URL.createObjectURL(photo)} alt={`Novo ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                        <button
+                          onClick={() => setData((prev) => ({ ...prev, photos: prev.photos.filter((_, i) => i !== index) }))}
+                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >✕</button>
                       </div>
                     ))}
                   </div>
@@ -2459,17 +2649,18 @@ export function ListYourLotPanel({
                 <p className="text-sm text-gray-900"><span className="font-medium">Recommendation:</span> We recommend uploading at least 3 photos to increase your listing's visibility and attract more drivers.</p>
               </div>
 
-              <button onClick={() => handleSaveSection(3)} disabled={data.photos.length === 0 || submitting} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
-                {submitting ? 'Spremanje...' : 'Spremi i izlazi'}
+              <button onClick={handleNext} disabled={data.photos.length === 0 && data.photoUrls.length === 0} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6">
+                Nastaviti
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
-              <p className="text-xs text-gray-700 leading-relaxed">Good quality photos are essential to attract drivers to your parking space. Show the entrance, parking area, and any distinctive features that help drivers identify your space.</p>
+              <p className="text-xs text-gray-700 leading-relaxed">Kvalitetne fotografije su ključne za privlačenje vozača. Pokažite ulaz, parking prostor i sve prepoznatljive značajke.</p>
             </div>
           </div>
         </div>
@@ -2477,7 +2668,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3b: Google Street View ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'streetView' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2541,7 +2732,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Street View helps drivers understand exactly where your parking space is located. Adjust the view to show the entrance and any distinguishing features that help drivers find you. Make sure the view is oriented toward the street and parking area, not into buildings.</p>
@@ -2552,7 +2743,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3c: Summary & Expectations ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'summary' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
@@ -2617,7 +2808,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">You're almost there! Review what to expect once your listing goes live. Your parking space will be visible to drivers based on your availability and booking settings.</p>
@@ -2628,7 +2819,7 @@ export function ListYourLotPanel({
 
       {/* ── SECTION 3d: Review Before Publishing ── */}
       {currentStepValue === 3 && currentStep3SubValue === 'review3' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           <div className="flex-[0_0_65%] bg-white py-6 h-full overflow-auto">
             <div className="px-6 space-y-6">
               <div className="animate-fadeIn mb-6">
@@ -2654,14 +2845,14 @@ export function ListYourLotPanel({
                 </div>
               </div>
 
-              <button onClick={handleNext} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2">
-                Objaviti
+              <button onClick={() => handleSaveSection(3)} disabled={(data.photos.length === 0 && data.photoUrls.length === 0) || submitting} className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg text-sm font-semibold hover:bg-[#4330c4] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2">
+                {submitting ? 'Spremanje...' : 'Spremi i nazad'}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto border-l border-gray-200">
+          <div className="w-full md:flex-[0_0_35%] bg-gray-50 py-6 px-6 overflow-auto md:border-l border-gray-200">
             <div className="sticky top-6 bg-gradient-to-br from-[#5F3DFC]/15 to-[#5F3DFC]/5 border border-[#5F3DFC]/30 rounded-lg p-4">
               <p className="text-sm font-medium text-gray-900 mb-2">Korisne Informacije</p>
               <p className="text-xs text-gray-700 leading-relaxed">Sve je spremno! Vaš parking prostor će biti vidljiv potencijalnim kupcima čim ga objavite.</p>
@@ -2672,9 +2863,9 @@ export function ListYourLotPanel({
 
       {/* ── REVIEW ── */}
       {currentStepValue === 'review' && (
-        <div className="flex animate-fadeIn h-full w-full">
+        <div className="flex flex-col md:flex-row animate-fadeIn h-full w-full">
           {/* Left sector - 65% */}
-          <div className="flex-[0_0_65%] bg-white py-6 h-full">
+          <div className="w-full md:flex-[0_0_65%] bg-white py-6 md:h-full">
             <div className="px-6 space-y-4">
               <div className="animate-fadeIn mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">Pregledajte podatke prije objavljivanja.</h2>
@@ -2711,7 +2902,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="flex-[0_0_35%] bg-white py-6 flex items-center justify-center h-full">
+          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Review all details before publishing. You can edit after going live." />

@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Camera, Clock, Euro, AlertCircle, Menu, X } from 'lucide-react';
+import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
+import { PayparqPageHeader } from '@/components/PayparqPageHeader';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
-  { id: 'space', label: 'Detalji prostora', icon: 'square' },
+  { id: 'space', label: 'Detalji prostora', icon: Square },
   { id: 'availability', label: 'Dostupnost i radnog vremena', icon: Clock },
-  { id: 'booking', label: 'Vrste rezervacija', icon: 'calendar' },
-  { id: 'pricing', label: 'Cijene', icon: Euro },
-  { id: 'description', label: 'Opis', icon: 'file' },
+  { id: 'description', label: 'Opis', icon: FileText },
   { id: 'additional', label: 'Dodatne informacije', icon: AlertCircle },
   { id: 'photos', label: 'Fotografije', icon: Camera },
-  { id: 'streetview', label: 'Pogled s ceste', icon: 'map' },
+  { id: 'streetview', label: 'Pogled s ceste', icon: Map },
 ];
 
 export default function EditListingPage() {
@@ -22,84 +22,109 @@ export default function EditListingPage() {
   const router = useRouter();
   const id = params.id as string;
 
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
+
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('location');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const streetViewRef = useRef<HTMLDivElement>(null);
+  const streetViewInstanceRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
-    // Basic Info
-    name: 'Downtown Premium Parking',
+    name: '',
     region: 'HR',
-    address: '123 Main Street',
-    addressLine2: 'Building B, Ground Floor',
-    town: 'Zagreb',
-    postalCode: '10000',
-    latitude: '45.8150',
-    longitude: '15.9819',
-    capacity: '5',
-    type: 'Outdoor Lot',
-    description: 'Secure parking in the heart of downtown. Well-lit, 24/7 access with CCTV monitoring and security guard on premises.',
-
-    // Space Details
-    spaceType: 'Outdoor Lot',
-    vehicleSize: 'All vehicles',
-    heightRestrictions: 'Yes',
-    maxHeight: '2.5m',
-    accessControl: 'Gate with code',
-    accessControlType: 'Electronic keypad',
-    permitRequired: 'No',
-    spaceAllocated: 'Marked spaces',
-    features: ['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging'],
-
-    // Availability & Pricing
-    available24_7: true,
-    openTime: '00:00',
-    closeTime: '23:59',
-    daysAvailable: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    address: '',
+    addressLine2: '',
+    town: '',
+    postalCode: '',
+    latitude: '',
+    longitude: '',
+    type: '',
+    description: '',
+    spaceType: '',
+    vehicleSize: '',
+    hasAccessControl: false,
+    accessControlType: '',
+    hasHeightRestrictions: false,
+    maxHeight: '',
+    requiresPermit: false,
+    spaceAllocated: '',
+    features: [] as string[],
+    available24_7: false,
+    schedule: {
+      Ponedjeljak: { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Utorak:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Srijeda:     { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Četvrtak:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Petak:       { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Subota:      { enabled: true, openTime: '00:00', closeTime: '23:59' },
+      Nedjelja:    { enabled: true, openTime: '00:00', closeTime: '23:59' },
+    } as Record<string, { enabled: boolean; openTime: string; closeTime: string }>,
     smartPricing: false,
-    permits: 'None required',
-
-    // Booking Options
-    allowOvernightBookings: true,
-    noticeRequired: '0 hours',
-    startTakingBookingsToday: true,
-    bookingStartDate: '2026-05-05',
-    bookingWindow: '90 days',
-    acceptMonthlyBookings: true,
-    acceptHourlyDailyBookings: true,
-    availablePlan: 'Premium',
-    pricingModel: 'Fixed pricing',
-
-    // Pricing
-    base_price_hourly: '5.50',
-    base_price_daily: '18.00',
-    base_price_monthly: '350.00',
-
-    // Additional Info
-    addAdditionalInfo: true,
-    additionalDescription: 'Free Wi-Fi available in waiting area. Reserved spaces for handicapped. Covered parking available for additional fee.',
-    postBookingInstructions: 'Upon arrival, use gate code: 1234. Reserved spot marked with your license plate. Contact security at +385 1 234 5678 for assistance.',
-    addPostBookingInfo: true,
-
-    // Photos (simulated)
-    photos: [
-      { id: 1, name: 'parking-entrance.jpg', url: 'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=500&h=500&fit=crop' },
-      { id: 2, name: 'parking-spaces.jpg', url: 'https://images.unsplash.com/photo-1597045866519-bf8eb5537877?w=500&h=500&fit=crop' },
-      { id: 3, name: 'parking-night.jpg', url: 'https://images.unsplash.com/photo-1464207687429-7505649dae38?w=500&h=500&fit=crop' },
-    ],
-
-    // Street View
-    streetView: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&h=600&fit=crop',
+    permits: '',
+    postBookingInstructions: '',
+    addPostBookingInfo: false,
+    photos: [] as { id: number; name: string; url: string }[],
   });
 
   const handleSave = async () => {
+    if (!supabase) return;
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setSuccess(true);
-    setSaving(false);
-    setTimeout(() => setSuccess(false), 3000);
+    try {
+      const { data: existing } = await supabase
+        .from('locations')
+        .select('verification_metadata')
+        .eq('id', id)
+        .single();
+
+      const meta = existing?.verification_metadata || {};
+
+      const { error } = await supabase
+        .from('locations')
+        .update({
+          name: formData.name,
+          address: formData.address,
+          description: formData.description,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+          verification_metadata: {
+            ...meta,
+            region: formData.region,
+            addressLine2: formData.addressLine2,
+            town: formData.town,
+            postalCode: formData.postalCode,
+            type: formData.type,
+            spaceType: formData.spaceType,
+            vehicleSize: formData.vehicleSize,
+            hasAccessControl: formData.hasAccessControl,
+            accessControlType: formData.accessControlType,
+            hasHeightRestrictions: formData.hasHeightRestrictions,
+            maxHeight: formData.maxHeight,
+            requiresPermit: formData.requiresPermit,
+            spaceAllocated: formData.spaceAllocated,
+            features: formData.features,
+            available24_7: formData.available24_7,
+            schedule: formData.schedule,
+            smartPricing: formData.smartPricing,
+            permits: formData.permits,
+            postBookingInstructions: formData.postBookingInstructions,
+            photos: formData.photos,
+          },
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Save failed:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemovePhoto = (id: number) => {
@@ -117,6 +142,26 @@ export default function EditListingPage() {
       element.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    if (!isLoaded || !formData.latitude || !formData.longitude || !streetViewRef.current) return;
+    if (!window.google?.maps) return;
+    const lat = parseFloat(formData.latitude);
+    const lng = parseFloat(formData.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
+    const location = new window.google.maps.LatLng(lat, lng);
+    if (!streetViewInstanceRef.current) {
+      streetViewInstanceRef.current = new window.google.maps.StreetViewPanorama(streetViewRef.current, {
+        position: location,
+        pov: { heading: 0, pitch: 0 },
+        zoom: 1,
+        addressControl: false,
+        fullscreenControl: false,
+      });
+    } else {
+      streetViewInstanceRef.current.setPosition(location);
+    }
+  }, [isLoaded, formData.latitude, formData.longitude]);
 
   useEffect(() => {
     if (id) {
@@ -149,44 +194,41 @@ export default function EditListingPage() {
         addressLine2: data.verification_metadata?.addressLine2 || '',
         town: data.verification_metadata?.town || '',
         postalCode: data.verification_metadata?.postalCode || '',
-        latitude: data.verification_metadata?.latitude || '',
-        longitude: data.verification_metadata?.longitude || '',
-        capacity: String(data.capacity || 1),
+        latitude: data.latitude != null && data.latitude !== 0 ? String(data.latitude) : '',
+        longitude: data.longitude != null && data.longitude !== 0 ? String(data.longitude) : '',
         type: data.verification_metadata?.type || '',
-        description: data.description || '',
+        description: data.verification_metadata?.additionalDescription || data.description || '',
         spaceType: data.verification_metadata?.spaceType || '',
         vehicleSize: data.verification_metadata?.vehicleSize || '',
-        heightRestrictions: data.verification_metadata?.heightRestrictions || '',
-        maxHeight: data.verification_metadata?.maxHeight || '',
-        accessControl: data.verification_metadata?.accessControl || '',
-        accessControlType: data.verification_metadata?.accessControlType || '',
-        permitRequired: data.verification_metadata?.permitRequired || '',
+        hasHeightRestrictions: data.verification_metadata?.hasHeightRestrictions ?? true,
+        maxHeight: data.verification_metadata?.maxHeight || '2.5m',
+        hasAccessControl: data.verification_metadata?.hasAccessControl ?? true,
+        accessControlType: data.verification_metadata?.accessControlType || 'Electronic keypad',
+        requiresPermit: data.verification_metadata?.requiresPermit ?? false,
         spaceAllocated: data.verification_metadata?.spaceAllocated || '',
         features: data.verification_metadata?.features || [],
         available24_7: data.verification_metadata?.available24_7 || false,
-        openTime: data.verification_metadata?.openTime || '00:00',
-        closeTime: data.verification_metadata?.closeTime || '23:59',
-        daysAvailable: data.verification_metadata?.daysAvailable || [],
+        schedule: (() => {
+          const days = ['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'];
+          const saved = data.verification_metadata?.schedule;
+          const oldOpen = data.verification_metadata?.openTime || '00:00';
+          const oldClose = data.verification_metadata?.closeTime || '23:59';
+          const oldDays: string[] = data.verification_metadata?.daysAvailable || days;
+          return Object.fromEntries(days.map(d => [d, saved?.[d] ?? {
+            enabled: oldDays.includes(d),
+            openTime: oldOpen,
+            closeTime: oldClose,
+          }]));
+        })(),
         smartPricing: data.verification_metadata?.smartPricing || false,
         permits: data.verification_metadata?.permits || '',
-        allowOvernightBookings: data.verification_metadata?.allowOvernightBookings || false,
-        noticeRequired: data.verification_metadata?.noticeRequired || '',
-        startTakingBookingsToday: data.verification_metadata?.startTakingBookingsToday || false,
-        bookingStartDate: data.verification_metadata?.bookingStartDate || '',
-        bookingWindow: data.verification_metadata?.bookingWindow || '',
-        acceptMonthlyBookings: data.verification_metadata?.acceptMonthlyBookings || false,
-        acceptHourlyDailyBookings: data.verification_metadata?.acceptHourlyDailyBookings || false,
-        availablePlan: data.verification_metadata?.availablePlan || '',
-        pricingModel: data.verification_metadata?.pricingModel || '',
-        base_price_hourly: String(data.base_price_hourly || 0),
-        base_price_daily: String(data.base_price_daily || 0),
-        base_price_monthly: String(data.base_price_monthly || 0),
-        addAdditionalInfo: !!data.verification_metadata?.additionalDescription,
-        additionalDescription: data.verification_metadata?.additionalDescription || '',
         postBookingInstructions: data.verification_metadata?.postBookingInstructions || '',
         addPostBookingInfo: !!data.verification_metadata?.postBookingInstructions,
-        photos: [],
-        streetView: '',
+        photos: (data.verification_metadata?.photo_urls || []).map((url: string, i: number) => ({
+          id: i + 1,
+          name: `photo-${i + 1}.jpg`,
+          url,
+        })),
       });
     } catch (err) {
       console.error('Error loading listing:', err);
@@ -198,29 +240,27 @@ export default function EditListingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-black/50">Učitavanje...</p>
+        <div className="text-center">
+          <div className="relative flex items-center justify-center w-20 h-20 mx-auto mb-4">
+            {/* Rotating white ring */}
+            <div className="absolute inset-0 rounded-full border-4 border-gray-100 border-t-white animate-spin" style={{ animationDuration: '1s' }} />
+            {/* Pulsating logo */}
+            <div className="animate-pulse w-12 h-12 rounded-full bg-[#020617] flex items-center justify-center shadow-lg z-10">
+              <span className="text-lg font-black tracking-tight text-white select-none">P</span>
+            </div>
+          </div>
+          <p className="text-black/60 text-sm">Učitavanje...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-black/10 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-black">Edit Listing</h1>
-            <p className="text-black/60 text-sm">{formData.name}</p>
-          </div>
-
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 hover:bg-black/5 rounded-lg transition-colors"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+      <PayparqPageHeader
+        title="Uredi popis"
+        onBack={() => router.back()}
+      />
 
       {/* Success Message */}
       {success && (
@@ -246,11 +286,7 @@ export default function EditListingPage() {
                       : 'text-black/60 hover:bg-black/5 hover:text-black'
                   }`}
                 >
-                  {typeof IconComponent === 'string' ? (
-                    <span className="w-5 h-5">•</span>
-                  ) : (
-                    <IconComponent className="w-5 h-5 flex-shrink-0" />
-                  )}
+                  <IconComponent className="w-5 h-5 flex-shrink-0" />
                   <span className="text-left">{section.label}</span>
                 </button>
               );
@@ -282,7 +318,7 @@ export default function EditListingPage() {
             <div id="location" className="scroll-mt-24">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Location Details</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Location Details</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -380,17 +416,6 @@ export default function EditListingPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Kapacitet (mjesta)</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    min="1"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip parkinga</label>
                   <input
                     type="text"
@@ -402,12 +427,17 @@ export default function EditListingPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip prostora</label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.spaceType}
                     onChange={(e) => setFormData({ ...formData, spaceType: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black bg-white"
+                  >
+                    <option value="">Odaberite tip</option>
+                    <option value="private_driveway">Privatni prilaz</option>
+                    <option value="commercial_carpark">Komercijalni parking</option>
+                    <option value="residential_carpark">Stambeni parking</option>
+                    <option value="lockup_garage">Garaža</option>
+                  </select>
                 </div>
 
                 <div>
@@ -422,52 +452,102 @@ export default function EditListingPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Ograničenja visine</label>
-                  <input
-                    type="text"
-                    value={formData.heightRestrictions}
-                    onChange={(e) => setFormData({ ...formData, heightRestrictions: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Maksimalna visina</label>
-                  <input
-                    type="text"
-                    value={formData.maxHeight}
-                    onChange={(e) => setFormData({ ...formData, maxHeight: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.hasHeightRestrictions}
+                        onChange={() => setFormData({ ...formData, hasHeightRestrictions: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.hasHeightRestrictions}
+                        onChange={() => setFormData({ ...formData, hasHeightRestrictions: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
+                  {formData.hasHeightRestrictions && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Maksimalna visina</label>
+                      <input
+                        type="text"
+                        placeholder="npr. 2.5m"
+                        value={formData.maxHeight}
+                        onChange={(e) => setFormData({ ...formData, maxHeight: e.target.value })}
+                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Kontrola pristupa</label>
-                  <input
-                    type="text"
-                    value={formData.accessControl}
-                    onChange={(e) => setFormData({ ...formData, accessControl: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip kontrole pristupa</label>
-                  <input
-                    type="text"
-                    value={formData.accessControlType}
-                    onChange={(e) => setFormData({ ...formData, accessControlType: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.hasAccessControl}
+                        onChange={() => setFormData({ ...formData, hasAccessControl: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.hasAccessControl}
+                        onChange={() => setFormData({ ...formData, hasAccessControl: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
+                  {formData.hasAccessControl && (
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Tip kontrole pristupa</label>
+                      <select
+                        value={formData.accessControlType}
+                        onChange={(e) => setFormData({ ...formData, accessControlType: e.target.value })}
+                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
+                      >
+                        <option value="Electronic keypad">Electronic keypad</option>
+                        <option value="Gate with code">Gate with code</option>
+                        <option value="RFID card">RFID card</option>
+                        <option value="Mobile app">Mobile app</option>
+                        <option value="Manual entry">Manual entry</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Dozvola obavezna</label>
-                  <input
-                    type="text"
-                    value={formData.permitRequired}
-                    onChange={(e) => setFormData({ ...formData, permitRequired: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={formData.requiresPermit}
+                        onChange={() => setFormData({ ...formData, requiresPermit: true })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Da</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!formData.requiresPermit}
+                        onChange={() => setFormData({ ...formData, requiresPermit: false })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-black">Ne</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -481,12 +561,24 @@ export default function EditListingPage() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Karakteristike</label>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.features.map((feature, idx) => (
-                      <span key={idx} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold">
-                        {feature}
-                      </span>
+                  <label className="block text-xs font-semibold text-black/60 mb-3 uppercase">Karakteristike</label>
+                  <div className="space-y-2">
+                    {['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging', 'WiFi', 'Covered Parking', 'Valet Service', 'Car Wash', 'Phone Charging', 'Accessible for Disabled'].map((feature) => (
+                      <label key={feature} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.features.includes(feature)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({ ...formData, features: [...formData.features, feature] });
+                            } else {
+                              setFormData({ ...formData, features: formData.features.filter(f => f !== feature) });
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-black/20 accent-[#7C3AED]"
+                        />
+                        <span className="text-sm text-black">{feature}</span>
+                      </label>
                     ))}
                   </div>
                 </div>
@@ -497,213 +589,61 @@ export default function EditListingPage() {
             <div id="availability" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Availability & Hours</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Dostupnost i radno vrijeme</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.available24_7}
-                      onChange={(e) => setFormData({ ...formData, available24_7: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Available 24/7</span>
-                  </label>
-                </div>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 mb-4">
+                  <input
+                    type="checkbox"
+                    checked={formData.available24_7}
+                    onChange={(e) => setFormData({ ...formData, available24_7: e.target.checked })}
+                    className="rounded border-black/20"
+                  />
+                  <span className="text-sm font-semibold text-black">Dostupan 24/7</span>
+                </label>
 
-                {!formData.available24_7 && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Opens At</label>
-                      <input
-                        type="time"
-                        value={formData.openTime}
-                        onChange={(e) => setFormData({ ...formData, openTime: e.target.value })}
-                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                      />
+                {['Ponedjeljak','Utorak','Srijeda','Četvrtak','Petak','Subota','Nedjelja'].map(day => {
+                  const d = formData.schedule[day] ?? { enabled: true, openTime: '00:00', closeTime: '23:59' };
+                  return (
+                    <div key={day} className="flex items-center gap-3">
+                      <div className="w-28 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={d.enabled}
+                          onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, enabled: e.target.checked } } })}
+                          className="rounded border-black/20"
+                        />
+                        <span className="text-xs font-semibold text-black">{day}</span>
+                      </div>
+                      {d.enabled && !formData.available24_7 ? (
+                        <>
+                          <input
+                            type="time"
+                            value={d.openTime}
+                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, openTime: e.target.value } } })}
+                            className="px-2 py-1 border border-black/20 rounded-lg text-xs text-black w-24"
+                          />
+                          <span className="text-xs text-black/40">–</span>
+                          <input
+                            type="time"
+                            value={d.closeTime}
+                            onChange={(e) => setFormData({ ...formData, schedule: { ...formData.schedule, [day]: { ...d, closeTime: e.target.value } } })}
+                            className="px-2 py-1 border border-black/20 rounded-lg text-xs text-black w-24"
+                          />
+                        </>
+                      ) : d.enabled ? (
+                        <span className="text-xs text-black/40">00:00 – 24:00</span>
+                      ) : (
+                        <span className="text-xs text-black/30 italic">Zatvoreno</span>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Closes At</label>
-                      <input
-                        type="time"
-                        value={formData.closeTime}
-                        onChange={(e) => setFormData({ ...formData, closeTime: e.target.value })}
-                        className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Days Available</label>
-                  <p className="text-sm text-black">{formData.daysAvailable.join(', ')}</p>
-                </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.allowOvernightBookings}
-                      onChange={(e) => setFormData({ ...formData, allowOvernightBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Allow Overnight Bookings</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Notice Required</label>
-                  <input
-                    type="text"
-                    value={formData.noticeRequired}
-                    onChange={(e) => setFormData({ ...formData, noticeRequired: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Booking Window</label>
-                  <input
-                    type="text"
-                    value={formData.bookingWindow}
-                    onChange={(e) => setFormData({ ...formData, bookingWindow: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.startTakingBookingsToday}
-                      onChange={(e) => setFormData({ ...formData, startTakingBookingsToday: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Start Taking Bookings Today</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Booking Start Date</label>
-                  <input
-                    type="date"
-                    value={formData.bookingStartDate}
-                    onChange={(e) => setFormData({ ...formData, bookingStartDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Available Plan</label>
-                  <input
-                    type="text"
-                    value={formData.availablePlan}
-                    onChange={(e) => setFormData({ ...formData, availablePlan: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* SECTION 4: BOOKING TYPES */}
-            <div id="booking" className="scroll-mt-24 pt-6 border-t border-black/10">
-              <h2 className="text-2xl font-bold text-black mb-4">Booking Types & Options</h2>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptMonthlyBookings}
-                      onChange={(e) => setFormData({ ...formData, acceptMonthlyBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Accept Monthly Bookings</span>
-                  </label>
-                </div>
-
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptHourlyDailyBookings}
-                      onChange={(e) => setFormData({ ...formData, acceptHourlyDailyBookings: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Accept Hourly & Daily Bookings</span>
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Pricing Model</label>
-                  <input
-                    type="text"
-                    value={formData.pricingModel}
-                    onChange={(e) => setFormData({ ...formData, pricingModel: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.smartPricing}
-                      onChange={(e) => setFormData({ ...formData, smartPricing: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Smart Pricing</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 5: PRICING */}
-            <div id="pricing" className="scroll-mt-24 pt-6 border-t border-black/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Euro className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Pricing</h2>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Hourly Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_hourly}
-                    onChange={(e) => setFormData({ ...formData, base_price_hourly: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Daily Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_daily}
-                    onChange={(e) => setFormData({ ...formData, base_price_daily: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-black/60 mb-2 uppercase">Monthly Rate (€)</label>
-                  <input
-                    type="number"
-                    value={formData.base_price_monthly}
-                    onChange={(e) => setFormData({ ...formData, base_price_monthly: e.target.value })}
-                    className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 6: DESCRIPTION */}
+            {/* SECTION 4: DESCRIPTION */}
             <div id="description" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Description</h2>
               <textarea
@@ -714,31 +654,11 @@ export default function EditListingPage() {
               />
             </div>
 
-            {/* SECTION 7: ADDITIONAL INFO */}
+            {/* SECTION 5: ADDITIONAL INFO */}
             <div id="additional" className="scroll-mt-24 pt-6 border-t border-black/10">
               <h2 className="text-2xl font-bold text-black mb-4">Additional Information</h2>
 
               <div className="space-y-4">
-                <div>
-                  <label className="flex items-center gap-2 mb-3">
-                    <input
-                      type="checkbox"
-                      checked={formData.addAdditionalInfo}
-                      onChange={(e) => setFormData({ ...formData, addAdditionalInfo: e.target.checked })}
-                      className="rounded border-black/20"
-                    />
-                    <span className="text-sm font-semibold text-black">Add Additional Information</span>
-                  </label>
-                  {formData.addAdditionalInfo && (
-                    <textarea
-                      value={formData.additionalDescription}
-                      onChange={(e) => setFormData({ ...formData, additionalDescription: e.target.value })}
-                      className="w-full px-3 py-2 border border-black/20 rounded-lg text-sm text-black min-h-[100px]"
-                      placeholder="E.g., Free Wi-Fi, handicapped accessible, covered parking..."
-                    />
-                  )}
-                </div>
-
                 <div>
                   <label className="flex items-center gap-2 mb-3">
                     <input
@@ -761,11 +681,11 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 8: PHOTOS */}
+            {/* SECTION 6: PHOTOS */}
             <div id="photos" className="scroll-mt-24 pt-6 border-t border-black/10">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Photos</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Photos</h2>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -796,21 +716,21 @@ export default function EditListingPage() {
               </div>
             </div>
 
-            {/* SECTION 9: STREET VIEW */}
+            {/* SECTION 7: STREET VIEW */}
             <div id="streetview" className="scroll-mt-24 pt-6 border-t border-black/10 pb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Camera className="w-5 h-5 text-black" />
-                <h2 className="text-2xl font-bold text-black">Street View</h2>
+                <h2 className="hidden md:block text-2xl font-bold text-black">Street View</h2>
               </div>
 
-              <div className="rounded-lg overflow-hidden border border-black/10">
-                <img
-                  src={formData.streetView}
-                  alt="Street view"
-                  className="w-full h-80 object-cover"
-                />
-              </div>
-              <p className="text-xs text-black/50 mt-2">📍 Street view from coordinates: {formData.latitude}, {formData.longitude}</p>
+              {formData.latitude && formData.longitude ? (
+                <div ref={streetViewRef} className="rounded-lg overflow-hidden border border-black/10 w-full h-80" />
+              ) : (
+                <div className="rounded-lg border border-black/10 w-full h-80 flex items-center justify-center bg-black/5">
+                  <p className="text-xs text-black/40">Nema koordinata za prikaz Street Viewa</p>
+                </div>
+              )}
+              <p className="text-xs text-black/50 mt-2">📍 Koordinate: {formData.latitude}, {formData.longitude}</p>
             </div>
           </div>
         </div>

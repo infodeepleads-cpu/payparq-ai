@@ -7,6 +7,24 @@
  * - Realtime sync
  */
 
+const CACHE_VERSION = 'payparq-v1-' + new Date().toISOString().split('T')[0];
+
+// Clean up old caches on activation
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName.startsWith('payparq-v') && !cacheName.startsWith(CACHE_VERSION.split('-').slice(0, 3).join('-'))) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
 // Handle push notifications (from Web Push protocol)
 self.addEventListener('push', (event) => {
   const data = event.data.json();
@@ -68,6 +86,11 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// Install handler to ensure latest version
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
 });
 
 // Helpers
