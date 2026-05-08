@@ -233,7 +233,7 @@ export function LotCalendarPricing({ lotId, lotName, lotAddress, lotCapacity, on
                         <span className="hidden lg:inline">{config ? (config.isOpen ? `${config.openTime} - ${config.closeTime}` : 'Zatvoreno') : '00:00 - 24:00'}</span>
                       </div>
                       {config && (
-                        <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">✓ {config.priceMode === 'auto' ? 'Auto' : `${config.price}€`}</p>
+                        <p className="text-[8px] md:text-[10px] text-green-700 font-semibold mt-0.5 md:mt-1">✓ {config.priceMode === 'auto' ? 'Auto' : `${config.priceHourly ?? ''}€/h`}</p>
                       )}
                     </>
                   )}
