@@ -80,6 +80,17 @@ const hrOverrides = new Map<string, string>([
   ["Calendar", "Kalendar"],
   ["Manage calendar and pricing", "Upravljaj kalendarom i cijenama"],
   ["Manage calendar", "Upravljaj kalendarom"],
+  // Parking categories
+  ["Airport", "Zračna Luka"],
+  ["airport", "Zračna Luka"],
+  ["Hotels", "Hoteli"],
+  ["hotels", "Hoteli"],
+  ["Events", "Eventovi"],
+  ["events", "Eventovi"],
+  ["Parking near airports", "Parking blizu aerodroma"],
+  ["Parking near hotels", "Parking blizu hotela"],
+  ["Parking near event venues", "Parking blizu događaja"],
+  ["Browse by category", "Pretraži po kategoriji"],
   // Parking terms that Google Translate gets wrong
   ["Valet", "Valet"],
   ["Valet Parking", "Valet parking"],
@@ -93,7 +104,7 @@ const hrOverrides = new Map<string, string>([
   ["Mjesečni najam", "Mjesečni najam"],
   ["Wheelchair Accessible", "Pristup invalidskim kolicima"],
   ["EV Charging", "Punjenje el. vozila"],
-  ["Instant Access", "Trenutni pristup"],
+  ["Instant Access", "Rampa"],
   ["Covered Garage", "Natkrivena garaža"],
   ["All Parking Options", "Sve opcije parkiranja"],
   // Sort options

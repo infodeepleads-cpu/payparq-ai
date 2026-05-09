@@ -58,7 +58,7 @@ interface ListingCardProps {
   hideDetailsButton?: boolean;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
   const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
@@ -117,7 +117,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
                 <span className="text-xs text-gray-500">({listing.reviews})</span>
               </>
             ) : (
-              <span className="text-xs font-semibold text-gray-500">New Listing</span>
+              <span className="text-xs font-semibold text-gray-500">Novi objekt</span>
             )}
           </div>
 

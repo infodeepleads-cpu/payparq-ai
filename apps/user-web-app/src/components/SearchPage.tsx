@@ -8,7 +8,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
@@ -149,6 +149,18 @@ export function SearchPage() {
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
 
+  useEffect(() => {
+    if (!selectedListing) return;
+
+    setTimeout(() => {
+      document.querySelectorAll('[data-lot-id]').forEach((el) => {
+        if (el.getAttribute('data-lot-id') === selectedListing.id) {
+          (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }, 200);
+  }, [selectedListing?.id]);
+
   const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -199,9 +211,9 @@ export function SearchPage() {
   // ---------------------------
 
   const parkingCategories = [
-    { id: 'airport', label: 'Airport', emoji: '✈️', description: 'Parking near airports' },
-    { id: 'hotels', label: 'Hotels', emoji: '🏨', description: 'Parking near hotels' },
-    { id: 'events', label: 'Events', emoji: '🎉', description: 'Parking near event venues' },
+    { id: 'airport', label: 'Zračna Luka', emoji: '✈️', description: 'Parking near airports' },
+    { id: 'hotels', label: 'Hoteli', emoji: '🏨', description: 'Parking near hotels' },
+    { id: 'events', label: 'Eventovi', emoji: '🎉', description: 'Parking near event venues' },
   ];
 
   const toggleQuickFilter = (filterId: string) => {
@@ -795,7 +807,7 @@ export function SearchPage() {
           {/* Search Widget - Clickable Summary */}
           <button
             onClick={() => setShowMobileSearchEdit(true)}
-            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC] px-3 py-1 text-left flex flex-col justify-center"
+            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex flex-col justify-center"
           >
             <div className="text-xs text-gray-600 font-semibold truncate max-w-28">{searchLocation || 'Gdje ideš?'}</div>
             {startTime && endTime && (
@@ -865,7 +877,7 @@ export function SearchPage() {
               <select
                 value={reservationType}
                 onChange={(e) => setReservationType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Satna/dnevna">Satna/dnevna</option>
                 <option value="Mjesecna">Mjesecna</option>
@@ -875,7 +887,7 @@ export function SearchPage() {
             {/* Location Search */}
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
-              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-[#5F3DFC]">
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-blue-500">
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
                 <input
                   type="text"
@@ -1051,7 +1063,7 @@ export function SearchPage() {
                       onClick={() => setAllParkingDropdownOpen(false)}
                     >
                       <span className="text-2xl">{cat.emoji}</span>
-                      <div>
+                      <div translate="no">
                         <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
                         <p className="text-xs text-gray-500">{cat.description}</p>
                       </div>
@@ -1170,7 +1182,7 @@ export function SearchPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="relevance">Poredaj po relevantnosti</option>
               <option value="distance">Poredaj po udaljenosti</option>
@@ -1196,61 +1208,54 @@ export function SearchPage() {
               </div>
             ) : (
               (() => {
-                // Find actual best in each category (not filtered)
                 const badgeMap = new Map<string, string>();
 
                 if (filteredListings.length > 0) {
-                  const cheapestListing = filteredListings.reduce((min, curr) =>
-                    curr.pricePerHour < min.pricePerHour ? curr : min
-                  );
-                  badgeMap.set(cheapestListing.id, 'Najbolja Vrijednost');
-                  console.log('Cheapest:', cheapestListing.name, `€${cheapestListing.pricePerHour}`);
-                }
+                  const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
+                  if (validListings.length > 0) {
+                    const cheapest = validListings.reduce((min, curr) =>
+                      curr.pricePerHour < min.pricePerHour ? curr : min
+                    );
+                    const closest = validListings.reduce((min, curr) =>
+                      curr.distance < min.distance ? curr : min
+                    );
+                    const highestRated = validListings.reduce((max, curr) =>
+                      curr.rating > max.rating ? curr : max
+                    );
 
-                if (filteredListings.length > 0) {
-                  const closestListing = filteredListings.reduce((min, curr) =>
-                    curr.distance < min.distance ? curr : min
-                  );
-                  console.log('All distances:', filteredListings.map(l => `${l.name}: ${l.distance}km`).join(', '));
-                  console.log('Closest:', closestListing.name, `${closestListing.distance}km`);
-                  // Only badge if not already badged (priority: Value > Distance)
-                  if (!badgeMap.has(closestListing.id)) {
-                    badgeMap.set(closestListing.id, 'Najkraća Šetnja');
-                    console.log('→ Awarded Shortest Walk to', closestListing.name);
-                  } else {
-                    console.log('→ Skipped Shortest Walk (already has badge)');
+                    badgeMap.set(cheapest.id, 'Najbolja Vrijednost');
+                    if (closest.id !== cheapest.id) badgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
                   }
                 }
 
-                if (filteredListings.length > 0) {
-                  const highestRatedListing = filteredListings.reduce((max, curr) =>
-                    curr.rating > max.rating ? curr : max
+                return filteredListings.map((listing, index) => {
+                  // Only show badge if listing is in the top 3 visible positions
+                  const badgeText = index < 3 ? badgeMap.get(listing.id) : undefined;
+                  if (badgeText) console.log(`Card ${index} (${listing.name}): badge="${badgeText}"`);
+                  const isSelected = selectedListing?.id === listing.id;
+                  return (
+                    <div
+                      key={listing.id}
+                      data-lot-id={listing.id}
+                      className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
+                    >
+                      <ListingCard
+                        listing={listing}
+                        isSelected={isSelected}
+                        onSelect={setSelectedListing}
+                        onBook={() => {
+                          setSelectedListing(listing);
+                          setShowBookingModal(true);
+                        }}
+                        onDetails={() => setShowDetailsView(true)}
+                        badgeText={badgeText}
+                        checkoutUrl={buildCheckoutUrl(listing)}
+                        durationHours={durationHours}
+                        showFee={showTotalPrice}
+                      />
+                    </div>
                   );
-                  // Only badge if not already badged (priority: Value > Distance > Rating)
-                  if (!badgeMap.has(highestRatedListing.id)) {
-                    badgeMap.set(highestRatedListing.id, 'Najviše Ocijenjeno');
-                  }
-                }
-
-                return filteredListings.map((listing) => {
-                  const badgeText = badgeMap.get(listing.id);
-                return (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isSelected={selectedListing?.id === listing.id}
-                    onSelect={setSelectedListing}
-                    onBook={() => {
-                      setSelectedListing(listing);
-                      setShowBookingModal(true);
-                    }}
-                    onDetails={() => setShowDetailsView(true)}
-                    badgeText={badgeText}
-                    checkoutUrl={buildCheckoutUrl(listing)}
-                    durationHours={durationHours}
-                    showFee={showTotalPrice}
-                  />
-                );
                 });
               })()
             )}
@@ -1261,7 +1266,7 @@ export function SearchPage() {
         {showDetailsView && selectedListing && (
           <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
             {/* Photo Gallery - Fixed Height */}
-            <div className="flex-shrink-0 h-64 bg-gray-100 relative overflow-hidden">
+            <div className="flex-shrink-0 bg-gray-100 relative overflow-hidden" style={{ height: '394px' }}>
               {(() => {
                 const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
                 return (
@@ -1273,23 +1278,26 @@ export function SearchPage() {
                 );
               })()}
 
-              {/* Back Button - Top Left */}
+              {/* Close Button - Top Right */}
               <button
                 onClick={() => setShowDetailsView(false)}
-                className="absolute top-4 left-4 bg-white/90 hover:bg-white text-gray-900 rounded-full p-2 shadow-md transition-all"
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-900 rounded-lg p-2 shadow-md transition-all z-10"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
               {/* Left Arrow */}
               <button
-                onClick={() => setPhotoIndex(Math.max(0, photoIndex - 1))}
-                disabled={photoIndex === 0}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
+                onClick={() => {
+                  const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
+                  setPhotoIndex((photoIndex - 1 + photosArray.length) % photosArray.length);
+                }}
+                style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }}
+                className="bg-black/60 hover:bg-black/70 text-white rounded-full p-2.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-10 h-10"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -1298,12 +1306,12 @@ export function SearchPage() {
               <button
                 onClick={() => {
                   const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
-                  if (photoIndex < photosArray.length - 1) setPhotoIndex(photoIndex + 1);
+                  setPhotoIndex((photoIndex + 1) % photosArray.length);
                 }}
-                disabled={(() => { const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800']; return photoIndex >= photosArray.length - 1; })()}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
+                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}
+                className="bg-black/60 hover:bg-black/70 text-white rounded-full p-2.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-10 h-10"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -1335,9 +1343,9 @@ export function SearchPage() {
             </button>
 
             {/* Book Now Suggestion Widget */}
-            <button className="flex-shrink-0 w-full px-6 py-4 bg-yellow-50 hover:bg-yellow-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-yellow-200">
+            <button className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 hover:bg-amber-200 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-amber-300">
               <div className="flex items-start gap-3 flex-1">
-                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
                 <div className="text-left">
                   <p className="text-sm font-semibold text-gray-900">We suggest you book now.</p>
                   <p className="text-xs text-gray-900 mt-1">We only have 2 spots remaining here during the times you selected.</p>
@@ -1366,7 +1374,7 @@ export function SearchPage() {
                       <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
                     </>
                   ) : (
-                    <span className="text-xs font-semibold text-gray-500">New Listing</span>
+                    <span className="text-xs font-semibold text-gray-500">Novi objekt</span>
                   )}
                 </div>
 
@@ -1384,7 +1392,7 @@ export function SearchPage() {
               <div className="px-6 py-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <button className="inline-block bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 transition-colors">
-                    <p className="text-xs font-semibold text-gray-900">Online specijal</p>
+                    <p className="text-xs font-semibold text-gray-900">Obavijest</p>
                   </button>
                   <button
                     onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
@@ -1398,7 +1406,7 @@ export function SearchPage() {
                 {showOnlineSpecialReminder && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Važna napomena</p>
-                    <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od vlasnika parkinga.</p>
+                    <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.</p>
                   </div>
                 )}
 
@@ -1714,7 +1722,7 @@ export function SearchPage() {
                     placeholder="Type to Search"
                     value={vehicleInput}
                     onChange={(e) => setVehicleInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500">Example: Honda Civic</p>
 
@@ -1933,27 +1941,55 @@ export function SearchPage() {
                 </div>
               </div>
             ) : (
-              filteredListings.map((listing, index) => {
-                const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
-                const badgeText = index < badges.length ? badges[index] : undefined;
-                return (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isSelected={selectedListing?.id === listing.id}
-                    onSelect={() => {
-                      setSelectedListing(listing);
-                      setShowMobileDetails(true);
-                    }}
-                    onBook={() => {
-                      setSelectedListing(listing);
-                      setShowMobileDetails(true);
-                    }}
-                    badgeText={badgeText}
-                    hideDetailsButton={true}
-                  />
-                );
-              })
+              (() => {
+                const mobileBadgeMap = new Map<string, string>();
+
+                if (filteredListings.length > 0) {
+                  const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
+                  if (validListings.length > 0) {
+                    const cheapest = validListings.reduce((min, curr) =>
+                      curr.pricePerHour < min.pricePerHour ? curr : min
+                    );
+                    const closest = validListings.reduce((min, curr) =>
+                      curr.distance < min.distance ? curr : min
+                    );
+                    const highestRated = validListings.reduce((max, curr) =>
+                      curr.rating > max.rating ? curr : max
+                    );
+
+                    mobileBadgeMap.set(cheapest.id, 'Najbolja Vrijednost');
+                    if (closest.id !== cheapest.id) mobileBadgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (!mobileBadgeMap.has(highestRated.id)) mobileBadgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
+                  }
+                }
+
+                return filteredListings.map((listing, index) => {
+                  const badgeText = index < 3 ? mobileBadgeMap.get(listing.id) : undefined;
+                  const isSelected = selectedListing?.id === listing.id;
+                  return (
+                    <div
+                      key={listing.id}
+                      data-lot-id={listing.id}
+                      className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
+                    >
+                      <ListingCard
+                        listing={listing}
+                        isSelected={isSelected}
+                        onSelect={() => {
+                          setSelectedListing(listing);
+                          setShowMobileDetails(true);
+                        }}
+                        onBook={() => {
+                          setSelectedListing(listing);
+                          setShowMobileDetails(true);
+                        }}
+                        badgeText={badgeText}
+                        hideDetailsButton={true}
+                      />
+                    </div>
+                  );
+                });
+              })()
             )}
           </div>
         </div>
