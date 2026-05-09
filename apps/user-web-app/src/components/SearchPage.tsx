@@ -1236,9 +1236,13 @@ export function SearchPage() {
                     const cheapest = validListings.reduce((min, curr) =>
                       curr.pricePerHour < min.pricePerHour ? curr : min
                     );
-                    const closest = validListings.reduce((min, curr) =>
-                      curr.distance < min.distance ? curr : min
-                    );
+                    // Use real-time distance calculation for closest (should be at index 0 after sorting)
+                    const refPoint = searchLocationPin || mapCenter;
+                    const closest = validListings.reduce((min, curr) => {
+                      const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+                      const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+                      return currDist < minDist ? curr : min;
+                    });
                     const highestRated = validListings.reduce((max, curr) =>
                       curr.rating > max.rating ? curr : max
                     );
@@ -1250,8 +1254,8 @@ export function SearchPage() {
                 }
 
                 return filteredListings.map((listing, index) => {
-                  // Only show badge if listing is in the top 3 visible positions
-                  const badgeText = index < 3 ? badgeMap.get(listing.id) : undefined;
+                  // Show badge for first listing always (Najkraća Šetnja), plus top 2 others
+                  const badgeText = badgeMap.get(listing.id);
                   if (badgeText) console.log(`Card ${index} (${listing.name}): badge="${badgeText}"`);
                   const isSelected = selectedListing?.id === listing.id;
                   return (
@@ -1970,9 +1974,13 @@ export function SearchPage() {
                     const cheapest = validListings.reduce((min, curr) =>
                       curr.pricePerHour < min.pricePerHour ? curr : min
                     );
-                    const closest = validListings.reduce((min, curr) =>
-                      curr.distance < min.distance ? curr : min
-                    );
+                    // Use real-time distance calculation for closest (should be at index 0 after sorting)
+                    const refPoint = searchLocationPin || mapCenter;
+                    const closest = validListings.reduce((min, curr) => {
+                      const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+                      const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+                      return currDist < minDist ? curr : min;
+                    });
                     const highestRated = validListings.reduce((max, curr) =>
                       curr.rating > max.rating ? curr : max
                     );
@@ -1984,7 +1992,7 @@ export function SearchPage() {
                 }
 
                 return filteredListings.map((listing, index) => {
-                  const badgeText = index < 3 ? mobileBadgeMap.get(listing.id) : undefined;
+                  const badgeText = mobileBadgeMap.get(listing.id);
                   const isSelected = selectedListing?.id === listing.id;
                   return (
                     <div
