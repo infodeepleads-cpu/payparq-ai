@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
-import { createClient } from '@supabase/supabase-js';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
 import { SearchFilters } from './SearchFilters';
@@ -13,6 +12,25 @@ import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Acce
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
+
+const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number }>> = {
+  split: [
+    { name: 'Riva', lat: 43.5088, lng: 16.4406 },
+    { name: 'Bačvice Beach', lat: 43.5095, lng: 16.4470 },
+    { name: 'Marjan Park', lat: 43.5150, lng: 16.4200 },
+    { name: 'Diocletian Palace', lat: 43.5086, lng: 16.4399 },
+    { name: 'Split Airport', lat: 43.5388, lng: 16.2973 },
+    { name: 'City Center Shopping', lat: 43.5088, lng: 16.4350 },
+  ],
+  zagreb: [
+    { name: 'Ban Jelačić Square', lat: 45.8150, lng: 15.9819 },
+    { name: 'Zrinjevac Park', lat: 45.8113, lng: 15.9765 },
+    { name: 'Maksimir Park', lat: 45.8234, lng: 16.0089 },
+    { name: 'Zagreb Airport', lat: 45.7429, lng: 16.0688 },
+    { name: 'Avenue Mall', lat: 45.8166, lng: 15.9797 },
+    { name: 'Mirogoj Cemetery', lat: 45.8303, lng: 15.9736 },
+  ],
+};
 
 const VEHICLE_DATABASE = [
   { make: 'Honda', model: 'Civic', height: 1.46 },
@@ -66,11 +84,6 @@ export function SearchPage() {
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
-
   const [listings, setListings] = useState<Parking[]>([]);
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
   const [mapCenter, setMapCenter] = useState({ lat: 45.815, lng: 15.982 }); // Zagreb center
@@ -116,9 +129,10 @@ export function SearchPage() {
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+  const [recentSearches, setRecentSearches] = useState<{ name: string; lat: number; lng: number }[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; lat: number; lng: number; type: string }[]>([]);
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [showAllParkingOptions, setShowAllParkingOptions] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
@@ -184,27 +198,10 @@ export function SearchPage() {
   };
   // ---------------------------
 
-  const parkingOptions = [
-    'All Types',
-    'Best Value',
-    'Highest Rated',
-    'Valet Parking',
-    'Covered Garage',
-    'Open Lot',
-    'Street Parking',
-    'Parking Deck',
-    'Basement Parking',
-    'Underground Parking',
-    'Ground Level',
-    'Multi-Level',
-    'Attended Parking',
-    'Unattended Parking',
-    'Gated Parking',
-    'Secure Parking',
-    'Climate Controlled',
-    'Heated Parking',
-    'EV Charging Available',
-    'Disability Accessible',
+  const parkingCategories = [
+    { id: 'airport', label: 'Airport', emoji: '✈️', description: 'Parking near airports' },
+    { id: 'hotels', label: 'Hotels', emoji: '🏨', description: 'Parking near hotels' },
+    { id: 'events', label: 'Events', emoji: '🎉', description: 'Parking near event venues' },
   ];
 
   const toggleQuickFilter = (filterId: string) => {
@@ -214,15 +211,15 @@ export function SearchPage() {
   };
 
   const FILTER_OPTIONS = [
-    { id: 'valet', label: 'Valet', count: 29 },
-    { id: 'garage-covered', label: 'Garage - Covered', count: 26 },
-    { id: 'lot-uncovered', label: 'Lot - Uncovered', count: 29 },
-    { id: 'immediate-parking', label: 'Immediate Parking', count: 11 },
-    { id: 'on-site-staff', label: 'On-Site Staff', count: 23 },
-    { id: 'month-to-month', label: 'Month to Month', count: 29 },
-    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: 13 },
-    { id: 'self-park', label: 'Self Park', count: 4 },
-    { id: 'ev-charging', label: 'EV Charging', count: 3 },
+    { id: 'valet', label: 'Valet', count: listings.filter(l => l.features.includes('valet')).length },
+    { id: 'garage-covered', label: 'Garage - Covered', count: listings.filter(l => l.type === 'garage' || l.features.includes('garage')).length },
+    { id: 'lot-uncovered', label: 'Parcela - Nepokrivena', count: listings.filter(l => l.type === 'lot').length },
+    { id: 'immediate-parking', label: 'Immediate Parking', count: listings.filter(l => l.availability).length },
+    { id: 'on-site-staff', label: 'On-Site Staff', count: listings.filter(l => l.features.includes('on-site-staff')).length },
+    { id: 'month-to-month', label: 'Mjesečni najam', count: listings.length },
+    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: listings.filter(l => l.features.includes('wheelchair-accessible')).length },
+    { id: 'self-park', label: 'Self Park', count: listings.filter(l => l.type === 'self-park').length },
+    { id: 'ev-charging', label: 'EV Charging', count: listings.filter(l => l.features.includes('ev-charging')).length },
   ];
 
   const toggleFilter = (filterId: string) => {
@@ -258,30 +255,52 @@ export function SearchPage() {
     });
   }, []);
 
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('recentSearches');
+    if (stored) {
+      try {
+        setRecentSearches(JSON.parse(stored).slice(0, 5));
+      } catch {
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
   // Fetch real data from Supabase - Hub locations only
   useEffect(() => {
     const fetchListings = async () => {
       try {
         setLoading(true);
-        const { data: locations, error } = await supabase
-          .from('locations')
-          .select('*')
-          .limit(50);
+        const res = await fetch('/api/listings');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { locations, error } = await res.json();
 
-        if (error) throw error;
+        if (error) throw new Error(error);
+        if (!locations) throw new Error('No data');
 
         if (locations && locations.length > 0) {
           const parkingListings: Parking[] = locations.map((loc: any) => {
             const features: string[] = [];
 
-            // Parse features from addons if available
-            if (loc.addons) {
-              const addons = typeof loc.addons === 'string' ? JSON.parse(loc.addons) : loc.addons || {};
-              if (addons.valet) features.push('valet');
-              if (addons.garage) features.push('garage');
-              if (addons.staff) features.push('on-site-staff');
-              if (addons.wheelchair) features.push('wheelchair-accessible');
-              if (addons.ev_charging) features.push('ev-charging');
+            // Parse features from addons_config (correct column name)
+            const addonsConfig = loc.addons_config
+              ? (typeof loc.addons_config === 'string' ? JSON.parse(loc.addons_config) : loc.addons_config)
+              : {};
+            if (addonsConfig.valet) features.push('valet');
+            if (addonsConfig.garage) features.push('garage');
+            if (addonsConfig.staff) features.push('on-site-staff');
+            if (addonsConfig.wheelchair) features.push('wheelchair-accessible');
+            if (addonsConfig.ev_charging) features.push('ev-charging');
+
+            // Fallback: also check verification_metadata.features array
+            const meta = loc.verification_metadata
+              ? (typeof loc.verification_metadata === 'string' ? JSON.parse(loc.verification_metadata) : loc.verification_metadata)
+              : {};
+            if (Array.isArray(meta.features)) {
+              for (const f of meta.features) {
+                if (!features.includes(f)) features.push(f);
+              }
             }
 
             const lat = loc.latitude || loc.lat || 45.815;
@@ -354,11 +373,6 @@ export function SearchPage() {
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
-        console.error('Error details:', {
-          message: (err as any)?.message,
-          details: (err as any)?.details,
-          hint: (err as any)?.hint,
-        });
         setListings([]);
         setFilteredListings([]);
       } finally {
@@ -426,8 +440,15 @@ export function SearchPage() {
           lng,
         });
         setSearchLocationPin({ lat, lng });
+        addToRecentSearches(mainText || '', lat, lng);
       }
     });
+  };
+
+  const addToRecentSearches = (name: string, lat: number, lng: number) => {
+    const updated = [{ name, lat, lng }, ...recentSearches.filter(s => s.name !== name)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('recentSearches', JSON.stringify(updated));
   };
 
   const handleCurrentLocation = () => {
@@ -442,8 +463,31 @@ export function SearchPage() {
         setSearchLocationPin({ lat, lng });
         setSearchLocation('Current Location');
         setShowPredictions(false);
+        addToRecentSearches('Current Location', lat, lng);
       });
     }
+  };
+
+  const handleRecentSearch = (name: string, lat: number, lng: number) => {
+    setMapCenter({ lat, lng });
+    setSearchLocationPin({ lat, lng });
+    setSearchLocation(name);
+    setShowPredictions(false);
+    addToRecentSearches(name, lat, lng);
+  };
+
+  const fetchNearbyPlaces = () => {
+    const lat = mapCenter.lat;
+    const lng = mapCenter.lng;
+
+    // Detect region: Split area (43.4-43.6 lat, 16.2-16.5 lng) or Zagreb area (45.7-45.9 lat, 15.8-16.1 lng)
+    let region = 'split';
+    if (lat > 45.7 && lat < 45.9 && lng > 15.8 && lng < 16.1) {
+      region = 'zagreb';
+    }
+
+    const hotspots = HOTSPOTS_BY_REGION[region] || HOTSPOTS_BY_REGION.split;
+    setNearbyPlaces(hotspots);
   };
 
   // Apply filters
@@ -474,6 +518,26 @@ export function SearchPage() {
       filtered = filtered.filter((l) => selectedFeatures.some((f) => l.features.includes(f)));
     }
 
+    // Filter modal selections
+    if (selectedFilters.length > 0) {
+      filtered = filtered.filter((l) => {
+        return selectedFilters.every((filterId) => {
+          switch (filterId) {
+            case 'valet': return l.features.includes('valet');
+            case 'garage-covered': return l.type === 'garage' || l.features.includes('garage');
+            case 'lot-uncovered': return l.type === 'lot';
+            case 'immediate-parking': return l.availability;
+            case 'on-site-staff': return l.features.includes('on-site-staff');
+            case 'month-to-month': return true;
+            case 'wheelchair-accessible': return l.features.includes('wheelchair-accessible');
+            case 'self-park': return l.type === 'self-park';
+            case 'ev-charging': return l.features.includes('ev-charging');
+            default: return true;
+          }
+        });
+      });
+    }
+
     // Apply sorting
     const sorted = [...filtered];
     switch (sortBy) {
@@ -498,7 +562,7 @@ export function SearchPage() {
     }
 
     setFilteredListings(sorted);
-  }, [listings, priceRange, selectedFeatures, parkingType, quickFilters, sortBy]);
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -603,7 +667,12 @@ export function SearchPage() {
                   placeholder="Search location..."
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
-                  onFocus={() => setShowPredictions(true)}
+                  onFocus={() => {
+                    setShowPredictions(true);
+                    if (nearbyPlaces.length === 0) {
+                      fetchNearbyPlaces();
+                    }
+                  }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
                 />
               </div>
@@ -618,22 +687,41 @@ export function SearchPage() {
                     <MapPin className="w-4 h-4 text-gray-600" />
                     Use current location
                   </button>
-                  {/* Predictions */}
-                  {predictions.map((prediction) => (
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <>
+                      {recentSearches.map((search, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleRecentSearch(search.name, search.lat, search.lng)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900 border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                          {search.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Nearby Locations Header */}
+                  {nearbyPlaces.length > 0 && (
+                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
+                      Nearby Locations
+                    </div>
+                  )}
+
+                  {/* Nearby Places of Interest */}
+                  {nearbyPlaces.map((place, idx) => (
                     <button
-                      key={prediction.place_id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowPredictions(false);
-                        handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
-                      }}
+                      key={idx}
+                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
                     >
                       <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
+                        <div className="text-gray-900 font-medium">{place.name}</div>
+                        <div className="text-xs text-gray-500 capitalize">{place.type}</div>
                       </div>
                     </button>
                   ))}
@@ -794,7 +882,12 @@ export function SearchPage() {
                   placeholder="Search location..."
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
-                  onFocus={() => setShowPredictions(true)}
+                  onFocus={() => {
+                    setShowPredictions(true);
+                    if (nearbyPlaces.length === 0) {
+                      fetchNearbyPlaces();
+                    }
+                  }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
                 />
               </div>
@@ -808,21 +901,41 @@ export function SearchPage() {
                     <MapPin className="w-4 h-4 text-gray-600" />
                     Use current location
                   </button>
-                  {predictions.map((prediction) => (
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <>
+                      {recentSearches.map((search, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleRecentSearch(search.name, search.lat, search.lng)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900 border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                          {search.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Nearby Locations Header */}
+                  {nearbyPlaces.length > 0 && (
+                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
+                      Nearby Locations
+                    </div>
+                  )}
+
+                  {/* Nearby Places of Interest */}
+                  {nearbyPlaces.map((place, idx) => (
                     <button
-                      key={prediction.place_id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowPredictions(false);
-                        handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
-                      }}
+                      key={idx}
+                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
                     >
                       <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
+                        <div className="text-gray-900 font-medium">{place.name}</div>
+                        <div className="text-xs text-gray-500 capitalize">{place.type}</div>
                       </div>
                     </button>
                   ))}
@@ -928,38 +1041,23 @@ export function SearchPage() {
                 </svg>
               </button>
             {allParkingDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px] max-h-96 overflow-y-auto">
-                {parkingOptions.slice(0, showAllParkingOptions ? parkingOptions.length : 3).map((option, index) => (
-                  <button
-                    key={index}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 ${
-                      index === 0 ? 'rounded-t-lg border-t-0' : ''
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-
-                {/* Toggle Slider at Bottom */}
-                {parkingOptions.length > 3 && (
-                  <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50 rounded-b-lg">
-                    <span className="text-xs font-medium text-gray-600">
-                      {showAllParkingOptions ? 'Show Less' : `Show All (${parkingOptions.length})`}
-                    </span>
+              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 w-[320px]">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Browse by category</p>
+                <div className="flex flex-col gap-2">
+                  {parkingCategories.map((cat) => (
                     <button
-                      onClick={() => setShowAllParkingOptions(!showAllParkingOptions)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        showAllParkingOptions ? 'bg-[#5F3DFC]' : 'bg-gray-300'
-                      }`}
+                      key={cat.id}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                      onClick={() => setAllParkingDropdownOpen(false)}
                     >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          showAllParkingOptions ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
+                      <span className="text-2xl">{cat.emoji}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                        <p className="text-xs text-gray-500">{cat.description}</p>
+                      </div>
                     </button>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             )}
             </div>
@@ -1047,10 +1145,10 @@ export function SearchPage() {
             {/* CTAs */}
             <div className="flex items-center justify-between pt-6 border-t border-gray-200">
               <button
-                onClick={clearAllFilters}
+                onClick={() => setFilterModalOpen(false)}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900"
               >
-                Clear All
+                Povratak
               </button>
               <button
                 onClick={() => setFilterModalOpen(false)}
@@ -1074,9 +1172,9 @@ export function SearchPage() {
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
             >
-              <option value="relevance">Sort by Relevance</option>
-              <option value="distance">Sort by Distance</option>
-              <option value="price">Sort by Price</option>
+              <option value="relevance">Poredaj po relevantnosti</option>
+              <option value="distance">Poredaj po udaljenosti</option>
+              <option value="price">Poredaj po cijeni</option>
             </select>
           </div>
 

@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const client = supabaseAdmin;
+    if (!client) {
+      return NextResponse.json({ locations: [], error: 'supabase_not_configured' }, { status: 500 });
+    }
+    const { data: locations, error } = await client
+      .from('locations')
+      .select('*')
+      .limit(50);
+
+    if (error) {
+      console.error('Listings API error:', error);
+      return NextResponse.json({ locations: [], error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ locations: locations || [] });
+  } catch (error) {
+    console.error('Listings API error:', error);
+    return NextResponse.json({ locations: [], error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || '';
