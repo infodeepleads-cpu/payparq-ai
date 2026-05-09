@@ -594,7 +594,7 @@ export function SearchPage() {
     sorted.splice(1, sorted.length - 1, ...rest);
 
     setFilteredListings(sorted);
-  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, searchLocationPin?.lat, searchLocationPin?.lng]);
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
