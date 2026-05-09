@@ -555,9 +555,12 @@ export function SearchPage() {
 
     // Find and move closest listing to top (Najkraća Šetnja always on top)
     if (sorted.length > 0) {
-      const closest = sorted.reduce((min, curr) =>
-        curr.distance < min.distance ? curr : min
-      );
+      const refPoint = searchLocationPin || mapCenter;
+      const closest = sorted.reduce((min, curr) => {
+        const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+        const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+        return currDist < minDist ? curr : min;
+      });
       const closestIndex = sorted.findIndex(l => l.id === closest.id);
       if (closestIndex > 0) {
         sorted.splice(closestIndex, 1);
@@ -591,7 +594,7 @@ export function SearchPage() {
     sorted.splice(1, sorted.length - 1, ...rest);
 
     setFilteredListings(sorted);
-  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy]);
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, searchLocationPin?.lat, searchLocationPin?.lng]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
