@@ -552,26 +552,43 @@ export function SearchPage() {
 
     // Apply sorting
     const sorted = [...filtered];
+
+    // Find and move closest listing to top (Najkraća Šetnja always on top)
+    if (sorted.length > 0) {
+      const closest = sorted.reduce((min, curr) =>
+        curr.distance < min.distance ? curr : min
+      );
+      const closestIndex = sorted.findIndex(l => l.id === closest.id);
+      if (closestIndex > 0) {
+        sorted.splice(closestIndex, 1);
+        sorted.unshift(closest);
+      }
+    }
+
+    // Apply sorting to rest
+    const rest = sorted.slice(1);
     switch (sortBy) {
       case 'distance':
-        sorted.sort((a, b) => a.distance - b.distance);
+        rest.sort((a, b) => a.distance - b.distance);
         break;
       case 'price':
-        sorted.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        rest.sort((a, b) => a.pricePerHour - b.pricePerHour);
         break;
       case 'rating':
-        sorted.sort((a, b) => b.rating - a.rating);
+        rest.sort((a, b) => b.rating - a.rating);
         break;
       case 'walk':
-        sorted.sort((a, b) => a.distance - b.distance);
+        rest.sort((a, b) => a.distance - b.distance);
         break;
       case 'value':
-        sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
+        rest.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
         break;
       case 'relevance':
       default:
         break;
     }
+
+    sorted.splice(1, sorted.length - 1, ...rest);
 
     setFilteredListings(sorted);
   }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy]);
