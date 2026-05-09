@@ -128,7 +128,7 @@ export function SearchPage() {
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
-  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('distance');
   const [recentSearches, setRecentSearches] = useState<{ name: string; lat: number; lng: number }[]>([]);
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; lat: number; lng: number; type: string }[]>([]);
   const [showDetailsView, setShowDetailsView] = useState(false);
@@ -1184,9 +1184,9 @@ export function SearchPage() {
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="relevance">Poredaj po relevantnosti</option>
               <option value="distance">Poredaj po udaljenosti</option>
               <option value="price">Poredaj po cijeni</option>
+              <option value="relevance">Poredaj po relevantnosti</option>
             </select>
           </div>
 
@@ -1223,8 +1223,8 @@ export function SearchPage() {
                       curr.rating > max.rating ? curr : max
                     );
 
-                    badgeMap.set(cheapest.id, 'Najbolja Vrijednost');
-                    if (closest.id !== cheapest.id) badgeMap.set(closest.id, 'Najkraća Šetnja');
+                    badgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) badgeMap.set(cheapest.id, 'Najbolja Vrijednost');
                     if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
                   }
                 }
@@ -1957,8 +1957,8 @@ export function SearchPage() {
                       curr.rating > max.rating ? curr : max
                     );
 
-                    mobileBadgeMap.set(cheapest.id, 'Najbolja Vrijednost');
-                    if (closest.id !== cheapest.id) mobileBadgeMap.set(closest.id, 'Najkraća Šetnja');
+                    mobileBadgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) mobileBadgeMap.set(cheapest.id, 'Najbolja Vrijednost');
                     if (!mobileBadgeMap.has(highestRated.id)) mobileBadgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
                   }
                 }
