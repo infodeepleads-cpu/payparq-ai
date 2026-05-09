@@ -13,22 +13,22 @@ import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
-const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number }>> = {
+const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number; type: string }>> = {
   split: [
-    { name: 'Riva', lat: 43.5088, lng: 16.4406 },
-    { name: 'Bačvice Beach', lat: 43.5095, lng: 16.4470 },
-    { name: 'Marjan Park', lat: 43.5150, lng: 16.4200 },
-    { name: 'Diocletian Palace', lat: 43.5086, lng: 16.4399 },
-    { name: 'Split Airport', lat: 43.5388, lng: 16.2973 },
-    { name: 'City Center Shopping', lat: 43.5088, lng: 16.4350 },
+    { name: 'Riva', lat: 43.5088, lng: 16.4406, type: 'landmark' },
+    { name: 'Bačvice Beach', lat: 43.5095, lng: 16.4470, type: 'beach' },
+    { name: 'Marjan Park', lat: 43.5150, lng: 16.4200, type: 'park' },
+    { name: 'Diocletian Palace', lat: 43.5086, lng: 16.4399, type: 'landmark' },
+    { name: 'Split Airport', lat: 43.5388, lng: 16.2973, type: 'airport' },
+    { name: 'City Center Shopping', lat: 43.5088, lng: 16.4350, type: 'shopping' },
   ],
   zagreb: [
-    { name: 'Ban Jelačić Square', lat: 45.8150, lng: 15.9819 },
-    { name: 'Zrinjevac Park', lat: 45.8113, lng: 15.9765 },
-    { name: 'Maksimir Park', lat: 45.8234, lng: 16.0089 },
-    { name: 'Zagreb Airport', lat: 45.7429, lng: 16.0688 },
-    { name: 'Avenue Mall', lat: 45.8166, lng: 15.9797 },
-    { name: 'Mirogoj Cemetery', lat: 45.8303, lng: 15.9736 },
+    { name: 'Ban Jelačić Square', lat: 45.8150, lng: 15.9819, type: 'landmark' },
+    { name: 'Zrinjevac Park', lat: 45.8113, lng: 15.9765, type: 'park' },
+    { name: 'Maksimir Park', lat: 45.8234, lng: 16.0089, type: 'park' },
+    { name: 'Zagreb Airport', lat: 45.7429, lng: 16.0688, type: 'airport' },
+    { name: 'Avenue Mall', lat: 45.8166, lng: 15.9797, type: 'shopping' },
+    { name: 'Mirogoj Cemetery', lat: 45.8303, lng: 15.9736, type: 'landmark' },
   ],
 };
 
