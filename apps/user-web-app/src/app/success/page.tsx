@@ -851,10 +851,18 @@ function SuccessContent() {
   );
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col">
-      <SiteHeader />
+    <div className="min-h-screen text-black flex flex-col" style={{ background: '#05020A' }}>
+      {/* PayParq logo header */}
+      <header className="flex items-center justify-center px-4 py-4 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#5F3DFC' }}>
+            <span className="text-white font-bold text-xs">P</span>
+          </div>
+          <span className="text-white font-bold text-sm tracking-tight">PayParq</span>
+        </div>
+      </header>
 
-      <main className="flex-1 pt-20 pb-12">
+      <main className="flex-1 pt-6 pb-12">
         <div className="max-w-sm mx-auto px-4 space-y-3 mt-12">
 
           {/* 1 — Confirmation card */}
@@ -1452,7 +1460,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center text-black/40 text-sm">
+      <div className="min-h-screen flex items-center justify-center text-white/40 text-sm" style={{ background: '#05020A' }}>
         Učitavanje...
       </div>
     }>

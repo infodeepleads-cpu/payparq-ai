@@ -208,6 +208,7 @@ export function SearchPage() {
       out: new Date(endTime).toISOString(),
       amount_cents: Math.round(total * 100).toString(),
       name: listing.name || listing.address,
+      address: listing.address,
     });
     return `/checkout?${params.toString()}`;
   };
