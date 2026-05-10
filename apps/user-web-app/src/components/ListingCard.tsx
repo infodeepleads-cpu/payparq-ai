@@ -55,9 +55,10 @@ interface ListingCardProps {
   durationHours?: number;
   showFee?: boolean;
   hideDetailsButton?: boolean;
+  spots?: number;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
   const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
@@ -92,6 +93,11 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400'; }}
           unoptimized={!listing.photo?.includes('unsplash.com') && !listing.photo?.includes('supabase')}
         />
+        {/* Yellow Spots Widget Below Photo */}
+        <div className="flex items-center justify-center gap-1 bg-yellow-100 rounded-md w-full mt-1" style={{ padding: '4px 2px' }}>
+          <Info className="w-3 h-3 text-yellow-700 flex-shrink-0" />
+          <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
+        </div>
       </div>
 
       {/* Content RIGHT */}
@@ -140,7 +146,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           {/* Spots Left Widget - Always show */}
           <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
             <Info className="w-3.5 h-3.5 text-yellow-700" />
-            <span className="text-xs font-semibold text-gray-900">3 mjesta</span>
+            <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
           </div>
 
           {!hideDetailsButton && (

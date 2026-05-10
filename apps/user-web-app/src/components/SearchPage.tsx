@@ -76,6 +76,7 @@ interface Parking {
   thingsToKnow?: string;
   gettingThere?: string;
   howItWorks?: string;
+  spots?: number;
 }
 
 export function SearchPage() {
@@ -373,6 +374,7 @@ export function SearchPage() {
               thingsToKnow: (metadata.things_to_know as string | undefined) || 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
               gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
               howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
+              spots: loc.total_spots || loc.capacity,
             };
           });
 
@@ -1269,6 +1271,7 @@ export function SearchPage() {
                         checkoutUrl={buildCheckoutUrl(listing)}
                         durationHours={durationHours}
                         showFee={showTotalPrice}
+                        spots={liveListing.spots}
                       />
                     </div>
                   );
@@ -1359,15 +1362,13 @@ export function SearchPage() {
             </button>
 
             {/* Book Now Suggestion Widget */}
-            <button className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 hover:bg-amber-200 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-amber-300">
-              <div className="flex items-start gap-3 flex-1">
-                <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900">We suggest you book now.</p>
-                  <p className="text-xs text-gray-900 mt-1">We only have 2 spots remaining here during the times you selected.</p>
-                </div>
+            <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300">
+              <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
+                <p className="text-xs text-gray-900 mt-1">Ovdje imamo samo {(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()} tijekom vremena koje ste odabrali po ovoj cijeni.</p>
               </div>
-            </button>
+            </div>
 
             {/* Location Information Widget */}
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden">
@@ -1455,6 +1456,15 @@ export function SearchPage() {
                   <div className="flex items-center gap-1.5">
                     <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
                     <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  </div>
+                </div>
+
+                {/* Yellow Spots Widget */}
+                <div className="flex items-center gap-1.5 bg-yellow-100 rounded-md px-3 py-2">
+                  <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-semibold text-gray-900">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()}</span>
+                    <span className="text-xs text-gray-600 ml-1">po ovoj cijeni</span>
                   </div>
                 </div>
 
@@ -1869,10 +1879,10 @@ export function SearchPage() {
                   fill="${isSelected ? 'white' : 'black'}">${label}</text>
               </svg>`;
               const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
-              const baseSize = 48.75;
+              const baseSize = 63.375;
               const scaleFactor = mapZoom / 15;
               const scaledWidth = baseSize * scaleFactor;
-              const scaledHeight = 44.85 * scaleFactor;
+              const scaledHeight = 58.305 * scaleFactor;
               return (
                 <Marker
                   key={listing.id}
@@ -1890,10 +1900,10 @@ export function SearchPage() {
             {/* Search location marker - Native Marker, no spike */}
             {searchLocationPin && (() => {
               const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
-                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#3b82f6" stroke="white" stroke-width="0.5"/>
+                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
               </svg>`;
-              const basePinWidth = 24;
-              const basePinHeight = 31.5;
+              const basePinWidth = 31.2;
+              const basePinHeight = 40.95;
               const pinScaleFactor = mapZoom / 15;
               const pinScaledWidth = basePinWidth * pinScaleFactor;
               const pinScaledHeight = basePinHeight * pinScaleFactor;
@@ -2029,6 +2039,7 @@ export function SearchPage() {
                         }}
                         badgeText={badgeText}
                         hideDetailsButton={true}
+                        spots={liveListing.spots}
                       />
                     </div>
                   );
