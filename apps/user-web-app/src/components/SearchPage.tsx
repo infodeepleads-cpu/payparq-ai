@@ -194,9 +194,8 @@ export function SearchPage() {
   const formatTimeRange = () => {
     const s = new Date(startTime), e = new Date(endTime);
     const pad = (n: number) => String(n).padStart(2, '0');
-    const today = new Date();
-    const isToday = s.toDateString() === today.toDateString();
-    const dateStr = isToday ? 'Danas' : `${s.getDate()}.${s.getMonth() + 1}.`;
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dateStr = `${s.getDate()}. ${months[s.getMonth()]}`;
     return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
   };
 
@@ -1378,26 +1377,26 @@ export function SearchPage() {
               </div>
 
               {/* Location Content - Card Style */}
-              <div className="px-6 py-4 space-y-2">
+              <div className="px-8 py-6 space-y-3">
                 {/* Address */}
-                <p className="font-semibold text-gray-900" style={{ fontSize: '15px' }}>{selectedListing.address}</p>
+                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.address}</p>
 
                 {/* Rating */}
-                <div className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <div className="flex items-center gap-1 text-sm font-semibold">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                   {selectedListing.reviews > 0 ? (
                     <>
-                      <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
-                      <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                      <span className="text-gray-900">{selectedListing.rating}</span>
+                      <span className="text-gray-900">({selectedListing.reviews})</span>
                     </>
                   ) : (
-                    <span className="text-xs font-semibold text-gray-500">Novi objekt</span>
+                    <span className="text-gray-900">Novi objekt</span>
                   )}
                 </div>
 
                 {/* Walking Distance */}
-                <div className="flex items-center gap-1 text-xs text-gray-900">
-                  <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="13" cy="3" r="2"/>
                     <path d="M11 6.5L8 12l3 1"/>
                     <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
@@ -1412,42 +1411,22 @@ export function SearchPage() {
             {/* Reservation Details Widget */}
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200">
               {/* Header and Content Combined */}
-              <div className="px-6 py-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <button className="inline-block bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 transition-colors">
-                    <p className="text-xs font-semibold text-gray-900">Obavijest</p>
-                  </button>
-                  <button
-                    onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
-                    className="text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors"
-                  >
-                    Detalji
-                  </button>
-                </div>
+              <div className="px-8 py-6 space-y-4">
 
-                {/* Important Notice - Show below Detalji on click */}
-                {showOnlineSpecialReminder && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Važna napomena</p>
-                    <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.</p>
-                  </div>
-                )}
-
-                <p className="text-xs text-gray-700 font-semibold">Rezervacija parkinga</p>
+                <p className="text-sm text-gray-700 font-semibold">Rezervacija parkinga</p>
 
                 {/* Date, Time and Price Row */}
                 <button
                   onClick={() => setShowPriceBreakdown(true)}
-                  className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
+                  className="w-full text-left hover:opacity-70 transition-opacity pb-5 border-b border-gray-200 flex items-start justify-between -mt-3"
                 >
                   <div className="flex-1">
-                    <p className="text-lg font-bold text-gray-900">{formatDuration()}</p>
-                    <p className="text-sm text-gray-900 mt-1">{formatTimeRange()}</p>
-                    <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
+                    <p className="text-base font-bold text-gray-900">{formatTimeRange()}</p>
+                    <p className="text-sm text-gray-500 mt-1.5">Nema ulaza i izlaza</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
+                  <div className="text-right flex flex-col items-end">
+                    <p className="text-2xl font-bold text-gray-900">€{(subtotal * 1.05).toFixed(2)}</p>
+                    <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
                   </div>
                 </button>
 
@@ -1515,10 +1494,19 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Things You Should Know</p>
                   </button>
                   {showThingsToKnow && (
-                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      {selectedListing.thingsToKnow
-                        ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
-                        : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                    <div className="space-y-3 mt-3">
+                      {/* Important Notice */}
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Važna napomena</p>
+                        <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.</p>
+                      </div>
+
+                      {/* Things to Know Content */}
+                      <div className="space-y-3 text-sm text-gray-900 leading-relaxed ml-7">
+                        {selectedListing.thingsToKnow
+                          ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
+                          : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                      </div>
                     </div>
                   )}
                 </div>
