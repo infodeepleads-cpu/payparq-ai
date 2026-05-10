@@ -199,15 +199,17 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`;
+    const sub = parseFloat((durationHours * listing.pricePerHour).toFixed(2));
+    const fee = parseFloat((sub * 0.05).toFixed(2));
+    const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
     const params = new URLSearchParams({
-      location_id: listing.id,
-      type: 'hourly',
-      check_in: new Date(startTime).toISOString(),
-      check_out: new Date(endTime).toISOString(),
-      flow: 'reserve',
+      loc: listing.id,
+      in: new Date(startTime).toISOString(),
+      out: new Date(endTime).toISOString(),
+      amount_cents: Math.round(total * 100).toString(),
+      name: listing.name || listing.address,
     });
-    return `${base}?${params.toString()}`;
+    return `/checkout?${params.toString()}`;
   };
   // ---------------------------
 
@@ -1449,8 +1451,6 @@ export function SearchPage() {
                 {/* CTA Button - Stripe checkout */}
                 <a
                   href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Rezervirajte sad — €{totalPrice.toFixed(2)}
@@ -1681,8 +1681,6 @@ export function SearchPage() {
 
                 <a
                   href={buildCheckoutUrl(selectedListing)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
                   Rezervirajte sad — €{totalPrice.toFixed(2)}
@@ -1722,11 +1720,10 @@ export function SearchPage() {
                   <p className="text-xs text-gray-500">Example: Honda Civic</p>
 
                   {/* Search Results Dropdown */}
-                  {vehicleInput && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {VEHICLE_DATABASE.filter((v) =>
-                        `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
-                      ).map((vehicle, idx) => (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {VEHICLE_DATABASE.filter((v) =>
+                      vehicleInput === '' || `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
+                    ).map((vehicle, idx) => (
                         <button
                           key={idx}
                           onClick={() => {
@@ -1741,8 +1738,7 @@ export function SearchPage() {
                           {vehicle.make} {vehicle.model} <span className="text-gray-500">({vehicle.height}m)</span>
                         </button>
                       ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Vehicle Check Result */}
@@ -2323,8 +2319,6 @@ export function SearchPage() {
             <div className="sticky bottom-0 px-4 py-3 border-t border-gray-200 bg-white space-y-2">
               <a
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="block w-full px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
                 Rezervirajte sad — €{totalPrice.toFixed(2)}

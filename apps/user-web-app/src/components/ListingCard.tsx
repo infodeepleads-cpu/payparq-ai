@@ -163,8 +163,6 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           )}
           <a
             href={checkoutUrl || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
             onClick={(e) => { e.stopPropagation(); if (!checkoutUrl) e.preventDefault(); }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
