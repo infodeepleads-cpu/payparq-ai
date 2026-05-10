@@ -12,7 +12,6 @@ import {
   Waves,
   ParkingCircle,
   Repeat2,
-  Footprints,
   Info,
 } from 'lucide-react';
 
@@ -100,7 +99,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
           <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
-          <span className="text-xs text-gray-500">Ukupno</span>
+          <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
         </div>
 
         {/* Address & Info */}
@@ -114,16 +113,22 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
             {listing.reviews > 0 ? (
               <>
                 <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
-                <span className="text-xs text-gray-500">({listing.reviews})</span>
+                <span className="text-xs font-semibold text-gray-900">({listing.reviews})</span>
               </>
             ) : (
-              <span className="text-xs font-semibold text-gray-500">Novi objekt</span>
+              <span className="text-xs font-semibold text-gray-900">Novi objekt</span>
             )}
           </div>
 
           {/* Walking Distance */}
-          <div className="flex items-center gap-1 text-xs text-gray-600">
-            <Footprints className="w-3 h-3 flex-shrink-0" />
+          <div className="flex items-center gap-1 text-xs font-semibold text-gray-900">
+            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="13" cy="3" r="2"/>
+              <path d="M11 6.5L8 12l3 1"/>
+              <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+              <path d="M11 14l-2 6"/>
+              <path d="M16 9l2 2"/>
+            </svg>
             <span>
               {Math.round(listing.distance * 12)} min ({listing.distance.toFixed(1)} km)
             </span>

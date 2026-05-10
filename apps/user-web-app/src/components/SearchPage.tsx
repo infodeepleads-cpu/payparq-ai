@@ -8,7 +8,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
+import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
@@ -134,6 +134,8 @@ export function SearchPage() {
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [mapZoom, setMapZoom] = useState(15);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
@@ -395,16 +397,6 @@ export function SearchPage() {
     fetchListings();
   }, []);
 
-  // Recalculate distances when search pin moves
-  useEffect(() => {
-    if (!searchLocationPin || listings.length === 0) return;
-    const recalc = (l: Parking) => ({
-      ...l,
-      distance: parseFloat(haversineKm(searchLocationPin.lat, searchLocationPin.lng, l.lat, l.lng).toFixed(1)),
-    });
-    setListings(prev => prev.map(recalc));
-    setFilteredListings(prev => prev.map(recalc));
-  }, [searchLocationPin]);
 
   // Reset photo index when listing selection changes
   useEffect(() => {
@@ -570,18 +562,17 @@ export function SearchPage() {
 
     // Apply sorting to rest
     const rest = sorted.slice(1);
+    const ref = searchLocationPin || mapCenter;
     switch (sortBy) {
       case 'distance':
-        rest.sort((a, b) => a.distance - b.distance);
+      case 'walk':
+        rest.sort((a, b) => haversineKm(ref.lat, ref.lng, a.lat, a.lng) - haversineKm(ref.lat, ref.lng, b.lat, b.lng));
         break;
       case 'price':
         rest.sort((a, b) => a.pricePerHour - b.pricePerHour);
         break;
       case 'rating':
         rest.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'walk':
-        rest.sort((a, b) => a.distance - b.distance);
         break;
       case 'value':
         rest.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
@@ -594,7 +585,8 @@ export function SearchPage() {
     sorted.splice(1, sorted.length - 1, ...rest);
 
     setFilteredListings(sorted);
-  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1253,11 +1245,11 @@ export function SearchPage() {
                   }
                 }
 
-                return filteredListings.map((listing, index) => {
-                  // Show badge for first listing always (Najkraća Šetnja), plus top 2 others
+                return filteredListings.map((listing) => {
                   const badgeText = badgeMap.get(listing.id);
-                  if (badgeText) console.log(`Card ${index} (${listing.name}): badge="${badgeText}"`);
                   const isSelected = selectedListing?.id === listing.id;
+                  const liveRef = searchLocationPin || mapCenter;
+                  const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
                   return (
                     <div
                       key={listing.id}
@@ -1265,7 +1257,7 @@ export function SearchPage() {
                       className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                     >
                       <ListingCard
-                        listing={listing}
+                        listing={liveListing}
                         isSelected={isSelected}
                         onSelect={setSelectedListing}
                         onBook={() => {
@@ -1403,8 +1395,14 @@ export function SearchPage() {
                 </div>
 
                 {/* Walking Distance */}
-                <div className="flex items-center gap-1 text-xs text-gray-600">
-                  <Footprints className="w-3 h-3 flex-shrink-0" />
+                <div className="flex items-center gap-1 text-xs text-gray-900">
+                  <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13" cy="3" r="2"/>
+                    <path d="M11 6.5L8 12l3 1"/>
+                    <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                    <path d="M11 14l-2 6"/>
+                    <path d="M16 9l2 2"/>
+                  </svg>
                   <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
                 </div>
               </div>
@@ -1434,7 +1432,7 @@ export function SearchPage() {
                   </div>
                 )}
 
-                <p className="text-lg font-bold text-gray-900">Rezervacija parkinga</p>
+                <p className="text-xs text-gray-700 font-semibold">Rezervacija parkinga</p>
 
                 {/* Date, Time and Price Row */}
                 <button
@@ -1442,12 +1440,12 @@ export function SearchPage() {
                   className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
                 >
                   <div className="flex-1">
-                    <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
-                    <p className="text-sm text-gray-900 mt-1">{formatDuration()}</p>
+                    <p className="text-lg font-bold text-gray-900">{formatDuration()}</p>
+                    <p className="text-sm text-gray-900 mt-1">{formatTimeRange()}</p>
                     <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
+                    <p className="text-sm font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                     <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
                   </div>
                 </button>
@@ -1842,6 +1840,12 @@ export function SearchPage() {
             zoom={16}
             center={mapCenter}
             mapContainerStyle={{ width: '100%', height: '100%' }}
+            onLoad={(map) => {
+              mapRef.current = map;
+              map.addListener('zoom_changed', () => {
+                setMapZoom(map.getZoom());
+              });
+            }}
             options={{
               styles: [
                 {
@@ -1852,49 +1856,59 @@ export function SearchPage() {
               ],
             }}
           >
-            {/* Parking lot location markers - Cloud with price */}
-            {filteredListings.map((listing) => (
-              <OverlayView
-                key={listing.id}
-                position={{ lat: listing.lat, lng: listing.lng }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <button
+            {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
+            {filteredListings.map((listing) => {
+              const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+              const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+              const isSelected = selectedListing?.id === listing.id;
+              const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
+                <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                  fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
+                  font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
+                  fill="${isSelected ? 'white' : 'black'}">${label}</text>
+              </svg>`;
+              const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
+              const baseSize = 48.75;
+              const scaleFactor = mapZoom / 15;
+              const scaledWidth = baseSize * scaleFactor;
+              const scaledHeight = 44.85 * scaleFactor;
+              return (
+                <Marker
+                  key={listing.id}
+                  position={{ lat: listing.lat, lng: listing.lng }}
                   onClick={() => setSelectedListing(listing)}
-                  style={{ transform: 'translate(-50%, -90%)', width: 'calc(2.5rem + 0.4cm)' }}
-                  className="relative h-13 transition-transform hover:scale-110"
-                >
-                  {/* Single path speech bubble — oval body + smooth tail */}
-                  <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
-                    <path
-                      d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                      fill="white"
-                      stroke="black"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {/* Price centered in oval body (oval center is ~33% from top of viewBox) */}
-                  <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
-                    <span className="text-sm font-bold text-black leading-none">{(() => { const t = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2)); return `€${t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)}`; })()}</span>
-                  </div>
-                </button>
-              </OverlayView>
-            ))}
+                  icon={{
+                    url: iconUrl,
+                    anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
+                    scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
+                  }}
+                />
+              );
+            })}
 
-            {/* Search location marker - Classic Google pin */}
-            {searchLocationPin && (
-              <OverlayView
-                position={searchLocationPin}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <div className="w-8 h-12 flex items-start justify-center -translate-x-1/2 -translate-y-full">
-                  <svg viewBox="0 0 24 32" className="w-full h-full">
-                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#5F3DFC" stroke="white" strokeWidth="0.5"/>
-                  </svg>
-                </div>
-              </OverlayView>
-            )}
+            {/* Search location marker - Native Marker, no spike */}
+            {searchLocationPin && (() => {
+              const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
+                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#3b82f6" stroke="white" stroke-width="0.5"/>
+              </svg>`;
+              const basePinWidth = 24;
+              const basePinHeight = 31.5;
+              const pinScaleFactor = mapZoom / 15;
+              const pinScaledWidth = basePinWidth * pinScaleFactor;
+              const pinScaledHeight = basePinHeight * pinScaleFactor;
+              return (
+                <Marker
+                  position={searchLocationPin}
+                  icon={{
+                    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(pinSvg)}`,
+                    anchor: new google.maps.Point(pinScaledWidth / 2, pinScaledHeight),
+                    scaledSize: new google.maps.Size(pinScaledWidth, pinScaledHeight)
+                  }}
+                  clickable={false}
+                />
+              );
+            })()}
           </GoogleMap>
           )}
         </div>
@@ -1991,9 +2005,11 @@ export function SearchPage() {
                   }
                 }
 
-                return filteredListings.map((listing, index) => {
+                return filteredListings.map((listing) => {
                   const badgeText = mobileBadgeMap.get(listing.id);
                   const isSelected = selectedListing?.id === listing.id;
+                  const liveRef = searchLocationPin || mapCenter;
+                  const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
                   return (
                     <div
                       key={listing.id}
@@ -2001,7 +2017,7 @@ export function SearchPage() {
                       className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                     >
                       <ListingCard
-                        listing={listing}
+                        listing={liveListing}
                         isSelected={isSelected}
                         onSelect={() => {
                           setSelectedListing(listing);
@@ -2057,37 +2073,46 @@ export function SearchPage() {
                 zoom={15}
                 center={mapCenter}
                 mapContainerStyle={{ width: '100%', height: '100%' }}
+                onLoad={(map) => {
+                  mapRef.current = map;
+                  map.addListener('zoom_changed', () => {
+                    setMapZoom(map.getZoom());
+                  });
+                }}
               >
-                {filteredListings.map((listing) => (
-                  <OverlayView
-                    key={listing.id}
-                    position={{ lat: listing.lat, lng: listing.lng }}
-                    mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                  >
-                    <button
+                {filteredListings.map((listing) => {
+                  const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+                  const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+                  const isSelected = selectedListing?.id === listing.id;
+                  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
+                    <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                      fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                    <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
+                      font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
+                      fill="${isSelected ? 'white' : 'black'}">${label}</text>
+                  </svg>`;
+                  const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
+                  const baseSize = 48.75;
+                  const scaleFactor = mapZoom / 15;
+                  const scaledWidth = baseSize * scaleFactor;
+                  const scaledHeight = 44.85 * scaleFactor;
+                  return (
+                    <Marker
+                      key={listing.id}
+                      position={{ lat: listing.lat, lng: listing.lng }}
                       onClick={() => {
                         setSelectedListing(listing);
                         setShowMobileMap(false);
                         setShowMobileDetails(true);
                       }}
-                      style={{ transform: 'translate(-50%, -90%)', width: 'calc(2.5rem + 0.4cm)' }}
-                      className="relative h-13 transition-transform hover:scale-110"
-                    >
-                      <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
-                        <path
-                          d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                          fill="white"
-                          stroke="black"
-                          strokeWidth="2"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
-                        <span className="text-sm font-bold text-black leading-none">{(() => { const t = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2)); return `€${t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)}`; })()}</span>
-                      </div>
-                    </button>
-                  </OverlayView>
-                ))}
+                      icon={{
+                        url: iconUrl,
+                        anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
+                        scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
+                      }}
+                    />
+                  );
+                })}
               </GoogleMap>
             )}
           </div>
@@ -2142,8 +2167,14 @@ export function SearchPage() {
                     <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
                     <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <Footprints className="w-3 h-3 flex-shrink-0" />
+                  <div className="flex items-center gap-1 text-xs text-gray-900">
+                    <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="13" cy="3" r="2"/>
+                      <path d="M11 6.5L8 12l3 1"/>
+                      <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                      <path d="M11 14l-2 6"/>
+                      <path d="M16 9l2 2"/>
+                    </svg>
                     <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
                   </div>
                 </div>
@@ -2171,19 +2202,19 @@ export function SearchPage() {
                     </div>
                   )}
 
-                  <p className="text-base font-bold text-gray-900">Rezervacija parkinga</p>
+                  <p className="text-xs text-gray-700 font-semibold">Rezervacija parkinga</p>
 
                   <button
                     onClick={() => setShowPriceBreakdown(true)}
                     className="w-full text-left hover:opacity-70 transition-opacity pb-3 border-b border-gray-200 flex items-start justify-between"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
-                      <p className="text-sm text-gray-900 mt-0.5">{formatDuration()}</p>
+                      <p className="text-base font-bold text-gray-900">{formatDuration()}</p>
+                      <p className="text-sm text-gray-900 mt-0.5">{formatTimeRange()}</p>
                       <p className="text-xs text-gray-600 mt-0.5">Nema ulaza i izlaza</p>
                     </div>
                     <div className="text-right ml-2 flex-shrink-0">
-                      <p className="text-xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
+                      <p className="text-xs font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-0.5">Međuzbroj</p>
                     </div>
                   </button>

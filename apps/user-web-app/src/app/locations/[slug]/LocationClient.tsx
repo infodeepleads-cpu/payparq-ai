@@ -89,6 +89,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const [loading, setLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [premiumSpots, setPremiumSpots] = useState<Array<{ id: string; label: string; price_modifier_cents: number; available: boolean }>>([]);
   const parkTaxiLeadMinutes = 60;
   const parkTaxiDefaultOffsetMinutes = 65;
@@ -234,12 +235,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
   const dailyPrice = resolveScannerTruthPriceEuro(hub, "daily");
   const parkTaxiUnitPrice = resolveParkTaxiPriceEuro(hub) || dailyPrice;
   const reserveUsesDailyPricing = totalHours > 24;
-  const reserveTotalAmount = reserveUsesDailyPricing ? totalDays * dailyPrice : totalHours * hourlyPrice;
+  const reserveSubtotal = reserveUsesDailyPricing ? totalDays * dailyPrice : totalHours * hourlyPrice;
+  const reserveServiceFee = 0;
+  const reserveTotalAmount = reserveSubtotal + reserveServiceFee;
   const reserveTotalPriceLabel = `€${reserveTotalAmount.toFixed(2)}`;
   const reserveDurationLabel = reserveUsesDailyPricing
     ? `${totalDays} days (${formatEur(dailyPrice)}/day)`
     : `${totalHours} hours (${formatEur(hourlyPrice)}/hr)`;
-  const parkTaxiTotalPriceLabel = `€${(parkTaxiUnitPrice + (totalDays - 1) * dailyPrice).toFixed(2)}`;
+  const parkTaxiSubtotal = parkTaxiUnitPrice + (totalDays - 1) * dailyPrice;
+  const parkTaxiServiceFee = 0;
+  const parkTaxiTotal = parkTaxiSubtotal + parkTaxiServiceFee;
+  const parkTaxiTotalPriceLabel = `€${parkTaxiTotal.toFixed(2)}`;
   const parkTaxiBreakdownLabel = totalDays > 1
     ? `P&T ${formatEur(parkTaxiUnitPrice)} + ${totalDays - 1} dan${totalDays > 2 ? 'a' : ''} (${formatEur(dailyPrice)}/dan)`
     : `Park & Taxi (${formatEur(parkTaxiUnitPrice)})`;
@@ -735,9 +741,40 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
     })),
   };
 
+  const breakdownSubtotal = activeTab === 'reserve' ? reserveSubtotal : parkTaxiSubtotal;
+  const breakdownServiceFee = activeTab === 'reserve' ? reserveServiceFee : parkTaxiServiceFee;
+  const breakdownTotal = activeTab === 'reserve' ? reserveTotalPriceLabel : parkTaxiTotalPriceLabel;
+
   return (
     <div className="min-h-screen bg-[#05020A] text-white flex flex-col">
       {hideHeader ? null : <SiteHeader hideAnnouncementBar={hideAnnouncementBar} />}
+
+      {/* Breakdown Modal */}
+      {showBreakdown && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setShowBreakdown(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-72 mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-gray-900">Price Breakdown</h3>
+              <button onClick={() => setShowBreakdown(false)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-medium text-gray-900">{formatEur(breakdownSubtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Service Fee</span>
+                <span className="font-medium text-gray-900">{formatEur(breakdownServiceFee)}</span>
+              </div>
+              <div className="border-t border-gray-200 pt-3 pb-3 flex justify-between border-b">
+                <span className="font-semibold text-gray-900">Total</span>
+                <span className="font-bold text-gray-900">{breakdownTotal}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="hidden">
         <div className="w-full px-4 md:px-10 pt-3 md:pt-4 pointer-events-auto">
           <div className="bg-white/95 shadow-lg border border-black/5">
@@ -867,7 +904,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   onClick={checkIn && checkOut ? handleBook : undefined}
                   className={`px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold shadow-sm hover:bg-[#4330c4] transition-colors ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  {loading ? "Processing..." : (checkIn && checkOut ? `Lock in Price (${reserveTotalPriceLabel})` : `Lock in Price (${priceLabel}/hr)`)}
+                  {loading ? "Processing..." : (checkIn && checkOut ? `Book Now (${reserveTotalPriceLabel})` : `Book Now (${priceLabel}/hr)`)}
                 </Link>
                 </div>
                 {showMinChargeWalletExplainer ? (
@@ -1161,7 +1198,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   disabled={loading || !canSubmitCheckout}
                   className={`w-full inline-flex justify-center items-center px-4 py-2 rounded-xl bg-[#5F3DFC] text-white text-sm font-semibold shadow-sm hover:bg-[#4330c4] transition-colors mb-3 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                 >
-                  {loading ? "Processing..." : (activeTab === 'reserve' ? `Lock in Price (${priceLabel})` : "Zaključaj cijenu")}
+                  {loading ? "Processing..." : (activeTab === 'reserve' ? `Book Now (${priceLabel})` : "Book Now")}
                 </button>
                 {showMinChargeWalletExplainer ? (
                   <p className="mb-2 text-[10px] text-gray-500">{minChargeWalletExplainerText}</p>
@@ -1190,7 +1227,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         />
                       </div>
                     </div>
-                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju polaska. Parq vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
+                    <p className="mb-2 text-[11px] text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju <span className="notranslate" translate="no">polaska</span>. <span className="notranslate" translate="no">Parq</span> vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
                     <div className="flex bg-gray-100 p-1 rounded-xl mb-2">
                       <button
                         onClick={() => setActiveTab('reserve')}
@@ -1205,13 +1242,10 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
                     </div>
-                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
-                      <span className="text-gray-500 font-medium text-xs">Total</span>
-                      <div className="text-right">
-                        <div className="flex items-baseline justify-end gap-0.5">
-                            <span className="text-2xl font-bold text-black tabular-nums tracking-tight">{reserveTotalPriceLabel.slice(1)} €</span>
-                        </div>
-                        <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
+                    <div className="border-t border-gray-100 pt-2 flex justify-end">
+                      <div className="p-2 w-full flex flex-col items-end gap-0">
+                        <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
+                        <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
                       </div>
                     </div>
                   </>
@@ -1257,13 +1291,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                         <span className="notranslate" translate="no">Park & Taxi</span>
                       </button>
                     </div>
-                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
-                      <span className="text-gray-500 font-medium text-xs">Total</span>
-                      <div className="text-right">
-                        <div className="flex items-baseline justify-end">
-                          <span className="text-2xl font-bold text-black tabular-nums tracking-tight">{parkTaxiTotalPriceLabel.slice(1)} €</span>
+                    <div className="border-t border-gray-100 pt-2 flex justify-end">
+                      <div className="p-2 w-full flex flex-col gap-0">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm text-gray-500">Price:</span>
+                          <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{parkTaxiTotalPriceLabel}</span>
                         </div>
-                        <div className="text-[10px] text-gray-400 font-medium">{parkTaxiBreakdownLabel}</div>
+                        <div className="flex justify-end -mt-3">
+                          <button onClick={() => setShowBreakdown(true)}>
+                            <span className="text-gray-500 font-medium text-[8px] border-b border-gray-400 pb-0.5">Međuzbroj</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1883,15 +1921,19 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       />
                     </div>
                   </div>
-                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju polaska. Parq vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
+                  <p className="mb-3 text-xs text-gray-600">Napomena: Vožnju možete rezervirati nakon što rezervirate parking; rezervacija 60 min unaprijed daje garanciju <span className="notranslate" translate="no">polaska</span>. <span className="notranslate" translate="no">Parq</span> vozači su dostupni i na licu mjesta, a dostupan je i Uber.</p>
                   
-                  <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
-                    <span className="text-gray-500 font-medium text-sm">Total</span>
-                    <div className="text-right">
-                      <div className="flex items-baseline justify-end gap-0.5">
-                        <span className="text-3xl font-bold text-black tabular-nums tracking-tight">{reserveTotalPriceLabel.slice(1)} €</span>
+                  <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
+                    <div className="p-3 w-full flex flex-col gap-0">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-gray-500">Price:</span>
+                        <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{reserveTotalPriceLabel}</span>
                       </div>
-                      <div className="text-[10px] text-gray-400 font-medium">{reserveDurationLabel}</div>
+                      <div className="flex justify-end -mt-3">
+                        <button onClick={() => setShowBreakdown(true)}>
+                          <span className="text-gray-500 font-medium text-[10px] border-b border-gray-400 pb-0.5">Međuzbroj</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1929,13 +1971,17 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mb-4 py-3 border-t border-gray-100">
-                    <span className="text-gray-500 font-medium text-sm">Total</span>
-                    <div className="text-right">
-                      <div className="flex items-baseline justify-end">
-                        <span className="text-3xl font-bold text-black tabular-nums tracking-tight">{parkTaxiTotalPriceLabel.slice(1)} €</span>
+                  <div className="border-t border-gray-100 mb-4 pt-3 flex justify-end">
+                    <div className="p-3 w-full flex flex-col gap-0">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-sm text-gray-500">Price:</span>
+                        <span className="font-semibold text-black" style={{ fontSize: '20px' }}>{parkTaxiTotalPriceLabel}</span>
                       </div>
-                      <div className="text-[10px] text-gray-400 font-medium">{parkTaxiBreakdownLabel}</div>
+                      <div className="flex justify-end -mt-3">
+                        <button onClick={() => setShowBreakdown(true)}>
+                          <span className="text-gray-500 font-medium text-[10px] border-b border-gray-400 pb-0.5">Međuzbroj</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1949,7 +1995,7 @@ export default function LocationClient({ hub, priceLabel, hero: _hero, faqItems,
                   loading || !canSubmitCheckout ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
-                {loading ? "Processing..." : (activeTab === 'reserve' ? "Lock in Price" : "Zaključaj cijenu")}
+                {loading ? "Processing..." : (activeTab === 'reserve' ? "Book Now" : "Book Now")}
               </button>
               {showMinChargeWalletExplainer ? (
                 <p className="mt-2 text-[10px] text-center text-gray-500">{minChargeWalletExplainerText}</p>
