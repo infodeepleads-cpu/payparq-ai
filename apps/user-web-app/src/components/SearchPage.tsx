@@ -1843,7 +1843,7 @@ export function SearchPage() {
             onLoad={(map) => {
               mapRef.current = map;
               map.addListener('zoom_changed', () => {
-                setMapZoom(map.getZoom());
+                setMapZoom(map.getZoom() ?? 15);
               });
             }}
             options={{
@@ -2076,7 +2076,7 @@ export function SearchPage() {
                 onLoad={(map) => {
                   mapRef.current = map;
                   map.addListener('zoom_changed', () => {
-                    setMapZoom(map.getZoom());
+                    setMapZoom(map.getZoom() ?? 15);
                   });
                 }}
               >
