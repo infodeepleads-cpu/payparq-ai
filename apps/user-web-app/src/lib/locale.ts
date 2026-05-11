@@ -1,7 +1,7 @@
 export type AppLocale = "en" | "hr";
 
 export const LOCALE_COOKIE_NAME = "pp_locale";
-export const DEFAULT_LOCALE: AppLocale = "hr";
+export const DEFAULT_LOCALE: AppLocale = "en";
 export const CROATIAN_COUNTRIES = new Set(["RS", "BA", "ME"]);
 
 export function normalizeLocale(value: string | null | undefined): AppLocale | null {
