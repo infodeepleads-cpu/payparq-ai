@@ -164,6 +164,52 @@ export default function News() {
                 </div>
               </Link>
             </div>
+
+            {/* Region + City Links */}
+            <div className="mt-16 border-t border-black/5 pt-12">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">Browse by region</p>
+              <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-black mb-6">
+                Explore parking across Europe
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+                {[
+                  { label: 'Croatia', href: '/regions/croatia' },
+                  { label: 'Slovenia', href: '/regions/slovenia' },
+                  { label: 'Austria', href: '/regions/austria' },
+                  { label: 'Germany', href: '/regions/germany' },
+                  { label: 'Serbia', href: '/regions/serbia' },
+                  { label: 'Bosnia', href: '/regions/bosnia' },
+                  { label: 'Montenegro', href: '/regions/montenegro' },
+                  { label: 'Italy', href: '/regions/italy' },
+                  { label: 'Switzerland', href: '/regions/switzerland' },
+                ].map((r) => (
+                  <Link key={r.href} href={r.href}
+                    className="rounded-xl border border-black/8 bg-[#F5F5F7] px-4 py-3 text-xs font-semibold text-black/80 hover:bg-black hover:text-white transition-colors text-center">
+                    {r.label}
+                  </Link>
+                ))}
+              </div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-black/60 mb-3">City guides</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Zagreb', href: '/guides/zagreb' },
+                  { label: 'Split', href: '/guides/split' },
+                  { label: 'Rijeka', href: '/guides/rijeka' },
+                  { label: 'Ljubljana', href: '/guides/ljubljana' },
+                  { label: 'Vienna', href: '/guides/vienna' },
+                  { label: 'Berlin', href: '/guides/berlin' },
+                  { label: 'Belgrade', href: '/guides/belgrade' },
+                  { label: 'Sarajevo', href: '/guides/sarajevo' },
+                  { label: 'Zadar', href: '/guides/zadar' },
+                  { label: 'Munich', href: '/guides/munich' },
+                ].map((c) => (
+                  <Link key={c.href} href={c.href}
+                    className="rounded-full border border-black/8 px-3 py-1.5 text-[11px] font-medium text-black/70 hover:border-black hover:text-black transition-colors">
+                    {c.label} →
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
