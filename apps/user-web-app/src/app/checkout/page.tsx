@@ -338,7 +338,7 @@ function PaidCheckoutForm({
           <SummaryPanel
             locationName={locationName}
             locationId={locationId}
-            address={address}
+            address={address || ''}
             checkIn={checkIn}
             checkOut={checkOut}
             originalAmountCents={originalAmountCents}
