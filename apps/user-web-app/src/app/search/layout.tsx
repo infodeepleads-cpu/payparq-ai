@@ -16,11 +16,18 @@ export const metadata: Metadata = {
     'valet parking',
     'parking reservations',
   ],
+  alternates: {
+    canonical: 'https://www.payparq.com/search',
+    languages: {
+      'hr': 'https://www.payparq.com/search',
+      'en': 'https://www.payparq.com/en/search',
+    },
+  },
   openGraph: {
     title: 'Find Parking | PayParq',
     description: 'Search and book verified parking spaces in your area',
     type: 'website',
-    url: 'https://payparq.ai/search',
+    url: 'https://www.payparq.com/search',
   },
   manifest: '/manifest-search.json',
 };

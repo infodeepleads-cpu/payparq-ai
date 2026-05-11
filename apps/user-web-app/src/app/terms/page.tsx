@@ -610,9 +610,11 @@ export default function Terms() {
             <p className="text-sm text-black/70">
               Email: payparq@outlook.com
       <br />
+      Company: Leadvex Group LLC
+      <br />
       Headquarters: 1309 Coffeen Avenue, Suite 1200, Sheridan, WY 82801, USA
       <br />
-      EU Operations: Croatia
+      EU Operations: Croatia - Leadvex Group LLC
     </p>
           </section>
         </section>
