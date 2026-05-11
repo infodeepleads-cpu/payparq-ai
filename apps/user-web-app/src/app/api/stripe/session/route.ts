@@ -229,6 +229,9 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
+  // PaymentIntent flow (Stripe Elements) — ID starts with pi_
+  const isPaymentIntent = sessionId.startsWith('pi_');
+
   const secret = resolveStripeSecretKey();
   if (!secret) {
     let fallback = await buildFallbackSummaryFromParkingSession(sessionId);
@@ -258,6 +261,85 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
   }
   const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
+
+  // ── PaymentIntent branch (Stripe Elements checkout) ──────────────────────
+  if (isPaymentIntent) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(sessionId);
+      const meta = pi.metadata ?? {};
+      const email = ((pi as unknown as { receipt_email?: string | null }).receipt_email ?? '').trim().toLowerCase();
+      const locationId = (meta.location_id ?? '').trim() || null;
+      const checkIn = parseMetadataDatetime(meta.check_in ?? null);
+      const checkOut = parseMetadataDatetime(meta.check_out ?? null);
+
+      let locationName: string | null = null;
+      let locationDisplayId: string | null = null;
+      let valetEnabled = false;
+      let shuttleEnabled = false;
+      let addonsConfig: Record<string, unknown> = {};
+      let valetAttendant: string | null = null;
+      let lotPoint: { lat: number; lng: number } | null = null;
+      let membershipExists = false;
+      let emailVerified = false;
+
+      const dbClient = supabaseAdmin ?? supabase;
+      if (dbClient && locationId) {
+        const { data: locRow } = await dbClient
+          .from('locations')
+          .select('id,display_id,name,lat,lng,valet_enabled,shuttle_enabled,addons_config')
+          .eq('id', locationId)
+          .maybeSingle();
+        const lr = locRow as { id?: string; display_id?: string; name?: string; lat?: number; lng?: number; valet_enabled?: boolean; shuttle_enabled?: boolean; addons_config?: Record<string, unknown> } | null;
+        if (lr) {
+          locationName = lr.name ? normalizeLocationName(lr.name) : null;
+          locationDisplayId = lr.display_id ?? null;
+          valetEnabled = lr.valet_enabled ?? false;
+          shuttleEnabled = lr.shuttle_enabled ?? false;
+          addonsConfig = lr.addons_config ?? {};
+          if (lr.lat && lr.lng) lotPoint = { lat: lr.lat, lng: lr.lng };
+          valetAttendant = await resolveValetAttendant(lr.id ?? locationId);
+        }
+      }
+      if (email && supabaseAdmin) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (!error) {
+          const existing = data.users.find((u) => (u.email ?? '').trim().toLowerCase() === email);
+          membershipExists = Boolean(existing);
+          emailVerified = Boolean(existing?.email_confirmed_at);
+        }
+      }
+
+      return NextResponse.json({
+        session_id: pi.id,
+        ref_id: pi.id.slice(-8),
+        email: email || null,
+        amount_total: pi.amount ?? 0,
+        currency: pi.currency ?? 'eur',
+        flow_type: meta.flow_type ?? null,
+        location_id: locationId,
+        location_name: locationName,
+        location_display_id: locationDisplayId,
+        valet_enabled: valetEnabled,
+        shuttle_enabled: shuttleEnabled,
+        addons_config: addonsConfig,
+        valet_attendant: valetAttendant,
+        lot_point: lotPoint,
+        assigned_spot: null,
+        check_in: checkIn,
+        check_out: checkOut,
+        wallet_topup_credit_cents: 0,
+        wallet_debit_applied_cents: 0,
+        loyalty_bonus_credit_cents: 0,
+        membership_exists: membershipExists,
+        email_verified: emailVerified,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'payment_intent_lookup_failed';
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
+  // ── Checkout Session branch (existing — unchanged below) ─────────────────
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const sessionMetadata = session.metadata ?? {};
