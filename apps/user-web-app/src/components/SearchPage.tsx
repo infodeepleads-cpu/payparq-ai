@@ -218,6 +218,7 @@ export function SearchPage() {
     { id: 'airport', label: 'Zračna Luka', emoji: '✈️', description: 'Parking near airports' },
     { id: 'hotels', label: 'Hoteli', emoji: '🏨', description: 'Parking near hotels' },
     { id: 'events', label: 'Eventovi', emoji: '🎉', description: 'Parking near event venues' },
+    { id: 'list-lot', label: 'List your lot', emoji: '📍', description: 'List your parking space', action: 'navigate', link: '/host' },
   ];
 
   const toggleQuickFilter = (filterId: string) => {
@@ -790,6 +791,9 @@ export function SearchPage() {
                 <a href="/members" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
                   Log In / Sign Up
                 </a>
+                <a href="/host" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
+                  List your lot
+                </a>
                 <a href="https://www.payparq.com" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
                   Početna
                 </a>
@@ -851,8 +855,11 @@ export function SearchPage() {
                   <a href="/" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
                     Home
                   </a>
-                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
                     Log In
+                  </a>
+                  <a href="/host" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                    List your lot
                   </a>
                 </div>
               )}
@@ -1071,19 +1078,38 @@ export function SearchPage() {
               <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 w-[320px]">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Browse by category</p>
                 <div className="flex flex-col gap-2">
-                  {parkingCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
-                      onClick={() => setAllParkingDropdownOpen(false)}
-                    >
-                      <span className="text-2xl">{cat.emoji}</span>
-                      <div translate="no">
-                        <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
-                        <p className="text-xs text-gray-500">{cat.description}</p>
-                      </div>
-                    </button>
-                  ))}
+                  {parkingCategories.map((cat) => {
+                    const isListLot = (cat as any).link;
+                    if (isListLot) {
+                      return (
+                        <a
+                          key={cat.id}
+                          href={(cat as any).link}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                          onClick={() => setAllParkingDropdownOpen(false)}
+                        >
+                          <span className="text-2xl">{cat.emoji}</span>
+                          <div translate="no">
+                            <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                            <p className="text-xs text-gray-500">{cat.description}</p>
+                          </div>
+                        </a>
+                      );
+                    }
+                    return (
+                      <button
+                        key={cat.id}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                        onClick={() => setAllParkingDropdownOpen(false)}
+                      >
+                        <span className="text-2xl">{cat.emoji}</span>
+                        <div translate="no">
+                          <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                          <p className="text-xs text-gray-500">{cat.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
