@@ -51,6 +51,8 @@ const blogRoutes = [
   "/news/blog/smart-parking-hrvatska-2025",
   "/news/blog/parking-dalmacija-ljeto-2025",
   "/news/blog/park-taxi-brela",
+  "/news/blog/parking-zagreb-city-center",
+  "/news/blog/parking-split-airport-2026",
 ];
 
 function resolveSiteUrl() {
