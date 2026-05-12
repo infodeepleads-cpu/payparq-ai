@@ -2797,18 +2797,20 @@ export default function MembersPage() {
             <p className="text-sm text-black/70">Upravljaj svojim parkiralištima.</p>
           </div>
 
-          <div className="rounded-xl border border-black/10 bg-white p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
-              <button
-                type="button"
-                onClick={() => router.push('/list-your-parking')}
-                className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
-                title="Dodaj novi prostor"
-              >
-                <span className="text-base leading-none font-bold">+</span>
-              </button>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <div className="rounded-xl border border-black/10 bg-white p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-black/60">Moji prostori</p>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/list-your-parking')}
+                    className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
+                    title="Dodaj novi prostor"
+                  >
+                    <span className="text-base leading-none font-bold">+</span>
+                  </button>
+                </div>
             {ownerListingsLoading ? (
               <p className="text-xs text-black/50">Učitavanje...</p>
             ) : ownerListings.length === 0 ? (
@@ -2899,6 +2901,32 @@ export default function MembersPage() {
                 ))}
               </div>
             )}
+              </div>
+            </div>
+
+            <div className="md:col-span-1">
+              <div className="sticky top-6 space-y-4">
+                <div className="rounded-xl border border-black/10 bg-white p-4">
+                  <p className="text-xs text-black/70 leading-snug mb-2">U vašem području, prostori mogu zaraditi i do</p>
+                  <p className="text-2xl font-bold text-[#5F3DFC]">
+                    €6,912.00
+                    <span className="text-sm font-normal text-black/60 block">godišnje</span>
+                  </p>
+                </div>
+
+                <a
+                  href="https://www.payparq.com/host"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  ⚡ Instant Listing
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </div>
           </div>
 
           {actionError && (
