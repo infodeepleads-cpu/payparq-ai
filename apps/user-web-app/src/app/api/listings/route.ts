@@ -12,6 +12,7 @@ export async function GET() {
     const { data: locations, error } = await client
       .from('locations')
       .select('*')
+      .eq('verification_status', 'verified')
       .limit(50);
 
     if (error) {
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
         total_spots: parseInt(capacity) || 1,
         verification_metadata: {
           listing_status: 'pending',
+          section_status: { section1: true, section2: true, section3: true },
           type,
           capacity,
           features,
