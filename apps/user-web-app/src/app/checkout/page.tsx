@@ -329,7 +329,9 @@ function PaidCheckoutForm({
 
     // Extract payment intent ID from client secret for success URL
     const piId = clientSecret?.split('_secret_')[0] || '';
+    console.log('[Checkout] clientSecret:', clientSecret?.substring(0, 20), '| piId:', piId);
     const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+    console.log('[Checkout] successUrl:', successUrl);
 
     const { error: confirmErr } = await stripe.confirmPayment({
       elements,
