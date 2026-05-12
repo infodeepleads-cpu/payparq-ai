@@ -7,12 +7,7 @@ export const dynamic = 'force-dynamic';
 async function ensureHostAccount(email: string, name: string, phone: string) {
   if (!supabaseAdmin) return { ok: false, userId: null };
 
-  const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (listError) return { ok: false, userId: null };
-
-  const existing = listData.users.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
-  if (existing) return { ok: true, userId: existing.id };
-
+  // Try creating first — avoids expensive list-all scan
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password: `${crypto.randomUUID()}${crypto.randomUUID()}`,
@@ -20,43 +15,20 @@ async function ensureHostAccount(email: string, name: string, phone: string) {
     user_metadata: { full_name: name, phone, role: 'manager', membership_source: 'host_listing' },
   });
 
-  if (createError || !created.user) return { ok: false, userId: null };
-
-  await supabaseAdmin.from('profiles').upsert({ id: created.user.id, role: 'manager' });
-
-  const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-    options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.payparq.com'}/members?tab=moji-prostori` },
-  });
-
-  if (linkData?.properties?.action_link) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq Team <team@info.payparq.com>',
-      to: email,
-      subject: 'Dobrodošli u Payparq - Pristupite vašem računu',
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#111827;background:#ffffff;">
-          <h2 style="margin:0 0 16px 0;">Payparq Moji Prostori</h2>
-          <p style="margin:0 0 14px 0;">Kliknite na gumb ispod za pristup vašem računu i upravljanju vašim parkirnim mjestima:</p>
-          <p style="margin:0 0 18px 0;">
-            <a href="${linkData.properties.action_link}" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#5F3DFC;color:#ffffff;text-decoration:none;font-weight:600;">Otvori Moji Prostori</a>
-          </p>
-          <p style="margin:0 0 8px 0;color:#6B7280;font-size:12px;">Ako niste tražili ovu prijavu, slobodno zanemarite ovu poruku.</p>
-          <hr style="margin:20px 0;border:none;border-top:1px solid #E5E7EB;" />
-          <div style="font-size:11px;color:#6B7280;line-height:1.6;">
-            <p style="margin:0 0 4px 0;"><strong>PayParq</strong></p>
-            <p style="margin:0 0 4px 0;">E-pošta: payparq@outlook.com</p>
-            <p style="margin:0 0 4px 0;">Sjedište: 1309 Coffeen Avenue, Suite 1200, Sheridan, WY 82801, SAD</p>
-            <p style="margin:0;">EU operacije: Hrvatska - Leadvex Group LLC</p>
-          </div>
-        </div>
-      `,
-    });
+  if (!createError && created?.user) {
+    await supabaseAdmin.from('profiles').upsert({ id: created.user.id, role: 'manager' });
+    // generate + send magic link below and return
+    return { ok: true, userId: created.user.id, isNew: true };
   }
 
-  return { ok: true, userId: created.user.id };
+  // User already exists — find by listing (email is unique so first match = correct user)
+  if (createError?.message?.toLowerCase().includes('already') || createError?.message?.toLowerCase().includes('exists')) {
+    const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const existing = listData?.users?.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
+    if (existing) return { ok: true, userId: existing.id, isNew: false };
+  }
+
+  return { ok: false, userId: null };
 }
 
 export async function POST(req: NextRequest) {

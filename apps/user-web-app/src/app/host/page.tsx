@@ -639,15 +639,23 @@ export default function HostPage() {
 
     try {
       const res = await fetch('/api/host/submit', { method: 'POST', body: fd });
-      const json = await res.json();
+      let json: Record<string, unknown> = {};
+      try {
+        json = await res.json();
+      } catch {
+        const text = await res.text().catch(() => '');
+        setSubmitError(`Greška ${res.status}${text ? ': ' + text.slice(0, 120) : ''}`);
+        setSubmitting(false);
+        return;
+      }
       if (!res.ok || !json.success) {
-        setSubmitError(json.error || 'Greška pri slanju zahtjeva.');
+        setSubmitError((json.error as string) || 'Greška pri slanju zahtjeva.');
         setSubmitting(false);
         return;
       }
       setSubmitted(true);
-    } catch {
-      setSubmitError('Mrežna greška. Pokušajte ponovo.');
+    } catch (err) {
+      setSubmitError('Mrežna greška: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSubmitting(false);
     }
