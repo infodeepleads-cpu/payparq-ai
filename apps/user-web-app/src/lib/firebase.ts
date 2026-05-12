@@ -24,7 +24,6 @@ export async function initializeFirebase() {
   try {
     const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
     const supported = await isSupported();
-    console.log('[FCM] Messaging supported:', supported);
     if (supported) {
       messaging = getMessaging(app);
     }
@@ -78,7 +77,6 @@ export async function getFCMToken(): Promise<string | null> {
     });
 
     if (token) {
-      console.log('[FCM] Token obtained successfully:', token.substring(0, 20) + '...');
     }
 
     return token || null;
@@ -95,7 +93,6 @@ export async function onMessageListener() {
       return;
     }
     onMessage(messaging, (payload) => {
-      console.log('[FCM] Foreground message received:', payload);
       resolve(payload);
     });
   });

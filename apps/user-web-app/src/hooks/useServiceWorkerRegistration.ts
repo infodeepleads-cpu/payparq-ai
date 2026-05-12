@@ -21,7 +21,6 @@ export function useServiceWorkerRegistration(scope: string) {
                 if (r.installing) {
                   r.installing.addEventListener('statechange', () => {
                     if (r.installing?.state === 'installed' && navigator.serviceWorker.controller) {
-                      console.log('✓ New SW update available - refresh to apply');
                     }
                   });
                 }
@@ -35,14 +34,11 @@ export function useServiceWorkerRegistration(scope: string) {
           scope: scope,
         });
 
-        console.log(`✓ Service Worker registered for scope: ${scope}`, registration);
-
         // Listen for updates
         registration.addEventListener('updatefound', () => {
           if (registration.installing) {
             registration.installing.addEventListener('statechange', () => {
               if (registration.installing?.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('✓ New SW update available - refresh to apply');
               }
             });
           }
