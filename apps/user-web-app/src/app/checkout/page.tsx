@@ -287,6 +287,23 @@ function PaidCheckoutForm({
     setSubmitError(null);
 
     if (isFree) {
+      try {
+        await fetch('/api/stripe/free-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            location_id: locationId,
+            email,
+            plate,
+            phone,
+            check_in: checkIn,
+            check_out: checkOut,
+            promo_code: promoInput || undefined,
+          }),
+        });
+      } catch (err) {
+        console.error('Free session creation failed:', err);
+      }
       router.push('/success');
       return;
     }
