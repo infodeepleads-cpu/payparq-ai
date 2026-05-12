@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { location_id, amount_cents, check_in, check_out, description } = body;
+    const { location_id, amount_cents, check_in, check_out, description, promo_code } = body;
 
     if (!location_id || !amount_cents || amount_cents < 50) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         location_id,
         check_in: check_in || '',
         check_out: check_out || '',
+        ...(promo_code ? { promo_code } : {}),
         source: 'user-web-app',
       },
     });

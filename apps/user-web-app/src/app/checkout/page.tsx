@@ -261,7 +261,7 @@ function PaidCheckoutForm({
         setPromoStatus('valid');
         setPromoDiscountCents(data.discount_cents);
         setPromoDiscountPercent(data.discount_percent);
-        onAmountChange(data.final_amount_cents);
+        onAmountChange(data.final_amount_cents, code);
       } else {
         setPromoStatus('invalid');
         setPromoError(data.error || 'Invalid promo code');
@@ -519,7 +519,7 @@ function CheckoutInner() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const createIntent = useCallback(async (cents: number) => {
+  const createIntent = useCallback(async (cents: number, promoCode?: string) => {
     setClientSecret(null);
     if (cents < 50) { setClientSecret('free'); return; }
     try {
@@ -530,6 +530,7 @@ function CheckoutInner() {
           location_id: locId, amount_cents: cents,
           check_in: checkIn, check_out: checkOut,
           description: `PayParq — ${locationName}`,
+          ...(promoCode ? { promo_code: promoCode } : {}),
         }),
       });
       const data = await res.json();
@@ -544,9 +545,9 @@ function CheckoutInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAmountChange = useCallback((newCents: number) => {
+  const handleAmountChange = useCallback((newCents: number, promoCode?: string) => {
     setAmountCents(newCents);
-    createIntent(newCents);
+    createIntent(newCents, promoCode);
   }, [createIntent]);
 
   const amountEur = amountCents / 100;
