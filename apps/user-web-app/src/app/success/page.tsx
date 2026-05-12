@@ -43,6 +43,7 @@ type SessionSummary = {
   valet_attendant?: string | null;
   lot_point?: { lat: number; lng: number } | null;
   assigned_spot?: { label: string; lat?: number | null; lng?: number | null; col_num?: number | null } | null;
+  plate?: string | null;
 };
 
 type Credits = number | '∞';
@@ -388,6 +389,7 @@ type StoredBooking = {
   checkIn?: string;
   checkOut?: string;
   amountCents?: number;
+  plate?: string;
 };
 
 function SuccessContent() {
@@ -455,6 +457,8 @@ function SuccessContent() {
     searchParams.get('check_in') || searchParams.get('checkIn') || searchParams.get('in') || searchParams.get('start') || null;
   const fallbackCheckOut =
     searchParams.get('check_out') || searchParams.get('checkOut') || searchParams.get('out') || searchParams.get('end') || null;
+  const fallbackPlate =
+    searchParams.get('plate') || searchParams.get('plateNumber') || null;
 
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
@@ -482,6 +486,7 @@ function SuccessContent() {
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
   const checkoutStart = summary?.check_in || fallbackCheckIn || storedBooking?.checkIn || null;
   const checkoutEnd = summary?.check_out || fallbackCheckOut || storedBooking?.checkOut || null;
+  const plate = (summary?.plate || fallbackPlate || storedBooking?.plate || '').toUpperCase().trim() || null;
 
   useEffect(() => {
     if (sessionId && typeof window !== 'undefined') {
@@ -924,6 +929,20 @@ function SuccessContent() {
     return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
   }, [checkoutEnd]);
 
+  const passDateOut = useMemo(() => {
+    if (!checkoutEnd) return null;
+    const d = new Date(checkoutEnd);
+    if (Number.isNaN(d.getTime())) return null;
+    const dateStr = d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+    // Only show if different day than check-in
+    if (checkoutStart) {
+      const inDay = new Date(checkoutStart).toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
+      const outDay = d.toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
+      if (inDay === outDay) return null;
+    }
+    return dateStr;
+  }, [checkoutEnd, checkoutStart]);
+
   const emergencyPhone = (summary?.addons_config?.phone_sms as string | undefined) ?? '+385915963139';
   const resCode = summary?.session_id ? deriveReservationCode(summary.session_id) : (storedPiId ? 'PP-' + storedPiId.slice(-4).toUpperCase() : null);
 
@@ -1015,6 +1034,14 @@ function SuccessContent() {
                   )}
                 </div>
 
+                {/* Plate */}
+                {plate && (
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Tablica / Plate</p>
+                    <p className="text-[15px] font-black text-black font-mono tracking-widest">{plate}</p>
+                  </div>
+                )}
+
                 {/* Date */}
                 {passDate && (
                   <div>
@@ -1037,6 +1064,9 @@ function SuccessContent() {
                   <div>
                     <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Izlaz</p>
                     <p className="text-[30px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeOut}</p>
+                    {passDateOut && (
+                      <p className="text-[10px] font-bold capitalize mt-0.5" style={{ color: '#64748b' }}>{passDateOut}</p>
+                    )}
                   </div>
                 </div>
 

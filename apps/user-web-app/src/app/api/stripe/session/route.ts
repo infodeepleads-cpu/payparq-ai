@@ -79,7 +79,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   if (!dbClient) return null;
   const { data: sessionRows } = await dbClient
     .from('parking_sessions')
-    .select('stripe_session_id,location_id,entry_time,exit_time,email,price,amount_cents,currency,type,stripe_metadata')
+    .select('stripe_session_id,location_id,entry_time,exit_time,email,price,amount_cents,currency,type,stripe_metadata,plate')
     .eq('stripe_session_id', sessionId)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -97,6 +97,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     currency?: string | null;
     type?: string | null;
     stripe_metadata?: Record<string, unknown> | null;
+    plate?: string | null;
   };
 
   const email = (row.email ?? '').trim().toLowerCase();
@@ -165,6 +166,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     location_display_id: locationDisplayId,
     check_in: row.entry_time ?? null,
     check_out: row.exit_time ?? null,
+    plate: (row.plate ?? (row.stripe_metadata?.plate as string | null) ?? (row.stripe_metadata?.plateNumber as string | null)) || null,
     wallet_topup_credit_cents: Number(row.stripe_metadata?.wallet_topup_credit_cents ?? 0) || 0,
     wallet_debit_applied_cents: Number(row.stripe_metadata?.wallet_debit_applied_cents ?? 0) || 0,
     loyalty_bonus_credit_cents: Number(row.stripe_metadata?.loyalty_bonus_credit_cents ?? 0) || 0,
