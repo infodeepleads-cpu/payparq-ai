@@ -1218,456 +1218,242 @@ function SuccessContent() {
             />
           )}
 
-          {/* Receipt download — slim actions row */}
-          <div className="flex items-center justify-center gap-6 py-1">
-            <button
-              type="button"
-              onClick={handleDownloadReceipt}
-              disabled={lookupLoading}
-              className="text-[12px] font-semibold underline underline-offset-2 disabled:opacity-40"
-              style={{ color: '#2451A0' }}
-            >
-              Preuzmi potvrdu
-            </button>
-            {summary?.email && (
+          {/* Members zona — slim single link */}
+          {summary?.email && (
+            <div className="flex items-center justify-center py-1">
               <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2" style={{ color: '#2451A0' }}>
                 Members zona
               </Link>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Addons / summon sections (valet/shuttle only, kept for functional sessions) */}
-          {/* 3 — Odaberi dodatne usluge (single merged widget) */}
-          {hasAnyAddonWidget && (
-            <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
-              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">
-                Odaberi dodatne usluge:
-              </p>
+          {/* ══ UNIFIED SERVICES WIDGET ══ */}
+          {/* ══ UNIFIED SERVICES WIDGET — spot + addons + summon in one card ══ */}
+          {(hasAnyAddonWidget || showSummonSection || summary?.assigned_spot !== undefined) && (
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #CBD5E1' }}>
+              <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Usluge · Services</p>
+              </div>
+              <div className="divide-y" style={{ borderColor: '#E2E8F0' }}>
 
-              {/* ── Included in price sub-section ── */}
-              {showIncludedSection && (
-                <div className="space-y-2">
-                  {showIncludedValet && (
-                    <button
-                      type="button"
-                      onClick={() => setValetToggled((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                            <rect x="9" y="11" width="14" height="10" rx="1"/>
-                            <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Valet parking</p>
-                          <p className="text-[11px] text-[#5F3DFC] font-medium">Uključeno u cijenu · ∞</p>
-                        </div>
+                {/* ── Parking spot row ── */}
+                {summary?.assigned_spot ? (
+                  <div className="px-5 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#EBF0FA' }}>
+                        <span className="text-[16px] font-black" style={{ color: '#1A3A6B' }}>{summary.assigned_spot.label}</span>
                       </div>
-                      <Toggle on={valetToggled} />
-                    </button>
-                  )}
-
-                  {showIncludedShuttle && (
-                    <button
-                      type="button"
-                      onClick={() => setShuttleToggled((s) => !s)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
-                            <rect x="1" y="8" width="22" height="10" rx="2"/>
-                            <path d="M5 18v2M19 18v2"/>
-                            <path d="M1 12h22"/>
-                            <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Shuttle prijevoz</p>
-                          <p className="text-[11px] text-[#0F6E56] font-medium">Uključeno u cijenu · ∞</p>
-                        </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-black">Spot {summary.assigned_spot.label}</p>
+                        <p className="text-[11px]" style={{ color: '#64748b' }}>Vaš dodijeljeni parking spot</p>
                       </div>
-                      <Toggle on={shuttleToggled} />
-                    </button>
-                  )}
-                </div>
-              )}
+                    </div>
+                    {(() => {
+                      const navLat = summary.assigned_spot?.lat ?? summary.lot_point?.lat;
+                      const navLng = summary.assigned_spot?.lng ?? summary.lot_point?.lng;
+                      return navLat && navLng ? (
+                        <a href={`https://www.google.com/maps?q=${navLat},${navLng}`} target="_blank" rel="noopener noreferrer"
+                          className="text-[12px] font-bold underline shrink-0" style={{ color: '#2451A0' }}>
+                          Navigiraj
+                        </a>
+                      ) : null;
+                    })()}
+                  </div>
+                ) : (
+                  <div className="px-5 py-3">
+                    <p className="text-[13px] font-medium text-black">Automatski dodjeljujemo slobodan spot</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: '#94a3b8' }}>Spot će biti potvrđen pri dolasku</p>
+                  </div>
+                )}
 
-              {/* Divider between included and paid sections */}
-              {showIncludedSection && showPaidSection && (
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="flex-1 h-px bg-black/8" />
-                  <span className="text-[10px] text-black/30 uppercase tracking-widest">Dodaj uslugu</span>
-                  <div className="flex-1 h-px bg-black/8" />
-                </div>
-              )}
+                {/* ── Included valet toggle ── */}
+                {showIncludedValet && (
+                  <button type="button" onClick={() => setValetToggled((v) => !v)}
+                    className="w-full flex items-center justify-between px-5 py-3 text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#EBF0FA' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2451A0" strokeWidth="2">
+                          <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+                          <rect x="9" y="11" width="14" height="10" rx="1"/>
+                          <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-black">Valet parking</p>
+                        <p className="text-[11px] font-medium" style={{ color: '#2451A0' }}>Uključeno · ∞</p>
+                      </div>
+                    </div>
+                    <Toggle on={valetToggled} />
+                  </button>
+                )}
 
-              {/* ── Paid addons sub-section ── */}
-              {showPaidSection && (
-                <div className="space-y-2">
+                {/* ── Included shuttle toggle ── */}
+                {showIncludedShuttle && (
+                  <button type="button" onClick={() => setShuttleToggled((s) => !s)}
+                    className="w-full flex items-center justify-between px-5 py-3 text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#EBF0FA' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2451A0" strokeWidth="2">
+                          <rect x="1" y="8" width="22" height="10" rx="2"/>
+                          <path d="M5 18v2M19 18v2M1 12h22M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-black">Shuttle prijevoz</p>
+                        <p className="text-[11px] font-medium" style={{ color: '#2451A0' }}>Uključeno · ∞</p>
+                      </div>
+                    </div>
+                    <Toggle on={shuttleToggled} />
+                  </button>
+                )}
 
-                  {/* Paid valet (only when not already included) */}
-                  {showValetPaidAddon && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonValetOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'bg-[#5F3DFC] border-[#5F3DFC]' : 'border-black/20 bg-white'}`}>
-                            {addonValetOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
+                {/* ── Paid addons ── */}
+                {showPaidSection && (
+                  <div className="px-5 py-3 space-y-2">
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] mb-2" style={{ color: '#2451A0' }}>Dodaj uslugu</p>
+                    {showValetPaidAddon && (
+                      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
+                        <button type="button" onClick={() => setAddonValetOn((v) => !v)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'border-[#2451A0]' : 'border-gray-300'}`}
+                              style={addonValetOn ? { background: '#2451A0' } : {}}>
+                              {addonValetOn && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                            </div>
                             <p className="text-[13px] font-medium text-black">Valet parking</p>
-                            <p className="text-[11px] text-black/40">Mi parkiramo vaš automobil</p>
                           </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          {formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan
-                        </span>
-                      </button>
-                      {addonValetOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <p className="text-[11px] text-black/50 mb-2">Broj dana</p>
-                          <div className="flex gap-2">
-                            {[1, 2, 3, 4].map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => setAddonValetDays(d)}
-                                className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${addonValetDays === d ? 'bg-[#5F3DFC] text-white border-[#5F3DFC]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                              >
+                          <span className="text-[12px] font-bold shrink-0" style={{ color: '#1A3A6B' }}>{formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan</span>
+                        </button>
+                        {addonValetOn && (
+                          <div className="px-3 pb-2.5 pt-1 flex gap-2" style={{ background: '#F0F5FF', borderTop: '1px solid #E2E8F0' }}>
+                            {[1,2,3,4].map((d) => (
+                              <button key={d} type="button" onClick={() => setAddonValetDays(d)}
+                                className="flex-1 py-1 rounded text-[12px] font-bold transition-colors"
+                                style={addonValetDays === d ? { background: '#2451A0', color: 'white' } : { background: 'white', color: '#1A3A6B', border: '1px solid #CBD5E1' }}>
                                 {d}d
                               </button>
                             ))}
                           </div>
-                          <p className="text-[11px] text-black/50 mt-2 text-right">
-                            Ukupno: <span className="font-semibold text-black">{formatAmount(addonValetPriceCents, 'eur')}</span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Paid shuttle (only when not included in price) */}
-                  {showShuttlePaidAddon && (
-                    <button
-                      type="button"
-                      onClick={() => setAddonShuttleOn((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonShuttleOn ? 'bg-[#0F6E56] border-[#0F6E56]' : 'border-black/20 bg-white'}`}>
-                          {addonShuttleOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Prijevoz</p>
-                          <p className="text-[11px] text-black/40">1 smjer · do/od destinacije</p>
-                        </div>
+                        )}
                       </div>
-                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                        {formatAmount(addonShuttleCfg?.price_cents ?? 200, 'eur')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* EV Charging */}
-                  {addonEvCfg && (
-                    <button
-                      type="button"
-                      onClick={() => setAddonEvOn((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'bg-[#2E7D32] border-[#2E7D32]' : 'border-black/20 bg-white'}`}>
-                          {addonEvOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                    )}
+                    {showShuttlePaidAddon && (
+                      <button type="button" onClick={() => setAddonShuttleOn((v) => !v)}
+                        className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-gray-50"
+                        style={{ border: '1px solid #CBD5E1' }}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${addonShuttleOn ? 'border-[#2451A0]' : 'border-gray-300'}`}
+                            style={addonShuttleOn ? { background: '#2451A0' } : {}}>
+                            {addonShuttleOn && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <p className="text-[13px] font-medium text-black">Prijevoz (1 smjer)</p>
                         </div>
-                        <div className="min-w-0">
+                        <span className="text-[12px] font-bold shrink-0" style={{ color: '#1A3A6B' }}>{formatAmount(addonShuttleCfg?.price_cents ?? 200, 'eur')}</span>
+                      </button>
+                    )}
+                    {addonEvCfg && (
+                      <button type="button" onClick={() => setAddonEvOn((v) => !v)}
+                        className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-gray-50"
+                        style={{ border: '1px solid #CBD5E1' }}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'border-[#2451A0]' : 'border-gray-300'}`}
+                            style={addonEvOn ? { background: '#2451A0' } : {}}>
+                            {addonEvOn && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
                           <p className="text-[13px] font-medium text-black">EV punjenje</p>
-                          <p className="text-[11px] text-black/40">Type 2 / CCS · do 22 kW</p>
                         </div>
+                        <span className="text-[12px] font-bold shrink-0" style={{ color: '#1A3A6B' }}>{formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}</span>
+                      </button>
+                    )}
+                    {addonWashCfg && (
+                      <button type="button" onClick={() => setAddonWashOn((v) => !v)}
+                        className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-gray-50"
+                        style={{ border: '1px solid #CBD5E1' }}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'border-[#2451A0]' : 'border-gray-300'}`}
+                            style={addonWashOn ? { background: '#2451A0' } : {}}>
+                            {addonWashOn && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <p className="text-[13px] font-medium text-black">Pranje vozila</p>
+                        </div>
+                        <span className="text-[12px] font-bold shrink-0" style={{ color: '#1A3A6B' }}>od {formatAmount(addonWashBasicCents, 'eur')}</span>
+                      </button>
+                    )}
+                    {addonFuelCfg && (
+                      <button type="button" onClick={() => setAddonFuelOn((v) => !v)}
+                        className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left hover:bg-gray-50"
+                        style={{ border: '1px solid #CBD5E1' }}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'border-[#2451A0]' : 'border-gray-300'}`}
+                            style={addonFuelOn ? { background: '#2451A0' } : {}}>
+                            {addonFuelOn && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
+                          </div>
+                          <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
+                        </div>
+                        <span className="text-[12px] font-bold shrink-0" style={{ color: '#1A3A6B' }}>od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}</span>
+                      </button>
+                    )}
+                    {anyPaidAddonSelected && (
+                      <div className="pt-1 space-y-2">
+                        <div className="flex items-center justify-between text-[12px] px-1">
+                          <span style={{ color: '#64748b' }}>Ukupno za usluge</span>
+                          <span className="font-black" style={{ color: '#1A3A6B' }}>{formatAmount(addonsTotalCents, 'eur')}</span>
+                        </div>
+                        <button type="button" onClick={handleAddonsCheckout} disabled={addonsCheckoutLoading}
+                          className="w-full py-2.5 rounded-xl text-white text-[13px] font-bold disabled:opacity-60"
+                          style={{ background: '#1A3A6B' }}>
+                          {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
+                        </button>
+                        {addonsCheckoutError && <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>}
                       </div>
-                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                        {formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Car Wash */}
-                  {addonWashCfg && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonWashOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'bg-[#1565C0] border-[#1565C0]' : 'border-black/20 bg-white'}`}>
-                            {addonWashOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-black">Pranje vozila</p>
-                            <p className="text-[11px] text-black/40">Basic ili Premium</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          od {formatAmount(addonWashBasicCents, 'eur')}
-                        </span>
-                      </button>
-                      {addonWashOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <div className="flex gap-2">
-                            {(['basic', 'premium'] as const).map((tier) => {
-                              const priceCents = tier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
-                              return (
-                                <button
-                                  key={tier}
-                                  type="button"
-                                  onClick={() => setAddonWashTier(tier)}
-                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonWashTier === tier ? 'bg-[#1565C0] text-white border-[#1565C0]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                                >
-                                  {tier === 'premium' ? 'Premium' : 'Basic'}<br />
-                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fuel */}
-                  {addonFuelCfg && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonFuelOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'bg-[#F57F17] border-[#F57F17]' : 'border-black/20 bg-white'}`}>
-                            {addonFuelOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
-                            <p className="text-[11px] text-black/40">Diesel ili Benzin · mobilna punjaonica</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}
-                        </span>
-                      </button>
-                      {addonFuelOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <div className="flex gap-2">
-                            {(['diesel', 'benzin'] as const).map((fuelType) => {
-                              const priceCents = fuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
-                              return (
-                                <button
-                                  key={fuelType}
-                                  type="button"
-                                  onClick={() => setAddonFuelType(fuelType)}
-                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonFuelType === fuelType ? 'bg-[#F57F17] text-white border-[#F57F17]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                                >
-                                  {fuelType === 'diesel' ? 'Diesel' : 'Benzin'}<br />
-                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Checkout CTA */}
-                  {anyPaidAddonSelected && (
-                    <div className="pt-1 space-y-2">
-                      <div className="flex items-center justify-between text-[13px] px-1">
-                        <span className="text-black/50">Ukupno za usluge</span>
-                        <span className="font-bold text-black">{formatAmount(addonsTotalCents, 'eur')}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddonsCheckout}
-                        disabled={addonsCheckoutLoading}
-                        className="w-full py-3 rounded-xl bg-[#5F3DFC] text-white text-[14px] font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
-                      >
-                        {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
-                      </button>
-                      {addonsCheckoutError && (
-                        <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3b — Parking spot info */}
-          {summary?.assigned_spot ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                    <rect x="3" y="3" width="8" height="8" rx="1"/>
-                    <rect x="13" y="3" width="8" height="8" rx="1"/>
-                    <rect x="3" y="13" width="8" height="8" rx="1"/>
-                    <rect x="13" y="13" width="8" height="8" rx="1"/>
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-black">Parking spot</p>
-                  <p className="text-[11px] text-black/50">Vaš dodijeljeni spot</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
-                    <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
-                    {summary.assigned_spot.col_num != null && (
-                      <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">
-                        Trak {summary.assigned_spot.col_num + 1}/5
-                      </span>
                     )}
                   </div>
-                  {(() => {
-                    const spotLat = summary.assigned_spot.lat;
-                    const spotLng = summary.assigned_spot.lng;
-                    const navLat = spotLat ?? summary.lot_point?.lat;
-                    const navLng = spotLng ?? summary.lot_point?.lng;
-                    return navLat && navLng ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${navLat},${navLng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] font-semibold text-[#5F3DFC] underline shrink-0"
-                      >
-                        {spotLat ? 'Navigiraj do spota' : 'Navigacija'}
-                      </a>
-                    ) : null;
-                  })()}
-                </div>
-                {summary.lot_point && (
-                  <div className="rounded-xl overflow-hidden border border-[#5F3DFC]/20" style={{ height: 160 }}>
-                    <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e]" />}>
-                      <LotMap
-                        lat={summary.lot_point.lat}
-                        lng={summary.lot_point.lng}
-                        locationId={summary.location_id ?? undefined}
-                        assignedSpotLabel={summary.assigned_spot.label}
-                        interactive={false}
-                      />
-                    </Suspense>
+                )}
+
+                {/* ── Summon buttons ── */}
+                {showSummonSection && (
+                  <div className="px-5 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] mb-3" style={{ color: '#2451A0' }}>Pozovi vozilo</p>
+                    <div className={`grid gap-2 ${showIncludedValet && showIncludedShuttle ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {showIncludedValet && (
+                        <button type="button" onClick={() => handleSummon('car')}
+                          disabled={valetCredits === 0 || !valetToggled}
+                          className="relative flex flex-col items-center gap-1.5 py-3 rounded-xl disabled:opacity-40 transition-colors"
+                          style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}>
+                          <CreditBadge value={valetCredits} />
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A3A6B" strokeWidth="1.5">
+                            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+                            <rect x="9" y="11" width="14" height="10" rx="1"/>
+                            <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+                          </svg>
+                          <span className="text-[12px] font-bold" style={{ color: '#1A3A6B' }}>Pozovi auto</span>
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>~6 min</span>
+                        </button>
+                      )}
+                      {showIncludedShuttle && (
+                        <button type="button" onClick={() => handleSummon('shuttle')}
+                          disabled={shuttleCredits === 0 || !shuttleToggled}
+                          className="relative flex flex-col items-center gap-1.5 py-3 rounded-xl disabled:opacity-40 transition-colors"
+                          style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}>
+                          <CreditBadge value={shuttleCredits} />
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A3A6B" strokeWidth="1.5">
+                            <rect x="1" y="8" width="22" height="10" rx="2"/>
+                            <path d="M5 18v2M19 18v2M1 12h22M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                          <span className="text-[12px] font-bold" style={{ color: '#1A3A6B' }}>Pozovi shuttle</span>
+                          <span className="text-[10px]" style={{ color: '#64748b' }}>~4 min</span>
+                        </button>
+                      )}
+                    </div>
+                    {summonStatus && (
+                      <div className="mt-2 rounded-xl px-3 py-2 text-[12px] font-medium text-center" style={{ background: '#EBF0FA', color: '#1A3A6B', border: '1px solid #2451A0' }}>
+                        {summonStatus}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-              {premiumSpots.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
-                  {premiumSpots.map((sp) => (
-                    <button
-                      key={sp.id}
-                      type="button"
-                      disabled={spotUpgradeLoading}
-                      onClick={async () => {
-                        setSpotUpgradeLoading(true);
-                        try {
-                          const res = await fetch('/api/stripe/spot-upgrade', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              stripe_session_id: summary.session_id,
-                              new_spot_id: sp.id,
-                              current_spot_id: summary.assigned_spot?.label,
-                              email: summary.email,
-                              location_id: summary.location_id,
-                              location_name: summary.location_name,
-                            }),
-                          });
-                          const d = await res.json().catch(() => null) as { url?: string } | null;
-                          if (d?.url) window.location.href = d.url;
-                        } finally {
-                          setSpotUpgradeLoading(false);
-                        }
-                      }}
-                      className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
-                        <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#92400E]">
-                        +{((sp.price_modifier_cents) / 100).toFixed(2)} €
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {premiumSpots.length === 0 && (
-                <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <p className="text-[13px] text-black/70">Automatski dodjeljujemo slobodan spot</p>
-              <p className="text-[11px] text-black/50 mt-2">Spot će biti potvrđen pri dolasku</p>
-            </div>
-          )}
 
-          {/* 4 — Pozovi vozilo (with credit badges) */}
-          {showSummonSection && (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">Pozovi vozilo</p>
-              <div className={`grid gap-3 ${showIncludedValet && showIncludedShuttle ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {showIncludedValet && (
-                  <button
-                    type="button"
-                    onClick={() => handleSummon('car')}
-                    disabled={valetCredits === 0 || !valetToggled}
-                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    <CreditBadge value={valetCredits} />
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
-                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                      <rect x="9" y="11" width="14" height="10" rx="1"/>
-                      <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
-                    </svg>
-                    <span className="text-[13px] font-medium text-black">Pozovi auto</span>
-                    <span className="text-[11px] text-black/50">Valet dovozi · ~6 min</span>
-                  </button>
-                )}
-                {showIncludedShuttle && (
-                  <button
-                    type="button"
-                    onClick={() => handleSummon('shuttle')}
-                    disabled={shuttleCredits === 0 || !shuttleToggled}
-                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    <CreditBadge value={shuttleCredits} />
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
-                      <rect x="1" y="8" width="22" height="10" rx="2"/>
-                      <path d="M5 18v2M19 18v2"/>
-                      <path d="M1 12h22"/>
-                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                    <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
-                    <span className="text-[11px] text-black/50">1 smjer · ~4 min</span>
-                  </button>
-                )}
               </div>
-              {summonStatus && (
-                <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
-                  {summonStatus}
-                </div>
-              )}
             </div>
           )}
 
