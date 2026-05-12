@@ -2822,8 +2822,8 @@ export default function MembersPage() {
                   >
                     <button
                       onClick={() => {
-                        const sections = loc.verification_metadata?.section_status || { section1: false, section2: false, section3: false };
-                        const isComplete = sections.section1 && sections.section2 && sections.section3;
+                        const sections = loc.verification_metadata?.section_status;
+                        const isComplete = !sections || (sections.section1 && sections.section2 && sections.section3);
                         if (!isComplete) {
                           router.push(`/list-your-parking?edit=${loc.id}`);
                         } else {
