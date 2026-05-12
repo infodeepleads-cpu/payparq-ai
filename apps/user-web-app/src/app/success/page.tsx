@@ -381,13 +381,27 @@ function ValetTicket({
   );
 }
 
+type StoredBooking = {
+  locationId?: string;
+  locationName?: string;
+  address?: string;
+  checkIn?: string;
+  checkOut?: string;
+  amountCents?: number;
+};
+
 function SuccessContent() {
   const searchParams = useSearchParams();
   const [storedPiId, setStoredPiId] = useState<string | null>(null);
+  const [storedBooking, setStoredBooking] = useState<StoredBooking | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('last_payment_intent');
     if (stored) setStoredPiId(stored);
+    const booking = sessionStorage.getItem('payparq_booking');
+    if (booking) {
+      try { setStoredBooking(JSON.parse(booking)); } catch {}
+    }
   }, []);
 
   const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') || storedPiId;
@@ -462,19 +476,24 @@ function SuccessContent() {
     }).format(value);
   };
 
-  const checkoutLocationName = summary?.location_name ?? null;
+  const checkoutLocationName = summary?.location_name ?? storedBooking?.locationName ?? null;
   const checkoutLocationDisplayId = summary?.location_display_id ?? null;
-  const checkoutLocation = summary?.location_id ?? fallbackLocationId;
+  const checkoutLocation = summary?.location_id ?? fallbackLocationId ?? storedBooking?.locationId ?? null;
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in || fallbackCheckIn || null;
-  const checkoutEnd = summary?.check_out || fallbackCheckOut || null;
+  const checkoutStart = summary?.check_in || fallbackCheckIn || storedBooking?.checkIn || null;
+  const checkoutEnd = summary?.check_out || fallbackCheckOut || storedBooking?.checkOut || null;
 
   useEffect(() => {
-    // Clear stored PI ID once we've read it
     if (sessionId && typeof window !== 'undefined') {
       sessionStorage.removeItem('last_payment_intent');
     }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (summary?.session_id) {
+      sessionStorage.removeItem('payparq_booking');
+    }
+  }, [summary?.session_id]);
 
   useEffect(() => {
     let active = true;
@@ -907,7 +926,7 @@ function SuccessContent() {
               </div>
               <div>
                 <p className="text-black/50">Cijena</p>
-                <p className="font-semibold text-black">{formatAmount(summary?.amount_total ?? 0, summary?.currency ?? 'EUR')}</p>
+                <p className="font-semibold text-black">{formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}</p>
               </div>
               <div>
                 <p className="text-black/50">Od</p>

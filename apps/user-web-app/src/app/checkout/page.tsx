@@ -288,7 +288,7 @@ function PaidCheckoutForm({
 
     if (isFree) {
       try {
-        await fetch('/api/stripe/free-session', {
+        const freeRes = await fetch('/api/stripe/free-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -301,6 +301,10 @@ function PaidCheckoutForm({
             promo_code: promoInput || undefined,
           }),
         });
+        const freeData = await freeRes.json().catch(() => null);
+        if (freeData?.session_id) {
+          sessionStorage.setItem('last_payment_intent', freeData.session_id);
+        }
       } catch (err) {
         console.error('Free session creation failed:', err);
       }
@@ -553,6 +557,24 @@ function CheckoutInner() {
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Store booking details in sessionStorage immediately so success page can display them
+  // even if Stripe's redirect drops the URL query params.
+  useEffect(() => {
+    if (locId) {
+      try {
+        sessionStorage.setItem('payparq_booking', JSON.stringify({
+          locationId: locId,
+          locationName,
+          address,
+          checkIn,
+          checkOut,
+          amountCents: initialAmountCents,
+        }));
+      } catch {}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createIntent = useCallback(async (cents: number, promoCode?: string) => {
     setClientSecret(null);
