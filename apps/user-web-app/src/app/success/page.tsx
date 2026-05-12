@@ -383,8 +383,14 @@ function ValetTicket({
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') ||
-    (typeof window !== 'undefined' ? sessionStorage.getItem('last_payment_intent') : null);
+  const [storedPiId, setStoredPiId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('last_payment_intent');
+    if (stored) setStoredPiId(stored);
+  }, []);
+
+  const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') || storedPiId;
   const hasRealSessionId = Boolean(
     sessionId &&
       sessionId !== '{CHECKOUT_SESSION_ID}' &&
