@@ -1,10 +1,9 @@
 'use client';
 
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react';
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -883,63 +882,298 @@ function SuccessContent() {
     </div>
   );
 
+  // QR code
+  const qrRef = useRef<HTMLCanvasElement>(null);
+  const qrData = sessionId || `payparq-${checkoutLocationIdLabel || 'pass'}`;
+  useEffect(() => {
+    const canvas = qrRef.current;
+    if (!canvas) return;
+    import('qrcode').then((mod) => {
+      const QRCode = mod.default ?? mod;
+      (QRCode as { toCanvas: (el: HTMLCanvasElement, data: string, opts: object) => Promise<void> })
+        .toCanvas(canvas, qrData, { width: 128, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+        .catch(() => {});
+    });
+  }, [qrData]);
+
+  const mapsUrl = useMemo(() => {
+    const addr = storedBooking?.address || checkoutLocationName || checkoutLocation || '';
+    if (!addr) return null;
+    return `https://www.google.com/maps/search/${encodeURIComponent(addr)}`;
+  }, [storedBooking?.address, checkoutLocationName, checkoutLocation]);
+
+  const passDate = useMemo(() => {
+    if (!checkoutStart) return null;
+    const d = new Date(checkoutStart);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  }, [checkoutStart]);
+
+  const passTimeIn = useMemo(() => {
+    if (!checkoutStart) return '—';
+    const d = new Date(checkoutStart);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  }, [checkoutStart]);
+
+  const passTimeOut = useMemo(() => {
+    if (!checkoutEnd) return '—';
+    const d = new Date(checkoutEnd);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  }, [checkoutEnd]);
+
+  const emergencyPhone = (summary?.addons_config?.phone_sms as string | undefined) ?? '+385915963139';
+  const resCode = summary?.session_id ? deriveReservationCode(summary.session_id) : (storedPiId ? 'PP-' + storedPiId.slice(-4).toUpperCase() : null);
+
+  const [howStep, setHowStep] = useState<number | null>(null);
+  const howSteps = [
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+          <rect x="9" y="11" width="14" height="10" rx="1"/>
+          <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+        </svg>
+      ),
+      title: 'Vozite se unutra',
+      desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite:',
+      phone: emergencyPhone,
+    },
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="1" y="3" width="15" height="13" rx="1"/>
+          <path d="M16 8h5l3 3v5h-8V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      ),
+      title: 'Parkirajte',
+      desc: 'Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.',
+      phone: null,
+    },
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      ),
+      title: 'Vozite se van',
+      desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite:',
+      phone: emergencyPhone,
+    },
+  ];
+
   return (
-    <div className="min-h-screen text-black flex flex-col" style={{ background: '#05020A' }}>
-      {/* PayParq logo header */}
-      <header className="flex items-center justify-center px-4 py-4 border-b border-white/10">
+    <div className="min-h-screen bg-gray-100 text-black flex flex-col">
+
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-center">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#5F3DFC' }}>
-            <span className="text-white font-bold text-xs">P</span>
+          <div className="w-7 h-7 rounded-lg bg-black flex items-center justify-center">
+            <span className="text-white font-black text-sm">P</span>
           </div>
-          <span className="text-white font-bold text-sm tracking-tight">PayParq</span>
+          <span className="text-black font-black text-base tracking-tight">payparq</span>
         </div>
       </header>
 
-      <main className="flex-1 pt-6 pb-12">
-        <div className="max-w-sm mx-auto px-4 space-y-3 mt-12">
+      <main className="flex-1 py-6 pb-16">
+        <div className="max-w-md mx-auto px-4 space-y-4">
 
-          {/* 1 — Confirmation card */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-[#E1F5EE] flex items-center justify-center shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
+          {/* ══════════════════════════════════════
+              PARKING PASS CARD
+          ══════════════════════════════════════ */}
+          <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100">
+
+            {/* Top confirmed strip */}
+            <div className="bg-[#0F6E56] px-5 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                   <path d="M9 12l2 2 4-4"/>
                   <circle cx="12" cy="12" r="10"/>
                 </svg>
+                <span className="text-white font-bold text-[13px] uppercase tracking-widest">Parking Pass</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-[12px] text-black/50">
-                  Rezervacija potvrđena
-                  {summary?.session_id && (
-                    <span className="ml-2 font-mono text-black/70">{deriveReservationCode(summary.session_id)}</span>
+              {resCode && <span className="text-white/70 text-[11px] font-mono">{resCode}</span>}
+            </div>
+
+            {/* Pass body */}
+            <div className="px-5 pt-5 pb-4 flex gap-4 items-start">
+
+              {/* Left: booking details */}
+              <div className="flex-1 min-w-0 space-y-4">
+
+                {/* Location */}
+                <div>
+                  <p className="text-[9px] text-black/30 uppercase tracking-[0.15em] font-bold mb-0.5">Lokacija</p>
+                  <p className="text-[18px] font-black text-black leading-tight">
+                    {checkoutLocationName || checkoutLocationIdLabel || 'Parking'}
+                  </p>
+                  {storedBooking?.address && (
+                    <p className="text-[12px] text-black/40 mt-0.5 leading-snug">{storedBooking.address}</p>
                   )}
+                </div>
+
+                {/* Date */}
+                {passDate && (
+                  <div>
+                    <p className="text-[9px] text-black/30 uppercase tracking-[0.15em] font-bold mb-0.5">Datum</p>
+                    <p className="text-[14px] font-bold text-black capitalize">{passDate}</p>
+                  </div>
+                )}
+
+                {/* Times */}
+                <div className="flex items-end gap-3">
+                  <div>
+                    <p className="text-[9px] text-black/30 uppercase tracking-[0.15em] font-bold mb-0.5">Ulaz</p>
+                    <p className="text-[28px] font-black text-black leading-none tabular-nums">{passTimeIn}</p>
+                  </div>
+                  <div className="pb-1.5 text-black/30">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-black/30 uppercase tracking-[0.15em] font-bold mb-0.5">Izlaz</p>
+                    <p className="text-[28px] font-black text-black leading-none tabular-nums">{passTimeOut}</p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right: QR code */}
+              <div className="shrink-0 flex flex-col items-center gap-1.5">
+                <div className="rounded-xl overflow-hidden border border-gray-100 p-1 bg-white shadow-sm">
+                  <canvas ref={qrRef} width={128} height={128} className="block" />
+                </div>
+                <p className="text-[9px] text-black/30 font-medium text-center">Pokaži vozaču</p>
+              </div>
+
+            </div>
+
+            {/* Perforated separator */}
+            <div className="relative flex items-center mx-0 my-0">
+              <div className="absolute -left-3 w-6 h-6 rounded-full bg-gray-100 border border-gray-200" style={{ zIndex: 1 }} />
+              <div className="flex-1 border-t-2 border-dashed border-gray-200 mx-3" />
+              <div className="absolute -right-3 w-6 h-6 rounded-full bg-gray-100 border border-gray-200" style={{ zIndex: 1 }} />
+            </div>
+
+            {/* Price strip */}
+            <div className="px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] text-black/30 uppercase tracking-[0.15em] font-bold mb-0.5">Ukupno plaćeno</p>
+                <p className="text-[26px] font-black text-black leading-none">
+                  {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
                 </p>
-                <p className="text-[15px] font-semibold text-black leading-tight">
-                  {checkoutLocationName || checkoutLocationIdLabel || 'Safe Parking by PayParq'}
-                </p>
+              </div>
+              <div className="text-right">
+                {lookupLoading && (
+                  <p className="text-[10px] text-black/30 animate-pulse">Sinkronizacija...</p>
+                )}
+                {lookupError && !lookupLoading && (
+                  <p className="text-[10px] text-red-400">{lookupError}</p>
+                )}
+                {summary?.email && (
+                  <p className="text-[10px] text-black/30 font-mono">{summary.email}</p>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
-              <div>
-                <p className="text-black/50">Lokacija ID</p>
-                <p className="font-semibold text-black font-mono tracking-tight">{checkoutLocationDisplayId || checkoutLocationIdLabel || '—'}</p>
-              </div>
-              <div>
-                <p className="text-black/50">Cijena</p>
-                <p className="font-semibold text-black">{formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}</p>
-              </div>
-              <div>
-                <p className="text-black/50">Od</p>
-                <p className="font-semibold text-black">{formatDateTime(checkoutStart)}</p>
-              </div>
-              <div>
-                <p className="text-black/50">Kraj</p>
-                <p className="font-semibold text-black">{formatDateTime(checkoutEnd)}</p>
+
+          </div>
+          {/* END PARKING PASS */}
+
+          {/* ══════════════════════════════════════
+              GETTING THERE
+          ══════════════════════════════════════ */}
+          <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+            <div className="px-5 pt-5 pb-4 space-y-3">
+              <p className="text-[10px] font-bold text-black/40 uppercase tracking-[0.15em]">Kako doći</p>
+              {(checkoutLocationName || storedBooking?.address) && (
+                <div>
+                  <p className="text-[14px] font-bold text-black">{checkoutLocationName || ''}</p>
+                  {storedBooking?.address && <p className="text-[13px] text-black/50">{storedBooking.address}</p>}
+                </div>
+              )}
+              {mapsUrl ? (
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#EA4335] flex items-center justify-center shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                      <circle cx="12" cy="9" r="2.5"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-black">Otvori u Google Maps</p>
+                    <p className="text-[11px] text-black/40 truncate">{storedBooking?.address || checkoutLocationName || ''}</p>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" className="shrink-0 ml-auto">
+                    <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                  </svg>
+                </a>
+              ) : (
+                <p className="text-[12px] text-black/30 italic">Adresa nije dostupna</p>
+              )}
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════
+              HOW IT WORKS
+          ══════════════════════════════════════ */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-5 pt-5 pb-4">
+              <p className="text-[10px] font-bold text-black/40 uppercase tracking-[0.15em] mb-4">Kako funkcionira</p>
+              <div className="space-y-0">
+                {howSteps.map((step, i) => {
+                  const open = howStep === i;
+                  return (
+                    <div key={i}>
+                      {i > 0 && <div className="h-px bg-gray-100 my-1" />}
+                      <button
+                        type="button"
+                        onClick={() => setHowStep(open ? null : i)}
+                        className="w-full flex items-center gap-3 py-3 text-left hover:bg-gray-50 rounded-xl px-2 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
+                          <span className="text-white text-[11px] font-black">{i + 1}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-black min-w-0 flex-1">
+                          {step.icon}
+                          <p className="text-[14px] font-bold">{step.title}</p>
+                        </div>
+                        <svg
+                          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
+                          className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                        >
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </button>
+                      {open && (
+                        <div className="mx-2 mb-3 pl-11 pr-2">
+                          <p className="text-[13px] text-black/60 leading-relaxed">{step.desc}</p>
+                          {step.phone && (
+                            <a
+                              href={`tel:${step.phone}`}
+                              className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2 text-[13px] font-semibold text-[#0F6E56]"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.59 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                              </svg>
+                              {step.phone}
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            {(lookupLoading || lookupError) && (
-              <p className="mt-3 text-[11px] text-black/40">{lookupLoading ? 'Učitavanje...' : lookupError}</p>
-            )}
           </div>
 
           {/* 1b — Valet confirmation ticket (when valet included in price) */}
@@ -1474,7 +1708,7 @@ function SuccessContent() {
         </div>
       </main>
 
-      <footer className="bg-[#020617] px-6 py-8 print:hidden">
+      <footer className="bg-gray-200 px-6 py-8 print:hidden">
         <div className="max-w-sm mx-auto">
           <FooterBrand />
         </div>
@@ -1493,7 +1727,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center text-white/40 text-sm" style={{ background: '#05020A' }}>
+      <div className="min-h-screen flex items-center justify-center text-black/30 text-sm bg-gray-100">
         Učitavanje...
       </div>
     }>
