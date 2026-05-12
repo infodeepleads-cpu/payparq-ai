@@ -327,10 +327,14 @@ function PaidCheckoutForm({
       }
     }
 
+    // Extract payment intent ID from client secret for success URL
+    const piId = clientSecret?.split('_secret_')[0] || '';
+    const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+
     const { error: confirmErr } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/success`,
+        return_url: successUrl,
         payment_method_data: {
           billing_details: {
             email: email || undefined,
@@ -445,9 +449,11 @@ function PaidCheckoutForm({
                       } catch { /* non-blocking */ }
                     }
                   }
+                  const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                  const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
                   const { error } = await stripe.confirmPayment({
                     elements,
-                    confirmParams: { return_url: `${window.location.origin}/success` },
+                    confirmParams: { return_url: successUrl },
                   });
                   if (error) console.error(error);
                 }}
