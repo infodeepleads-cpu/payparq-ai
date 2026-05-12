@@ -49,7 +49,7 @@ function InfoPanel() {
     <div className="bg-white rounded-lg border border-gray-200 sticky top-8 p-6 space-y-6">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-1">Oglasi svoje parkirno mjesto</p>
-        <p className="text-xs text-gray-500">Zarađujte iznajmljivanjem svog neiskorištenog parkirnog mjesta vozačima u vašoj okolini.</p>
+        <p className="text-xs text-gray-500">Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.</p>
       </div>
       <div className="border-t border-gray-100 pt-6 space-y-4">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Kako funkcionira</p>
@@ -584,9 +584,12 @@ export default function HostPage() {
   const [photos, setPhotos] = useState<File[]>([]);
 
   // Toggles
-  const [wantQR, setWantQR] = useState(false);
-  const [wantLPR, setWantLPR] = useState(false);
-  const [wantHotel, setWantHotel] = useState(false);
+  const [wantPartnership, setWantPartnership] = useState(true);
+  const [wantQR, setWantQR] = useState(true);
+  const [wantLPR, setWantLPR] = useState(true);
+  const [wantSafeBrand, setWantSafeBrand] = useState(true);
+  const [wantMarketing, setWantMarketing] = useState(true);
+  const [wantDashboard, setWantDashboard] = useState(true);
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -919,9 +922,9 @@ export default function HostPage() {
               <CollapsibleSection title="Cijena">
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije</p>
+                  <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije! Naknadu plaća kupac!</p>
                   <p className="text-xs text-black leading-relaxed space-y-2" translate="no">
-                    <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta, i Dinamičko određivanje cijena.</span>
+                    <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta, i Dinamično određivanje cijena.</span>
                     <span className="block">Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.</span>
                   </p>
                 </div>
@@ -948,7 +951,7 @@ export default function HostPage() {
                 {/* Dynamic Price Toggle */}
                 <div className="flex items-center justify-between pt-2">
                   <div>
-                    <p className="text-xs font-semibold text-gray-800">Dinamičko određivanje cijena</p>
+                    <p className="text-xs font-semibold text-gray-800">Dinamično određivanje cijena</p>
                     <p className="text-xs text-gray-400">PayParq će prilagoditi cijene na temelju potražnje</p>
                   </div>
                   <Toggle checked={useDynamicPrice} onChange={setUseDynamicPrice} />
@@ -1028,13 +1031,21 @@ export default function HostPage() {
             {/* ── Toggles ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Besplatni dodaci</p>
+              <div className="flex items-start justify-between gap-4 pb-3 border-b border-gray-100">
+                <p className="text-xs font-black text-gray-900 leading-relaxed">Da, želim se pridružiti PayParq Partnership programu</p>
+                <Toggle checked={wantPartnership} onChange={(v) => {
+                  setWantPartnership(v);
+                  if (!v) { setWantQR(false); setWantLPR(false); setWantDashboard(false); setWantMarketing(false); }
+                  else { setWantQR(true); setWantLPR(true); setWantDashboard(true); setWantMarketing(true); }
+                }} />
+              </div>
               {[
                 { state: wantQR, setter: setWantQR, label: 'Da, želim besplatni PayParq QR Pay za plaćanje na licu mjesta' },
-                { state: wantLPR, setter: setWantLPR, label: 'Da, želim besplatnu LPR aplikaciju i upravljačku ploču' },
-                { state: wantHotel, setter: setWantHotel, label: 'Da, želim se pridružiti PayParq Hotel Partnership programu' },
+                { state: wantDashboard, setter: setWantDashboard, label: 'Da, želim potpuno besplatno PayParq Business upravljačku ploču i LPR mobile sustav' },
+                { state: wantMarketing, setter: setWantMarketing, label: 'Da, želim besplatnu digitalnu marketinšku optimizaciju i vlastitu Safe Parking web stranicu' },
               ].map(({ state, setter, label }) => (
                 <div key={label} className="flex items-start justify-between gap-4">
-                  <p className="text-xs font-medium text-gray-800 leading-relaxed">{label}</p>
+                  <p className="text-xs font-medium text-gray-600 leading-relaxed">{label}</p>
                   <Toggle checked={state} onChange={setter} />
                 </div>
               ))}
