@@ -904,17 +904,25 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         bool addonWashOn = (addonsConfig['car_wash'] as Map?)?['enabled'] == true;
         bool addonFuelOn = (addonsConfig['fuel'] as Map?)?['enabled'] == true;
         bool addonShuttleOn = (addonsConfig['shuttle'] as Map?)?['enabled'] == true;
+        // Safely convert a meta value that may be String or List to a display string
+        String metaStr(dynamic v, String fallback) {
+          if (v == null) return fallback;
+          if (v is String) return v;
+          if (v is List) return v.map((e) => e.toString()).join(', ');
+          return v.toString();
+        }
+
         // Listing detail section controllers
         final accessHoursCtrl = TextEditingController(
-            text: (meta['access_hours'] as String?) ?? 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00');
+            text: metaStr(meta['access_hours'], 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00'));
         final amenitiesCtrl = TextEditingController(
-            text: (meta['amenities'] as String?) ?? 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima');
+            text: metaStr(meta['amenities'], 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima'));
         final thingsToKnowCtrl = TextEditingController(
-            text: (meta['things_to_know'] as String?) ?? 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.');
+            text: metaStr(meta['things_to_know'], 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.'));
         final gettingThereCtrl = TextEditingController(
-            text: (meta['getting_there'] as String?) ?? 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.');
+            text: metaStr(meta['getting_there'], 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.'));
         final howItWorksCtrl = TextEditingController(
-            text: (meta['how_it_works'] as String?) ?? '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići');
+            text: metaStr(meta['how_it_works'], '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići'));
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
