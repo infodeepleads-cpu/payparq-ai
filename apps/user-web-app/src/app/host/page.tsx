@@ -595,6 +595,29 @@ export default function HostPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  const compressImage = (file: File, maxWidthPx = 1280, quality = 0.82): Promise<File> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxWidthPx / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+          'image/jpeg',
+          quality,
+        );
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -634,8 +657,9 @@ export default function HostPage() {
     fd.append('minPriceHourly', minPriceHourly);
     fd.append('minPriceDaily', minPriceDaily);
     fd.append('minPriceMonthly', minPriceMonthly);
-    // Photos
-    photos.forEach((photo) => fd.append('photos', photo));
+    // Photos — compress before upload to avoid 413
+    const compressedPhotos = await Promise.all(photos.map((p) => compressImage(p)));
+    compressedPhotos.forEach((photo) => fd.append('photos', photo));
 
     try {
       const res = await fetch('/api/host/submit', { method: 'POST', body: fd });

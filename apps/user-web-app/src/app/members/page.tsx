@@ -610,7 +610,8 @@ export default function MembersPage() {
     if (
       tab === "home" ||
       tab === "activity" ||
-      tab === "account"
+      tab === "account" ||
+      tab === "moji-prostori"
     ) {
       setActiveItem(tab as NavItemId);
     }
@@ -3162,6 +3163,15 @@ export default function MembersPage() {
                             +
                           </span>
                           <span>Navedite svoje parkiralište</span>
+                        </Link>
+                        <Link
+                          href="/host"
+                          className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-[#8B5CF6]/90 hover:bg-white/5"
+                        >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC]/20 text-[11px]">
+                            ⚡
+                          </span>
+                          <span>Instant listing</span>
                         </Link>
                         <button
                           type="button"

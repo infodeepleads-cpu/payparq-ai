@@ -636,7 +636,7 @@ export function ListYourLotPanel({
         return;
       }
       if (currentStep2SubValue === 'review2') {
-        router.push('/members?refresh=listings');
+        router.push('/members?tab=moji-prostori');
         return;
       }
     }
@@ -660,7 +660,7 @@ export function ListYourLotPanel({
             .update({ verification_status: 'pending' })
             .eq('id', listingId);
         }
-        router.push('/members?refresh=listings');
+        router.push('/members?tab=moji-prostori');
         return;
       }
     }
@@ -1056,7 +1056,7 @@ export function ListYourLotPanel({
                   <p className="text-sm text-black/70">Upravljajte kalendarom i cijenama u nastavku.</p>
                 </div>
                 <button
-                  onClick={() => router.push('/members?refresh=listings')}
+                  onClick={() => router.push('/members?tab=moji-prostori')}
                   className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                 >
                   Idi na upravljanje

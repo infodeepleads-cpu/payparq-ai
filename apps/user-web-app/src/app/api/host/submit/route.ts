@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 async function ensureHostAccount(email: string, name: string, phone: string) {
   if (!supabaseAdmin) return { ok: false, userId: null };
@@ -16,18 +17,30 @@ async function ensureHostAccount(email: string, name: string, phone: string) {
   });
 
   if (!createError && created?.user) {
-    await supabaseAdmin.from('profiles').upsert({ id: created.user.id, role: 'manager' });
-    // generate + send magic link below and return
+    const { error: profileErr } = await supabaseAdmin.from('profiles').upsert(
+      { id: created.user.id, email, full_name: name, role: 'manager' },
+      { onConflict: 'id' },
+    );
+    if (profileErr) console.error('Profile upsert error (new user):', profileErr);
     return { ok: true, userId: created.user.id, isNew: true };
   }
 
-  // User already exists — find by listing (email is unique so first match = correct user)
+  // User already exists — look up by email
   if (createError?.message?.toLowerCase().includes('already') || createError?.message?.toLowerCase().includes('exists')) {
     const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const existing = listData?.users?.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
-    if (existing) return { ok: true, userId: existing.id, isNew: false };
+    if (existing) {
+      // Ensure profile row exists for returning users too
+      const { error: profileErr } = await supabaseAdmin.from('profiles').upsert(
+        { id: existing.id, email, full_name: name, role: 'manager' },
+        { onConflict: 'id' },
+      );
+      if (profileErr) console.error('Profile upsert error (existing user):', profileErr);
+      return { ok: true, userId: existing.id, isNew: false };
+    }
   }
 
+  console.error('ensureHostAccount failed — createError:', createError);
   return { ok: false, userId: null };
 }
 
