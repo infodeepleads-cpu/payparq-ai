@@ -224,7 +224,7 @@ function PaidCheckoutForm({
   checkOut: string;
   locationId: string;
   originalAmountCents: number;
-  onAmountChange: (cents: number) => void;
+  onAmountChange: (cents: number, promoCode?: string) => void;
   isFree?: boolean;
   address?: string;
   clientSecret?: string | null;
