@@ -220,6 +220,10 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
+  useEffect(() => {
+    onConfigsChange?.(dateConfigs);
+  }, [dateConfigs, onConfigsChange]);
+
   const croatianMonths = ['siječnja','veljače','ožujka','travnja','svibnja','lipnja','srpnja','kolovoza','rujna','listopada','studenog','prosinca'];
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
@@ -247,7 +251,6 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
   const handleSaveDate = (config: DateConfig) => {
     setDateConfigs((prev) => {
       const next = { ...prev, [config.date]: config };
-      onConfigsChange?.(next);
       return next;
     });
     setSelectedDate(null);
@@ -256,7 +259,6 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
     setDateConfigs((prev) => {
       const next = { ...prev };
       delete next[dateStr];
-      onConfigsChange?.(next);
       return next;
     });
     setSelectedDate(null);
