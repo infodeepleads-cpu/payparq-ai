@@ -1552,10 +1552,12 @@ export function SearchPage() {
                   {showAmenities && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
                       {selectedListing.amenities
-                        ? selectedListing.amenities.split(',').map((a, i) => (
+                        ? (Array.isArray(selectedListing.amenities)
+                            ? selectedListing.amenities
+                            : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
                             <div key={i} className="flex items-center gap-3">
                               <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
-                              <span>{a.trim()}</span>
+                              <span>{typeof a === 'string' ? a.trim() : a}</span>
                             </div>
                           ))
                         : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
@@ -2271,10 +2273,12 @@ export function SearchPage() {
                 {showAmenities && (
                   <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
                     {selectedListing.amenities
-                      ? selectedListing.amenities.split(',').map((a, i) => (
+                      ? (Array.isArray(selectedListing.amenities)
+                          ? selectedListing.amenities
+                          : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
                           <div key={i} className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span>{a.trim()}</span>
+                            <span>{typeof a === 'string' ? a.trim() : a}</span>
                           </div>
                         ))
                       : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
