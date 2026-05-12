@@ -62,3 +62,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create payment intent' }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest) {
+  try {
+    const secretKey = resolveStripeSecretKey();
+    if (!secretKey) {
+      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    }
+
+    const stripe = new Stripe(secretKey, {
+      apiVersion: '2025-03-31.basil' as unknown as Stripe.LatestApiVersion,
+    });
+
+    const body = await req.json();
+    const { payment_intent_id, email, plate, phone, pricing_type } = body;
+
+    if (!payment_intent_id || !/^pi_/.test(payment_intent_id)) {
+      return NextResponse.json({ error: 'Invalid payment_intent_id' }, { status: 400 });
+    }
+
+    await stripe.paymentIntents.update(payment_intent_id, {
+      receipt_email: email || undefined,
+      metadata: {
+        ...(email ? { customer_email: email } : {}),
+        ...(plate ? { plate_number: plate } : {}),
+        ...(phone ? { customer_phone: phone } : {}),
+        ...(pricing_type ? { pricing_type } : {}),
+      },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('PaymentIntent update error:', error);
+    return NextResponse.json({ error: 'Failed to update payment intent' }, { status: 500 });
+  }
+}

@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
     // 3.5 Create verification inbox entry
     if (location?.id) {
-      await supabaseAdmin.from('verification_inbox').insert({
+      const { error: inboxErr } = await supabaseAdmin.from('verification_inbox').insert({
         location_id: location.id,
         owner_id: userId,
         owner_name: ownerName,
@@ -199,7 +199,8 @@ export async function POST(req: NextRequest) {
         address,
         status: 'pending',
         created_at: new Date().toISOString(),
-      }).catch(err => console.error('Inbox insert error:', err));
+      });
+      if (inboxErr) console.error('Inbox insert error:', inboxErr);
     }
 
     // 4. Ensure profile role = manager

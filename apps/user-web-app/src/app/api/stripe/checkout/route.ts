@@ -23,9 +23,9 @@ export const revalidate = 0;
 
 type PricingType = "hourly" | "daily" | "monthly";
 const STRIPE_CARD_MIN_AMOUNT_CENTS = 50;
-const unifiedStripeSuccessUrl =
-  "https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}";
-const unifiedStripeCancelUrl = "https://www.payparq.com/success";
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.payparq.com").replace(/\/$/, "");
+const unifiedStripeSuccessUrl = `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
+const unifiedStripeCancelUrl = `${siteUrl}/success`;
 const stripeApiVersion =
   "2025-03-31.basil" as unknown as Stripe.LatestApiVersion;
 
@@ -153,7 +153,7 @@ function buildSuccessUrl(params: {
   checkIn?: string;
   checkOut?: string;
 }) {
-  const url = new URL("https://www.payparq.com/success");
+  const url = new URL(`${siteUrl}/success`);
   url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
   if (params.locationId) {
     url.searchParams.set("location_id", params.locationId);

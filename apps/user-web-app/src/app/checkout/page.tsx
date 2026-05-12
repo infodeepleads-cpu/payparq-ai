@@ -216,7 +216,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 
 function PaidCheckoutForm({
   amountEur, locationName, checkIn, checkOut,
-  locationId, originalAmountCents, onAmountChange, isFree, address,
+  locationId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
 }: {
   amountEur: number;
   locationName: string;
@@ -227,6 +227,7 @@ function PaidCheckoutForm({
   onAmountChange: (cents: number) => void;
   isFree?: boolean;
   address?: string;
+  clientSecret?: string | null;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -294,6 +295,20 @@ function PaidCheckoutForm({
 
     const { error: submitErr } = await elements.submit();
     if (submitErr) { setSubmitError(submitErr.message ?? 'Payment failed.'); setSubmitting(false); return; }
+
+    // Update PaymentIntent metadata with user-entered details before confirming
+    if (clientSecret && clientSecret !== 'free') {
+      const piId = clientSecret.split('_secret_')[0];
+      if (piId?.startsWith('pi_')) {
+        try {
+          await fetch('/api/stripe/payment-intent', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+          });
+        } catch { /* non-blocking */ }
+      }
+    }
 
     const { error: confirmErr } = await stripe.confirmPayment({
       elements,
@@ -401,6 +416,18 @@ function PaidCheckoutForm({
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
                 onConfirm={async () => {
                   if (!stripe || !elements) return;
+                  if (clientSecret && clientSecret !== 'free') {
+                    const piId = clientSecret.split('_secret_')[0];
+                    if (piId?.startsWith('pi_')) {
+                      try {
+                        await fetch('/api/stripe/payment-intent', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                        });
+                      } catch { /* non-blocking */ }
+                    }
+                  }
                   const { error } = await stripe.confirmPayment({
                     elements,
                     confirmParams: { return_url: `${window.location.origin}/success` },
@@ -589,6 +616,7 @@ function CheckoutInner() {
         onAmountChange={handleAmountChange}
         isFree={clientSecret === 'free'}
         address={address}
+        clientSecret={clientSecret}
       />
     </Elements>
   );

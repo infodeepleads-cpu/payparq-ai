@@ -1289,5 +1289,87 @@ export async function POST(req: Request) {
     }
   }
 
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    console.log('✅ PaymentIntent succeeded:', paymentIntent.id);
+
+    const meta = paymentIntent.metadata ?? {};
+    let location_id = (meta.location_id ?? '').toString().trim();
+    const plate_number = (meta.plate_number ?? meta.plate ?? '').toString().trim() || 'UNKNOWN';
+    if (!location_id) location_id = 'DEFAULT_LOC';
+
+    const client = supabaseAdmin ?? supabase;
+    if (!client) {
+      console.warn('Supabase client not configured; skipping DB writes for PaymentIntent.');
+      return NextResponse.json({ received: true });
+    }
+
+    // Idempotency: skip if already stored
+    const { data: existing } = await client
+      .from('parking_sessions')
+      .select('id')
+      .eq('stripe_session_id', paymentIntent.id)
+      .maybeSingle();
+
+    if (existing) {
+      console.log(`🔄 PaymentIntent ${paymentIntent.id} already recorded. Skipping.`);
+      return NextResponse.json({ received: true });
+    }
+
+    const checkInIso = parseMetadataDatetime(meta.check_in);
+    const checkOutIso = parseMetadataDatetime(meta.check_out);
+    const pricingType = (meta.pricing_type ?? 'hourly').toString();
+    const entryTime = checkInIso ?? new Date(paymentIntent.created * 1000).toISOString();
+    const exitTime =
+      checkOutIso ??
+      resolveExitTimeFromQuantity({ entryIso: entryTime, quantity: 1, pricingType });
+
+    const durationMinutes =
+      exitTime
+        ? Math.max(1, Math.round((new Date(exitTime).getTime() - new Date(entryTime).getTime()) / 60000))
+        : null;
+
+    const email =
+      [paymentIntent.receipt_email, meta.customer_email, meta.email]
+        .map((v) => (v ?? '').toString().trim().toLowerCase())
+        .find((v) => v.length > 0) ?? '';
+
+    const customerPhone = (meta.customer_phone ?? '').toString().trim();
+    const amountCents = paymentIntent.amount ?? 0;
+
+    const { error: insertError } = await client.from('parking_sessions').insert({
+      location_id,
+      plate: plate_number,
+      mobile: customerPhone,
+      email,
+      price: amountCents / 100,
+      currency: (paymentIntent.currency || 'eur').toLowerCase(),
+      stripe_session_id: paymentIntent.id,
+      payment_status: 'paid',
+      status: 'active',
+      entry_time: entryTime,
+      exit_time: exitTime,
+      quantity: 1,
+      duration_minutes: durationMinutes,
+      stripe_metadata: {
+        ...meta,
+        source: 'payment_intent_succeeded',
+      },
+    });
+
+    if (insertError) {
+      console.error('❌ Supabase INSERT failed (PaymentIntent):', insertError);
+      return NextResponse.json({ error: insertError.message, received: true });
+    }
+
+    console.log('✨ Successfully inserted parking session from PaymentIntent!');
+    await sendOwnerPushNotification(location_id, {
+      plate: plate_number,
+      amount: amountCents,
+      email,
+      entryTime,
+    });
+  }
+
   return NextResponse.json({ received: true });
 }
