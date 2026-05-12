@@ -327,14 +327,13 @@ function PaidCheckoutForm({
       }
     }
 
-    // Extract payment intent ID from client secret for success URL
     const piId = clientSecret?.split('_secret_')[0] || '';
 
     const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: 'if_required',
       confirmParams: {
-        return_url: `${window.location.origin}/success`,
+        return_url: `${window.location.origin}/success${piId ? `?payment_intent=${piId}` : ''}`,
         payment_method_data: {
           billing_details: {
             email: email || undefined,
@@ -347,9 +346,12 @@ function PaidCheckoutForm({
     if (confirmErr) {
       setSubmitError(confirmErr.message ?? 'Payment failed.');
       setSubmitting(false);
-    } else if (paymentIntent?.status === 'succeeded') {
-      // Payment succeeded, redirect with PI ID in URL
-      window.location.href = `${window.location.origin}/success?payment_intent=${paymentIntent.id}`;
+    } else if (paymentIntent) {
+      // Any status (succeeded, processing) — redirect to success with PI ID
+      window.location.href = `${window.location.origin}/success?payment_intent=${paymentIntent.id || piId}`;
+    } else if (piId) {
+      // Fallback: no paymentIntent object but we have the ID from clientSecret
+      window.location.href = `${window.location.origin}/success?payment_intent=${piId}`;
     }
   };
 
