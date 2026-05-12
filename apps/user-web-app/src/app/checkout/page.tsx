@@ -329,6 +329,9 @@ function PaidCheckoutForm({
 
     const piId = clientSecret?.split('_secret_')[0] || '';
 
+    // Store PI ID in sessionStorage so success page can find it even if URL params are lost
+    if (piId) sessionStorage.setItem('last_payment_intent', piId);
+
     const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: 'if_required',

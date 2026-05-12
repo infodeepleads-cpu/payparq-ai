@@ -383,7 +383,8 @@ function ValetTicket({
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent');
+  const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') ||
+    (typeof window !== 'undefined' ? sessionStorage.getItem('last_payment_intent') : null);
   const hasRealSessionId = Boolean(
     sessionId &&
       sessionId !== '{CHECKOUT_SESSION_ID}' &&
@@ -461,6 +462,13 @@ function SuccessContent() {
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
   const checkoutStart = summary?.check_in || fallbackCheckIn || null;
   const checkoutEnd = summary?.check_out || fallbackCheckOut || null;
+
+  useEffect(() => {
+    // Clear stored PI ID once we've read it
+    if (sessionId && typeof window !== 'undefined') {
+      sessionStorage.removeItem('last_payment_intent');
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     let active = true;
