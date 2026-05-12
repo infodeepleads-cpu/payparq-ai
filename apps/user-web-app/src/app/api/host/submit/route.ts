@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
         addons_config: { enabled: addons },
         capacity: baseSpots,
         total_spots: baseSpots,
+        verification_status: 'pending_verification',
         verification_metadata: {
           listing_status: 'pending',
           // Contact
@@ -185,6 +186,20 @@ export async function POST(req: NextRequest) {
     if (locationError) {
       console.error('Location insert error:', locationError);
       return NextResponse.json({ error: 'Greška pri kreiranju lota' }, { status: 500 });
+    }
+
+    // 3.5 Create verification inbox entry
+    if (location?.id) {
+      await supabaseAdmin.from('verification_inbox').insert({
+        location_id: location.id,
+        owner_id: userId,
+        owner_name: ownerName,
+        owner_email: ownerEmail,
+        lot_name: lotName,
+        address,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+      }).catch(err => console.error('Inbox insert error:', err));
     }
 
     // 4. Ensure profile role = manager
