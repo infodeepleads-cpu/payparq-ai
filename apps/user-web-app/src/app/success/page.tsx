@@ -5,6 +5,7 @@ const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FooterBrand } from '@/components/FooterBrand';
+import { SiteHeader } from '@/components/SiteHeader';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type AddonsConfigOption = { id: string; label: string; price_cents: number };
@@ -937,7 +938,7 @@ function SuccessContent() {
         </svg>
       ),
       title: 'Vozite se unutra',
-      desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite:',
+      desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.',
       phone: emergencyPhone,
     },
     {
@@ -960,7 +961,7 @@ function SuccessContent() {
         </svg>
       ),
       title: 'Vozite se van',
-      desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite:',
+      desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.',
       phone: emergencyPhone,
     },
   ];
@@ -968,18 +969,9 @@ function SuccessContent() {
   return (
     <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
-      {/* Header */}
-      <header style={{ background: '#1A3A6B' }} className="px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded flex items-center justify-center border border-white/30" style={{ background: '#2451A0' }}>
-            <span className="text-white font-black text-sm">P</span>
-          </div>
-          <span className="text-white font-black text-base tracking-tight">payparq</span>
-        </div>
-        <span className="text-white/50 text-[11px] uppercase tracking-widest font-medium">Official Parking Permit</span>
-      </header>
+      <SiteHeader hideAnnouncementBar />
 
-      <main className="flex-1 py-5 pb-16">
+      <main className="flex-1 pt-24 pb-16">
         <div className="max-w-md mx-auto px-4 space-y-3">
 
           {/* ══════════════════════════════════════
@@ -991,9 +983,8 @@ function SuccessContent() {
             <div style={{ background: '#1A3A6B' }} className="px-5 py-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-white/60 text-[9px] uppercase tracking-[0.2em] font-bold mb-1">Republika Hrvatska · PayParq</p>
-                  <p className="text-white font-black text-[17px] uppercase tracking-wide leading-tight">Dozvola za parkiranje</p>
-                  <p className="text-white/60 text-[10px] font-mono mt-1">Parking Permit</p>
+                  <p className="text-white font-black text-[17px] uppercase tracking-wide leading-tight">Parking Pass</p>
+                  <p className="text-white/50 text-[10px] font-mono mt-0.5 tracking-widest">1 / 1</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   {resCode && (
@@ -1084,13 +1075,8 @@ function SuccessContent() {
               </div>
             </div>
 
-          </div>
-          {/* END PARKING PASS */}
 
-          {/* ══════════════════════════════════════
-              GETTING THERE
-          ══════════════════════════════════════ */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #CBD5E1' }}>
+            {/* ── Getting There ── */}
             <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kako doći · Getting There</p>
             </div>
@@ -1102,13 +1088,9 @@ function SuccessContent() {
                 </div>
               )}
               {mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
-                  style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}
-                >
+                  style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#2451A0' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -1127,114 +1109,57 @@ function SuccessContent() {
                 <p className="text-[12px] italic" style={{ color: '#94a3b8' }}>Adresa nije dostupna</p>
               )}
             </div>
-          </div>
 
-          {/* ══════════════════════════════════════
-              HOW IT WORKS
-          ══════════════════════════════════════ */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #CBD5E1' }}>
-            <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+            {/* ── Instructions ── */}
+            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
               <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Upute za korištenje · Instructions</p>
             </div>
-            <div className="px-5 py-3 divide-y" style={{ borderColor: '#E2E8F0' }}>
-              {howSteps.map((step, i) => {
-                const open = howStep === i;
-                return (
-                  <div key={i}>
-                    <button
-                      type="button"
-                      onClick={() => setHowStep(open ? null : i)}
-                      className="w-full flex items-center gap-3 py-3 text-left"
-                    >
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 font-black text-[11px] text-white" style={{ background: '#2451A0' }}>
-                        {i + 1}
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span style={{ color: '#2451A0' }}>{step.icon}</span>
-                        <p className="text-[14px] font-bold text-black">{step.title}</p>
-                      </div>
-                      <svg
-                        width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"
-                        className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-                      >
-                        <path d="M6 9l6 6 6-6"/>
-                      </svg>
-                    </button>
-                    {open && (
-                      <div className="pb-3 pl-10 pr-2">
-                        <p className="text-[13px] leading-relaxed" style={{ color: '#475569' }}>{step.desc}</p>
-                        {step.phone && (
-                          <a
-                            href={`tel:${step.phone}`}
-                            className="mt-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-bold"
-                            style={{ background: '#EBF0FA', border: '1px solid #2451A0', color: '#1A3A6B' }}
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.59 1.18h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                            </svg>
-                            {step.phone}
-                          </a>
-                        )}
-                      </div>
-                    )}
+            <div className="px-5 py-1 divide-y" style={{ borderColor: '#E2E8F0' }}>
+              {howSteps.map((step, i) => (
+                <div key={i} className="flex gap-3 py-2.5">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-black text-[10px] text-white mt-0.5" style={{ background: '#2451A0' }}>
+                    {i + 1}
                   </div>
-                );
-              })}
+                  <div>
+                    <p className="text-[13px] font-bold text-black">{step.title}</p>
+                    <p className="text-[12px] leading-relaxed mt-0.5" style={{ color: '#64748b' }}>{step.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
 
-          {/* 1b — Valet confirmation ticket (when valet included in price) */}
-          {showIncludedValet && summary?.session_id && (
-            <ValetTicket
-              sessionId={summary.session_id}
-              locationName={checkoutLocationName}
-              checkIn={checkoutStart}
-              checkOut={checkoutEnd}
-              attendant={summary.valet_attendant ?? null}
-              pickupPoint={summary.addons_config?.pickup_point ?? null}
-              lotPoint={summary.lot_point ?? null}
-              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
-              lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
-              trackUrl={activeTrackUrl}
-              formatDateTime={formatDateTime}
-              onSummon={() => handleSummon('car')}
-            />
-          )}
-
-          {/* 1c — Shuttle confirmation ticket (when shuttle included in price) */}
-          {showIncludedShuttle && summary?.session_id && (
-            <ShuttleTicket
-              sessionId={summary.session_id}
-              locationName={checkoutLocationName}
-              checkIn={checkoutStart}
-              checkOut={checkoutEnd}
-              attendant={summary.valet_attendant ?? null}
-              pickupPoint={summary.addons_config?.pickup_point ?? null}
-              lotPoint={summary.lot_point ?? null}
-              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
-              trackUrl={activeTrackUrl}
-              formatDateTime={formatDateTime}
-              onSummon={summary.flow_type === 'park_now' ? null : () => handleSummon('shuttle')}
-            />
-          )}
-
-          {/* Members zona — slim single link */}
-          {summary?.email && (
-            <div className="flex items-center justify-center py-1">
-              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2" style={{ color: '#2451A0' }}>
-                Members zona
-              </Link>
+            {/* ── Contact numbers ── */}
+            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kontakt · Support</p>
             </div>
-          )}
+            <div className="px-5 py-4 space-y-2.5">
+              <a href="tel:+385915963139"
+                className="block rounded-xl px-4 py-3"
+                style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>PayParq Priority Support</p>
+                <p className="text-[15px] font-black text-black mt-0.5">+385 91 596 3139</p>
+              </a>
+              {emergencyPhone && emergencyPhone !== '+385915963139' && (
+                <a href={`tel:${emergencyPhone}`} className="block rounded-xl px-4 py-3"
+                  style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>Lot Emergency Number</p>
+                  <p className="text-[15px] font-black text-black mt-0.5">{emergencyPhone}</p>
+                </a>
+              )}
+              {(!emergencyPhone || emergencyPhone === '+385915963139') && (
+                <div className="block rounded-xl px-4 py-3"
+                  style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>Lot Emergency Number</p>
+                  <p className="text-[13px] font-medium mt-0.5" style={{ color: '#94a3b8' }}>Prikazat će se pri dolasku</p>
+                </div>
+              )}
+            </div>
 
-          {/* ══ UNIFIED SERVICES WIDGET ══ */}
-          {/* ══ UNIFIED SERVICES WIDGET — spot + addons + summon in one card ══ */}
-          {(hasAnyAddonWidget || showSummonSection || summary?.assigned_spot !== undefined) && (
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm" style={{ border: '1.5px solid #CBD5E1' }}>
-              <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Usluge · Services</p>
-              </div>
-              <div className="divide-y" style={{ borderColor: '#E2E8F0' }}>
+            {/* ── (services removed) ── */}
+            {false && (
+              <>
+                <div style={{ display: 'none' }} />
+                <div style={{ display: 'none' }}>
 
                 {/* ── Parking spot row ── */}
                 {summary?.assigned_spot ? (
@@ -1453,17 +1378,62 @@ function SuccessContent() {
                   </div>
                 )}
 
-              </div>
+                </div>
+              </>
+            )}
+
+          </div>
+
+          {/* Members zona — slim single link */}
+          {summary?.email && (
+            <div className="flex items-center justify-center py-1">
+              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2" style={{ color: '#2451A0' }}>
+                Members zona
+              </Link>
             </div>
           )}
-
 
         </div>
       </main>
 
-      <footer className="px-6 py-8 print:hidden" style={{ background: '#1A3A6B' }}>
-        <div className="max-w-sm mx-auto">
-          <FooterBrand />
+      {/* Footer — matches home page */}
+      <footer className="bg-[#05020A] border-t border-white/10 print:hidden notranslate" translate="no" data-no-translate="true">
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">Parking · Made Simple</p>
+              <p className="text-sm text-white/70 max-w-md">Rezervirajte, i parkirajte bez problema.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
+                <Link href="/about" className="block hover:text-white transition-colors">About</Link>
+                <Link href="/careers" className="block hover:text-white transition-colors">Careers</Link>
+                <Link href="/news" className="block hover:text-white transition-colors">News</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Vision</p>
+                <Link href="/product" className="block hover:text-white transition-colors">Product</Link>
+                <Link href="/parking" className="block hover:text-white transition-colors">Parking</Link>
+                <Link href="/security" className="block hover:text-white transition-colors">Security</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
+                <Link href="/legal" className="block hover:text-white transition-colors">Legal</Link>
+                <Link href="/privacy" className="block hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="block hover:text-white transition-colors">Terms</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
+                <Link href="/locations" className="block hover:text-white transition-colors">Locations</Link>
+                <Link href="/members" className="block hover:text-white transition-colors">Members</Link>
+                <Link href="/support" className="block hover:text-white transition-colors">Support</Link>
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 pt-6 border-t border-white/10">
+            <FooterBrand />
+          </div>
         </div>
       </footer>
 
@@ -1480,7 +1450,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center text-white/40 text-sm" style={{ background: '#1A3A6B' }}>
+      <div className="min-h-screen flex items-center justify-center text-black/30 text-sm" style={{ background: '#EBF0FA' }}>
         Učitavanje...
       </div>
     }>

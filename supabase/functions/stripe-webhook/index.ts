@@ -814,6 +814,56 @@ serve(async (req: Request) => {
       }
       const persisted = await persistCheckoutSession(session);
       if (!persisted.ok) return json({ error: persisted.message ?? "Failed persist" }, persisted.status ?? 500);
+    } else if (event.type === "payment_intent.succeeded") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      console.log(`[V19] payment_intent.succeeded: ${pi.id}`);
+      const meta = pi.metadata ?? {};
+      const locationInput = String(meta.location_id ?? "").trim();
+      if (locationInput) {
+        const resolvedLoc = await resolveLocation(locationInput);
+        if (resolvedLoc?.id) {
+          const { data: existingPi } = await admin.from("parking_sessions").select("id").eq("stripe_session_id", pi.id).maybeSingle();
+          if (!existingPi?.id) {
+            const email = String(pi.receipt_email ?? meta.customer_email ?? meta.email ?? "").trim().toLowerCase();
+            const plate = String(meta.plate_number ?? meta.plate ?? "").trim().toUpperCase() || "PENDING";
+            const phone = String(meta.customer_phone ?? "").trim();
+            const checkInDate = meta.check_in ? parseMetadataDatetime(meta.check_in) : null;
+            const checkOutDate = meta.check_out ? parseMetadataDatetime(meta.check_out) : null;
+            const entryTime = checkInDate ?? new Date(pi.created * 1000);
+            const pricingType = String(meta.pricing_type ?? "hourly").trim();
+            const durationUnit = pricingType === "monthly" ? "month" : pricingType === "daily" ? "day" : "hour";
+            const durationMinutes = durationUnit === "month" ? 30 * 24 * 60 : durationUnit === "day" ? 24 * 60 : 60;
+            const exitTime = checkOutDate ?? new Date(entryTime.getTime() + durationMinutes * 60 * 1000);
+            await insertSessionWithSchemaFallback({
+              location_id: resolvedLoc.id,
+              plate,
+              email,
+              mobile: phone,
+              type: pricingType,
+              ui_type: "guest",
+              status: entryTime.getTime() > Date.now() ? "scheduled" : "active",
+              payment_status: "paid",
+              price: pi.amount / 100,
+              amount_cents: pi.amount,
+              currency: (pi.currency ?? "eur").toLowerCase(),
+              payment_source: "regular",
+              is_lpr_scan: false,
+              stripe_session_id: pi.id,
+              entry_time: entryTime.toISOString(),
+              exit_time: exitTime.toISOString(),
+              end_time: exitTime.toISOString(),
+              created_at: entryTime.toISOString(),
+              updated_at: entryTime.toISOString(),
+              quantity: 1,
+              duration_minutes: durationMinutes,
+              stripe_metadata: JSON.stringify({ ...meta, source: "payment_intent_succeeded", stripe_id: pi.id }),
+            });
+            console.log(`[V19] Inserted parking session for PaymentIntent ${pi.id}`);
+          } else {
+            console.log(`[V19] PaymentIntent ${pi.id} already recorded, skipping.`);
+          }
+        }
+      }
     } else if (event.type === "checkout.session.expired") {
       const session = event.data.object as Stripe.Checkout.Session;
       await cleanupExpiredCheckoutSession(session);
