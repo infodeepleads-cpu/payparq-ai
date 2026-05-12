@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
     if (locationError) {
       console.error('Location insert error:', locationError);
-      return NextResponse.json({ error: 'Greška pri kreiranju lota' }, { status: 500 });
+      return NextResponse.json({ error: `Greška pri kreiranju lota: ${locationError.message} (code: ${locationError.code})` }, { status: 500 });
     }
 
     // 3.5 Create verification inbox entry
