@@ -152,10 +152,8 @@ function buildSuccessUrl(params: {
   displayId?: string;
   checkIn?: string;
   checkOut?: string;
-  siteUrl?: string;
 }) {
-  const baseUrl = params.siteUrl || siteUrl;
-  const url = new URL(`${baseUrl}/success`);
+  const url = new URL(`${siteUrl}/success`);
   url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
   if (params.locationId) {
     url.searchParams.set("location_id", params.locationId);
@@ -975,20 +973,10 @@ async function resolveLocationPricing(
   };
 }
 
-function resolveSiteUrl(req: NextRequest): string {
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "").trim();
-  if (envUrl && !envUrl.startsWith("localhost")) {
-    return envUrl;
-  }
-  const origin = req.nextUrl.origin || "https://payparq.app";
-  return origin;
-}
-
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({} as { [key: string]: unknown }));
   console.log("[Stripe Checkout] Request body:", body);
   const url = new URL(req.url);
-  const requestSiteUrl = resolveSiteUrl(req);
   console.log("[Stripe Checkout] Request URL searchParams:", url.searchParams.toString());
   const location_id =
     (typeof body.location_id === "string" && body.location_id) ||
@@ -1115,8 +1103,8 @@ export async function POST(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: "setup",
-        success_url: `${requestSiteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${requestSiteUrl}/success`,
+        success_url: unifiedStripeSuccessUrl,
+        cancel_url: unifiedStripeCancelUrl,
         ...checkoutCustomerParams,
         payment_method_types: ["card"],
         setup_intent_data: {
@@ -1131,8 +1119,7 @@ export async function POST(req: NextRequest) {
           },
         },
       });
-      const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
-    return NextResponse.json({ url: checkoutUrl });
+      return NextResponse.json({ url: session.url });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "stripe_setup_failed";
       return NextResponse.json({ error: message }, { status: 400 });
@@ -1347,7 +1334,6 @@ export async function POST(req: NextRequest) {
       displayId: resolvedDisplayId,
       checkIn: effectiveCheckIn || undefined,
       checkOut: finalCheckOut || undefined,
-      siteUrl: requestSiteUrl,
     });
     const session = await createSessionWithComputedValues({
       sessionQuantity: quantity,
@@ -1360,8 +1346,7 @@ export async function POST(req: NextRequest) {
       lotCommissionRate,
       paymentMethodTypes: ["card", "sepa_debit"],
     });
-    const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
-    return NextResponse.json({ url: checkoutUrl });
+    return NextResponse.json({ url: session.url });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "";
     // If SEPA is not enabled, retry with just Card
@@ -1387,8 +1372,7 @@ export async function POST(req: NextRequest) {
           lotCommissionRate,
           paymentMethodTypes: ["card"],
         });
-        const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
-    return NextResponse.json({ url: checkoutUrl });
+        return NextResponse.json({ url: session.url });
       } catch (retryErr: unknown) {
         const retryMessage = retryErr instanceof Error
           ? retryErr.message
@@ -1474,7 +1458,7 @@ export async function POST(req: NextRequest) {
     return await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: params.checkoutSuccessUrl,
-      cancel_url: `${requestSiteUrl}/success`,
+      cancel_url: unifiedStripeCancelUrl,
       payment_method_types,
       allow_promotion_codes: allowPromotionCodes,
       line_items: [
@@ -1682,8 +1666,8 @@ export async function GET(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: "setup",
-        success_url: `${requestSiteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${requestSiteUrl}/success`,
+        success_url: unifiedStripeSuccessUrl,
+        cancel_url: unifiedStripeCancelUrl,
         ...checkoutCustomerParams,
         payment_method_types: ["card"],
         setup_intent_data: {
@@ -1892,7 +1876,6 @@ export async function GET(req: NextRequest) {
     displayId: resolvedDisplayId,
     checkIn: effectiveCheckIn || undefined,
     checkOut: finalCheckOut || undefined,
-    siteUrl: requestSiteUrl,
   });
   const submitMessageBase = forceCETLabel(buildSubmitMessage({
     pricingType: pricing_type,
@@ -1994,7 +1977,7 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: checkoutSuccessUrl,
-      cancel_url: `${requestSiteUrl}/success`,
+      cancel_url: unifiedStripeCancelUrl,
       payment_method_types: ["card"],
       allow_promotion_codes: allowPromotionCodes,
       line_items: [
