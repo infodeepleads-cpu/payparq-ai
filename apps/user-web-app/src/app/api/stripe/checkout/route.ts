@@ -1131,7 +1131,8 @@ export async function POST(req: NextRequest) {
           },
         },
       });
-      return NextResponse.json({ url: session.url });
+      const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
+    return NextResponse.json({ url: checkoutUrl });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "stripe_setup_failed";
       return NextResponse.json({ error: message }, { status: 400 });
@@ -1359,7 +1360,8 @@ export async function POST(req: NextRequest) {
       lotCommissionRate,
       paymentMethodTypes: ["card", "sepa_debit"],
     });
-    return NextResponse.json({ url: session.url });
+    const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
+    return NextResponse.json({ url: checkoutUrl });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "";
     // If SEPA is not enabled, retry with just Card
@@ -1385,7 +1387,8 @@ export async function POST(req: NextRequest) {
           lotCommissionRate,
           paymentMethodTypes: ["card"],
         });
-        return NextResponse.json({ url: session.url });
+        const checkoutUrl = session.url || `https://checkout.stripe.com/pay/${session.id}`;
+    return NextResponse.json({ url: checkoutUrl });
       } catch (retryErr: unknown) {
         const retryMessage = retryErr instanceof Error
           ? retryErr.message
