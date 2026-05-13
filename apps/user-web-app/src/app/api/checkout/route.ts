@@ -25,15 +25,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const origin = request.nextUrl.origin || 'https://payparq.app';
-
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
-            currency: 'eur',
+            currency: 'usd',
             product_data: {
               name: listingName,
               description: `Parking for ${duration} hours starting ${startDate} at ${startTime}`,
@@ -50,8 +48,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/search`,
+      success_url: `${request.nextUrl.origin}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${request.nextUrl.origin}/search`,
       metadata: {
         listingId,
         startDate,
