@@ -1221,6 +1221,8 @@ export async function POST(req: Request) {
         .map((v) => (v ?? '').toString().trim().toLowerCase())
         .find((v) => v.length > 0) ?? '';
 
+    console.log(`📧 Email resolved: "${email}" from receipt_email="${paymentIntent.receipt_email}" customer_email="${meta.customer_email}"`);
+
     const customerPhone = (meta.customer_phone ?? '').toString().trim();
     const amountCents = paymentIntent.amount ?? 0;
 
@@ -1285,6 +1287,7 @@ export async function POST(req: Request) {
 
     const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;
     const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
+    console.log(`📧 Sending email - has email: ${!!email}, has resendKey: ${!!resendKey}, resendKey starts with: ${resendKey?.slice(0, 10)}...`);
     if (email && resendKey) {
       try {
         const res = await fetch('https://api.resend.com/emails', {
@@ -1293,10 +1296,12 @@ export async function POST(req: Request) {
           body: JSON.stringify({ from: fromAddress, to: email, subject: `Rezervacija potvrđena · ${reservationCode}`, html }),
         });
         const resBody = await res.text().catch(() => '');
-        console.log(`📧 Resend: ${res.status} to ${email} (${reservationCode}) — ${resBody}`);
+        console.log(`📧 Resend Response: status=${res.status}, to=${email}, code=${reservationCode}, body=${resBody}`);
       } catch (e) {
         console.error('📧 Email error:', e);
       }
+    } else {
+      console.warn(`📧 Skipped email send: email="${email}" resendKey exists=${!!resendKey}`);
     }
 
     await sendOwnerPushNotification(location_id, {

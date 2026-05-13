@@ -37,7 +37,7 @@ function fmtTime(iso: string) {
 // ─── Right summary panel ──────────────────────────────────────────────────────
 
 function SummaryPanel({
-  locationName, locationId, address, checkIn, checkOut,
+  locationName, locationId, displayId, address, checkIn, checkOut,
   originalAmountCents, amountEur,
   promoStatus, promoInput, promoError, promoDiscountCents, promoDiscountPercent,
   onApplyPromo, onRemovePromo, onInputChange,
@@ -45,6 +45,7 @@ function SummaryPanel({
 }: {
   locationName: string;
   locationId: string;
+  displayId?: string;
   address: string;
   checkIn: string;
   checkOut: string;
@@ -146,7 +147,8 @@ function SummaryPanel({
     <div className="bg-white rounded-lg border border-gray-200 sticky top-8 p-6 space-y-6">
       <div className="hidden lg:block">
         <p className="text-sm font-semibold text-gray-900 mb-1">{locationName}</p>
-        <p className="text-xs text-gray-600">{address || locationId}</p>
+        <p className="text-xs text-gray-600 mb-2">{address || locationId}</p>
+        {displayId && <p className="text-xs text-gray-700">ID Lokacije: <span className="font-mono font-medium text-gray-900">{displayId}</span></p>}
       </div>
 
       <div className="lg:hidden">
@@ -160,7 +162,7 @@ function SummaryPanel({
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-900 leading-none">
               {checkIn && checkOut
-                ? `${new Date(checkIn).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkIn).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' })} → ${new Date(checkOut).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkOut).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                ? `${new Date(checkIn).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkIn).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} → ${new Date(checkOut).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkOut).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`
                 : '—'}
             </span>
             <button onClick={openDatePicker} className="px-2 py-1 text-xs font-bold text-gray-900 hover:text-gray-700 focus:outline-none">
@@ -168,7 +170,6 @@ function SummaryPanel({
             </button>
           </div>
         </div>
-        <p className="text-xs text-gray-700 mt-3">ID Lokacije: <span className="font-mono font-medium">{locationName || '—'}</span></p>
       </div>
 
       {showDatePicker && typeof document !== 'undefined' && createPortal(
@@ -305,6 +306,21 @@ function SummaryPanel({
           {promoError && showPromoDropdown && <p className="text-xs text-red-600 text-center">{promoError}</p>}
         </div>
 
+        <div className="flex flex-col gap-1 mb-4">
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </span>
+            <span>Cancel free until start time</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-700">
+            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-700 flex items-center justify-center">
+              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </span>
+            <span>Jednostavno promijenite rezervaciju</span>
+          </div>
+        </div>
+
         {promoDiscountPercent === 100 ? (
           <div className="border-t border-gray-100 pt-4 text-center">
             <div className="text-sm font-bold text-green-600 mb-2">COUPON APPLIED</div>
@@ -382,13 +398,14 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 
 function PaidCheckoutForm({
   amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
-  locationId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
+  locationId, displayId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
 }: {
   amountEur: number;
   locationName: string;
   checkIn: string;
   checkOut: string;
   locationId: string;
+  displayId?: string;
   originalAmountCents: number;
   onAmountChange: (cents: number, promoCode?: string) => void;
   isFree?: boolean;
@@ -425,6 +442,25 @@ function PaidCheckoutForm({
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+
+  // Update payment intent with email, plate, phone when they change
+  useEffect(() => {
+    if (!clientSecret || clientSecret === 'free') return;
+    const piId = clientSecret.split('_secret_')[0];
+    if (!piId?.startsWith('pi_')) return;
+    if (!email && !plate && !phone) return; // Skip if nothing to update
+
+    fetch('/api/stripe/payment-intent', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        payment_intent_id: piId,
+        email: email || undefined,
+        plate: plate || undefined,
+        phone: phone || undefined,
+      }),
+    }).catch(() => {});
+  }, [email, plate, phone, clientSecret]);
 
   function updatePIAmount(baseAmountCents: number) {
     if (!clientSecret || clientSecret === 'free') return;
@@ -609,6 +645,7 @@ function PaidCheckoutForm({
           <SummaryPanel
             locationName={locationName}
             locationId={locationId}
+            displayId={displayId}
             address={address || ''}
             checkIn={checkIn}
             checkOut={checkOut}
@@ -777,6 +814,7 @@ function CheckoutInner() {
   const initialAmountCents = parseInt(searchParams.get('amount_cents') || '0', 10);
   const locationName = searchParams.get('name') || 'Parking';
   const address = searchParams.get('address') || '';
+  const displayId = searchParams.get('display_id') || '';
 
   const [amountCents, setAmountCents] = useState(initialAmountCents);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -800,7 +838,7 @@ function CheckoutInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createIntent = useCallback(async (cents: number, promoCode?: string) => {
+  const createIntent = useCallback(async (cents: number, promoCode?: string, userEmail?: string) => {
     if (cents < 50) { setClientSecret('free'); return; }
     try {
       const res = await fetch('/api/stripe/payment-intent', {
@@ -810,6 +848,8 @@ function CheckoutInner() {
           location_id: locId, amount_cents: cents,
           check_in: checkIn, check_out: checkOut,
           description: `PayParq — ${locationName}`,
+          email: userEmail || undefined,
+          address: address || undefined,
           ...(promoCode ? { promo_code: promoCode } : {}),
         }),
       });
@@ -895,7 +935,7 @@ function CheckoutInner() {
       <PaidCheckoutForm
         amountEur={amountEur} locationName={locationName}
         checkIn={checkIn} checkOut={checkOut}
-        locationId={locId} originalAmountCents={initialAmountCents}
+        locationId={locId} displayId={displayId} originalAmountCents={initialAmountCents}
         onAmountChange={handleAmountChange}
         isFree={clientSecret === 'free'}
         address={address}

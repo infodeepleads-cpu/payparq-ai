@@ -87,10 +87,15 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid payment_intent_id' }, { status: 400 });
     }
 
+    // Fetch existing payment intent to preserve metadata
+    const existingPI = await stripe.paymentIntents.retrieve(payment_intent_id);
+    const existingMeta = existingPI.metadata ?? {};
+
     await stripe.paymentIntents.update(payment_intent_id, {
       ...(amount_cents && amount_cents >= 50 ? { amount: Math.round(amount_cents) } : {}),
       receipt_email: email || undefined,
       metadata: {
+        ...existingMeta,
         ...(email ? { customer_email: email } : {}),
         ...(plate ? { plate_number: plate } : {}),
         ...(phone ? { customer_phone: phone } : {}),

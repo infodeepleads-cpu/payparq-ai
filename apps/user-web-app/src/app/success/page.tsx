@@ -1002,7 +1002,7 @@ function SuccessContent() {
             <div style={{ background: '#1A3A6B' }} className="px-5 py-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-white font-black text-[17px] uppercase tracking-wide leading-tight">Parking Pass</p>
+                  <p suppressHydrationWarning className="text-white font-black text-[17px] uppercase tracking-wide leading-tight">Parking Pass</p>
                   <p className="text-white/50 text-[10px] font-mono mt-0.5 tracking-widest">1 / 1</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">

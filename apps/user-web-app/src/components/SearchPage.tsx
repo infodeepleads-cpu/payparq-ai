@@ -54,6 +54,7 @@ const VEHICLE_DATABASE = [
 
 interface Parking {
   id: string;
+  display_id?: string;
   name: string;
   address: string;
   lat: number;
@@ -135,7 +136,6 @@ export function SearchPage() {
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
-  const [mapZoom, setMapZoom] = useState(15);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
@@ -180,7 +180,7 @@ export function SearchPage() {
   })();
 
   const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
-  const serviceFee = parseFloat((subtotal * 0.05).toFixed(2));
+  const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((showTotalPrice ? subtotal + serviceFee : subtotal).toFixed(2));
 
   const formatDuration = () => {
@@ -209,6 +209,7 @@ export function SearchPage() {
       amount_cents: Math.round(total * 100).toString(),
       name: listing.name || listing.address,
       address: listing.address,
+      ...(listing.display_id ? { display_id: listing.display_id } : {}),
     });
     return `/checkout?${params.toString()}`;
   };
@@ -356,6 +357,7 @@ export function SearchPage() {
 
             return {
               id: loc.id,
+              display_id: loc.display_id || undefined,
               name: loc.name || 'Parking',
               address: loc.address || '',
               lat: lat,
@@ -1698,7 +1700,7 @@ export function SearchPage() {
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Naknada za uslugu (5%)</p>
+                    <p className="text-sm text-gray-600">Naknada za uslugu (€0.99 + 5%)</p>
                     <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
                   </div>
                 </div>
@@ -1840,9 +1842,6 @@ export function SearchPage() {
             mapContainerStyle={{ width: '100%', height: '100%' }}
             onLoad={(map) => {
               mapRef.current = map;
-              map.addListener('zoom_changed', () => {
-                setMapZoom(map.getZoom() ?? 15);
-              });
             }}
             options={{
               styles: [
@@ -1867,10 +1866,8 @@ export function SearchPage() {
                   fill="${isSelected ? 'white' : 'black'}">${label}</text>
               </svg>`;
               const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
-              const baseSize = 63.375;
-              const scaleFactor = mapZoom / 15;
-              const scaledWidth = baseSize * scaleFactor;
-              const scaledHeight = 58.305 * scaleFactor;
+              const scaledWidth = 63.375;
+              const scaledHeight = 58.305;
               return (
                 <Marker
                   key={listing.id}
@@ -1890,11 +1887,8 @@ export function SearchPage() {
               const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
                 <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
               </svg>`;
-              const basePinWidth = 31.2;
-              const basePinHeight = 40.95;
-              const pinScaleFactor = mapZoom / 15;
-              const pinScaledWidth = basePinWidth * pinScaleFactor;
-              const pinScaledHeight = basePinHeight * pinScaleFactor;
+              const pinScaledWidth = 31.2;
+              const pinScaledHeight = 40.95;
               return (
                 <Marker
                   position={searchLocationPin}
@@ -2074,9 +2068,6 @@ export function SearchPage() {
                 mapContainerStyle={{ width: '100%', height: '100%' }}
                 onLoad={(map) => {
                   mapRef.current = map;
-                  map.addListener('zoom_changed', () => {
-                    setMapZoom(map.getZoom() ?? 15);
-                  });
                 }}
               >
                 {filteredListings.map((listing) => {
@@ -2091,10 +2082,8 @@ export function SearchPage() {
                       fill="${isSelected ? 'white' : 'black'}">${label}</text>
                   </svg>`;
                   const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
-                  const baseSize = 48.75;
-                  const scaleFactor = mapZoom / 15;
-                  const scaledWidth = baseSize * scaleFactor;
-                  const scaledHeight = 44.85 * scaleFactor;
+                  const scaledWidth = 48.75;
+                  const scaledHeight = 44.85;
                   return (
                     <Marker
                       key={listing.id}
