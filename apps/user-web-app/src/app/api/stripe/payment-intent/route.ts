@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { location_id, amount_cents, check_in, check_out, description, promo_code } = body;
+    const { location_id, amount_cents, check_in, check_out, description, promo_code, email, address, plate_number, display_id } = body;
 
     if (!location_id || !amount_cents || amount_cents < 50) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
@@ -48,11 +48,16 @@ export async function POST(req: NextRequest) {
       currency: 'eur',
       automatic_payment_methods: { enabled: true },
       description: description || 'PayParq rezervacija parkinga',
+      receipt_email: email || undefined,
       metadata: {
         location_id,
         check_in: check_in || '',
         check_out: check_out || '',
         ...(promo_code ? { promo_code } : {}),
+        ...(email ? { customer_email: email } : {}),
+        ...(address ? { address } : {}),
+        ...(plate_number ? { plate_number } : {}),
+        ...(display_id ? { display_id } : {}),
         source: 'user-web-app',
       },
     });
