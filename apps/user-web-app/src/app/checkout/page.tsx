@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -40,6 +41,7 @@ function SummaryPanel({
   originalAmountCents, amountEur,
   promoStatus, promoInput, promoError, promoDiscountCents, promoDiscountPercent,
   onApplyPromo, onRemovePromo, onInputChange,
+  onCheckInChange, onCheckOutChange, onDatePickerToggle, onAddHours, hourlyRateCents,
 }: {
   locationName: string;
   locationId: string;
@@ -56,17 +58,56 @@ function SummaryPanel({
   onApplyPromo: () => void;
   onRemovePromo: () => void;
   onInputChange: (v: string) => void;
+  onCheckInChange?: (newCheckIn: string) => void;
+  onCheckOutChange?: (newCheckOut: string) => void;
+  onDatePickerToggle?: (open: boolean) => void;
+  onAddHours?: (hours: number, addCents: number) => void;
+  hourlyRateCents?: number;
 }) {
   const subtotalEur = originalAmountCents / 100;
-  const serviceFeeEur = parseFloat((subtotalEur * 0.05).toFixed(2));
+  const serviceFeeEur = 0.99 + (subtotalEur * 0.05);
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 
   const durationHours = checkIn && checkOut ? Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60)) : 1;
   const [showPromoDropdown, setShowPromoDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempCheckIn, setTempCheckIn] = useState(checkIn);
+  const [tempCheckOut, setTempCheckOut] = useState(checkOut);
+  const [selectedAddOn, setSelectedAddOn] = useState<number | null>(null);
 
-  function formatFullDateTime(iso: string) {
+  const hr = hourlyRateCents ?? 0;
+  const add1hCents = Math.round(hr);
+  const add2hCents = Math.round(2 * hr * 0.90);
+  const add3hCents = Math.round(3 * hr * 0.85);
+
+  // Generate date options (next 30 days)
+  const generateDateOptions = () => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const formatted = date.toISOString().slice(0, 10);
+      const label = date.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+      dates.push({ value: formatted, label });
+    }
+    return dates;
+  };
+
+  // Generate time options (every 30 min)
+  const generateTimeOptions = () => {
+    const times: Array<{ value: string; label: string }> = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m of [0, 30]) {
+        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        times.push({ value: timeStr, label: timeStr });
+      }
+    }
+    return times;
+  };
+
+  function toDateTimeLocal(iso: string) {
     if (!iso) return '';
     const d = new Date(iso);
     const year = d.getFullYear();
@@ -74,8 +115,31 @@ function SummaryPanel({
     const date = String(d.getDate()).padStart(2, '0');
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return year + '-' + month + '-' + date + ' ' + hours + ':' + minutes + ':' + seconds + ' CET';
+    return `${year}-${month}-${date}T${hours}:${minutes}`;
+  }
+
+  function fromDateTimeLocal(dateStr: string, timeStr: string) {
+    if (!dateStr || !timeStr) return '';
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const d = new Date();
+    d.setFullYear(year, month - 1, day);
+    d.setHours(hours, minutes, 0, 0);
+    return d.toISOString();
+  }
+
+  function handleApplyDateChanges() {
+    if (onCheckInChange) onCheckInChange(tempCheckIn);
+    if (onCheckOutChange) onCheckOutChange(tempCheckOut);
+    setShowDatePicker(false);
+    onDatePickerToggle?.(false);
+  }
+
+  function openDatePicker() {
+    setTempCheckIn(checkIn);
+    setTempCheckOut(checkOut);
+    setShowDatePicker(true);
+    onDatePickerToggle?.(true);
   }
 
   return (
@@ -91,45 +155,122 @@ function SummaryPanel({
       </div>
 
       <div className="border-t border-gray-100 pt-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-600">Reservation Period</p>
-          <button onClick={() => setShowDatePicker(!showDatePicker)} className="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700">
-            Change
-          </button>
-        </div>
-        <div className="space-y-2 text-xs text-gray-700">
-          <p>From: <span className="font-mono font-medium">{checkIn ? formatFullDateTime(checkIn) : '—'}</span></p>
-          <p>To: <span className="font-mono font-medium">{checkOut ? formatFullDateTime(checkOut) : '—'}</span></p>
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-400 mb-2.5">Check-in → Check-out</p>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-900 leading-none">
+              {checkIn && checkOut
+                ? `${new Date(checkIn).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkIn).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' })} → ${new Date(checkOut).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkOut).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                : '—'}
+            </span>
+            <button onClick={openDatePicker} className="px-2 py-1 text-xs font-bold text-gray-900 hover:text-gray-700 focus:outline-none">
+              Promijeni
+            </button>
+          </div>
         </div>
         <p className="text-xs text-gray-700 mt-3">ID Lokacije: <span className="font-mono font-medium">{locationName || '—'}</span></p>
       </div>
 
-      {showDatePicker && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center" onClick={() => setShowDatePicker(false)}>
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Change Reservation Period</h3>
-            <p className="text-sm text-gray-600 mb-4">Date/time picker widget would go here</p>
-            <button onClick={() => setShowDatePicker(false)} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-              Close
+      {showDatePicker && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center" style={{background:'rgba(0,0,0,0.18)', zIndex: 2147483647}} onClick={() => { setShowDatePicker(false); onDatePickerToggle?.(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 pb-20 w-96 mx-4 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-bold text-gray-900 mb-4 text-center">Change Reservation</p>
+            <div className="space-y-4 flex-1 overflow-visible">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
+                  <select
+                    value={tempCheckIn.split('T')[0]}
+                    onChange={(e) => setTempCheckIn(fromDateTimeLocal(e.target.value, tempCheckIn.split('T')[1]?.slice(0, 5) || '00:00'))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  >
+                    {generateDateOptions().map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Start Time</label>
+                  <select
+                    value={tempCheckIn.split('T')[1]?.slice(0, 5) || '00:00'}
+                    onChange={(e) => setTempCheckIn(fromDateTimeLocal(tempCheckIn.split('T')[0], e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  >
+                    {generateTimeOptions().map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
+                  <select
+                    value={tempCheckOut.split('T')[0]}
+                    onChange={(e) => setTempCheckOut(fromDateTimeLocal(e.target.value, tempCheckOut.split('T')[1]?.slice(0, 5) || '00:00'))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  >
+                    {generateDateOptions().map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">End Time</label>
+                  <select
+                    value={tempCheckOut.split('T')[1]?.slice(0, 5) || '00:00'}
+                    onChange={(e) => setTempCheckOut(fromDateTimeLocal(tempCheckOut.split('T')[0], e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+                  >
+                    {generateTimeOptions().map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleApplyDateChanges}
+              className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors mb-2"
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => setShowDatePicker(false)}
+              className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              Cancel
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="border-t border-gray-100 pt-6 space-y-4">
         <div className="grid grid-cols-3 gap-2">
-          <button className="px-2 py-2 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 transition-colors text-center">
-            <div className="font-semibold text-gray-900">+1h</div>
-            <div className="text-xs text-gray-600 mt-0.5">+€{(subtotalEur * 0.75).toFixed(2)}</div>
-          </button>
-          <button className="px-2 py-2 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 transition-colors text-center">
-            <div className="font-semibold text-gray-900">+2h</div>
-            <div className="text-xs text-gray-600 mt-0.5">+€{(subtotalEur * 1.5).toFixed(2)}</div>
-          </button>
-          <button className="px-2 py-2 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 transition-colors text-center">
-            <div className="font-semibold text-gray-900">+3h</div>
-            <div className="text-xs text-gray-600 mt-0.5">+€{(subtotalEur * 2.25).toFixed(2)}</div>
-          </button>
+          {[{ h: 1, cents: add1hCents }, { h: 2, cents: add2hCents }, { h: 3, cents: add3hCents }].map(({ h, cents }) => {
+            const isSelected = selectedAddOn === h;
+            const isDisabled = selectedAddOn !== null && !isSelected;
+            return (
+              <button
+                key={h}
+                disabled={isDisabled}
+                onClick={() => { onAddHours?.(isSelected ? -h : h, isSelected ? -cents : cents); setSelectedAddOn(isSelected ? null : h); }}
+                className={`px-2 py-2 text-xs font-medium border border-gray-300 rounded transition-colors text-center text-gray-900 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white`}
+              >
+                <div className="font-semibold">+{h}h</div>
+                <div className="text-xs mt-0.5 text-gray-600">+€{(cents / 100).toFixed(2)}</div>
+              </button>
+            );
+          })}
         </div>
 
         <div className="space-y-2">
@@ -169,17 +310,33 @@ function SummaryPanel({
               <span>Subtotal</span>
               <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-gray-700">
-              <span>Service Fee</span>
-              <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
-              <span>Total</span>
-              <span>€{amountEur.toFixed(2)}</span>
+            {promoDiscountCents > 0 && (
+              <div className="flex justify-between text-green-600 font-semibold">
+                <span>Promo Discount (-{promoDiscountPercent}%)</span>
+                <span>-€{(promoDiscountCents / 100).toFixed(2)}</span>
+              </div>
+            )}
+            {serviceFeeEur > 0 && (
+              <div className="flex justify-between text-gray-700">
+                <span>Service Fee</span>
+                <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
+              </div>
+            )}
+            {amountEur > 0 && (
+              <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
+                <span>Total</span>
+                <span>€{amountEur.toFixed(2)}</span>
+              </div>
+            )}
+            {amountEur === 0 && (
+              <div className="flex justify-between text-green-600 font-bold pt-2 border-t border-gray-100">
+                <span>Total</span>
+                <span>FREE</span>
+              </div>
+            )}
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
@@ -215,7 +372,7 @@ function Field({ label, note, ...props }: { label: string; note?: string } & Rea
 // ─── Paid checkout form ───────────────────────────────────────────────────────
 
 function PaidCheckoutForm({
-  amountEur, locationName, checkIn, checkOut,
+  amountEur, locationName, checkIn: initialCheckIn, checkOut: initialCheckOut,
   locationId, originalAmountCents, onAmountChange, isFree, address, clientSecret,
 }: {
   amountEur: number;
@@ -238,12 +395,65 @@ function PaidCheckoutForm({
   const [plate, setPlate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [checkIn, setCheckIn] = useState(initialCheckIn);
+  const [checkOut, setCheckOut] = useState(initialCheckOut);
+  const [displayAmountCents, setDisplayAmountCents] = useState(originalAmountCents);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  // Service fee: 0.99€ + 5% of parking price
+  const serviceFeeEurCents = Math.round((99 + (displayAmountCents * 0.05)));
+  const totalWithFeeEurCents = displayAmountCents + serviceFeeEurCents;
+
+  // Hourly rate derived from original booking — used to reprice on duration change
+  const originalDurationHours = Math.max(
+    0.5,
+    (new Date(initialCheckOut).getTime() - new Date(initialCheckIn).getTime()) / (1000 * 60 * 60)
+  );
+  const hourlyRateCents = originalAmountCents / originalDurationHours;
 
   const [promoStatus, setPromoStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoDiscountCents, setPromoDiscountCents] = useState(0);
   const [promoDiscountPercent, setPromoDiscountPercent] = useState(0);
+
+  function updatePIAmount(baseAmountCents: number) {
+    if (!clientSecret || clientSecret === 'free') return;
+    const piId = clientSecret.split('_secret_')[0];
+    if (!piId?.startsWith('pi_')) return;
+    const fee = Math.round(99 + (baseAmountCents * 0.05));
+    const totalAmount = baseAmountCents + fee;
+    fetch('/api/stripe/payment-intent', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_intent_id: piId, amount_cents: totalAmount }),
+    }).catch(() => {});
+  }
+
+  const handleCheckInChange = useCallback((newCheckIn: string) => {
+    setCheckIn(newCheckIn);
+    const newDurationHours = Math.max(0.5, (new Date(checkOut).getTime() - new Date(newCheckIn).getTime()) / (1000 * 60 * 60));
+    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    setDisplayAmountCents(newAmountCents);
+    updatePIAmount(newAmountCents);
+  }, [checkOut, hourlyRateCents, clientSecret]);
+
+  const handleCheckOutChange = useCallback((newCheckOut: string) => {
+    setCheckOut(newCheckOut);
+    const newDurationHours = Math.max(0.5, (new Date(newCheckOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60));
+    const newAmountCents = Math.max(100, Math.round(newDurationHours * hourlyRateCents));
+    setDisplayAmountCents(newAmountCents);
+    updatePIAmount(newAmountCents);
+  }, [checkIn, hourlyRateCents, clientSecret]);
+
+  const handleAddHours = useCallback((hours: number, addCents: number) => {
+    const newCheckOut = new Date(checkOut);
+    newCheckOut.setHours(newCheckOut.getHours() + hours);
+    setCheckOut(newCheckOut.toISOString());
+    const newAmountCents = displayAmountCents + addCents;
+    setDisplayAmountCents(newAmountCents);
+    updatePIAmount(newAmountCents);
+  }, [checkOut, displayAmountCents, clientSecret]);
 
   const applyPromo = async () => {
     const code = promoInput.trim();
@@ -393,8 +603,8 @@ function PaidCheckoutForm({
             address={address || ''}
             checkIn={checkIn}
             checkOut={checkOut}
-            originalAmountCents={originalAmountCents}
-            amountEur={amountEur}
+            originalAmountCents={displayAmountCents}
+            amountEur={totalWithFeeEurCents / 100}
             promoStatus={promoStatus}
             promoInput={promoInput}
             promoError={promoError}
@@ -403,6 +613,11 @@ function PaidCheckoutForm({
             onApplyPromo={applyPromo}
             onRemovePromo={removePromo}
             onInputChange={(v) => { setPromoInput(v); setPromoError(null); }}
+            onCheckInChange={handleCheckInChange}
+            onCheckOutChange={handleCheckOutChange}
+            onDatePickerToggle={setDatePickerOpen}
+            onAddHours={handleAddHours}
+            hourlyRateCents={hourlyRateCents}
           />
 
           {/* ── Right: form ── */}
@@ -577,7 +792,6 @@ function CheckoutInner() {
   }, []);
 
   const createIntent = useCallback(async (cents: number, promoCode?: string) => {
-    setClientSecret(null);
     if (cents < 50) { setClientSecret('free'); return; }
     try {
       const res = await fetch('/api/stripe/payment-intent', {
@@ -598,13 +812,15 @@ function CheckoutInner() {
 
   useEffect(() => {
     if (!locId) { setFetchError('Invalid parameters.'); return; }
-    createIntent(initialAmountCents);
+    const fee = Math.round(99 + (initialAmountCents * 0.05));
+    createIntent(initialAmountCents + fee);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAmountChange = useCallback((newCents: number, promoCode?: string) => {
     setAmountCents(newCents);
-    createIntent(newCents, promoCode);
+    const fee = newCents > 0 ? Math.round(99 + (newCents * 0.05)) : 0;
+    createIntent(newCents + fee, promoCode);
   }, [createIntent]);
 
   const amountEur = amountCents / 100;

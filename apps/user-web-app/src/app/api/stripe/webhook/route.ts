@@ -385,169 +385,47 @@ function buildBookingConfirmationEmail(params: {
   exitTime: string | null;
   amountCents: number;
   currency: string;
-  valetEnabled: boolean;
-  shuttleEnabled: boolean;
-  membersUrl: string;
+  valetEnabled?: boolean;
+  shuttleEnabled?: boolean;
+  membersUrl?: string;
+  plate?: string;
+  address?: string;
 }): string {
   const {
     sessionId, reservationCode, email, locationName, locationDisplayId,
-    entryTime, exitTime, amountCents, currency, valetEnabled, shuttleEnabled, membersUrl,
+    entryTime, exitTime, amountCents, currency, plate, address,
   } = params;
 
-  const BASE = 'https://www.payparq.com';
-  const locationLabel = locationName || locationDisplayId || 'Safe Parking by PayParq';
-  const successUrl = `${BASE}/success?session_id=${encodeURIComponent(sessionId)}`;
-  const insuranceUrl = `${BASE}/insurance/apply?email=${encodeURIComponent(email)}`;
-  const invoiceUrl = `${BASE}/api/members/invoice?mode=document&stripe_session_id=${encodeURIComponent(sessionId)}&fallback_stripe_session_id=${encodeURIComponent(sessionId)}`;
+  const formatDateOnly = (iso: string | null) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
-  const card = (bg: string, border: string, content: string) =>
-    `<table width="100%" cellpadding="0" cellspacing="0" style="background:${bg};border-radius:16px;border:1px solid ${border};margin-top:12px;"><tr><td style="padding:16px;">${content}</td></tr></table>`;
+  const formatTimeOnly = (iso: string | null) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
-  const sectionLabel = (text: string) =>
-    `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:#999;margin-bottom:10px;">${text}</div>`;
+  const dateIn = formatDateOnly(entryTime);
+  const timeIn = formatTimeOnly(entryTime);
+  const dateOut = formatDateOnly(exitTime);
+  const timeOut = formatTimeOnly(exitTime);
+  const amountFormatted = `€${(amountCents / 100).toFixed(2)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodeURIComponent(reservationCode)}`;
 
-  const trackingUrl = `https://www.payparq.com/api/track?session=${encodeURIComponent(sessionId)}`;
-
-  const valetTicket = valetEnabled ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #d0c4ff;margin-top:12px;">
-      <tr><td style="background:#5F3DFC;padding:10px 14px;">
-        <span style="color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Valet potvrda</span>
-        <span style="float:right;color:rgba(255,255,255,0.75);font-size:11px;font-family:monospace;">${deriveValetCode(sessionId)}</span>
-      </td></tr>
-      <tr><td style="background:#F5F2FF;padding:12px 14px;font-size:12px;color:#111;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
-        </table>
-      </td></tr>
-      <tr><td style="background:rgba(95,61,252,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(95,61,252,0.6);">Pokažite kod valet agentu pri predaji ključeva</td></tr>
-      <tr><td style="padding:10px 14px;text-align:center;">
-        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#5F3DFC;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
-        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
-      </td></tr>
-    </table>` : '';
-
-  const shuttleTicket = shuttleEnabled ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:12px;overflow:hidden;border:1px solid #a7d8c9;margin-top:12px;">
-      <tr><td style="background:#0F6E56;padding:10px 14px;">
-        <span style="color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;">Shuttle potvrda</span>
-        <span style="float:right;color:rgba(255,255,255,0.75);font-size:11px;font-family:monospace;">${deriveShuttleCodeEmail(sessionId)}</span>
-      </td></tr>
-      <tr><td style="background:#E1F5EE;padding:12px 14px;font-size:12px;color:#111;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="color:#888;padding-bottom:6px;">Lokacija</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${locationLabel}</td></tr>
-          <tr><td style="color:#888;padding-bottom:6px;">1. vožnja</td><td style="font-weight:600;text-align:right;padding-bottom:6px;">${formatDateTimeHr(entryTime)}</td></tr>
-          <tr><td style="color:#888;">2. vožnja</td><td style="font-weight:600;text-align:right;">${formatDateTimeHr(exitTime)}</td></tr>
-        </table>
-      </td></tr>
-      <tr><td style="background:rgba(15,110,86,0.08);padding:10px 14px;text-align:center;font-size:10px;color:rgba(15,110,86,0.6);">Pokažite kod vozaču shuttlea pri ukrcaju</td></tr>
-      <tr><td style="padding:10px 14px;text-align:center;">
-        <a href="${trackingUrl}" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#0F6E56;color:#fff;font-size:12px;font-weight:700;text-decoration:none;">Prati vozača uživo →</a>
-        <div style="margin-top:6px;font-size:10px;color:#aaa;">Dostupno 15 min prije polaska</div>
-      </td></tr>
-    </table>` : '';
-
-  // Produži boravak — 4 link-buttons pointing to success page
-  const extendCard = card('#fff', 'rgba(0,0,0,0.08)', `
-    ${sectionLabel('Produži boravak')}
-    <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${['+1h', '+2h', '+1d', '+2d'].map(label => `
-        <td width="25%" style="padding:0 3px;">
-          <a href="${successUrl}" style="display:block;text-align:center;padding:9px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">${label}</a>
-        </td>`).join('')}
-    </tr></table>
-    <div style="margin-top:8px;font-size:10px;color:#bbb;text-align:center;">Kliknite za produženje na stranici rezervacije</div>
-  `);
-
-  // Summon section — only if valet or shuttle included
-  const summonCard = (valetEnabled || shuttleEnabled) ? card('#fff', 'rgba(0,0,0,0.08)', `
-    ${sectionLabel('Pozovi vozilo')}
-    <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${valetEnabled ? `<td width="${shuttleEnabled ? '50%' : '100%'}" style="padding:0 3px;">
-        <a href="${successUrl}" style="display:block;text-align:center;padding:14px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">
-          🚗 Pozovi auto<br><span style="font-size:10px;font-weight:400;color:#999;">Valet dovozi · ~6 min</span>
-        </a>
-      </td>` : ''}
-      ${shuttleEnabled ? `<td width="${valetEnabled ? '50%' : '100%'}" style="padding:0 3px;">
-        <a href="${successUrl}" style="display:block;text-align:center;padding:14px 0;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#f9f9f9;font-size:13px;font-weight:600;color:#111;text-decoration:none;">
-          🚌 Pozovi shuttle<br><span style="font-size:10px;font-weight:400;color:#999;">1 smjer · ~4 min</span>
-        </a>
-      </td>` : ''}
-    </tr></table>
-  `) : '';
-
-  // Quick actions
-  const actionBtn = (href: string, label: string) =>
-    `<a href="${href}" style="display:block;text-align:center;padding:12px;border-radius:12px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:13px;font-weight:500;color:#111;text-decoration:none;margin-bottom:8px;">${label}</a>`;
-
-  const actionsCard = card('#fff', 'rgba(0,0,0,0.08)', `
-    ${sectionLabel('Brze akcije')}
-    ${actionBtn('https://m.uber.com/', 'Naruči Uber')}
-    ${actionBtn(insuranceUrl, 'Osiguranje vozila')}
-    ${actionBtn(invoiceUrl, 'Preuzmi potvrdu')}
-  `);
 
   return `<!DOCTYPE html>
-<html lang="hr">
+<html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
   <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;">
-
-      <!-- Brand -->
-      <tr><td style="padding-bottom:20px;text-align:center;">
-        <span style="font-size:20px;font-weight:700;color:#111;">Payparq</span>
-      </td></tr>
-
-      <!-- 1. Rezervacija potvrđena card -->
-      <tr><td style="background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:20px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-          <tr>
-            <td width="40" valign="top" style="padding-top:2px;">
-              <table cellpadding="0" cellspacing="0"><tr><td style="width:36px;height:36px;border-radius:50%;background:#E1F5EE;text-align:center;vertical-align:middle;font-size:16px;font-weight:700;color:#0F6E56;">✓</td></tr></table>
-            </td>
-            <td style="padding-left:12px;">
-              <div style="font-size:11px;color:#999;">Rezervacija potvrđena &nbsp;<span style="font-family:monospace;color:#333;font-weight:700;">${reservationCode}</span></div>
-              <div style="font-size:15px;font-weight:700;color:#111;margin-top:3px;">${locationLabel}</div>
-            </td>
-          </tr>
-        </table>
-        <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
-          <tr>
-            <td width="50%" style="padding-bottom:10px;"><div style="color:#999;margin-bottom:2px;">Lokacija ID</div><div style="font-weight:700;font-family:monospace;color:#111;">${locationDisplayId || '—'}</div></td>
-            <td width="50%" style="padding-bottom:10px;"><div style="color:#999;margin-bottom:2px;">Cijena</div><div style="font-weight:700;color:#111;">${formatAmountEmail(amountCents, currency)}</div></td>
-          </tr>
-          <tr>
-            <td><div style="color:#999;margin-bottom:2px;">Od</div><div style="font-weight:700;color:#111;">${formatDateTimeHr(entryTime)}</div></td>
-            <td><div style="color:#999;margin-bottom:2px;">Kraj</div><div style="font-weight:700;color:#111;">${formatDateTimeHr(exitTime)}</div></td>
-          </tr>
-        </table>
-        ${valetTicket}
-        ${shuttleTicket}
-      </td></tr>
-
-      <!-- 2. Produži boravak -->
-      <tr><td>${extendCard}</td></tr>
-
-      <!-- 3. Pozovi vozilo (conditional) -->
-      ${summonCard ? `<tr><td>${summonCard}</td></tr>` : ''}
-
-      <!-- 4. Brze akcije -->
-      <tr><td>${actionsCard}</td></tr>
-
-      <!-- 5. Members zona CTA -->
-      <tr><td style="padding-top:16px;text-align:center;">
-        <a href="${membersUrl}" style="display:inline-block;padding:13px 32px;border-radius:999px;background:#5F3DFC;color:#fff;text-decoration:none;font-weight:700;font-size:14px;">Otvori Members zonu</a>
-      </td></tr>
-
-      <!-- Footer -->
-      <tr><td style="padding-top:24px;text-align:center;font-size:11px;color:#bbb;line-height:1.6;">
-        Payparq &middot; <a href="https://www.payparq.com" style="color:#bbb;">payparq.com</a><br>
-        Ova poruka šalje se automatski. Molimo ne odgovarajte na nju.
-      </td></tr>
-
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);">
+      <tr><td style="background:#1A3A6B;padding:20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="color:#fff;font-size:24px;font-weight:900;text-transform:uppercase;letter-spacing:2px;">Parking Pass</div><div style="color:rgba(255,255,255,0.5);font-size:10px;font-family:monospace;margin-top:4px;letter-spacing:2px;">1 / 1</div></td><td align="right"><div style="color:#fff;font-family:monospace;font-size:12px;font-weight:900;background:rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;">${reservationCode}</div></td></tr></table></td></tr>
+      <tr><td style="height:6px;background:linear-gradient(90deg, #2451A0 0%, #3B82F6 50%, #2451A0 100%);"></td></tr>
+      <tr><td style="padding:20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;padding-right:16px;"><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Location</div><div style="font-size:17px;font-weight:900;color:#000;margin-bottom:12px;">${locationName || locationDisplayId || 'Parking'}</div>${address ? `<div style="font-size:11px;color:#64748b;line-height:1.4;margin-bottom:12px;">${address}</div>` : ''}${plate ? `<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Plate</div><div style="font-size:15px;font-weight:900;font-family:monospace;letter-spacing:4px;margin-bottom:12px;">${plate}</div>` : ''}<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">From / Od</div><div style="font-size:12px;color:#64748b;margin-bottom:2px;">${dateIn}</div><div style="font-size:28px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;margin-bottom:12px;">${timeIn}</div><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">To / Do</div><div style="font-size:12px;color:#64748b;margin-bottom:2px;">${dateOut}</div><div style="font-size:28px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;">${timeOut}</div></td><td style="vertical-align:top;text-align:center;width:140px;padding-left:16px;"><div style="border:2px solid #2451A0;border-radius:8px;background:#fff;padding:8px;display:inline-block;margin-bottom:8px;"><img src="${qrUrl}" width="112" height="112" alt="QR" style="display:block;" /></div><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Scan</div></td></tr></table></td></tr>
+      <tr><td style="padding:0 20px;"><div style="border-top:2px dashed #2451A0;"></div></td></tr>
+      <tr><td style="background:#F0F5FF;padding:16px 20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Total Paid</div><div style="font-size:24px;font-weight:900;color:#1A3A6B;">${amountFormatted}</div></td><td align="right" style="vertical-align:top;">${email ? `<div style="font-family:monospace;font-size:10px;color:#999;margin-bottom:8px;">${email}</div>` : ''}<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">VALID</div></td></tr></table></td></tr>
     </table>
   </td></tr>
 </table>
@@ -1363,6 +1241,55 @@ export async function POST(req: Request) {
     }
 
     console.log('✨ Successfully inserted parking session from PaymentIntent!');
+
+    // Send parking pass email
+    const reservationCode = deriveReservationCode(paymentIntent.id);
+    let locationName: string | null = null;
+    let locationDisplayId: string | null = (meta.display_id as string | null) ?? null;
+    try {
+      if (location_id && location_id !== 'DEFAULT_LOC') {
+        const { data: locRow } = await client
+          .from('locations')
+          .select('name,display_id,address')
+          .eq('id', location_id)
+          .maybeSingle();
+        if (locRow) {
+          locationName = (locRow as { name?: string | null }).name ?? null;
+          locationDisplayId = (locRow as { display_id?: string | null }).display_id ?? locationDisplayId;
+        }
+      }
+    } catch { /* best effort */ }
+
+    const html = buildBookingConfirmationEmail({
+      sessionId: paymentIntent.id,
+      reservationCode,
+      email,
+      locationName,
+      locationDisplayId,
+      entryTime: entryIso,
+      exitTime: exitIso,
+      amountCents,
+      currency: paymentIntent.currency?.toUpperCase() || 'EUR',
+      plate: plate_number !== 'UNKNOWN' ? plate_number : undefined,
+      address: (meta.address ?? '').toString().trim() || undefined,
+    });
+
+    const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;
+    const fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'PayParq <team@info.payparq.com>';
+    if (email && resendKey) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: fromAddress, to: email, subject: `Rezervacija potvrđena · ${reservationCode}`, html }),
+        });
+        const resBody = await res.text().catch(() => '');
+        console.log(`📧 Resend: ${res.status} to ${email} (${reservationCode}) — ${resBody}`);
+      } catch (e) {
+        console.error('📧 Email error:', e);
+      }
+    }
+
     await sendOwnerPushNotification(location_id, {
       plate: plate_number,
       amount: amountCents,
