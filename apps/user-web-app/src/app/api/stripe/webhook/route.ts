@@ -375,7 +375,7 @@ function formatAmountEmail(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
-function buildBookingConfirmationEmail(params: {
+async function buildBookingConfirmationEmail(params: {
   sessionId: string;
   reservationCode: string;
   email: string;
@@ -390,7 +390,7 @@ function buildBookingConfirmationEmail(params: {
   membersUrl?: string;
   plate?: string;
   address?: string;
-}): string {
+}): Promise<string> {
   const {
     sessionId, reservationCode, email, locationName, locationDisplayId,
     entryTime, exitTime, amountCents, currency, plate, address,
@@ -411,7 +411,14 @@ function buildBookingConfirmationEmail(params: {
   const dateOut = formatDateOnly(exitTime);
   const timeOut = formatTimeOnly(exitTime);
   const amountFormatted = `€${(amountCents / 100).toFixed(2)}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodeURIComponent(reservationCode)}`;
+
+  let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodeURIComponent(reservationCode)}`;
+  try {
+    const QRCode = await import('qrcode');
+    qrUrl = await QRCode.default.toDataURL(reservationCode, { width: 128, margin: 1, color: { dark: '#1A3A6B', light: '#ffffff' } });
+  } catch (e) {
+    console.warn('QR code generation failed, using fallback:', e);
+  }
 
 
   return `<!DOCTYPE html>
@@ -483,7 +490,7 @@ async function sendBookingConfirmation(
   const plate = (meta.plate_number ?? meta.plate ?? '').toString().trim() || undefined;
   const address = (meta.address ?? '').toString().trim() || undefined;
 
-  const html = buildBookingConfirmationEmail({
+  const html = await buildBookingConfirmationEmail({
     sessionId: session.id,
     reservationCode,
     email,
@@ -1262,7 +1269,7 @@ export async function POST(req: Request) {
       }
     } catch { /* best effort */ }
 
-    const html = buildBookingConfirmationEmail({
+    const html = await buildBookingConfirmationEmail({
       sessionId: paymentIntent.id,
       reservationCode,
       email,

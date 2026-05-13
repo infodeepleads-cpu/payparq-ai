@@ -305,40 +305,47 @@ function SummaryPanel({
           {promoError && showPromoDropdown && <p className="text-xs text-red-600 text-center">{promoError}</p>}
         </div>
 
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-xs font-semibold text-gray-600 mb-3">Price Breakdown</p>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between text-gray-700">
-              <span>Subtotal</span>
-              <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
-            </div>
-            {promoDiscountCents > 0 && (
-              <div className="flex justify-between text-green-600 font-semibold">
-                <span>Promo Discount (-{promoDiscountPercent}%)</span>
-                <span>-€{(promoDiscountCents / 100).toFixed(2)}</span>
-              </div>
-            )}
-            {serviceFeeEur > 0 && (
+        {promoDiscountPercent === 100 ? (
+          <div className="border-t border-gray-100 pt-4 text-center">
+            <div className="text-sm font-bold text-green-600 mb-2">COUPON APPLIED</div>
+            <div className="text-2xl font-bold text-green-600">CHECKOUT FREE</div>
+          </div>
+        ) : (
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-600 mb-3">Price Breakdown</p>
+            <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-700">
-                <span>Service Fee</span>
-                <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
+                <span>Subtotal</span>
+                <span className="font-medium">€{subtotalEur.toFixed(2)}</span>
               </div>
-            )}
-            {amountEur > 0 && (
-              <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
-                <span>Total</span>
-                <span>€{amountEur.toFixed(2)}</span>
-              </div>
-            )}
-            {amountEur <= 0 && (
-              <div className="flex justify-between text-green-600 font-bold pt-2 border-t border-gray-100">
-                <span>Total</span>
-                <span>€0.00</span>
-              </div>
-            )}
+              {promoDiscountCents > 0 && (
+                <div className="flex justify-between text-green-600 font-semibold">
+                  <span>Promo Discount (-{promoDiscountPercent}%)</span>
+                  <span>-€{(promoDiscountCents / 100).toFixed(2)}</span>
+                </div>
+              )}
+              {serviceFeeEur > 0 && (
+                <div className="flex justify-between text-gray-700">
+                  <span>Service Fee</span>
+                  <span className="font-medium">€{serviceFeeEur.toFixed(2)}</span>
+                </div>
+              )}
+              {amountEur > 0 && (
+                <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100">
+                  <span>Total</span>
+                  <span>€{amountEur.toFixed(2)}</span>
+                </div>
+              )}
+              {amountEur <= 0 && (
+                <div className="flex justify-between text-green-600 font-bold pt-2 border-t border-gray-100">
+                  <span>Total</span>
+                  <span>€0.00</span>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -91,16 +91,19 @@ export default function PayPage() {
       if (authToken) {
         headers.Authorization = `Bearer ${authToken}`;
       }
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers,
         body: JSON.stringify({
-          location_id: location.trim(),
-          plate_number: "",
-          customer_email: customerEmail,
-          flow_type: flow,
-          check_in: checkIn ? new Date(checkIn).toISOString() : undefined,
-          check_out: checkOut ? new Date(checkOut).toISOString() : undefined,
+          listingId: location.trim(),
+          listingName: location.trim(),
+          startDate: checkIn ? new Date(checkIn).toLocaleDateString() : new Date().toLocaleDateString(),
+          startTime: checkIn ? new Date(checkIn).toLocaleTimeString() : new Date().toLocaleTimeString(),
+          duration: checkIn && checkOut ? Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60)) : 1,
+          pricePerHour: 0,
+          subtotal: 0,
+          fees: 0,
+          total: Math.max(1, Math.round((amountCentsHint || 0) / 100 * 100) / 100),
         }),
       });
 
@@ -110,15 +113,15 @@ export default function PayPage() {
         return;
       }
 
-      const data = (await res.json().catch(() => null)) as { url?: string } | null;
+      const data = (await res.json().catch(() => null)) as { sessionId?: string } | null;
 
-      if (!data?.url) {
+      if (!data?.sessionId) {
         setError("Checkout link not available. Please try again.");
         setProcessing(null);
         return;
       }
 
-      window.location.href = data.url;
+      window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
     } catch {
       setError("Something went wrong. Please try again.");
       setProcessing(null);

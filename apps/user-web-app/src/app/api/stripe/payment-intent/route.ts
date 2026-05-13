@@ -76,13 +76,14 @@ export async function PUT(req: NextRequest) {
     });
 
     const body = await req.json();
-    const { payment_intent_id, email, plate, phone, pricing_type } = body;
+    const { payment_intent_id, email, plate, phone, pricing_type, amount_cents } = body;
 
     if (!payment_intent_id || !/^pi_/.test(payment_intent_id)) {
       return NextResponse.json({ error: 'Invalid payment_intent_id' }, { status: 400 });
     }
 
     await stripe.paymentIntents.update(payment_intent_id, {
+      ...(amount_cents && amount_cents >= 50 ? { amount: Math.round(amount_cents) } : {}),
       receipt_email: email || undefined,
       metadata: {
         ...(email ? { customer_email: email } : {}),
