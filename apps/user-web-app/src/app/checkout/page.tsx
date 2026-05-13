@@ -587,7 +587,7 @@ function PaidCheckoutForm({
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Lock className="w-3 h-3" />
-            <span className="font-medium">Sigurna naplata</span>
+            <span className="font-medium">Secure Checkout</span>
           </div>
         </div>
       </header>
@@ -664,6 +664,19 @@ function PaidCheckoutForm({
             {/* Payment Method */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
+              <PaymentElement
+                options={{
+                  layout: { type: 'accordion' },
+                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
+                  wallets: { googlePay: 'auto', applePay: 'auto' },
+                  fields: { billingDetails: { email: 'never', phone: 'never' } },
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">ili</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
               <ExpressCheckoutElement
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
                 onConfirm={async () => {
@@ -687,19 +700,6 @@ function PaidCheckoutForm({
                     confirmParams: { return_url: successUrl },
                   });
                   if (error) console.error(error);
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">ili</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
-              <PaymentElement
-                options={{
-                  layout: { type: 'accordion' },
-                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
-                  wallets: { googlePay: 'auto', applePay: 'auto' },
-                  fields: { billingDetails: { email: 'never', phone: 'never' } },
                 }}
               />
             </div>
@@ -745,7 +745,7 @@ function PaidCheckoutForm({
           <div className="flex items-center gap-4" translate="no">
             <span className="text-gray-500">Powered by <span className="font-black text-gray-900">Stripe</span></span>
             <span>·</span>
-            <a href="/terms" className="hover:text-gray-600 transition-colors">Uvjeti</a>
+            <a href="/terms" className="hover:text-gray-600 transition-colors">Terms</a>
             <a href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</a>
             <a href="/contact" className="hover:text-gray-600 transition-colors">Contact</a>
           </div>
