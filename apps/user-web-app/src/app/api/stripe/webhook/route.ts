@@ -480,6 +480,9 @@ async function sendBookingConfirmation(
     }
   } catch { /* best effort */ }
 
+  const plate = (meta.plate_number ?? meta.plate ?? '').toString().trim() || undefined;
+  const address = (meta.address ?? '').toString().trim() || undefined;
+
   const html = buildBookingConfirmationEmail({
     sessionId: session.id,
     reservationCode,
@@ -490,9 +493,8 @@ async function sendBookingConfirmation(
     exitTime: exitIso,
     amountCents: Number(session.amount_total ?? 0),
     currency: session.currency || 'EUR',
-    valetEnabled,
-    shuttleEnabled,
-    membersUrl: `https://www.payparq.com/members?email=${encodeURIComponent(email)}`,
+    plate,
+    address,
   });
 
   try {
