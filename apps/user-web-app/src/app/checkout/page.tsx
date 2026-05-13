@@ -65,7 +65,7 @@ function SummaryPanel({
   hourlyRateCents?: number;
 }) {
   const subtotalEur = originalAmountCents / 100;
-  const serviceFeeEur = 0.99 + (subtotalEur * 0.05);
+  const serviceFeeEur = promoDiscountPercent === 100 ? 0 : 0.99 + (subtotalEur * 0.05);
   const discountEur = promoDiscountCents / 100;
   const isFree = amountEur <= 0;
 
@@ -173,7 +173,7 @@ function SummaryPanel({
 
       {showDatePicker && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 flex items-center justify-center" style={{background:'rgba(0,0,0,0.18)', zIndex: 2147483647}} onClick={() => { setShowDatePicker(false); onDatePickerToggle?.(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl p-6 pb-20 w-96 mx-4 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 pb-6 w-96 mx-4 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <p className="text-sm font-bold text-gray-900 mb-4 text-center">Change Reservation</p>
             <div className="space-y-4 flex-1 overflow-visible">
               <div className="grid grid-cols-2 gap-3">
@@ -237,18 +237,20 @@ function SummaryPanel({
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleApplyDateChanges}
-              className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors mb-2"
-            >
-              Apply
-            </button>
-            <button
-              onClick={() => setShowDatePicker(false)}
-              className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
+            <div className="pt-6 space-y-2">
+              <button
+                onClick={handleApplyDateChanges}
+                className="w-full py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
+              >
+                Apliciraj
+              </button>
+              <button
+                onClick={() => setShowDatePicker(false)}
+                className="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Otkazati
+              </button>
+            </div>
           </div>
         </div>,
         document.body
@@ -328,10 +330,10 @@ function SummaryPanel({
                 <span>€{amountEur.toFixed(2)}</span>
               </div>
             )}
-            {amountEur === 0 && (
+            {amountEur <= 0 && (
               <div className="flex justify-between text-green-600 font-bold pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span>FREE</span>
+                <span>€0.00</span>
               </div>
             )}
             </div>
@@ -664,19 +666,6 @@ function PaidCheckoutForm({
             {/* Payment Method */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
-              <PaymentElement
-                options={{
-                  layout: { type: 'accordion' },
-                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
-                  wallets: { googlePay: 'auto', applePay: 'auto' },
-                  fields: { billingDetails: { email: 'never', phone: 'never' } },
-                }}
-              />
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">ili</span>
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
               <ExpressCheckoutElement
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
                 onConfirm={async () => {
@@ -700,6 +689,19 @@ function PaidCheckoutForm({
                     confirmParams: { return_url: successUrl },
                   });
                   if (error) console.error(error);
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400">ili</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <PaymentElement
+                options={{
+                  layout: { type: 'accordion' },
+                  paymentMethodOrder: ['card', 'google_pay', 'apple_pay', 'paypal'],
+                  wallets: { googlePay: 'auto', applePay: 'auto' },
+                  fields: { billingDetails: { email: 'never', phone: 'never' } },
                 }}
               />
             </div>
