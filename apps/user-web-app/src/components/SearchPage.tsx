@@ -2,17 +2,36 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { GoogleMap, Marker, OverlayView, useJsApiLoader } from '@react-google-maps/api';
-import { createClient } from '@supabase/supabase-js';
 import { SiteHeader } from './SiteHeader';
 import { ListingCard } from './ListingCard';
 import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
-import { MapPin, Star, Search, ChevronRight, Info, Footprints, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock } from 'lucide-react';
+import { DestinationPickerWidget } from './DestinationPickerWidget';
+import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
+
+const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number; type: string }>> = {
+  split: [
+    { name: 'Riva', lat: 43.5088, lng: 16.4406, type: 'landmark' },
+    { name: 'Bačvice Beach', lat: 43.5095, lng: 16.4470, type: 'beach' },
+    { name: 'Marjan Park', lat: 43.5150, lng: 16.4200, type: 'park' },
+    { name: 'Diocletian Palace', lat: 43.5086, lng: 16.4399, type: 'landmark' },
+    { name: 'Split Airport', lat: 43.5388, lng: 16.2973, type: 'airport' },
+    { name: 'City Center Shopping', lat: 43.5088, lng: 16.4350, type: 'shopping' },
+  ],
+  zagreb: [
+    { name: 'Ban Jelačić Square', lat: 45.8150, lng: 15.9819, type: 'landmark' },
+    { name: 'Zrinjevac Park', lat: 45.8113, lng: 15.9765, type: 'park' },
+    { name: 'Maksimir Park', lat: 45.8234, lng: 16.0089, type: 'park' },
+    { name: 'Zagreb Airport', lat: 45.7429, lng: 16.0688, type: 'airport' },
+    { name: 'Avenue Mall', lat: 45.8166, lng: 15.9797, type: 'shopping' },
+    { name: 'Mirogoj Cemetery', lat: 45.8303, lng: 15.9736, type: 'landmark' },
+  ],
+};
 
 const VEHICLE_DATABASE = [
   { make: 'Honda', model: 'Civic', height: 1.46 },
@@ -36,6 +55,7 @@ const VEHICLE_DATABASE = [
 
 interface Parking {
   id: string;
+  display_id?: string;
   name: string;
   address: string;
   lat: number;
@@ -58,6 +78,7 @@ interface Parking {
   thingsToKnow?: string;
   gettingThere?: string;
   howItWorks?: string;
+  spots?: number;
 }
 
 export function SearchPage() {
@@ -65,11 +86,6 @@ export function SearchPage() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: GOOGLE_MAPS_LIBRARIES,
   });
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
 
   const [listings, setListings] = useState<Parking[]>([]);
   const [filteredListings, setFilteredListings] = useState<Parking[]>([]);
@@ -116,10 +132,12 @@ export function SearchPage() {
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+  const [recentSearches, setRecentSearches] = useState<{ name: string; lat: number; lng: number }[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; lat: number; lng: number; type: string }[]>([]);
   const [showDetailsView, setShowDetailsView] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [showAllParkingOptions, setShowAllParkingOptions] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [vehicleInput, setVehicleInput] = useState('');
   const [vehicleCheckResult, setVehicleCheckResult] = useState<'fits' | 'prohibited' | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<{ make: string; model: string; height: number } | null>(null);
@@ -129,11 +147,30 @@ export function SearchPage() {
   const [showAmenities, setShowAmenities] = useState(false);
   const [showAccessHours, setShowAccessHours] = useState(false);
   const [showHowToRedeem, setShowHowToRedeem] = useState(false);
-  const [showFacilityReviews, setShowFacilityReviews] = useState(false);
   const [showGettingThere, setShowGettingThere] = useState(false);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
+  const [showDestinationPicker, setShowDestinationPicker] = useState(false);
+  const [destinationVenueType, setDestinationVenueType] = useState<'airport' | 'city' | 'event'>('airport');
+
+  useEffect(() => {
+    if (!selectedListing) return;
+
+    setTimeout(() => {
+      document.querySelectorAll('[data-lot-id]').forEach((el) => {
+        if (el.getAttribute('data-lot-id') === selectedListing.id) {
+          (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }, 200);
+  }, [selectedListing?.id]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapCenter) return;
+    mapRef.current.panTo({ lat: mapCenter.lat, lng: mapCenter.lng });
+    mapRef.current.setZoom(13);
+  }, [mapCenter]);
 
   const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371;
@@ -152,7 +189,7 @@ export function SearchPage() {
   })();
 
   const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
-  const serviceFee = parseFloat((subtotal * 0.05).toFixed(2));
+  const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((showTotalPrice ? subtotal + serviceFee : subtotal).toFixed(2));
 
   const formatDuration = () => {
@@ -165,46 +202,33 @@ export function SearchPage() {
   const formatTimeRange = () => {
     const s = new Date(startTime), e = new Date(endTime);
     const pad = (n: number) => String(n).padStart(2, '0');
-    const today = new Date();
-    const isToday = s.toDateString() === today.toDateString();
-    const dateStr = isToday ? 'Danas' : `${s.getDate()}.${s.getMonth() + 1}.`;
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dateStr = `${s.getDate()}. ${months[s.getMonth()]}`;
     return `${dateStr} ${pad(s.getHours())}:${pad(s.getMinutes())} – ${pad(e.getHours())}:${pad(e.getMinutes())}`;
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/create-checkout`;
+    const sub = parseFloat((durationHours * listing.pricePerHour).toFixed(2));
+    const fee = parseFloat((sub * 0.05).toFixed(2));
+    const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
     const params = new URLSearchParams({
-      location_id: listing.id,
-      type: 'hourly',
-      check_in: new Date(startTime).toISOString(),
-      check_out: new Date(endTime).toISOString(),
-      flow: 'reserve',
+      loc: listing.id,
+      in: new Date(startTime).toISOString(),
+      out: new Date(endTime).toISOString(),
+      amount_cents: Math.round(total * 100).toString(),
+      name: listing.name || listing.address,
+      address: listing.address,
+      ...(listing.display_id ? { display_id: listing.display_id } : {}),
     });
-    return `${base}?${params.toString()}`;
+    return `/checkout?${params.toString()}`;
   };
   // ---------------------------
 
-  const parkingOptions = [
-    'All Types',
-    'Best Value',
-    'Highest Rated',
-    'Valet Parking',
-    'Covered Garage',
-    'Open Lot',
-    'Street Parking',
-    'Parking Deck',
-    'Basement Parking',
-    'Underground Parking',
-    'Ground Level',
-    'Multi-Level',
-    'Attended Parking',
-    'Unattended Parking',
-    'Gated Parking',
-    'Secure Parking',
-    'Climate Controlled',
-    'Heated Parking',
-    'EV Charging Available',
-    'Disability Accessible',
+  const parkingCategories = [
+    { id: 'airport', label: 'Zračna Luka', description: 'Parking near airports' },
+    { id: 'city', label: 'Gradovi', description: 'Parking in city centers' },
+    { id: 'events', label: 'Eventovi', description: 'Parking near event venues' },
+    { id: 'list-lot', label: 'List your lot', description: 'List your parking space', action: 'navigate', link: '/host' },
   ];
 
   const toggleQuickFilter = (filterId: string) => {
@@ -214,15 +238,15 @@ export function SearchPage() {
   };
 
   const FILTER_OPTIONS = [
-    { id: 'valet', label: 'Valet', count: 29 },
-    { id: 'garage-covered', label: 'Garage - Covered', count: 26 },
-    { id: 'lot-uncovered', label: 'Lot - Uncovered', count: 29 },
-    { id: 'immediate-parking', label: 'Immediate Parking', count: 11 },
-    { id: 'on-site-staff', label: 'On-Site Staff', count: 23 },
-    { id: 'month-to-month', label: 'Month to Month', count: 29 },
-    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: 13 },
-    { id: 'self-park', label: 'Self Park', count: 4 },
-    { id: 'ev-charging', label: 'EV Charging', count: 3 },
+    { id: 'valet', label: 'Valet', count: listings.filter(l => l.features.includes('valet')).length },
+    { id: 'garage-covered', label: 'Garage - Covered', count: listings.filter(l => l.type === 'garage' || l.features.includes('garage')).length },
+    { id: 'lot-uncovered', label: 'Parcela - Nepokrivena', count: listings.filter(l => l.type === 'lot').length },
+    { id: 'immediate-parking', label: 'Immediate Parking', count: listings.filter(l => l.availability).length },
+    { id: 'on-site-staff', label: 'On-Site Staff', count: listings.filter(l => l.features.includes('on-site-staff')).length },
+    { id: 'month-to-month', label: 'Mjesečni najam', count: listings.length },
+    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: listings.filter(l => l.features.includes('wheelchair-accessible')).length },
+    { id: 'self-park', label: 'Self Park', count: listings.filter(l => l.type === 'self-park').length },
+    { id: 'ev-charging', label: 'EV Charging', count: listings.filter(l => l.features.includes('ev-charging')).length },
   ];
 
   const toggleFilter = (filterId: string) => {
@@ -258,30 +282,52 @@ export function SearchPage() {
     });
   }, []);
 
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('recentSearches');
+    if (stored) {
+      try {
+        setRecentSearches(JSON.parse(stored).slice(0, 5));
+      } catch {
+        setRecentSearches([]);
+      }
+    }
+  }, []);
+
   // Fetch real data from Supabase - Hub locations only
   useEffect(() => {
     const fetchListings = async () => {
       try {
         setLoading(true);
-        const { data: locations, error } = await supabase
-          .from('locations')
-          .select('*')
-          .limit(50);
+        const res = await fetch('/api/listings');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { locations, error } = await res.json();
 
-        if (error) throw error;
+        if (error) throw new Error(error);
+        if (!locations) throw new Error('No data');
 
         if (locations && locations.length > 0) {
           const parkingListings: Parking[] = locations.map((loc: any) => {
             const features: string[] = [];
 
-            // Parse features from addons if available
-            if (loc.addons) {
-              const addons = typeof loc.addons === 'string' ? JSON.parse(loc.addons) : loc.addons || {};
-              if (addons.valet) features.push('valet');
-              if (addons.garage) features.push('garage');
-              if (addons.staff) features.push('on-site-staff');
-              if (addons.wheelchair) features.push('wheelchair-accessible');
-              if (addons.ev_charging) features.push('ev-charging');
+            // Parse features from addons_config (correct column name)
+            const addonsConfig = loc.addons_config
+              ? (typeof loc.addons_config === 'string' ? JSON.parse(loc.addons_config) : loc.addons_config)
+              : {};
+            if (addonsConfig.valet) features.push('valet');
+            if (addonsConfig.garage) features.push('garage');
+            if (addonsConfig.staff) features.push('on-site-staff');
+            if (addonsConfig.wheelchair) features.push('wheelchair-accessible');
+            if (addonsConfig.ev_charging) features.push('ev-charging');
+
+            // Fallback: also check verification_metadata.features array
+            const meta = loc.verification_metadata
+              ? (typeof loc.verification_metadata === 'string' ? JSON.parse(loc.verification_metadata) : loc.verification_metadata)
+              : {};
+            if (Array.isArray(meta.features)) {
+              for (const f of meta.features) {
+                if (!features.includes(f)) features.push(f);
+              }
             }
 
             const lat = loc.latitude || loc.lat || 45.815;
@@ -320,6 +366,7 @@ export function SearchPage() {
 
             return {
               id: loc.id,
+              display_id: loc.display_id || undefined,
               name: loc.name || 'Parking',
               address: loc.address || '',
               lat: lat,
@@ -340,6 +387,7 @@ export function SearchPage() {
               thingsToKnow: (metadata.things_to_know as string | undefined) || 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
               gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
               howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
+              spots: loc.total_spots || loc.capacity,
             };
           });
 
@@ -354,11 +402,6 @@ export function SearchPage() {
         }
       } catch (err) {
         console.error('Error fetching listings:', err);
-        console.error('Error details:', {
-          message: (err as any)?.message,
-          details: (err as any)?.details,
-          hint: (err as any)?.hint,
-        });
         setListings([]);
         setFilteredListings([]);
       } finally {
@@ -369,16 +412,6 @@ export function SearchPage() {
     fetchListings();
   }, []);
 
-  // Recalculate distances when search pin moves
-  useEffect(() => {
-    if (!searchLocationPin || listings.length === 0) return;
-    const recalc = (l: Parking) => ({
-      ...l,
-      distance: parseFloat(haversineKm(searchLocationPin.lat, searchLocationPin.lng, l.lat, l.lng).toFixed(1)),
-    });
-    setListings(prev => prev.map(recalc));
-    setFilteredListings(prev => prev.map(recalc));
-  }, [searchLocationPin]);
 
   // Reset photo index when listing selection changes
   useEffect(() => {
@@ -426,8 +459,15 @@ export function SearchPage() {
           lng,
         });
         setSearchLocationPin({ lat, lng });
+        addToRecentSearches(mainText || '', lat, lng);
       }
     });
+  };
+
+  const addToRecentSearches = (name: string, lat: number, lng: number) => {
+    const updated = [{ name, lat, lng }, ...recentSearches.filter(s => s.name !== name)].slice(0, 5);
+    setRecentSearches(updated);
+    localStorage.setItem('recentSearches', JSON.stringify(updated));
   };
 
   const handleCurrentLocation = () => {
@@ -442,8 +482,31 @@ export function SearchPage() {
         setSearchLocationPin({ lat, lng });
         setSearchLocation('Current Location');
         setShowPredictions(false);
+        addToRecentSearches('Current Location', lat, lng);
       });
     }
+  };
+
+  const handleRecentSearch = (name: string, lat: number, lng: number) => {
+    setMapCenter({ lat, lng });
+    setSearchLocationPin({ lat, lng });
+    setSearchLocation(name);
+    setShowPredictions(false);
+    addToRecentSearches(name, lat, lng);
+  };
+
+  const fetchNearbyPlaces = () => {
+    const lat = mapCenter.lat;
+    const lng = mapCenter.lng;
+
+    // Detect region: Split area (43.4-43.6 lat, 16.2-16.5 lng) or Zagreb area (45.7-45.9 lat, 15.8-16.1 lng)
+    let region = 'split';
+    if (lat > 45.7 && lat < 45.9 && lng > 15.8 && lng < 16.1) {
+      region = 'zagreb';
+    }
+
+    const hotspots = HOTSPOTS_BY_REGION[region] || HOTSPOTS_BY_REGION.split;
+    setNearbyPlaces(hotspots);
   };
 
   // Apply filters
@@ -474,31 +537,71 @@ export function SearchPage() {
       filtered = filtered.filter((l) => selectedFeatures.some((f) => l.features.includes(f)));
     }
 
+    // Filter modal selections
+    if (selectedFilters.length > 0) {
+      filtered = filtered.filter((l) => {
+        return selectedFilters.every((filterId) => {
+          switch (filterId) {
+            case 'valet': return l.features.includes('valet');
+            case 'garage-covered': return l.type === 'garage' || l.features.includes('garage');
+            case 'lot-uncovered': return l.type === 'lot';
+            case 'immediate-parking': return l.availability;
+            case 'on-site-staff': return l.features.includes('on-site-staff');
+            case 'month-to-month': return true;
+            case 'wheelchair-accessible': return l.features.includes('wheelchair-accessible');
+            case 'self-park': return l.type === 'self-park';
+            case 'ev-charging': return l.features.includes('ev-charging');
+            default: return true;
+          }
+        });
+      });
+    }
+
     // Apply sorting
     const sorted = [...filtered];
+
+    // Find and move closest listing to top (Najkraća Šetnja always on top)
+    if (sorted.length > 0) {
+      const refPoint = searchLocationPin || mapCenter;
+      const closest = sorted.reduce((min, curr) => {
+        const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+        const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+        return currDist < minDist ? curr : min;
+      });
+      const closestIndex = sorted.findIndex(l => l.id === closest.id);
+      if (closestIndex > 0) {
+        sorted.splice(closestIndex, 1);
+        sorted.unshift(closest);
+      }
+    }
+
+    // Apply sorting to rest
+    const rest = sorted.slice(1);
+    const ref = searchLocationPin || mapCenter;
     switch (sortBy) {
       case 'distance':
-        sorted.sort((a, b) => a.distance - b.distance);
+      case 'walk':
+        rest.sort((a, b) => haversineKm(ref.lat, ref.lng, a.lat, a.lng) - haversineKm(ref.lat, ref.lng, b.lat, b.lng));
         break;
       case 'price':
-        sorted.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        rest.sort((a, b) => a.pricePerHour - b.pricePerHour);
         break;
       case 'rating':
-        sorted.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'walk':
-        sorted.sort((a, b) => a.distance - b.distance);
+        rest.sort((a, b) => b.rating - a.rating);
         break;
       case 'value':
-        sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
+        rest.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
         break;
       case 'relevance':
       default:
         break;
     }
 
+    sorted.splice(1, sorted.length - 1, ...rest);
+
     setFilteredListings(sorted);
-  }, [listings, priceRange, selectedFeatures, parkingType, quickFilters, sortBy]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -603,7 +706,12 @@ export function SearchPage() {
                   placeholder="Search location..."
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
-                  onFocus={() => setShowPredictions(true)}
+                  onFocus={() => {
+                    setShowPredictions(true);
+                    if (nearbyPlaces.length === 0) {
+                      fetchNearbyPlaces();
+                    }
+                  }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none cursor-pointer flex-1 leading-none"
                 />
               </div>
@@ -618,22 +726,41 @@ export function SearchPage() {
                     <MapPin className="w-4 h-4 text-gray-600" />
                     Use current location
                   </button>
-                  {/* Predictions */}
-                  {predictions.map((prediction) => (
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <>
+                      {recentSearches.map((search, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleRecentSearch(search.name, search.lat, search.lng)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900 border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                          {search.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Nearby Locations Header */}
+                  {nearbyPlaces.length > 0 && (
+                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
+                      Nearby Locations
+                    </div>
+                  )}
+
+                  {/* Nearby Places of Interest */}
+                  {nearbyPlaces.map((place, idx) => (
                     <button
-                      key={prediction.place_id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowPredictions(false);
-                        handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
-                      }}
+                      key={idx}
+                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
                     >
                       <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
+                        <div className="text-gray-900 font-medium">{place.name}</div>
+                        <div className="text-xs text-gray-500 capitalize">{place.type}</div>
                       </div>
                     </button>
                   ))}
@@ -675,6 +802,9 @@ export function SearchPage() {
                 <a href="/members" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
                   Log In / Sign Up
                 </a>
+                <a href="/host" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
+                  List your lot
+                </a>
                 <a href="https://www.payparq.com" className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
                   Početna
                 </a>
@@ -707,7 +837,7 @@ export function SearchPage() {
           {/* Search Widget - Clickable Summary */}
           <button
             onClick={() => setShowMobileSearchEdit(true)}
-            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC] px-3 py-1 text-left flex flex-col justify-center"
+            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex flex-col justify-center"
           >
             <div className="text-xs text-gray-600 font-semibold truncate max-w-28">{searchLocation || 'Gdje ideš?'}</div>
             {startTime && endTime && (
@@ -736,8 +866,11 @@ export function SearchPage() {
                   <a href="/" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
                     Home
                   </a>
-                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
                     Log In
+                  </a>
+                  <a href="/host" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                    List your lot
                   </a>
                 </div>
               )}
@@ -777,7 +910,7 @@ export function SearchPage() {
               <select
                 value={reservationType}
                 onChange={(e) => setReservationType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Satna/dnevna">Satna/dnevna</option>
                 <option value="Mjesecna">Mjesecna</option>
@@ -787,14 +920,19 @@ export function SearchPage() {
             {/* Location Search */}
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
-              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-[#5F3DFC]">
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-blue-500">
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
                 <input
                   type="text"
                   placeholder="Search location..."
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
-                  onFocus={() => setShowPredictions(true)}
+                  onFocus={() => {
+                    setShowPredictions(true);
+                    if (nearbyPlaces.length === 0) {
+                      fetchNearbyPlaces();
+                    }
+                  }}
                   className="bg-transparent border-none text-sm font-medium text-gray-900 p-0 focus:outline-none flex-1"
                 />
               </div>
@@ -808,21 +946,41 @@ export function SearchPage() {
                     <MapPin className="w-4 h-4 text-gray-600" />
                     Use current location
                   </button>
-                  {predictions.map((prediction) => (
+
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && (
+                    <>
+                      {recentSearches.map((search, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleRecentSearch(search.name, search.lat, search.lng)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-sm text-gray-900 border-t border-gray-200"
+                        >
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                          {search.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Nearby Locations Header */}
+                  {nearbyPlaces.length > 0 && (
+                    <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-500 border-t border-gray-200">
+                      Nearby Locations
+                    </div>
+                  )}
+
+                  {/* Nearby Places of Interest */}
+                  {nearbyPlaces.map((place, idx) => (
                     <button
-                      key={prediction.place_id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowPredictions(false);
-                        handleSelectPrediction(prediction.place_id, prediction.description || prediction.main_text || '');
-                      }}
+                      key={idx}
+                      onClick={() => handleRecentSearch(place.name, place.lat, place.lng)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-start gap-2 text-sm border-t border-gray-200"
                     >
                       <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <div className="text-gray-900 font-medium">{prediction.description || prediction.main_text || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{prediction.secondary_text}</div>
+                        <div className="text-gray-900 font-medium">{place.name}</div>
+                        <div className="text-xs text-gray-500 capitalize">{place.type}</div>
                       </div>
                     </button>
                   ))}
@@ -928,38 +1086,44 @@ export function SearchPage() {
                 </svg>
               </button>
             {allParkingDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[250px] max-h-96 overflow-y-auto">
-                {parkingOptions.slice(0, showAllParkingOptions ? parkingOptions.length : 3).map((option, index) => (
-                  <button
-                    key={index}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 ${
-                      index === 0 ? 'rounded-t-lg border-t-0' : ''
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-
-                {/* Toggle Slider at Bottom */}
-                {parkingOptions.length > 3 && (
-                  <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between bg-gray-50 rounded-b-lg">
-                    <span className="text-xs font-medium text-gray-600">
-                      {showAllParkingOptions ? 'Show Less' : `Show All (${parkingOptions.length})`}
-                    </span>
-                    <button
-                      onClick={() => setShowAllParkingOptions(!showAllParkingOptions)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        showAllParkingOptions ? 'bg-[#5F3DFC]' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          showAllParkingOptions ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                )}
+              <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-4 w-[320px]">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Browse by category</p>
+                <div className="flex flex-col gap-2">
+                  {parkingCategories.map((cat) => {
+                    const isListLot = (cat as any).link;
+                    if (isListLot) {
+                      return (
+                        <a
+                          key={cat.id}
+                          href={(cat as any).link}
+                          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                          onClick={() => setAllParkingDropdownOpen(false)}
+                        >
+                          <div translate="no">
+                            <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                            <p className="text-xs text-gray-500">{cat.description}</p>
+                          </div>
+                        </a>
+                      );
+                    }
+                    return (
+                      <button
+                        key={cat.id}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
+                        onClick={() => {
+                          setDestinationVenueType(cat.id as 'airport' | 'hotel' | 'event');
+                          setShowDestinationPicker(true);
+                          setAllParkingDropdownOpen(false);
+                        }}
+                      >
+                        <div translate="no">
+                          <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
+                          <p className="text-xs text-gray-500">{cat.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             </div>
@@ -971,7 +1135,7 @@ export function SearchPage() {
             <button
               onClick={() => setShowTotalPrice(!showTotalPrice)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                showTotalPrice ? 'bg-[#5F3DFC]' : 'bg-gray-300'
+                showTotalPrice ? 'bg-black' : 'bg-gray-300'
               }`}
             >
               <span
@@ -1047,10 +1211,10 @@ export function SearchPage() {
             {/* CTAs */}
             <div className="flex items-center justify-between pt-6 border-t border-gray-200">
               <button
-                onClick={clearAllFilters}
+                onClick={() => setFilterModalOpen(false)}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900"
               >
-                Clear All
+                Povratak
               </button>
               <button
                 onClick={() => setFilterModalOpen(false)}
@@ -1072,11 +1236,11 @@ export function SearchPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="relevance">Sort by Relevance</option>
-              <option value="distance">Sort by Distance</option>
-              <option value="price">Sort by Price</option>
+              <option value="relevance">Poredaj po relevantnosti</option>
+              <option value="distance">Poredaj po udaljenosti</option>
+              <option value="price">Poredaj po cijeni</option>
             </select>
           </div>
 
@@ -1098,61 +1262,59 @@ export function SearchPage() {
               </div>
             ) : (
               (() => {
-                // Find actual best in each category (not filtered)
                 const badgeMap = new Map<string, string>();
 
                 if (filteredListings.length > 0) {
-                  const cheapestListing = filteredListings.reduce((min, curr) =>
-                    curr.pricePerHour < min.pricePerHour ? curr : min
-                  );
-                  badgeMap.set(cheapestListing.id, 'Najbolja Vrijednost');
-                  console.log('Cheapest:', cheapestListing.name, `€${cheapestListing.pricePerHour}`);
-                }
+                  const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
+                  if (validListings.length > 0) {
+                    const cheapest = validListings.reduce((min, curr) =>
+                      curr.pricePerHour < min.pricePerHour ? curr : min
+                    );
+                    // Use real-time distance calculation for closest (should be at index 0 after sorting)
+                    const refPoint = searchLocationPin || mapCenter;
+                    const closest = validListings.reduce((min, curr) => {
+                      const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+                      const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+                      return currDist < minDist ? curr : min;
+                    });
+                    const highestRated = validListings.reduce((max, curr) =>
+                      curr.rating > max.rating ? curr : max
+                    );
 
-                if (filteredListings.length > 0) {
-                  const closestListing = filteredListings.reduce((min, curr) =>
-                    curr.distance < min.distance ? curr : min
-                  );
-                  console.log('All distances:', filteredListings.map(l => `${l.name}: ${l.distance}km`).join(', '));
-                  console.log('Closest:', closestListing.name, `${closestListing.distance}km`);
-                  // Only badge if not already badged (priority: Value > Distance)
-                  if (!badgeMap.has(closestListing.id)) {
-                    badgeMap.set(closestListing.id, 'Najkraća Šetnja');
-                    console.log('→ Awarded Shortest Walk to', closestListing.name);
-                  } else {
-                    console.log('→ Skipped Shortest Walk (already has badge)');
-                  }
-                }
-
-                if (filteredListings.length > 0) {
-                  const highestRatedListing = filteredListings.reduce((max, curr) =>
-                    curr.rating > max.rating ? curr : max
-                  );
-                  // Only badge if not already badged (priority: Value > Distance > Rating)
-                  if (!badgeMap.has(highestRatedListing.id)) {
-                    badgeMap.set(highestRatedListing.id, 'Najviše Ocijenjeno');
+                    badgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) badgeMap.set(cheapest.id, 'Najbolja Vrijednost');
+                    if (!badgeMap.has(highestRated.id)) badgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
                   }
                 }
 
                 return filteredListings.map((listing) => {
                   const badgeText = badgeMap.get(listing.id);
-                return (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isSelected={selectedListing?.id === listing.id}
-                    onSelect={setSelectedListing}
-                    onBook={() => {
-                      setSelectedListing(listing);
-                      setShowBookingModal(true);
-                    }}
-                    onDetails={() => setShowDetailsView(true)}
-                    badgeText={badgeText}
-                    checkoutUrl={buildCheckoutUrl(listing)}
-                    durationHours={durationHours}
-                    showFee={showTotalPrice}
-                  />
-                );
+                  const isSelected = selectedListing?.id === listing.id;
+                  const liveRef = searchLocationPin || mapCenter;
+                  const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                  return (
+                    <div
+                      key={listing.id}
+                      data-lot-id={listing.id}
+                      className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
+                    >
+                      <ListingCard
+                        listing={liveListing}
+                        isSelected={isSelected}
+                        onSelect={setSelectedListing}
+                        onBook={() => {
+                          setSelectedListing(listing);
+                          setShowBookingModal(true);
+                        }}
+                        onDetails={() => setShowDetailsView(true)}
+                        badgeText={badgeText}
+                        checkoutUrl={buildCheckoutUrl(listing)}
+                        durationHours={durationHours}
+                        showFee={showTotalPrice}
+                        spots={liveListing.spots}
+                      />
+                    </div>
+                  );
                 });
               })()
             )}
@@ -1163,7 +1325,7 @@ export function SearchPage() {
         {showDetailsView && selectedListing && (
           <div className="flex-1 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
             {/* Photo Gallery - Fixed Height */}
-            <div className="flex-shrink-0 h-64 bg-gray-100 relative overflow-hidden">
+            <div className="flex-shrink-0 bg-gray-100 relative overflow-hidden" style={{ height: '394px' }}>
               {(() => {
                 const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
                 return (
@@ -1175,23 +1337,26 @@ export function SearchPage() {
                 );
               })()}
 
-              {/* Back Button - Top Left */}
+              {/* Close Button - Top Right */}
               <button
                 onClick={() => setShowDetailsView(false)}
-                className="absolute top-4 left-4 bg-white/90 hover:bg-white text-gray-900 rounded-full p-2 shadow-md transition-all"
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-900 rounded-lg p-2 shadow-md transition-all z-10"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
 
               {/* Left Arrow */}
               <button
-                onClick={() => setPhotoIndex(Math.max(0, photoIndex - 1))}
-                disabled={photoIndex === 0}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
+                onClick={() => {
+                  const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
+                  setPhotoIndex((photoIndex - 1 + photosArray.length) % photosArray.length);
+                }}
+                style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }}
+                className="bg-black/60 hover:bg-black/70 text-white rounded-full p-2.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-10 h-10"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -1200,12 +1365,12 @@ export function SearchPage() {
               <button
                 onClick={() => {
                   const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800'];
-                  if (photoIndex < photosArray.length - 1) setPhotoIndex(photoIndex + 1);
+                  setPhotoIndex((photoIndex + 1) % photosArray.length);
                 }}
-                disabled={(() => { const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800']; return photoIndex >= photosArray.length - 1; })()}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white disabled:opacity-50 text-gray-900 rounded-full p-3 shadow-md transition-all"
+                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}
+                className="bg-black/60 hover:bg-black/70 text-white rounded-full p-2.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-10 h-10"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -1237,15 +1402,13 @@ export function SearchPage() {
             </button>
 
             {/* Book Now Suggestion Widget */}
-            <button className="flex-shrink-0 w-full px-6 py-4 bg-yellow-50 hover:bg-yellow-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-yellow-200">
-              <div className="flex items-start gap-3 flex-1">
-                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-gray-900">We suggest you book now.</p>
-                  <p className="text-xs text-gray-900 mt-1">We only have 2 spots remaining here during the times you selected.</p>
-                </div>
+            <div className="flex-shrink-0 w-full px-6 py-4 bg-amber-100 flex items-start gap-3 border-b border-amber-300">
+              <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
+                <p className="text-xs text-gray-900 mt-1">Ovdje imamo samo {(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()} po ovoj cijeni!</p>
               </div>
-            </button>
+            </div>
 
             {/* Location Information Widget */}
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden">
@@ -1255,26 +1418,32 @@ export function SearchPage() {
               </div>
 
               {/* Location Content - Card Style */}
-              <div className="px-6 py-4 space-y-2">
+              <div className="px-8 py-6 space-y-3">
                 {/* Address */}
-                <p className="font-semibold text-gray-900" style={{ fontSize: '15px' }}>{selectedListing.address}</p>
+                <p className="font-semibold text-gray-900" style={{ fontSize: '18px' }}>{selectedListing.address}</p>
 
                 {/* Rating */}
-                <div className="flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <div className="flex items-center gap-1 text-sm font-semibold">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                   {selectedListing.reviews > 0 ? (
                     <>
-                      <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
-                      <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
+                      <span className="text-gray-900">{selectedListing.rating}</span>
+                      <span className="text-gray-900">({selectedListing.reviews})</span>
                     </>
                   ) : (
-                    <span className="text-xs font-semibold text-gray-500">New Listing</span>
+                    <span className="text-gray-900">Novi objekt</span>
                   )}
                 </div>
 
                 {/* Walking Distance */}
-                <div className="flex items-center gap-1 text-xs text-gray-600">
-                  <Footprints className="w-3 h-3 flex-shrink-0" />
+                <div className="flex items-center gap-1 text-sm font-semibold text-gray-900">
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13" cy="3" r="2"/>
+                    <path d="M11 6.5L8 12l3 1"/>
+                    <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                    <path d="M11 14l-2 6"/>
+                    <path d="M16 9l2 2"/>
+                  </svg>
                   <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
                 </div>
               </div>
@@ -1283,42 +1452,22 @@ export function SearchPage() {
             {/* Reservation Details Widget */}
             <div className="flex-shrink-0 w-full bg-white border-b border-gray-200">
               {/* Header and Content Combined */}
-              <div className="px-6 py-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <button className="inline-block bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 transition-colors">
-                    <p className="text-xs font-semibold text-gray-900">Online specijal</p>
-                  </button>
-                  <button
-                    onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
-                    className="text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors"
-                  >
-                    Detalji
-                  </button>
-                </div>
+              <div className="px-8 py-6 space-y-4">
 
-                {/* Important Notice - Show below Detalji on click */}
-                {showOnlineSpecialReminder && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Važna napomena</p>
-                    <p className="text-xs text-yellow-800 leading-relaxed">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od vlasnika parkinga.</p>
-                  </div>
-                )}
-
-                <p className="text-lg font-bold text-gray-900">Rezervacija parkinga</p>
+                <p className="text-sm text-gray-700 font-semibold">Rezervacija parkinga</p>
 
                 {/* Date, Time and Price Row */}
                 <button
                   onClick={() => setShowPriceBreakdown(true)}
-                  className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between"
+                  className="w-full text-left hover:opacity-70 transition-opacity pb-5 border-b border-gray-200 flex items-start justify-between -mt-3"
                 >
                   <div className="flex-1">
-                    <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
-                    <p className="text-sm text-gray-900 mt-1">{formatDuration()}</p>
-                    <p className="text-xs text-gray-600 mt-1">Nema ulaza i izlaza</p>
+                    <p className="text-base font-bold text-gray-900">{formatTimeRange()}</p>
+                    <p className="text-sm text-gray-500 mt-1.5">Nema ulaza i izlaza</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500 mt-1">Međuzbroj</p>
+                  <div className="text-right flex flex-col items-end">
+                    <p className="text-2xl font-bold text-gray-900">€{(subtotal * 1.05).toFixed(2)}</p>
+                    <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
                   </div>
                 </button>
 
@@ -1330,11 +1479,18 @@ export function SearchPage() {
                   </div>
                 </div>
 
+                {/* Yellow Spots Widget */}
+                <div className="flex items-center gap-1.5 bg-yellow-100 rounded-md px-3 py-2">
+                  <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-semibold text-gray-900">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()}</span>
+                    <span className="text-xs text-gray-600 ml-1">po ovoj cijeni</span>
+                  </div>
+                </div>
+
                 {/* CTA Button - Stripe checkout */}
                 <a
                   href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Rezervirajte sad — €{totalPrice.toFixed(2)}
@@ -1377,10 +1533,22 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Things You Should Know</p>
                   </button>
                   {showThingsToKnow && (
-                    <div className="space-y-3 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      {selectedListing.thingsToKnow
-                        ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
-                        : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                    <div className="space-y-3 mt-3">
+                      {/* Important Notice */}
+                      <div className="bg-yellow-100 rounded-md px-3 py-2">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
+                          <p className="text-xs font-semibold text-gray-900">Važna napomena</p>
+                        </div>
+                        <p className="text-xs text-gray-900">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka. Ako prekršite ova pravila, naplaćeni iznos će biti izravno od operatera parkinga.</p>
+                      </div>
+
+                      {/* Things to Know Content */}
+                      <div className="space-y-3 text-sm text-gray-900 leading-relaxed ml-7">
+                        {selectedListing.thingsToKnow
+                          ? selectedListing.thingsToKnow.split('\n\n').map((p, i) => <p key={i}>{p}</p>)
+                          : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1397,10 +1565,12 @@ export function SearchPage() {
                   {showAmenities && (
                     <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
                       {selectedListing.amenities
-                        ? selectedListing.amenities.split(',').map((a, i) => (
+                        ? (Array.isArray(selectedListing.amenities)
+                            ? selectedListing.amenities
+                            : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
                             <div key={i} className="flex items-center gap-3">
                               <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
-                              <span>{a.trim()}</span>
+                              <span>{typeof a === 'string' ? a.trim() : a}</span>
                             </div>
                           ))
                         : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
@@ -1442,33 +1612,6 @@ export function SearchPage() {
                             <p key={i}>{step}</p>
                           ))
                         : <p className="text-gray-400">Nema dostupnih informacija.</p>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Facility Reviews Dropdown */}
-                <div className="pt-6 border-t border-gray-200 mt-6">
-                  <button
-                    onClick={() => setShowFacilityReviews(!showFacilityReviews)}
-                    className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
-                  >
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
-                    <p className="text-base font-bold text-gray-900">Facility Reviews</p>
-                  </button>
-                  {showFacilityReviews && (
-                    <div className="space-y-2 text-sm text-gray-900 leading-relaxed mt-3 ml-7">
-                      {selectedListing.reviews > 0 ? (
-                        <>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-2xl text-gray-900">{selectedListing.rating.toFixed(1)}</span>
-                            <span>/10</span>
-                          </div>
-                          <p>{(() => { const s = selectedListing.rating; return s >= 9 ? 'Izvrsno' : s >= 8 ? 'Vrlo dobro' : s >= 7 ? 'Dobro' : 'Prosječno'; })()}</p>
-                          <p>Na temelju {selectedListing.reviews} recenzija.</p>
-                        </>
-                      ) : (
-                        <p className="text-gray-500">Nova lokacija – još nema recenzija.</p>
-                      )}
                     </div>
                   )}
                 </div>
@@ -1568,7 +1711,7 @@ export function SearchPage() {
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Naknada za uslugu (5%)</p>
+                    <p className="text-sm text-gray-600">Naknada za uslugu (€0.99 + 5%)</p>
                     <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
                   </div>
                 </div>
@@ -1580,8 +1723,6 @@ export function SearchPage() {
 
                 <a
                   href={buildCheckoutUrl(selectedListing)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
                   Rezervirajte sad — €{totalPrice.toFixed(2)}
@@ -1616,16 +1757,15 @@ export function SearchPage() {
                     placeholder="Type to Search"
                     value={vehicleInput}
                     onChange={(e) => setVehicleInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5F3DFC]"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-xs text-gray-500">Example: Honda Civic</p>
 
                   {/* Search Results Dropdown */}
-                  {vehicleInput && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {VEHICLE_DATABASE.filter((v) =>
-                        `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
-                      ).map((vehicle, idx) => (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {VEHICLE_DATABASE.filter((v) =>
+                      vehicleInput === '' || `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
+                    ).map((vehicle, idx) => (
                         <button
                           key={idx}
                           onClick={() => {
@@ -1640,8 +1780,7 @@ export function SearchPage() {
                           {vehicle.make} {vehicle.model} <span className="text-gray-500">({vehicle.height}m)</span>
                         </button>
                       ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Vehicle Check Result */}
@@ -1712,6 +1851,9 @@ export function SearchPage() {
             zoom={16}
             center={mapCenter}
             mapContainerStyle={{ width: '100%', height: '100%' }}
+            onLoad={(map) => {
+              mapRef.current = map;
+            }}
             options={{
               styles: [
                 {
@@ -1722,49 +1864,54 @@ export function SearchPage() {
               ],
             }}
           >
-            {/* Parking lot location markers - Cloud with price */}
-            {filteredListings.map((listing) => (
-              <OverlayView
-                key={listing.id}
-                position={{ lat: listing.lat, lng: listing.lng }}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <button
+            {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
+            {filteredListings.map((listing) => {
+              const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+              const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+              const isSelected = selectedListing?.id === listing.id;
+              const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
+                <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                  fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
+                  font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
+                  fill="${isSelected ? 'white' : 'black'}">${label}</text>
+              </svg>`;
+              const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
+              const scaledWidth = 63.375;
+              const scaledHeight = 58.305;
+              return (
+                <Marker
+                  key={listing.id}
+                  position={{ lat: listing.lat, lng: listing.lng }}
                   onClick={() => setSelectedListing(listing)}
-                  style={{ transform: 'translate(-50%, -90%)', width: 'calc(2.5rem + 0.4cm)' }}
-                  className="relative h-13 transition-transform hover:scale-110"
-                >
-                  {/* Single path speech bubble — oval body + smooth tail */}
-                  <svg viewBox="0 0 100 115" className="w-full h-full drop-shadow-md" overflow="visible">
-                    <path
-                      d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                      fill="white"
-                      stroke="black"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {/* Price centered in oval body (oval center is ~33% from top of viewBox) */}
-                  <div className="absolute inset-x-0 flex justify-center" style={{ top: '33%', transform: 'translateY(-50%)' }}>
-                    <span className="text-sm font-bold text-black leading-none">{(() => { const t = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2)); return `€${t % 1 === 0 ? t.toFixed(0) : t.toFixed(2)}`; })()}</span>
-                  </div>
-                </button>
-              </OverlayView>
-            ))}
+                  icon={{
+                    url: iconUrl,
+                    anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
+                    scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
+                  }}
+                />
+              );
+            })}
 
-            {/* Search location marker - Classic Google pin */}
-            {searchLocationPin && (
-              <OverlayView
-                position={searchLocationPin}
-                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-              >
-                <div className="w-8 h-12 flex items-start justify-center -translate-x-1/2 -translate-y-full">
-                  <svg viewBox="0 0 24 32" className="w-full h-full">
-                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#5F3DFC" stroke="white" strokeWidth="0.5"/>
-                  </svg>
-                </div>
-              </OverlayView>
-            )}
+            {/* Search location marker - Native Marker, no spike */}
+            {searchLocationPin && (() => {
+              const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
+                <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
+              </svg>`;
+              const pinScaledWidth = 31.2;
+              const pinScaledHeight = 40.95;
+              return (
+                <Marker
+                  position={searchLocationPin}
+                  icon={{
+                    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(pinSvg)}`,
+                    anchor: new google.maps.Point(pinScaledWidth / 2, pinScaledHeight),
+                    scaledSize: new google.maps.Size(pinScaledWidth, pinScaledHeight)
+                  }}
+                  clickable={false}
+                />
+              );
+            })()}
           </GoogleMap>
           )}
         </div>
@@ -1835,27 +1982,62 @@ export function SearchPage() {
                 </div>
               </div>
             ) : (
-              filteredListings.map((listing, index) => {
-                const badges = ['Najkraća Šetnja', 'Najbolja Vrijednost', 'Najviše Ocijenjeno'];
-                const badgeText = index < badges.length ? badges[index] : undefined;
-                return (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    isSelected={selectedListing?.id === listing.id}
-                    onSelect={() => {
-                      setSelectedListing(listing);
-                      setShowMobileDetails(true);
-                    }}
-                    onBook={() => {
-                      setSelectedListing(listing);
-                      setShowMobileDetails(true);
-                    }}
-                    badgeText={badgeText}
-                    hideDetailsButton={true}
-                  />
-                );
-              })
+              (() => {
+                const mobileBadgeMap = new Map<string, string>();
+
+                if (filteredListings.length > 0) {
+                  const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
+                  if (validListings.length > 0) {
+                    const cheapest = validListings.reduce((min, curr) =>
+                      curr.pricePerHour < min.pricePerHour ? curr : min
+                    );
+                    // Use real-time distance calculation for closest (should be at index 0 after sorting)
+                    const refPoint = searchLocationPin || mapCenter;
+                    const closest = validListings.reduce((min, curr) => {
+                      const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
+                      const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
+                      return currDist < minDist ? curr : min;
+                    });
+                    const highestRated = validListings.reduce((max, curr) =>
+                      curr.rating > max.rating ? curr : max
+                    );
+
+                    mobileBadgeMap.set(closest.id, 'Najkraća Šetnja');
+                    if (cheapest.id !== closest.id) mobileBadgeMap.set(cheapest.id, 'Najbolja Vrijednost');
+                    if (!mobileBadgeMap.has(highestRated.id)) mobileBadgeMap.set(highestRated.id, 'Najviše Ocijenjeno');
+                  }
+                }
+
+                return filteredListings.map((listing) => {
+                  const badgeText = mobileBadgeMap.get(listing.id);
+                  const isSelected = selectedListing?.id === listing.id;
+                  const liveRef = searchLocationPin || mapCenter;
+                  const liveListing = { ...listing, distance: parseFloat(haversineKm(liveRef.lat, liveRef.lng, listing.lat, listing.lng).toFixed(1)) };
+                  return (
+                    <div
+                      key={listing.id}
+                      data-lot-id={listing.id}
+                      className={`transition-all duration-200 rounded-2xl ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
+                    >
+                      <ListingCard
+                        listing={liveListing}
+                        isSelected={isSelected}
+                        onSelect={() => {
+                          setSelectedListing(listing);
+                          setShowMobileDetails(true);
+                        }}
+                        onBook={() => {
+                          setSelectedListing(listing);
+                          setShowMobileDetails(true);
+                        }}
+                        badgeText={badgeText}
+                        hideDetailsButton={true}
+                        spots={liveListing.spots}
+                      />
+                    </div>
+                  );
+                });
+              })()
             )}
           </div>
         </div>
@@ -1895,26 +2077,41 @@ export function SearchPage() {
                 zoom={15}
                 center={mapCenter}
                 mapContainerStyle={{ width: '100%', height: '100%' }}
+                onLoad={(map) => {
+                  mapRef.current = map;
+                }}
               >
-                {filteredListings.map((listing) => (
-                  <Marker
-                    key={listing.id}
-                    position={{ lat: listing.lat, lng: listing.lng }}
-                    onClick={() => {
-                      setSelectedListing(listing);
-                      setShowMobileMap(false);
-                      setShowMobileDetails(true);
-                    }}
-                    icon={{
-                      path: 'M0,-48c-26.4,0 -48,21.6 -48,48c0,48 48,120 48,120s48,-72 48,-120c0,-26.4 -21.6,-48 -48,-48z',
-                      fillColor: '#5F3DFC',
-                      fillOpacity: 1,
-                      strokeColor: '#fff',
-                      strokeWeight: 2,
-                      scale: 0.5,
-                    }}
-                  />
-                ))}
+                {filteredListings.map((listing) => {
+                  const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+                  const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+                  const isSelected = selectedListing?.id === listing.id;
+                  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
+                    <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                      fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                    <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
+                      font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
+                      fill="${isSelected ? 'white' : 'black'}">${label}</text>
+                  </svg>`;
+                  const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
+                  const scaledWidth = 48.75;
+                  const scaledHeight = 44.85;
+                  return (
+                    <Marker
+                      key={listing.id}
+                      position={{ lat: listing.lat, lng: listing.lng }}
+                      onClick={() => {
+                        setSelectedListing(listing);
+                        setShowMobileMap(false);
+                        setShowMobileDetails(true);
+                      }}
+                      icon={{
+                        url: iconUrl,
+                        anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
+                        scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
+                      }}
+                    />
+                  );
+                })}
               </GoogleMap>
             )}
           </div>
@@ -1969,8 +2166,14 @@ export function SearchPage() {
                     <span className="text-xs font-semibold text-gray-900">{selectedListing.rating}</span>
                     <span className="text-xs text-gray-500">({selectedListing.reviews})</span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <Footprints className="w-3 h-3 flex-shrink-0" />
+                  <div className="flex items-center gap-1 text-xs text-gray-900">
+                    <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="13" cy="3" r="2"/>
+                      <path d="M11 6.5L8 12l3 1"/>
+                      <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+                      <path d="M11 14l-2 6"/>
+                      <path d="M16 9l2 2"/>
+                    </svg>
                     <span>{Math.round(selectedListing.distance * 12)} min ({selectedListing.distance.toFixed(1)} km)</span>
                   </div>
                 </div>
@@ -1992,25 +2195,28 @@ export function SearchPage() {
                   </div>
 
                   {showOnlineSpecialReminder && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5">
-                      <p className="text-xs font-semibold text-yellow-900 mb-1">⚠️ Važna napomena</p>
-                      <p className="text-xs text-yellow-800 leading-tight">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka.</p>
+                    <div className="bg-yellow-100 rounded-md px-2 py-1.5">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Info className="w-3 h-3 text-yellow-700 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-gray-900">Važna napomena</p>
+                      </div>
+                      <p className="text-xs text-gray-900">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka.</p>
                     </div>
                   )}
 
-                  <p className="text-base font-bold text-gray-900">Rezervacija parkinga</p>
+                  <p className="text-xs text-gray-700 font-semibold">Rezervacija parkinga</p>
 
                   <button
                     onClick={() => setShowPriceBreakdown(true)}
                     className="w-full text-left hover:opacity-70 transition-opacity pb-3 border-b border-gray-200 flex items-start justify-between"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-700 font-semibold">{formatTimeRange()}</p>
-                      <p className="text-sm text-gray-900 mt-0.5">{formatDuration()}</p>
+                      <p className="text-base font-bold text-gray-900">{formatDuration()}</p>
+                      <p className="text-sm text-gray-900 mt-0.5">{formatTimeRange()}</p>
                       <p className="text-xs text-gray-600 mt-0.5">Nema ulaza i izlaza</p>
                     </div>
                     <div className="text-right ml-2 flex-shrink-0">
-                      <p className="text-xl font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
+                      <p className="text-xs font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-0.5">Međuzbroj</p>
                     </div>
                   </button>
@@ -2067,10 +2273,12 @@ export function SearchPage() {
                 {showAmenities && (
                   <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
                     {selectedListing.amenities
-                      ? selectedListing.amenities.split(',').map((a, i) => (
+                      ? (Array.isArray(selectedListing.amenities)
+                          ? selectedListing.amenities
+                          : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
                           <div key={i} className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span>{a.trim()}</span>
+                            <span>{typeof a === 'string' ? a.trim() : a}</span>
                           </div>
                         ))
                       : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
@@ -2142,8 +2350,6 @@ export function SearchPage() {
             <div className="sticky bottom-0 px-4 py-3 border-t border-gray-200 bg-white space-y-2">
               <a
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="block w-full px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
                 Rezervirajte sad — €{totalPrice.toFixed(2)}
@@ -2157,6 +2363,21 @@ export function SearchPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Destination Picker Widget */}
+      {showDestinationPicker && (
+        <DestinationPickerWidget
+          onClose={() => setShowDestinationPicker(false)}
+          defaultTab={destinationVenueType}
+          onSelect={(venue, startTime, endTime) => {
+            setMapCenter({ lat: venue.lat, lng: venue.lng });
+            setSearchLocationPin({ lat: venue.lat, lng: venue.lng });
+            setSearchLocation(venue.name);
+            setStartTime(startTime);
+            setEndTime(endTime);
+          }}
+        />
       )}
     </div>
   );

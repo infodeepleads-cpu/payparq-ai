@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { supabase } from "@/lib/supabase";
+import { REGION_CONFIG } from "@/lib/regionMap";
 
 const staticRoutes = [
   "/",
@@ -28,6 +29,21 @@ const staticRoutes = [
   "/vision",
 ];
 
+const regionRoutes = Object.values(REGION_CONFIG).map((config) => `/regions/${config.slug}`);
+
+const cityGuides = [
+  'zagreb', 'split', 'rijeka', 'zadar', 'osijek',
+  'ljubljana', 'maribor',
+  'sarajevo', 'banja-luka',
+  'belgrade', 'nis',
+  'vienna', 'salzburg',
+  'munich', 'berlin',
+  'rome', 'milan',
+  'zurich', 'geneva',
+];
+
+const cityRoutes = cityGuides.map((city) => `/guides/${city}`);
+
 const blogRoutes = [
   "/news/blog/parking-aerodrom-split",
   "/news/blog/parking-trogir",
@@ -35,6 +51,8 @@ const blogRoutes = [
   "/news/blog/smart-parking-hrvatska-2025",
   "/news/blog/parking-dalmacija-ljeto-2025",
   "/news/blog/park-taxi-brela",
+  "/news/blog/parking-zagreb-city-center",
+  "/news/blog/parking-split-airport-2026",
 ];
 
 function resolveSiteUrl() {
@@ -79,5 +97,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...blogEntries, ...locationEntries];
+  const regionEntries: MetadataRoute.Sitemap = regionRoutes.map((route) => ({
+    url: `${siteUrl}${route}`,
+    lastModified: now,
+    changeFrequency: "daily" as const,
+    priority: 0.95,
+  }));
+
+  const cityGuideEntries: MetadataRoute.Sitemap = cityRoutes.map((route) => ({
+    url: `${siteUrl}${route}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.85,
+  }));
+
+  return [...staticEntries, ...regionEntries, ...cityGuideEntries, ...blogEntries, ...locationEntries];
 }

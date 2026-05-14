@@ -83,14 +83,24 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
       }
 
       if (userId && supabase) {
-        const { error: upsertError } = await supabase.from('device_tokens').upsert(
-          { user_id: userId, token, platform: 'web' },
-          { onConflict: 'user_id,token' }
-        );
-        if (upsertError) {
-          console.error('[FCM] Upsert error:', upsertError);
-          setEnableError('Greška pri spremanju tokena.');
-          return;
+        // Check if token already exists
+        const { data: existing } = await supabase
+          .from('device_tokens')
+          .select('id')
+          .eq('token', token)
+          .single();
+
+        if (!existing) {
+          const { error: insertError } = await supabase.from('device_tokens').insert({
+            user_id: userId,
+            token,
+            platform: 'web',
+          });
+          if (insertError) {
+            console.error('[FCM] Insert error:', insertError);
+            setEnableError('Greška pri spremanju tokena.');
+            return;
+          }
         }
       }
 

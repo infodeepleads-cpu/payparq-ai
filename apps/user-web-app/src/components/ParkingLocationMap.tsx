@@ -34,8 +34,6 @@ export default function ParkingLocationMap({ lat, lng, onLocationSelect, fullScr
   const [zoom, setZoom] = useState(17);
   const circleRef = useRef<any>(null);
 
-  console.log('🗺️ ParkingLocationMap rendering - isLoaded:', isLoaded, 'lat:', lat, 'lng:', lng);
-
   useEffect(() => {
     if (!map || !window.google || !lat || !lng) {
       if (circleRef.current) {
@@ -93,7 +91,6 @@ export default function ParkingLocationMap({ lat, lng, onLocationSelect, fullScr
             setZoom(17);
           }
           setLocating(false);
-          console.log('✅ Current location:', latitude, longitude);
         },
         (error) => {
           console.error('❌ Geolocation error:', error);
@@ -120,15 +117,12 @@ export default function ParkingLocationMap({ lat, lng, onLocationSelect, fullScr
   };
 
   if (!isLoaded) {
-    console.log('⏳ Google Maps API still loading...');
     return (
       <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
         Loading map...
       </div>
     );
   }
-
-  console.log('✅ Google Maps loaded, rendering map');
 
   return (
     <div style={{ width: '100%', height: '100%' }} className="rounded-lg overflow-hidden border border-gray-300 relative">

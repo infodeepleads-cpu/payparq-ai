@@ -1,11 +1,12 @@
 'use client';
 
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react';
+import html2pdf from 'html2pdf.js';
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { SiteHeader } from '@/components/SiteHeader';
 import { FooterBrand } from '@/components/FooterBrand';
+import { SiteHeader } from '@/components/SiteHeader';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 type AddonsConfigOption = { id: string; label: string; price_cents: number };
@@ -43,6 +44,8 @@ type SessionSummary = {
   valet_attendant?: string | null;
   lot_point?: { lat: number; lng: number } | null;
   assigned_spot?: { label: string; lat?: number | null; lng?: number | null; col_num?: number | null } | null;
+  plate?: string | null;
+  cover_photo?: string | null;
 };
 
 type Credits = number | '∞';
@@ -381,9 +384,34 @@ function ValetTicket({
   );
 }
 
+type StoredBooking = {
+  locationId?: string;
+  locationName?: string;
+  address?: string;
+  checkIn?: string;
+  checkOut?: string;
+  amountCents?: number;
+  plate?: string;
+};
+
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+  const [storedPiId, setStoredPiId] = useState<string | null>(null);
+  const [storedBooking, setStoredBooking] = useState<StoredBooking | null>(null);
+  const [storedCoverPhoto, setStoredCoverPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('last_payment_intent');
+    if (stored) setStoredPiId(stored);
+    const booking = sessionStorage.getItem('payparq_booking');
+    if (booking) {
+      try { setStoredBooking(JSON.parse(booking)); } catch {}
+    }
+    const photo = sessionStorage.getItem('payparq_cover_photo');
+    if (photo) setStoredCoverPhoto(photo);
+  }, []);
+
+  const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') || storedPiId;
   const hasRealSessionId = Boolean(
     sessionId &&
       sessionId !== '{CHECKOUT_SESSION_ID}' &&
@@ -434,6 +462,8 @@ function SuccessContent() {
     searchParams.get('check_in') || searchParams.get('checkIn') || searchParams.get('in') || searchParams.get('start') || null;
   const fallbackCheckOut =
     searchParams.get('check_out') || searchParams.get('checkOut') || searchParams.get('out') || searchParams.get('end') || null;
+  const fallbackPlate =
+    searchParams.get('plate') || searchParams.get('plateNumber') || null;
 
   const formatDateTime = (value: string | null | undefined) => {
     if (!value) return '—';
@@ -455,12 +485,25 @@ function SuccessContent() {
     }).format(value);
   };
 
-  const checkoutLocationName = summary?.location_name ?? null;
+  const checkoutLocationName = summary?.location_name ?? storedBooking?.locationName ?? null;
   const checkoutLocationDisplayId = summary?.location_display_id ?? null;
-  const checkoutLocation = summary?.location_id ?? fallbackLocationId;
+  const checkoutLocation = summary?.location_id ?? fallbackLocationId ?? storedBooking?.locationId ?? null;
   const checkoutLocationIdLabel = checkoutLocationDisplayId || checkoutLocation;
-  const checkoutStart = summary?.check_in || fallbackCheckIn || null;
-  const checkoutEnd = summary?.check_out || fallbackCheckOut || null;
+  const checkoutStart = summary?.check_in || fallbackCheckIn || storedBooking?.checkIn || null;
+  const checkoutEnd = summary?.check_out || fallbackCheckOut || storedBooking?.checkOut || null;
+  const plate = (summary?.plate || fallbackPlate || storedBooking?.plate || '').toUpperCase().trim() || null;
+
+  useEffect(() => {
+    if (sessionId && typeof window !== 'undefined') {
+      sessionStorage.removeItem('last_payment_intent');
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (summary?.session_id) {
+      sessionStorage.removeItem('payparq_booking');
+    }
+  }, [summary?.session_id]);
 
   useEffect(() => {
     let active = true;
@@ -665,6 +708,21 @@ function SuccessContent() {
     }
   };
 
+  const handleDownloadPass = () => {
+    const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
+    if (!passCard) return;
+    const element = passCard.cloneNode(true) as HTMLElement;
+    element.style.margin = '0';
+    const opt = {
+      margin: 10,
+      filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+    };
+    html2pdf().set(opt).from(element).save();
+  };
+
   const SUPPORT_WHATSAPP = '385915963139';
 
   const openWhatsAppFallback = (requestType: 'shuttle' | 'valet') => {
@@ -850,592 +908,356 @@ function SuccessContent() {
     </div>
   );
 
+  // QR code
+  const qrRef = useRef<HTMLCanvasElement>(null);
+  const qrData = sessionId || `payparq-${checkoutLocationIdLabel || 'pass'}`;
+  useEffect(() => {
+    const canvas = qrRef.current;
+    if (!canvas) return;
+    import('qrcode').then((mod) => {
+      const QRCode = mod.default ?? mod;
+      (QRCode as { toCanvas: (el: HTMLCanvasElement, data: string, opts: object) => Promise<void> })
+        .toCanvas(canvas, qrData, { width: 128, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+        .catch(() => {});
+    });
+  }, [qrData]);
+
+  const mapsUrl = useMemo(() => {
+    const addr = storedBooking?.address || checkoutLocationName || checkoutLocation || '';
+    if (!addr) return null;
+    return `https://www.google.com/maps/search/${encodeURIComponent(addr)}`;
+  }, [storedBooking?.address, checkoutLocationName, checkoutLocation]);
+
+  const passDate = useMemo(() => {
+    if (!checkoutStart) return null;
+    const d = new Date(checkoutStart);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+  }, [checkoutStart]);
+
+  const passTimeIn = useMemo(() => {
+    if (!checkoutStart) return '—';
+    const d = new Date(checkoutStart);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  }, [checkoutStart]);
+
+  const passTimeOut = useMemo(() => {
+    if (!checkoutEnd) return '—';
+    const d = new Date(checkoutEnd);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Zagreb' });
+  }, [checkoutEnd]);
+
+  const passDateOut = useMemo(() => {
+    if (!checkoutEnd) return null;
+    const d = new Date(checkoutEnd);
+    if (Number.isNaN(d.getTime())) return null;
+    const dateStr = d.toLocaleDateString('hr-HR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zagreb' });
+    // Only show if different day than check-in
+    if (checkoutStart) {
+      const inDay = new Date(checkoutStart).toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
+      const outDay = d.toLocaleDateString('hr-HR', { timeZone: 'Europe/Zagreb' });
+      if (inDay === outDay) return null;
+    }
+    return dateStr;
+  }, [checkoutEnd, checkoutStart]);
+
+  const emergencyPhone = (summary?.addons_config?.phone_sms as string | undefined) ?? '+385915963139';
+  const resCode = summary?.session_id ? deriveReservationCode(summary.session_id) : (storedPiId ? 'PP-' + storedPiId.slice(-4).toUpperCase() : null);
+
+  const [howStep, setHowStep] = useState<number | null>(null);
+  const howSteps = [
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
+          <rect x="9" y="11" width="14" height="10" rx="1"/>
+          <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
+        </svg>
+      ),
+      title: 'Vozite se unutra',
+      desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.',
+      phone: emergencyPhone,
+    },
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="1" y="3" width="15" height="13" rx="1"/>
+          <path d="M16 8h5l3 3v5h-8V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      ),
+      title: 'Parkirajte',
+      desc: 'Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.',
+      phone: null,
+    },
+    {
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      ),
+      title: 'Vozite se van',
+      desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.',
+      phone: emergencyPhone,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col">
-      <SiteHeader />
+    <div className="min-h-screen text-black flex flex-col" style={{ background: '#EBF0FA' }}>
 
-      <main className="flex-1 pt-20 pb-12">
-        <div className="max-w-sm mx-auto px-4 space-y-3 mt-12">
+      <SiteHeader hideAnnouncementBar />
 
-          {/* 1 — Confirmation card */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-full bg-[#E1F5EE] flex items-center justify-center shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
-                  <path d="M9 12l2 2 4-4"/>
-                  <circle cx="12" cy="12" r="10"/>
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <p className="text-[12px] text-black/50">
-                  Rezervacija potvrđena
-                  {summary?.session_id && (
-                    <span className="ml-2 font-mono text-black/70">{deriveReservationCode(summary.session_id)}</span>
+      <main className="flex-1 pt-24 pb-16">
+        <div className="max-w-md mx-auto px-4 space-y-3">
+
+          {/* ══════════════════════════════════════
+              PARKING PASS CARD
+          ══════════════════════════════════════ */}
+          <div className="bg-white rounded-2xl overflow-hidden shadow-lg" style={{ border: '2px solid #1A3A6B' }} data-pass-card>
+
+            {/* Pass header */}
+            <div style={{ background: '#1A3A6B' }} className="px-5 py-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p suppressHydrationWarning className="text-white font-black text-[17px] uppercase tracking-wide leading-tight">Parking Pass</p>
+                  <p className="text-white/50 text-[10px] font-mono mt-0.5 tracking-widest">1 / 1</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  {resCode && (
+                    <span className="text-white font-mono text-[12px] font-bold bg-white/10 rounded px-2 py-0.5">{resCode}</span>
                   )}
-                </p>
-                <p className="text-[15px] font-semibold text-black leading-tight">
-                  {checkoutLocationName || checkoutLocationIdLabel || 'Safe Parking by PayParq'}
-                </p>
+                  {lookupLoading && <p className="text-white/40 text-[9px] animate-pulse">syncing...</p>}
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[12px]">
-              <div>
-                <p className="text-black/50">Lokacija ID</p>
-                <p className="font-semibold text-black font-mono tracking-tight">{checkoutLocationDisplayId || checkoutLocationIdLabel || '—'}</p>
+
+            {/* Blue accent bar */}
+            <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #2451A0 0%, #3B82F6 50%, #2451A0 100%)' }} />
+
+            {/* Pass body */}
+            <div className="px-5 pt-4 pb-3 flex gap-4 items-start">
+
+              {/* Left: booking details */}
+              <div className="flex-1 min-w-0 space-y-3">
+
+                {/* Location */}
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Lokacija / Location</p>
+                  <p className="text-[17px] font-black text-black leading-tight">
+                    {checkoutLocationName || checkoutLocationIdLabel || 'Parking'}
+                  </p>
+                  {storedBooking?.address && (
+                    <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#64748b' }}>{storedBooking.address}</p>
+                  )}
+                </div>
+
+                {/* Plate */}
+                {plate && (
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Tablica / Plate</p>
+                    <p className="text-[15px] font-black text-black font-mono tracking-widest">{plate}</p>
+                  </div>
+                )}
+
+                {/* Times */}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ulaz</p>
+                    {passDate && <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDate}</p>}
+                    <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeIn}</p>
+                  </div>
+                  <div className="pt-5" style={{ color: '#94a3b8' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Izlaz</p>
+                    <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDateOut || passDate || ' '}</p>
+                    <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeOut}</p>
+                  </div>
+                </div>
+
               </div>
-              <div>
-                <p className="text-black/50">Cijena</p>
-                <p className="font-semibold text-black">{formatAmount(summary?.amount_total ?? 0, summary?.currency ?? 'EUR')}</p>
+
+              {/* Right: QR code */}
+              <div className="shrink-0 flex flex-col items-center gap-1">
+                <div className="rounded-lg overflow-hidden p-1.5 bg-white" style={{ border: '2px solid #2451A0' }}>
+                  <canvas ref={qrRef} width={112} height={112} className="block" />
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-center" style={{ color: '#2451A0' }}>Scan / Prikaži</p>
               </div>
+
+            </div>
+
+            {/* Perforated separator */}
+            <div className="relative flex items-center my-0">
+              <div className="absolute -left-3 w-5 h-5 rounded-full" style={{ background: '#EBF0FA', zIndex: 1 }} />
+              <div className="flex-1 border-t-2 border-dashed mx-3" style={{ borderColor: '#2451A0' }} />
+              <div className="absolute -right-3 w-5 h-5 rounded-full" style={{ background: '#EBF0FA', zIndex: 1 }} />
+            </div>
+
+            {/* Price footer */}
+            <div className="px-5 py-3 flex items-center justify-between" style={{ background: '#F0F5FF' }}>
               <div>
-                <p className="text-black/50">Od</p>
-                <p className="font-semibold text-black">{formatDateTime(checkoutStart)}</p>
+                <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ukupno plaćeno</p>
+                <p className="text-[24px] font-black leading-none" style={{ color: '#1A3A6B' }}>
+                  {formatAmount(summary?.amount_total ?? storedBooking?.amountCents ?? 0, summary?.currency ?? 'EUR')}
+                </p>
               </div>
-              <div>
-                <p className="text-black/50">Kraj</p>
-                <p className="font-semibold text-black">{formatDateTime(checkoutEnd)}</p>
+              <div className="text-right">
+                {summary?.email && (
+                  <p className="text-[10px] font-mono" style={{ color: '#94a3b8' }}>{summary.email}</p>
+                )}
+                <p className="text-[9px] uppercase tracking-widest font-bold mt-1" style={{ color: '#2451A0' }}>VRIJEDI · VALID</p>
               </div>
             </div>
-            {(lookupLoading || lookupError) && (
-              <p className="mt-3 text-[11px] text-black/40">{lookupLoading ? 'Učitavanje...' : lookupError}</p>
-            )}
-          </div>
 
-          {/* 1b — Valet confirmation ticket (when valet included in price) */}
-          {showIncludedValet && summary?.session_id && (
-            <ValetTicket
-              sessionId={summary.session_id}
-              locationName={checkoutLocationName}
-              checkIn={checkoutStart}
-              checkOut={checkoutEnd}
-              attendant={summary.valet_attendant ?? null}
-              pickupPoint={summary.addons_config?.pickup_point ?? null}
-              lotPoint={summary.lot_point ?? null}
-              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
-              lotZone={(summary.addons_config?.valet?.lot_zone as string | null | undefined) ?? null}
-              trackUrl={activeTrackUrl}
-              formatDateTime={formatDateTime}
-              onSummon={() => handleSummon('car')}
-            />
-          )}
 
-          {/* 1c — Shuttle confirmation ticket (when shuttle included in price) */}
-          {showIncludedShuttle && summary?.session_id && (
-            <ShuttleTicket
-              sessionId={summary.session_id}
-              locationName={checkoutLocationName}
-              checkIn={checkoutStart}
-              checkOut={checkoutEnd}
-              attendant={summary.valet_attendant ?? null}
-              pickupPoint={summary.addons_config?.pickup_point ?? null}
-              lotPoint={summary.lot_point ?? null}
-              phoneSms={(summary.addons_config?.phone_sms as string | null | undefined) ?? null}
-              trackUrl={activeTrackUrl}
-              formatDateTime={formatDateTime}
-              onSummon={summary.flow_type === 'park_now' ? null : () => handleSummon('shuttle')}
-            />
-          )}
+            {/* ── Getting There ── */}
+            <div style={{ background: '#F0F5FF', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kako doći · Getting There</p>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {(checkoutLocationName || storedBooking?.address) && (
+                <div>
+                  <p className="text-[14px] font-bold text-black">{checkoutLocationName || ''}</p>
+                  {storedBooking?.address && <p className="text-[12px] mt-0.5" style={{ color: '#64748b' }}>{storedBooking.address}</p>}
+                </div>
+              )}
+              {mapsUrl ? (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
+                  style={{ background: '#EBF0FA', border: '1px solid #2451A0' }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#2451A0' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                      <circle cx="12" cy="9" r="2.5"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold" style={{ color: '#1A3A6B' }}>Otvori u Google Maps</p>
+                    <p className="text-[11px] truncate" style={{ color: '#64748b' }}>{storedBooking?.address || checkoutLocationName || ''}</p>
+                  </div>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2451A0" strokeWidth="2" className="shrink-0 ml-auto">
+                    <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                  </svg>
+                </a>
+              ) : (
+                <p className="text-[12px] italic" style={{ color: '#94a3b8' }}>Adresa nije dostupna</p>
+              )}
+              {(summary?.cover_photo || storedCoverPhoto) && (
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
+                  <img src={summary?.cover_photo || storedCoverPhoto!} alt="Ulaz parkinga" className="w-full object-cover" style={{ maxHeight: '180px' }} />
+                </div>
+              )}
+            </div>
 
-          {/* 2 — Produži boravak */}
-          <div className="rounded-2xl border border-black/10 bg-white p-4">
-            <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">Produži boravak</p>
-            <div className="grid grid-cols-4 gap-2">
-              {([{ label: '+1h', minutes: 60 }, { label: '+2h', minutes: 120 }, { label: '+1d', minutes: 1440 }, { label: '+2d', minutes: 2880 }] as const).map(({ label, minutes }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => handleExtendWith(minutes)}
-                  disabled={extendLoading}
-                  className="py-2 rounded-xl border border-black/10 bg-gray-50 text-[13px] font-medium text-black hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                >
-                  {extendLoading ? '…' : label}
-                </button>
+            {/* ── Instructions ── */}
+            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Upute za korištenje · Instructions</p>
+            </div>
+            <div className="px-5 py-1 divide-y" style={{ borderColor: '#E2E8F0' }}>
+              {howSteps.map((step, i) => (
+                <div key={i} className="flex gap-3 py-2.5">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-black text-[10px] text-white mt-0.5" style={{ background: '#2451A0' }}>
+                    {i + 1}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-black">{step.title}</p>
+                    <p className="text-[12px] leading-relaxed mt-0.5" style={{ color: '#64748b' }}>{step.desc}</p>
+                  </div>
+                </div>
               ))}
             </div>
-            {extendFeedback && (
-              <p className={`mt-2 text-[11px] ${extendFeedback.type === 'error' ? 'text-red-600' : 'text-[#0F6E56]'}`}>
-                {extendFeedback.text}
-              </p>
-            )}
+
+            {/* ── Contact numbers ── */}
+            <div style={{ background: '#F0F5FF', borderTop: '1px solid #CBD5E1', borderBottom: '1px solid #CBD5E1' }} className="px-5 py-3">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#2451A0' }}>Kontakt · Support</p>
+            </div>
+            <div className="px-5 py-4 space-y-2.5">
+              <a href="tel:+385915963139"
+                className="block rounded-xl px-4 py-3"
+                style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>PayParq Priority Support</p>
+                <p className="text-[15px] font-black text-black mt-0.5">+385 91 596 3139</p>
+              </a>
+              {emergencyPhone && emergencyPhone !== '+385915963139' && (
+                <a href={`tel:${emergencyPhone}`} className="block rounded-xl px-4 py-3"
+                  style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>Lot Emergency Number</p>
+                  <p className="text-[15px] font-black text-black mt-0.5">{emergencyPhone}</p>
+                </a>
+              )}
+              {(!emergencyPhone || emergencyPhone === '+385915963139') && (
+                <div className="block rounded-xl px-4 py-3"
+                  style={{ background: '#EBF0FA', border: '1px solid #CBD5E1' }}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: '#2451A0' }}>Lot Emergency Number</p>
+                  <p className="text-[13px] font-medium mt-0.5" style={{ color: '#94a3b8' }}>Prikazat će se pri dolasku</p>
+                </div>
+              )}
+            </div>
+
+
           </div>
 
-          {/* 3 — Odaberi dodatne usluge (single merged widget) */}
-          {hasAnyAddonWidget && (
-            <div className="rounded-2xl border border-black/10 bg-white p-4 space-y-3">
-              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">
-                Odaberi dodatne usluge:
-              </p>
-
-              {/* ── Included in price sub-section ── */}
-              {showIncludedSection && (
-                <div className="space-y-2">
-                  {showIncludedValet && (
-                    <button
-                      type="button"
-                      onClick={() => setValetToggled((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                            <rect x="9" y="11" width="14" height="10" rx="1"/>
-                            <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Valet parking</p>
-                          <p className="text-[11px] text-[#5F3DFC] font-medium">Uključeno u cijenu · ∞</p>
-                        </div>
-                      </div>
-                      <Toggle on={valetToggled} />
-                    </button>
-                  )}
-
-                  {showIncludedShuttle && (
-                    <button
-                      type="button"
-                      onClick={() => setShuttleToggled((s) => !s)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2">
-                            <rect x="1" y="8" width="22" height="10" rx="2"/>
-                            <path d="M5 18v2M19 18v2"/>
-                            <path d="M1 12h22"/>
-                            <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Shuttle prijevoz</p>
-                          <p className="text-[11px] text-[#0F6E56] font-medium">Uključeno u cijenu · ∞</p>
-                        </div>
-                      </div>
-                      <Toggle on={shuttleToggled} />
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Divider between included and paid sections */}
-              {showIncludedSection && showPaidSection && (
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="flex-1 h-px bg-black/8" />
-                  <span className="text-[10px] text-black/30 uppercase tracking-widest">Dodaj uslugu</span>
-                  <div className="flex-1 h-px bg-black/8" />
-                </div>
-              )}
-
-              {/* ── Paid addons sub-section ── */}
-              {showPaidSection && (
-                <div className="space-y-2">
-
-                  {/* Paid valet (only when not already included) */}
-                  {showValetPaidAddon && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonValetOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonValetOn ? 'bg-[#5F3DFC] border-[#5F3DFC]' : 'border-black/20 bg-white'}`}>
-                            {addonValetOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-black">Valet parking</p>
-                            <p className="text-[11px] text-black/40">Mi parkiramo vaš automobil</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          {formatAmount(addonValetCfg?.price_cents ?? 500, 'eur')}/dan
-                        </span>
-                      </button>
-                      {addonValetOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <p className="text-[11px] text-black/50 mb-2">Broj dana</p>
-                          <div className="flex gap-2">
-                            {[1, 2, 3, 4].map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => setAddonValetDays(d)}
-                                className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${addonValetDays === d ? 'bg-[#5F3DFC] text-white border-[#5F3DFC]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                              >
-                                {d}d
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-[11px] text-black/50 mt-2 text-right">
-                            Ukupno: <span className="font-semibold text-black">{formatAmount(addonValetPriceCents, 'eur')}</span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Paid shuttle (only when not included in price) */}
-                  {showShuttlePaidAddon && (
-                    <button
-                      type="button"
-                      onClick={() => setAddonShuttleOn((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonShuttleOn ? 'bg-[#0F6E56] border-[#0F6E56]' : 'border-black/20 bg-white'}`}>
-                          {addonShuttleOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">Prijevoz</p>
-                          <p className="text-[11px] text-black/40">1 smjer · do/od destinacije</p>
-                        </div>
-                      </div>
-                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                        {formatAmount(addonShuttleCfg?.price_cents ?? 200, 'eur')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* EV Charging */}
-                  {addonEvCfg && (
-                    <button
-                      type="button"
-                      onClick={() => setAddonEvOn((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-black/10 p-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonEvOn ? 'bg-[#2E7D32] border-[#2E7D32]' : 'border-black/20 bg-white'}`}>
-                          {addonEvOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-black">EV punjenje</p>
-                          <p className="text-[11px] text-black/40">Type 2 / CCS · do 22 kW</p>
-                        </div>
-                      </div>
-                      <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                        {formatAmount(addonEvCfg.price_cents ?? 2000, 'eur')}
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Car Wash */}
-                  {addonWashCfg && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonWashOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonWashOn ? 'bg-[#1565C0] border-[#1565C0]' : 'border-black/20 bg-white'}`}>
-                            {addonWashOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-black">Pranje vozila</p>
-                            <p className="text-[11px] text-black/40">Basic ili Premium</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          od {formatAmount(addonWashBasicCents, 'eur')}
-                        </span>
-                      </button>
-                      {addonWashOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <div className="flex gap-2">
-                            {(['basic', 'premium'] as const).map((tier) => {
-                              const priceCents = tier === 'premium' ? addonWashPremiumCents : addonWashBasicCents;
-                              return (
-                                <button
-                                  key={tier}
-                                  type="button"
-                                  onClick={() => setAddonWashTier(tier)}
-                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonWashTier === tier ? 'bg-[#1565C0] text-white border-[#1565C0]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                                >
-                                  {tier === 'premium' ? 'Premium' : 'Basic'}<br />
-                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fuel */}
-                  {addonFuelCfg && (
-                    <div className="rounded-xl border border-black/10 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setAddonFuelOn((v) => !v)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${addonFuelOn ? 'bg-[#F57F17] border-[#F57F17]' : 'border-black/20 bg-white'}`}>
-                            {addonFuelOn && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-black">Punjenje gorivom</p>
-                            <p className="text-[11px] text-black/40">Diesel ili Benzin · mobilna punjaonica</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-semibold text-black shrink-0 ml-2">
-                          od {formatAmount(Math.min(addonFuelDieselCents, addonFuelBenzinCents), 'eur')}
-                        </span>
-                      </button>
-                      {addonFuelOn && (
-                        <div className="border-t border-black/5 px-3 py-2.5 bg-gray-50">
-                          <div className="flex gap-2">
-                            {(['diesel', 'benzin'] as const).map((fuelType) => {
-                              const priceCents = fuelType === 'diesel' ? addonFuelDieselCents : addonFuelBenzinCents;
-                              return (
-                                <button
-                                  key={fuelType}
-                                  type="button"
-                                  onClick={() => setAddonFuelType(fuelType)}
-                                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium border transition-colors ${addonFuelType === fuelType ? 'bg-[#F57F17] text-white border-[#F57F17]' : 'bg-white text-black border-black/10 hover:bg-gray-100'}`}
-                                >
-                                  {fuelType === 'diesel' ? 'Diesel' : 'Benzin'}<br />
-                                  <span className="text-[10px] opacity-75">{formatAmount(priceCents, 'eur')}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Checkout CTA */}
-                  {anyPaidAddonSelected && (
-                    <div className="pt-1 space-y-2">
-                      <div className="flex items-center justify-between text-[13px] px-1">
-                        <span className="text-black/50">Ukupno za usluge</span>
-                        <span className="font-bold text-black">{formatAmount(addonsTotalCents, 'eur')}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddonsCheckout}
-                        disabled={addonsCheckoutLoading}
-                        className="w-full py-3 rounded-xl bg-[#5F3DFC] text-white text-[14px] font-semibold hover:bg-[#4330c4] disabled:opacity-60 transition-colors"
-                      >
-                        {addonsCheckoutLoading ? 'Priprema...' : 'Plati usluge'}
-                      </button>
-                      {addonsCheckoutError && (
-                        <p className="text-[11px] text-red-500 text-center">{addonsCheckoutError}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3b — Parking spot info */}
-          {summary?.assigned_spot ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2">
-                    <rect x="3" y="3" width="8" height="8" rx="1"/>
-                    <rect x="13" y="3" width="8" height="8" rx="1"/>
-                    <rect x="3" y="13" width="8" height="8" rx="1"/>
-                    <rect x="13" y="13" width="8" height="8" rx="1"/>
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-black">Parking spot</p>
-                  <p className="text-[11px] text-black/50">Vaš dodijeljeni spot</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="rounded-xl bg-[#F5F2FF] px-3 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[22px] font-bold text-[#5F3DFC] leading-none">{summary.assigned_spot.label}</span>
-                    <span className="text-[12px] text-[#5F3DFC]/70 font-medium">Vaš spot</span>
-                    {summary.assigned_spot.col_num != null && (
-                      <span className="text-[10px] bg-[#5F3DFC] text-white px-2 py-0.5 rounded-full font-semibold">
-                        Trak {summary.assigned_spot.col_num + 1}/5
-                      </span>
-                    )}
-                  </div>
-                  {(() => {
-                    const spotLat = summary.assigned_spot.lat;
-                    const spotLng = summary.assigned_spot.lng;
-                    const navLat = spotLat ?? summary.lot_point?.lat;
-                    const navLng = spotLng ?? summary.lot_point?.lng;
-                    return navLat && navLng ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${navLat},${navLng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] font-semibold text-[#5F3DFC] underline shrink-0"
-                      >
-                        {spotLat ? 'Navigiraj do spota' : 'Navigacija'}
-                      </a>
-                    ) : null;
-                  })()}
-                </div>
-                {summary.lot_point && (
-                  <div className="rounded-xl overflow-hidden border border-[#5F3DFC]/20" style={{ height: 160 }}>
-                    <Suspense fallback={<div className="w-full h-full bg-[#1a1a2e]" />}>
-                      <LotMap
-                        lat={summary.lot_point.lat}
-                        lng={summary.lot_point.lng}
-                        locationId={summary.location_id ?? undefined}
-                        assignedSpotLabel={summary.assigned_spot.label}
-                        interactive={false}
-                      />
-                    </Suspense>
-                  </div>
-                )}
-              </div>
-              {premiumSpots.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest">Nadogradi na premium spot</p>
-                  {premiumSpots.map((sp) => (
-                    <button
-                      key={sp.id}
-                      type="button"
-                      disabled={spotUpgradeLoading}
-                      onClick={async () => {
-                        setSpotUpgradeLoading(true);
-                        try {
-                          const res = await fetch('/api/stripe/spot-upgrade', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              stripe_session_id: summary.session_id,
-                              new_spot_id: sp.id,
-                              current_spot_id: summary.assigned_spot?.label,
-                              email: summary.email,
-                              location_id: summary.location_id,
-                              location_name: summary.location_name,
-                            }),
-                          });
-                          const d = await res.json().catch(() => null) as { url?: string } | null;
-                          if (d?.url) window.location.href = d.url;
-                        } finally {
-                          setSpotUpgradeLoading(false);
-                        }
-                      }}
-                      className="w-full flex items-center justify-between rounded-xl border border-[#F59E0B]/30 bg-[#FFFBEB] px-3 py-2.5 hover:bg-[#FEF3C7] transition-colors text-left disabled:opacity-60"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[16px] font-bold text-[#F59E0B]">{sp.label}</span>
-                        <span className="text-[11px] text-[#92400E] font-medium">Premium spot</span>
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#92400E]">
-                        +{((sp.price_modifier_cents) / 100).toFixed(2)} €
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {premiumSpots.length === 0 && (
-                <p className="mt-2 text-[11px] text-black/40">Premium spotovi s boljim položajem bit će dostupni za nadoplatu.</p>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <p className="text-[13px] text-black/70">Automatski dodjeljujemo slobodan spot</p>
-              <p className="text-[11px] text-black/50 mt-2">Spot će biti potvrđen pri dolasku</p>
-            </div>
-          )}
-
-          {/* 4 — Pozovi vozilo (with credit badges) */}
-          {showSummonSection && (
-            <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <p className="text-[11px] font-semibold text-black/50 uppercase tracking-widest mb-3">Pozovi vozilo</p>
-              <div className={`grid gap-3 ${showIncludedValet && showIncludedShuttle ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {showIncludedValet && (
-                  <button
-                    type="button"
-                    onClick={() => handleSummon('car')}
-                    disabled={valetCredits === 0 || !valetToggled}
-                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    <CreditBadge value={valetCredits} />
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
-                      <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/>
-                      <rect x="9" y="11" width="14" height="10" rx="1"/>
-                      <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
-                    </svg>
-                    <span className="text-[13px] font-medium text-black">Pozovi auto</span>
-                    <span className="text-[11px] text-black/50">Valet dovozi · ~6 min</span>
-                  </button>
-                )}
-                {showIncludedShuttle && (
-                  <button
-                    type="button"
-                    onClick={() => handleSummon('shuttle')}
-                    disabled={shuttleCredits === 0 || !shuttleToggled}
-                    className="relative flex flex-col items-center gap-2 py-4 rounded-xl border border-black/10 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    <CreditBadge value={shuttleCredits} />
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="text-black">
-                      <rect x="1" y="8" width="22" height="10" rx="2"/>
-                      <path d="M5 18v2M19 18v2"/>
-                      <path d="M1 12h22"/>
-                      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                    <span className="text-[13px] font-medium text-black">Pozovi shuttle</span>
-                    <span className="text-[11px] text-black/50">1 smjer · ~4 min</span>
-                  </button>
-                )}
-              </div>
-              {summonStatus && (
-                <div className="mt-3 rounded-xl bg-[#E1F5EE] border border-[#0F6E56]/20 px-3 py-2.5 text-[13px] text-[#0F6E56] text-center">
-                  {summonStatus}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 5 — Secondary actions */}
-          <div className="flex flex-col gap-2">
-            <a
-              href="https://m.uber.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
-            >
-              Naruči Uber
-            </a>
-            <Link
-              href={insuranceHref}
-              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors"
-            >
-              Osiguranje
-            </Link>
-            <button
-              type="button"
-              onClick={handleDownloadReceipt}
-              disabled={lookupLoading}
-              className="w-full py-3 rounded-xl border border-black/10 bg-white text-[14px] font-medium text-black text-center block hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Preuzmi potvrdu
-            </button>
-          </div>
-
-          {/* 6 — Members zona link */}
+          {/* Members zona — slim single link + download */}
           {summary?.email && (
-            <p className="text-center text-[11px] text-black/40 pb-2">
-              <Link href={membersHref} className="text-[#0F6E56] font-medium hover:text-[#1D9E75] transition-colors">
+            <div className="flex items-center justify-center gap-4 py-3">
+              <button onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+                ⬇ Preuzmi Pass
+              </button>
+              <span style={{ color: '#94a3b8' }}>·</span>
+              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
                 Members zona
               </Link>
-              {' · '}
-              {summary.email}
-            </p>
+            </div>
           )}
 
         </div>
       </main>
 
-      <footer className="bg-[#020617] px-6 py-8 print:hidden">
-        <div className="max-w-sm mx-auto">
-          <FooterBrand />
+      {/* Footer — matches home page */}
+      <footer className="bg-[#05020A] border-t border-white/10 print:hidden notranslate" translate="no" data-no-translate="true">
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="grid gap-12 md:grid-cols-[2fr,3fr] items-end">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/60 mb-4">Parking · Made Simple</p>
+              <p className="text-sm text-white/70 max-w-md">Rezervirajte, i parkirajte bez problema.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] text-white/70">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Company</p>
+                <Link href="/about" className="block hover:text-white transition-colors">About</Link>
+                <Link href="/careers" className="block hover:text-white transition-colors">Careers</Link>
+                <Link href="/news" className="block hover:text-white transition-colors">News</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Vision</p>
+                <Link href="/product" className="block hover:text-white transition-colors">Product</Link>
+                <Link href="/parking" className="block hover:text-white transition-colors">Parking</Link>
+                <Link href="/security" className="block hover:text-white transition-colors">Security</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Policies</p>
+                <Link href="/legal" className="block hover:text-white transition-colors">Legal</Link>
+                <Link href="/privacy" className="block hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="block hover:text-white transition-colors">Terms</Link>
+              </div>
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-white uppercase tracking-[0.16em]">Platform</p>
+                <Link href="/locations" className="block hover:text-white transition-colors">Locations</Link>
+                <Link href="/members" className="block hover:text-white transition-colors">Members</Link>
+                <Link href="/support" className="block hover:text-white transition-colors">Support</Link>
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 pt-6 border-t border-white/10">
+            <FooterBrand />
+          </div>
         </div>
       </footer>
 
@@ -1452,7 +1274,7 @@ function SuccessContent() {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white flex items-center justify-center text-black/40 text-sm">
+      <div className="min-h-screen flex items-center justify-center text-black/30 text-sm" style={{ background: '#EBF0FA' }}>
         Učitavanje...
       </div>
     }>

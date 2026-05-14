@@ -12,7 +12,6 @@ import {
   Waves,
   ParkingCircle,
   Repeat2,
-  Footprints,
   Info,
 } from 'lucide-react';
 
@@ -56,9 +55,10 @@ interface ListingCardProps {
   durationHours?: number;
   showFee?: boolean;
   hideDetailsButton?: boolean;
+  spots?: number;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText = 'Najkraća Šetnja', checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false }: ListingCardProps) {
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
   const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
   return (
@@ -93,6 +93,11 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400'; }}
           unoptimized={!listing.photo?.includes('unsplash.com') && !listing.photo?.includes('supabase')}
         />
+        {/* Yellow Spots Widget Below Photo */}
+        <div className="flex items-center justify-center gap-1 bg-yellow-100 rounded-md w-full mt-1" style={{ padding: '4px 2px' }}>
+          <Info className="w-3 h-3 text-yellow-700 flex-shrink-0" />
+          <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
+        </div>
       </div>
 
       {/* Content RIGHT */}
@@ -100,7 +105,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
         {/* Price - Top Right */}
         <div className="absolute top-0 right-0 z-10 flex flex-col items-end">
           <span className="font-bold text-gray-900" style={{ fontSize: '20px' }}>€{total.toFixed(2)}</span>
-          <span className="text-xs text-gray-500">Ukupno</span>
+          <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5">Ukupno</span>
         </div>
 
         {/* Address & Info */}
@@ -114,16 +119,22 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
             {listing.reviews > 0 ? (
               <>
                 <span className="text-xs font-semibold text-gray-900">{listing.rating}</span>
-                <span className="text-xs text-gray-500">({listing.reviews})</span>
+                <span className="text-xs font-semibold text-gray-900">({listing.reviews})</span>
               </>
             ) : (
-              <span className="text-xs font-semibold text-gray-500">New Listing</span>
+              <span className="text-xs font-semibold text-gray-900">Novi objekt</span>
             )}
           </div>
 
           {/* Walking Distance */}
-          <div className="flex items-center gap-1 text-xs text-gray-600">
-            <Footprints className="w-3 h-3 flex-shrink-0" />
+          <div className="flex items-center gap-1 text-xs font-semibold text-gray-900">
+            <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="13" cy="3" r="2"/>
+              <path d="M11 6.5L8 12l3 1"/>
+              <path d="M13 6.5l1.5 3-3 2.5 1 5.5"/>
+              <path d="M11 14l-2 6"/>
+              <path d="M16 9l2 2"/>
+            </svg>
             <span>
               {Math.round(listing.distance * 12)} min ({listing.distance.toFixed(1)} km)
             </span>
@@ -135,7 +146,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           {/* Spots Left Widget - Always show */}
           <div className="flex items-center gap-1 bg-yellow-100 rounded-md whitespace-nowrap" style={{ padding: '4px 6px' }}>
             <Info className="w-3.5 h-3.5 text-yellow-700" />
-            <span className="text-xs font-semibold text-gray-900">3 mjesta</span>
+            <span className="text-xs font-semibold text-gray-900">{(() => { const s = listing.id.charCodeAt(listing.id.length - 1) % 5 + 1; return s === 1 ? '1 mjesto' : `${s} mjesta`; })()}</span>
           </div>
 
           {!hideDetailsButton && (
@@ -152,8 +163,6 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
           )}
           <a
             href={checkoutUrl || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
             onClick={(e) => { e.stopPropagation(); if (!checkoutUrl) e.preventDefault(); }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >

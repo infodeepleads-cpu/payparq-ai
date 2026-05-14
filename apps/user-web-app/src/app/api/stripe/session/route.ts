@@ -79,7 +79,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
   if (!dbClient) return null;
   const { data: sessionRows } = await dbClient
     .from('parking_sessions')
-    .select('stripe_session_id,location_id,entry_time,exit_time,email,price,amount_cents,currency,type,stripe_metadata')
+    .select('stripe_session_id,location_id,entry_time,exit_time,email,price,amount_cents,currency,type,stripe_metadata,plate')
     .eq('stripe_session_id', sessionId)
     .order('created_at', { ascending: false })
     .limit(1);
@@ -97,6 +97,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     currency?: string | null;
     type?: string | null;
     stripe_metadata?: Record<string, unknown> | null;
+    plate?: string | null;
   };
 
   const email = (row.email ?? '').trim().toLowerCase();
@@ -165,6 +166,7 @@ async function buildFallbackSummaryFromParkingSession(sessionId: string) {
     location_display_id: locationDisplayId,
     check_in: row.entry_time ?? null,
     check_out: row.exit_time ?? null,
+    plate: (row.plate ?? (row.stripe_metadata?.plate as string | null) ?? (row.stripe_metadata?.plateNumber as string | null)) || null,
     wallet_topup_credit_cents: Number(row.stripe_metadata?.wallet_topup_credit_cents ?? 0) || 0,
     wallet_debit_applied_cents: Number(row.stripe_metadata?.wallet_debit_applied_cents ?? 0) || 0,
     loyalty_bonus_credit_cents: Number(row.stripe_metadata?.loyalty_bonus_credit_cents ?? 0) || 0,
@@ -220,6 +222,7 @@ export async function GET(req: NextRequest) {
         location_display_id: fallbackDisplayId || null,
         check_in: fallbackCheckIn || null,
         check_out: fallbackCheckOut || null,
+        plate: null,
         wallet_topup_credit_cents: 0,
         wallet_debit_applied_cents: 0,
         loyalty_bonus_credit_cents: 0,
@@ -229,6 +232,9 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
+  // PaymentIntent flow (Stripe Elements) — ID starts with pi_
+  const isPaymentIntent = sessionId.startsWith('pi_');
+
   const secret = resolveStripeSecretKey();
   if (!secret) {
     let fallback = await buildFallbackSummaryFromParkingSession(sessionId);
@@ -245,6 +251,7 @@ export async function GET(req: NextRequest) {
         location_display_id: fallbackDisplayId || null,
         check_in: fallbackCheckIn || null,
         check_out: fallbackCheckOut || null,
+        plate: null,
         wallet_topup_credit_cents: 0,
         wallet_debit_applied_cents: 0,
         loyalty_bonus_credit_cents: 0,
@@ -258,6 +265,93 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'missing_or_invalid_stripe_secret' }, { status: 500 });
   }
   const stripe = new Stripe(secret, { apiVersion: '2023-10-16' });
+
+  // ── PaymentIntent branch (Stripe Elements checkout) ──────────────────────
+  if (isPaymentIntent) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(sessionId);
+      const meta = pi.metadata ?? {};
+      const email = ((pi as unknown as { receipt_email?: string | null }).receipt_email ?? '').trim().toLowerCase();
+      const locationId = (meta.location_id ?? '').trim() || null;
+      const checkIn = parseMetadataDatetime(meta.check_in ?? null);
+      const checkOut = parseMetadataDatetime(meta.check_out ?? null);
+
+      let locationName: string | null = null;
+      let locationDisplayId: string | null = null;
+      let valetEnabled = false;
+      let shuttleEnabled = false;
+      let addonsConfig: Record<string, unknown> = {};
+      let valetAttendant: string | null = null;
+      let lotPoint: { lat: number; lng: number } | null = null;
+      let coverPhoto: string | null = null;
+      let membershipExists = false;
+      let emailVerified = false;
+
+      const dbClient = supabaseAdmin ?? supabase;
+      if (dbClient && locationId) {
+        const { data: locRow } = await dbClient
+          .from('locations')
+          .select('id,display_id,name,lat,lng,valet_enabled,shuttle_enabled,addons_config,verification_photos,verification_metadata,photo')
+          .eq('id', locationId)
+          .maybeSingle();
+        const lr = locRow as { id?: string; display_id?: string; name?: string; lat?: number; lng?: number; valet_enabled?: boolean; shuttle_enabled?: boolean; addons_config?: Record<string, unknown>; verification_photos?: string[] | null; photo?: string | null } | null;
+        if (lr) {
+          locationName = lr.name ? normalizeLocationName(lr.name) : null;
+          locationDisplayId = lr.display_id ?? null;
+          valetEnabled = lr.valet_enabled ?? false;
+          shuttleEnabled = lr.shuttle_enabled ?? false;
+          addonsConfig = lr.addons_config ?? {};
+          if (lr.lat && lr.lng) lotPoint = { lat: lr.lat, lng: lr.lng };
+          valetAttendant = await resolveValetAttendant(lr.id ?? locationId);
+          const rawVp = lr.verification_photos as unknown;
+          const vpArr: string[] = Array.isArray(rawVp) ? rawVp : (typeof rawVp === 'string' ? (() => { try { return JSON.parse(rawVp); } catch { return []; } })() : []);
+          const lrMeta = (lr as unknown as { verification_metadata?: Record<string, unknown> | null }).verification_metadata;
+          const lrMetaUrls: string[] = Array.isArray(lrMeta?.photo_urls) ? (lrMeta!.photo_urls as string[]) : [];
+          coverPhoto = (vpArr.length > 0 ? vpArr[0] : null) ?? (lrMetaUrls.length > 0 ? lrMetaUrls[0] : null) ?? lr.photo ?? null;
+        }
+      }
+      if (email && supabaseAdmin) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (!error) {
+          const existing = data.users.find((u) => (u.email ?? '').trim().toLowerCase() === email);
+          membershipExists = Boolean(existing);
+          emailVerified = Boolean(existing?.email_confirmed_at);
+        }
+      }
+
+      return NextResponse.json({
+        session_id: pi.id,
+        ref_id: pi.id.slice(-8),
+        email: email || null,
+        amount_total: pi.amount ?? 0,
+        currency: pi.currency ?? 'eur',
+        flow_type: meta.flow_type ?? null,
+        location_id: locationId,
+        location_name: locationName,
+        location_display_id: locationDisplayId,
+        valet_enabled: valetEnabled,
+        shuttle_enabled: shuttleEnabled,
+        addons_config: addonsConfig,
+        valet_attendant: valetAttendant,
+        lot_point: lotPoint,
+        assigned_spot: null,
+        check_in: checkIn,
+        check_out: checkOut,
+        plate: null,
+        wallet_topup_credit_cents: 0,
+        wallet_debit_applied_cents: 0,
+        loyalty_bonus_credit_cents: 0,
+        membership_exists: membershipExists,
+        email_verified: emailVerified,
+        cover_photo: coverPhoto,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'payment_intent_lookup_failed';
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
+
+  // ── Checkout Session branch (existing — unchanged below) ─────────────────
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const sessionMetadata = session.metadata ?? {};
@@ -301,6 +395,7 @@ export async function GET(req: NextRequest) {
     let addonsConfig: Record<string, unknown> = {};
     let valetAttendant: string | null = null;
     let lotPoint: { lat: number; lng: number } | null = null;
+    let coverPhoto: string | null = null;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -403,12 +498,18 @@ export async function GET(req: NextRequest) {
         try {
           const { data: flagsRow } = await dbClient
             .from('locations')
-            .select('valet_enabled,shuttle_enabled,addons_config')
+            .select('valet_enabled,shuttle_enabled,addons_config,verification_photos,verification_metadata,photo')
             .eq('id', resolvedId)
             .maybeSingle();
           valetEnabled = (flagsRow as { valet_enabled?: boolean | null } | null)?.valet_enabled ?? false;
           shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
           addonsConfig = (flagsRow as { addons_config?: Record<string, unknown> | null } | null)?.addons_config ?? {};
+          const rawVPhotos = (flagsRow as { verification_photos?: unknown } | null)?.verification_photos;
+          const vpArr2: string[] = Array.isArray(rawVPhotos) ? rawVPhotos : (typeof rawVPhotos === 'string' ? (() => { try { return JSON.parse(rawVPhotos); } catch { return []; } })() : []);
+          const flagsMeta = (flagsRow as { verification_metadata?: Record<string, unknown> | null } | null)?.verification_metadata;
+          const flagsMetaUrls: string[] = Array.isArray(flagsMeta?.photo_urls) ? (flagsMeta!.photo_urls as string[]) : [];
+          const fallbackPhoto = (flagsRow as { photo?: string | null } | null)?.photo;
+          coverPhoto = (vpArr2.length > 0 ? vpArr2[0] : null) ?? (flagsMetaUrls.length > 0 ? flagsMetaUrls[0] : null) ?? fallbackPhoto ?? null;
         } catch {}
         // Query city manager (officer assignment) for valet attendant name
         valetAttendant = await resolveValetAttendant(resolvedId);
@@ -463,11 +564,13 @@ export async function GET(req: NextRequest) {
       assigned_spot: assignedSpot,
       check_in: entryTime,
       check_out: exitTime,
+      plate: null,
       wallet_topup_credit_cents: walletTopupCreditCents,
       wallet_debit_applied_cents: walletDebitAppliedCents,
       loyalty_bonus_credit_cents: loyaltyBonusCreditCents,
       membership_exists: membershipExists,
       email_verified: emailVerified,
+      cover_photo: coverPhoto,
     });
   } catch (error) {
     let fallback = await buildFallbackSummaryFromParkingSession(sessionId);

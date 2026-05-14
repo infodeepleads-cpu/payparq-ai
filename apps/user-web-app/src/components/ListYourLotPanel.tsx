@@ -337,8 +337,6 @@ export function ListYourLotPanel({
   }, [currentStepValue, currentStep3SubValue, isLoaded, data.latitude, data.longitude]);
 
   const geocodeFullAddress = async () => {
-    console.log('🔍 geocodeFullAddress called - timestamp:', new Date().toISOString());
-    console.log('📍 Current data state:', { address: data.address, addressLine2: data.addressLine2, town: data.town, postalCode: data.postalCode, region: data.region });
 
     if (!isLoaded) {
       console.error('❌ Google Maps API not loaded yet (isLoaded=false)');
@@ -359,8 +357,6 @@ export function ListYourLotPanel({
       return;
     }
 
-    console.log('🔍 Starting geocode for address:', fullAddress, 'with country:', data.region);
-
     return new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
         console.error('❌ Geocoding timeout after 5 seconds');
@@ -369,13 +365,11 @@ export function ListYourLotPanel({
 
       geocoder.geocode({ address: fullAddress, componentRestrictions: { country: data.region } }, (results, status) => {
         clearTimeout(timeout);
-        console.log('📡 Geocoder callback - status:', status, 'results:', results?.length || 0);
 
         if (status === 'OK' && results?.[0]?.geometry?.location) {
           const location = results[0].geometry.location;
           const lat = location.lat();
           const lng = location.lng();
-          console.log('✅ Geocoding SUCCESS - coordinates:', { lat, lng });
           updateData('latitude', String(lat));
           updateData('longitude', String(lng));
           resolve();
@@ -391,7 +385,6 @@ export function ListYourLotPanel({
     if (cityAutocompleteRef.current) {
       try {
         const place = cityAutocompleteRef.current.getPlace();
-        console.log('🏙️ City selected from Google:', place?.formatted_address);
 
         if (!place || !place.formatted_address) {
           console.warn('❌ Invalid city selection');
@@ -400,7 +393,6 @@ export function ListYourLotPanel({
 
         updateData('town', place.formatted_address);
         setCitySelected(true);
-        console.log('✅ City confirmed:', place.formatted_address);
 
         // Geocode the city immediately to zoom map
         if (place.geometry?.location) {
@@ -408,7 +400,6 @@ export function ListYourLotPanel({
           const lng = place.geometry.location.lng();
           updateData('latitude', String(lat));
           updateData('longitude', String(lng));
-          console.log('🗺️ City zoomed to:', lat, lng);
         }
       } catch (e) {
         console.error('❌ City selection error:', e);
@@ -579,118 +570,97 @@ export function ListYourLotPanel({
 
 
   const handleNext = async () => {
-    console.log('📍 handleNext - step:', currentStepValue, 'sub:', currentSubStepValue);
 
     if (currentStepValue === 1) {
       if (currentSubStepValue === 'region') {
-        console.log('🏠 Step 1a → geocoding full address and moving to map');
         await geocodeFullAddress();
         setStep1Sub('map');
         return;
       }
       if (currentSubStepValue === 'map') {
-        console.log('🗺️ Step 1b → moving to name');
         setStep1Sub('name');
         return;
       }
       if (currentSubStepValue === 'name') {
-        console.log('📝 Step 1c → moving to type');
         setStep1Sub('type');
         return;
       }
       if (currentSubStepValue === 'type') {
-        console.log('🎨 Step 1d → moving to features');
         setStep1Sub('features');
         return;
       }
       if (currentSubStepValue === 'features') {
-        console.log('⭐ Step 1e → moving to vehicleSize');
         setStep1Sub('vehicleSize');
         return;
       }
       if (currentSubStepValue === 'vehicleSize') {
-        console.log('🚗 Step 1f → moving to accessControl');
         setStep1Sub('accessControl');
         return;
       }
       if (currentSubStepValue === 'accessControl') {
-        console.log('🔐 Step 1g → moving to review');
         setStep('review');
         return;
       }
     }
     if (currentStepValue === 2) {
       if (currentStep2SubValue === 'availability') {
-        console.log('📅 Step 2a → moving to booking start');
         setStep2Sub('bookingStart');
         return;
       }
       if (currentStep2SubValue === 'bookingStart') {
-        console.log('📅 Step 2b → moving to calendar preview');
         setStep2Sub('calendarPreview');
         return;
       }
       if (currentStep2SubValue === 'calendarPreview') {
-        console.log('🗓️ Step 2c → moving to booking window');
         setStep2Sub('bookingWindow');
         return;
       }
       if (currentStep2SubValue === 'bookingWindow') {
-        console.log('📅 Step 2d → moving to booking types');
         setStep2Sub('bookingTypes');
         return;
       }
       if (currentStep2SubValue === 'bookingTypes') {
-        console.log('📋 Step 2e → moving to pricing');
         setStep2Sub('pricing');
         return;
       }
       if (currentStep2SubValue === 'pricing') {
-        console.log('💰 Step 2f → moving to description');
         setStep2Sub('description');
         return;
       }
       if (currentStep2SubValue === 'description') {
-        console.log('📝 Step 2g → moving to post-booking instructions');
         setStep2Sub('postBookingInstructions');
         return;
       }
       if (currentStep2SubValue === 'postBookingInstructions') {
-        console.log('📋 Step 2h → moving to section 2 review');
         setStep2Sub('review2');
         return;
       }
       if (currentStep2SubValue === 'review2') {
-        console.log('✅ Step 2 review → published, navigating to dashboard');
-        router.push('/members?refresh=listings');
+        router.push('/members?tab=moji-prostori');
         return;
       }
     }
     if (currentStepValue === 3) {
       if (currentStep3SubValue === 'photos') {
-        console.log('📸 Step 3a → moving to street view');
         setStep3Sub('streetView');
         return;
       }
       if (currentStep3SubValue === 'streetView') {
-        console.log('🗺️ Step 3b → moving to summary');
         setStep3Sub('summary');
         return;
       }
       if (currentStep3SubValue === 'summary') {
-        console.log('✅ Step 3c → moving to review3');
         setStep3Sub('review3');
         return;
       }
       if (currentStep3SubValue === 'review3') {
-        console.log('✅ Step 3 review → published, updating verification status');
         if (listingId && supabase) {
           await supabase
             .from('locations')
             .update({ verification_status: 'pending' })
             .eq('id', listingId);
         }
-        router.push('/members?refresh=listings');
+        router.push('/members?tab=moji-prostori');
         return;
       }
     }
@@ -1086,7 +1056,7 @@ export function ListYourLotPanel({
                   <p className="text-sm text-black/70">Upravljajte kalendarom i cijenama u nastavku.</p>
                 </div>
                 <button
-                  onClick={() => router.push('/members?refresh=listings')}
+                  onClick={() => router.push('/members?tab=moji-prostori')}
                   className="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                 >
                   Idi na upravljanje
@@ -1250,7 +1220,6 @@ export function ListYourLotPanel({
                   <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                   <Autocomplete
                     onLoad={(instance) => {
-                      console.log('🔌 City Autocomplete loaded');
                       cityAutocompleteRef.current = instance;
                     }}
                     onPlaceChanged={handleCitySelect}
@@ -1281,7 +1250,6 @@ export function ListYourLotPanel({
                         onChange={(e) => {
                           const value = e.target.value;
                           updateData('address', value);
-                          console.log('📝 Address changed to:', value);
                         }}
                         autoComplete="off"
                         spellCheck={false}

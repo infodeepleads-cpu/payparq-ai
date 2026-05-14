@@ -38,7 +38,7 @@ export function PWAInstallPrompt({ storageKey, appName, themeColor = '#5F3DFC' }
             onClick={handleDismiss}
             className="flex-1 px-3 py-2 bg-white/20 rounded-lg font-bold text-xs text-white hover:bg-white/30 transition-colors"
           >
-            Kasneje
+            Kasnije
           </button>
         </div>
       </div>

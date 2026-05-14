@@ -16,6 +16,16 @@ export const metadata: Metadata = {
   description:
     "Payparq is the software-only platform for frictionless parking, access, and urban mobility for drivers, operators, and modern cities.",
   applicationName: "Payparq",
+  alternates: {
+    canonical: "https://www.payparq.com",
+    languages: {
+      "hr": "https://www.payparq.com",
+      "en": "https://www.payparq.com/en",
+      "hr-HR": "https://www.payparq.com",
+      "en-US": "https://www.payparq.com/en",
+      "x-default": "https://www.payparq.com",
+    },
+  },
   openGraph: {
     title: "Payparq | Frictionless Parking and Urban Mobility",
     description:

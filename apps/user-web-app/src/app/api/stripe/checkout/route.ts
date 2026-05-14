@@ -23,11 +23,19 @@ export const revalidate = 0;
 
 type PricingType = "hourly" | "daily" | "monthly";
 const STRIPE_CARD_MIN_AMOUNT_CENTS = 50;
-const unifiedStripeSuccessUrl =
-  "https://www.payparq.com/success?session_id={CHECKOUT_SESSION_ID}";
-const unifiedStripeCancelUrl = "https://www.payparq.com/success";
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.payparq.com").replace(/\/$/, "");
 const stripeApiVersion =
   "2025-03-31.basil" as unknown as Stripe.LatestApiVersion;
+
+function getSuccessUrl(origin?: string): string {
+  const baseUrl = origin || siteUrl;
+  return `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`;
+}
+
+function getCancelUrl(origin?: string): string {
+  const baseUrl = origin || siteUrl;
+  return `${baseUrl}/success`;
+}
 
 function resolveStripeSecretKey(): string | null {
   const candidates = [
@@ -153,7 +161,7 @@ function buildSuccessUrl(params: {
   checkIn?: string;
   checkOut?: string;
 }) {
-  const url = new URL("https://www.payparq.com/success");
+  const url = new URL(`${siteUrl}/success`);
   url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
   if (params.locationId) {
     url.searchParams.set("location_id", params.locationId);
@@ -1103,8 +1111,8 @@ export async function POST(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: "setup",
-        success_url: unifiedStripeSuccessUrl,
-        cancel_url: unifiedStripeCancelUrl,
+        success_url: getSuccessUrl(req.nextUrl.origin),
+        cancel_url: getCancelUrl(req.nextUrl.origin),
         ...checkoutCustomerParams,
         payment_method_types: ["card"],
         setup_intent_data: {
@@ -1458,7 +1466,7 @@ export async function POST(req: NextRequest) {
     return await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: params.checkoutSuccessUrl,
-      cancel_url: unifiedStripeCancelUrl,
+      cancel_url: getCancelUrl(req.nextUrl.origin),
       payment_method_types,
       allow_promotion_codes: allowPromotionCodes,
       line_items: [
@@ -1666,8 +1674,8 @@ export async function GET(req: NextRequest) {
     try {
       const session = await stripe.checkout.sessions.create({
         mode: "setup",
-        success_url: unifiedStripeSuccessUrl,
-        cancel_url: unifiedStripeCancelUrl,
+        success_url: getSuccessUrl(req.nextUrl.origin),
+        cancel_url: getCancelUrl(req.nextUrl.origin),
         ...checkoutCustomerParams,
         payment_method_types: ["card"],
         setup_intent_data: {
@@ -1977,7 +1985,7 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       success_url: checkoutSuccessUrl,
-      cancel_url: unifiedStripeCancelUrl,
+      cancel_url: getCancelUrl(req.nextUrl.origin),
       payment_method_types: ["card"],
       allow_promotion_codes: allowPromotionCodes,
       line_items: [

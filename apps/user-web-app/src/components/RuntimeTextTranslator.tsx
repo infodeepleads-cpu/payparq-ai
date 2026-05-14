@@ -9,6 +9,7 @@ const TRANSLATE_BATCH_SIZE = 200;
 const TRANSLATE_BATCH_RETRIES = 3;
 const TRANSLATE_RETRY_DELAY_MS = 300;
 const localHrOverrides = new Map<string, string>([
+  ["Payparq Host", "Payparq Host"],
   ["Experience", "Iskustvo"],
   ["payparq makes cities", "PayParq stvara svijet"],
   ["payparq makes cities move with you", "PayParq stvara svijet koji se kreće s tobom"],

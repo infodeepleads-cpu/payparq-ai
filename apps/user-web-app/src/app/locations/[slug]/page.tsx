@@ -20,6 +20,11 @@ type HubData = {
   verification_photos?: string[];
   verification_metadata?: Record<string, unknown>;
   addons_config?: Record<string, unknown> | null;
+  capacity?: number;
+  total_spots?: number;
+  rate_per_hour?: number;
+  review_score?: number;
+  review_count?: number;
 };
 
 async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: string; hero: string; faqItems: Array<{ q: string; a: string }>; travelTime: string } | null> {
@@ -33,7 +38,7 @@ async function fetchHub(slug: string): Promise<{ hub: HubData; priceLabel: strin
     return null;
   }
   
-  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config,review_score,review_count,review_scores";
+  const selectCols = "id,name,address,display_id,canonical_slug,latitude,longitude,verification_photos,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling,addons_config,review_score,review_count,review_scores,capacity,total_spots";
 
   const { data: locationData, error } = await client
     .from("locations")
@@ -220,6 +225,7 @@ export default async function LocationPage(props: { params: Promise<{ slug: stri
   
   const { hub, priceLabel } = data;
   const hubUrl = `https://www.payparq.com/locations/${hub.canonical_slug ?? params.slug}`;
+
   const localBusinessLd = {
     "@context": "https://schema.org",
     "@type": "ParkingFacility",
@@ -254,6 +260,23 @@ export default async function LocationPage(props: { params: Promise<{ slug: stri
       { "@type": "LocationFeatureSpecification", "name": "24/7 Surveillance", "value": true },
       { "@type": "LocationFeatureSpecification", "name": "Online Booking", "value": true },
     ],
+    ...(hub.review_score && hub.review_count ? {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": hub.review_score.toFixed(1),
+        "ratingCount": hub.review_count,
+        "bestRating": "5",
+        "worstRating": "1",
+      },
+    } : {}),
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "EUR",
+      "lowPrice": Math.max(0.5, (hub.rate_per_hour || 2) - 1).toFixed(2),
+      "highPrice": ((hub.rate_per_hour || 2) + 2).toFixed(2),
+      "offerCount": hub.capacity || hub.total_spots || 10,
+      "availability": "https://schema.org/InStock",
+    },
   };
 
   return (
