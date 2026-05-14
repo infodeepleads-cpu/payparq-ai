@@ -102,9 +102,9 @@ export async function POST(req: NextRequest) {
       const ext = file.name.split('.').pop() ?? 'jpg';
       const path = `host-listings/${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const buffer = Buffer.from(await file.arrayBuffer());
-      const { error: uploadError } = await supabaseAdmin.storage.from('parking-photos').upload(path, buffer, { contentType: file.type });
+      const { error: uploadError } = await supabaseAdmin.storage.from('listing-photos').upload(path, buffer, { contentType: file.type });
       if (!uploadError) {
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('parking-photos').getPublicUrl(path);
+        const { data: { publicUrl } } = supabaseAdmin.storage.from('listing-photos').getPublicUrl(path);
         photoUrls.push(publicUrl);
       }
     }
