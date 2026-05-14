@@ -44,6 +44,7 @@ type SessionSummary = {
   lot_point?: { lat: number; lng: number } | null;
   assigned_spot?: { label: string; lat?: number | null; lng?: number | null; col_num?: number | null } | null;
   plate?: string | null;
+  cover_photo?: string | null;
 };
 
 type Credits = number | '∞';
@@ -396,6 +397,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const [storedPiId, setStoredPiId] = useState<string | null>(null);
   const [storedBooking, setStoredBooking] = useState<StoredBooking | null>(null);
+  const [storedCoverPhoto, setStoredCoverPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('last_payment_intent');
@@ -404,6 +406,8 @@ function SuccessContent() {
     if (booking) {
       try { setStoredBooking(JSON.parse(booking)); } catch {}
     }
+    const photo = sessionStorage.getItem('payparq_cover_photo');
+    if (photo) setStoredCoverPhoto(photo);
   }, []);
 
   const sessionId = searchParams.get('session_id') || searchParams.get('payment_intent') || storedPiId;
@@ -1042,31 +1046,22 @@ function SuccessContent() {
                   </div>
                 )}
 
-                {/* Date */}
-                {passDate && (
-                  <div>
-                    <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Datum / Date</p>
-                    <p className="text-[13px] font-bold text-black capitalize">{passDate}</p>
-                  </div>
-                )}
-
                 {/* Times */}
-                <div className="flex items-end gap-2">
-                  <div>
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
                     <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Ulaz</p>
-                    <p className="text-[30px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeIn}</p>
+                    {passDate && <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDate}</p>}
+                    <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeIn}</p>
                   </div>
-                  <div className="pb-2" style={{ color: '#94a3b8' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <div className="pt-5" style={{ color: '#94a3b8' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[9px] uppercase tracking-[0.18em] font-bold mb-0.5" style={{ color: '#2451A0' }}>Izlaz</p>
-                    <p className="text-[30px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeOut}</p>
-                    {passDateOut && (
-                      <p className="text-[10px] font-bold capitalize mt-0.5" style={{ color: '#64748b' }}>{passDateOut}</p>
-                    )}
+                    <p className="text-[11px] font-medium capitalize mb-0.5" style={{ color: '#64748b' }}>{passDateOut || passDate || ' '}</p>
+                    <p className="text-[28px] font-black leading-none tabular-nums" style={{ color: '#1A3A6B' }}>{passTimeOut}</p>
                   </div>
                 </div>
 
@@ -1137,6 +1132,11 @@ function SuccessContent() {
                 </a>
               ) : (
                 <p className="text-[12px] italic" style={{ color: '#94a3b8' }}>Adresa nije dostupna</p>
+              )}
+              {(summary?.cover_photo || storedCoverPhoto) && (
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #CBD5E1' }}>
+                  <img src={summary?.cover_photo || storedCoverPhoto!} alt="Ulaz parkinga" className="w-full object-cover" style={{ maxHeight: '180px' }} />
+                </div>
               )}
             </div>
 

@@ -283,6 +283,7 @@ export async function GET(req: NextRequest) {
       let addonsConfig: Record<string, unknown> = {};
       let valetAttendant: string | null = null;
       let lotPoint: { lat: number; lng: number } | null = null;
+      let coverPhoto: string | null = null;
       let membershipExists = false;
       let emailVerified = false;
 
@@ -290,10 +291,10 @@ export async function GET(req: NextRequest) {
       if (dbClient && locationId) {
         const { data: locRow } = await dbClient
           .from('locations')
-          .select('id,display_id,name,lat,lng,valet_enabled,shuttle_enabled,addons_config')
+          .select('id,display_id,name,lat,lng,valet_enabled,shuttle_enabled,addons_config,verification_photos,verification_metadata,photo')
           .eq('id', locationId)
           .maybeSingle();
-        const lr = locRow as { id?: string; display_id?: string; name?: string; lat?: number; lng?: number; valet_enabled?: boolean; shuttle_enabled?: boolean; addons_config?: Record<string, unknown> } | null;
+        const lr = locRow as { id?: string; display_id?: string; name?: string; lat?: number; lng?: number; valet_enabled?: boolean; shuttle_enabled?: boolean; addons_config?: Record<string, unknown>; verification_photos?: string[] | null; photo?: string | null } | null;
         if (lr) {
           locationName = lr.name ? normalizeLocationName(lr.name) : null;
           locationDisplayId = lr.display_id ?? null;
@@ -302,6 +303,11 @@ export async function GET(req: NextRequest) {
           addonsConfig = lr.addons_config ?? {};
           if (lr.lat && lr.lng) lotPoint = { lat: lr.lat, lng: lr.lng };
           valetAttendant = await resolveValetAttendant(lr.id ?? locationId);
+          const rawVp = lr.verification_photos as unknown;
+          const vpArr: string[] = Array.isArray(rawVp) ? rawVp : (typeof rawVp === 'string' ? (() => { try { return JSON.parse(rawVp); } catch { return []; } })() : []);
+          const lrMeta = (lr as unknown as { verification_metadata?: Record<string, unknown> | null }).verification_metadata;
+          const lrMetaUrls: string[] = Array.isArray(lrMeta?.photo_urls) ? (lrMeta!.photo_urls as string[]) : [];
+          coverPhoto = (vpArr.length > 0 ? vpArr[0] : null) ?? (lrMetaUrls.length > 0 ? lrMetaUrls[0] : null) ?? lr.photo ?? null;
         }
       }
       if (email && supabaseAdmin) {
@@ -337,6 +343,7 @@ export async function GET(req: NextRequest) {
         loyalty_bonus_credit_cents: 0,
         membership_exists: membershipExists,
         email_verified: emailVerified,
+        cover_photo: coverPhoto,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'payment_intent_lookup_failed';
@@ -388,6 +395,7 @@ export async function GET(req: NextRequest) {
     let addonsConfig: Record<string, unknown> = {};
     let valetAttendant: string | null = null;
     let lotPoint: { lat: number; lng: number } | null = null;
+    let coverPhoto: string | null = null;
     let membershipExists = false;
     let emailVerified = false;
     let walletTopupCreditCents = Number(sessionMetadata.minimum_charge_topup_cents ?? 0) || 0;
@@ -490,12 +498,18 @@ export async function GET(req: NextRequest) {
         try {
           const { data: flagsRow } = await dbClient
             .from('locations')
-            .select('valet_enabled,shuttle_enabled,addons_config')
+            .select('valet_enabled,shuttle_enabled,addons_config,verification_photos,verification_metadata,photo')
             .eq('id', resolvedId)
             .maybeSingle();
           valetEnabled = (flagsRow as { valet_enabled?: boolean | null } | null)?.valet_enabled ?? false;
           shuttleEnabled = (flagsRow as { shuttle_enabled?: boolean | null } | null)?.shuttle_enabled ?? false;
           addonsConfig = (flagsRow as { addons_config?: Record<string, unknown> | null } | null)?.addons_config ?? {};
+          const rawVPhotos = (flagsRow as { verification_photos?: unknown } | null)?.verification_photos;
+          const vpArr2: string[] = Array.isArray(rawVPhotos) ? rawVPhotos : (typeof rawVPhotos === 'string' ? (() => { try { return JSON.parse(rawVPhotos); } catch { return []; } })() : []);
+          const flagsMeta = (flagsRow as { verification_metadata?: Record<string, unknown> | null } | null)?.verification_metadata;
+          const flagsMetaUrls: string[] = Array.isArray(flagsMeta?.photo_urls) ? (flagsMeta!.photo_urls as string[]) : [];
+          const fallbackPhoto = (flagsRow as { photo?: string | null } | null)?.photo;
+          coverPhoto = (vpArr2.length > 0 ? vpArr2[0] : null) ?? (flagsMetaUrls.length > 0 ? flagsMetaUrls[0] : null) ?? fallbackPhoto ?? null;
         } catch {}
         // Query city manager (officer assignment) for valet attendant name
         valetAttendant = await resolveValetAttendant(resolvedId);
@@ -556,6 +570,7 @@ export async function GET(req: NextRequest) {
       loyalty_bonus_credit_cents: loyaltyBonusCreditCents,
       membership_exists: membershipExists,
       email_verified: emailVerified,
+      cover_photo: coverPhoto,
     });
   } catch (error) {
     let fallback = await buildFallbackSummaryFromParkingSession(sessionId);

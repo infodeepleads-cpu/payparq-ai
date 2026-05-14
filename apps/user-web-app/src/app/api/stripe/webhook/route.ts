@@ -390,6 +390,7 @@ async function buildBookingConfirmationEmail(params: {
   membersUrl?: string;
   plate?: string;
   address?: string;
+  coverPhoto?: string | null;
 }): Promise<string> {
   const {
     sessionId, reservationCode, email, locationName, locationDisplayId,
@@ -412,27 +413,179 @@ async function buildBookingConfirmationEmail(params: {
   const timeOut = formatTimeOnly(exitTime);
   const amountFormatted = `€${(amountCents / 100).toFixed(2)}`;
 
-  let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodeURIComponent(reservationCode)}`;
-  try {
-    const QRCode = await import('qrcode');
-    qrUrl = await QRCode.default.toDataURL(reservationCode, { width: 128, margin: 1, color: { dark: '#1A3A6B', light: '#ffffff' } });
-  } catch (e) {
-    console.warn('QR code generation failed, using fallback:', e);
-  }
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=000000&bgcolor=FFFFFF&data=${encodeURIComponent(reservationCode)}&format=png`;
 
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    @media only screen and (max-width:600px) {
+      .card { width:100% !important; }
+      .inner { padding:16px !important; }
+    }
+  </style>
+</head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 12px;">
   <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);">
-      <tr><td style="background:#1A3A6B;padding:20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="color:#fff;font-size:24px;font-weight:900;text-transform:uppercase;letter-spacing:2px;">Parking Pass</div><div style="color:rgba(255,255,255,0.5);font-size:10px;font-family:monospace;margin-top:4px;letter-spacing:2px;">1 / 1</div></td><td align="right"><div style="color:#fff;font-family:monospace;font-size:12px;font-weight:900;background:rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;">${reservationCode}</div></td></tr></table></td></tr>
-      <tr><td style="height:6px;background:linear-gradient(90deg, #2451A0 0%, #3B82F6 50%, #2451A0 100%);"></td></tr>
-      <tr><td style="padding:20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;padding-right:16px;"><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Location</div><div style="font-size:17px;font-weight:900;color:#000;margin-bottom:4px;">${locationName || locationDisplayId || 'Parking'}</div>${locationDisplayId ? `<div style="font-size:10px;color:#64748b;margin-bottom:12px;">#${locationDisplayId}</div>` : ''}${address ? `<div style="font-size:11px;color:#64748b;line-height:1.4;margin-bottom:12px;">${address}</div>` : ''}${plate ? `<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;margin-top:8px;">Plate</div><div style="font-size:15px;font-weight:900;font-family:monospace;letter-spacing:4px;margin-bottom:12px;">${plate}</div>` : ''}<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;margin-top:8px;">Dovezite se</div><div style="font-size:12px;color:#64748b;margin-bottom:2px;">${dateIn}</div><div style="font-size:28px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;margin-bottom:16px;">${timeIn}</div><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Odvezite se</div><div style="font-size:12px;color:#64748b;margin-bottom:2px;">${dateOut}</div><div style="font-size:28px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;">${timeOut}</div></td><td style="vertical-align:top;text-align:center;width:140px;padding-left:16px;"><div style="border:2px solid #2451A0;border-radius:8px;background:#fff;padding:8px;display:inline-block;margin-bottom:8px;"><img src="${qrUrl}" width="112" height="112" alt="QR" style="display:block;" /></div><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">Scan</div></td></tr></table></td></tr>
+    <table class="card" cellpadding="0" cellspacing="0" style="width:100%;max-width:420px;background:#fff;border-radius:16px;overflow:hidden;border:1px solid rgba(0,0,0,0.08);">
+
+      <!-- Header -->
+      <tr><td style="background:#1A3A6B;padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><div style="color:#fff;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:2px;">Parking Pass</div></td>
+          <td align="right"><div style="color:#fff;font-family:monospace;font-size:13px;font-weight:900;background:rgba(255,255,255,0.15);border-radius:6px;padding:5px 10px;">${reservationCode}</div></td>
+        </tr></table>
+      </td></tr>
+
+      <!-- Accent bar -->
+      <tr><td style="height:5px;background:linear-gradient(90deg,#2451A0 0%,#3B82F6 50%,#2451A0 100%);"></td></tr>
+
+      <!-- Location -->
+      <tr><td class="inner" style="padding:20px;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Location</div>
+        <div style="font-size:18px;font-weight:900;color:#000;margin-bottom:4px;">${locationName || locationDisplayId || 'Parking'}</div>
+        ${locationDisplayId ? `<div style="font-size:10px;color:#64748b;margin-bottom:6px;">#${locationDisplayId}</div>` : ''}
+        ${address ? `<div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:4px;">${address}</div>` : ''}
+      </td></tr>
+
+      <!-- Divider -->
+      <tr><td style="padding:0 20px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+
+      <!-- Dates -->
+      <tr><td class="inner" style="padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="width:50%;padding-right:12px;vertical-align:top;">
+              <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Dovezite se</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:3px;">${dateIn}</div>
+              <div style="font-size:26px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;">${timeIn}</div>
+            </td>
+            <td style="width:50%;padding-left:12px;vertical-align:top;border-left:1px solid #e2e8f0;">
+              <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Odvezite se</div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:3px;">${dateOut}</div>
+              <div style="font-size:26px;font-weight:900;color:#1A3A6B;font-family:monospace;line-height:1;">${timeOut}</div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      ${plate ? `
+      <!-- Divider -->
+      <tr><td style="padding:0 20px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+      <!-- Plate -->
+      <tr><td class="inner" style="padding:16px 20px;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Registarska pločica</div>
+        <div style="font-size:18px;font-weight:900;font-family:monospace;letter-spacing:4px;color:#000;">${plate}</div>
+      </td></tr>` : ''}
+
+      <!-- Dashed divider -->
       <tr><td style="padding:0 20px;"><div style="border-top:2px dashed #2451A0;"></div></td></tr>
-      <tr><td style="background:#F0F5FF;padding:16px 20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Total Paid</div><div style="font-size:24px;font-weight:900;color:#1A3A6B;">${amountFormatted}</div></td><td align="right" style="vertical-align:top;">${email ? `<div style="font-family:monospace;font-size:10px;color:#999;margin-bottom:8px;">${email}</div>` : ''}<div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">VALID</div></td></tr></table></td></tr>
+
+      <!-- QR Code -->
+      <tr><td class="inner" style="padding:20px;text-align:center;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Scan QR Code</div>
+        <div style="display:inline-block;border:2px solid #2451A0;border-radius:10px;padding:10px;background:#fff;">
+          <img src="${qrUrl}" width="140" height="140" alt="QR Code" style="display:block;" />
+        </div>
+        <div style="font-family:monospace;font-size:11px;color:#64748b;margin-top:8px;">${reservationCode}</div>
+      </td></tr>
+
+      <!-- Divider -->
+      <tr><td style="padding:0 20px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+
+      <!-- Footer -->
+      <tr><td style="background:#F0F5FF;padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td>
+            <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Total Paid</div>
+            <div style="font-size:22px;font-weight:900;color:#1A3A6B;">${amountFormatted}</div>
+          </td>
+          <td align="right" style="vertical-align:bottom;">
+            ${email ? `<div style="font-family:monospace;font-size:10px;color:#94a3b8;margin-bottom:4px;">${email}</div>` : ''}
+            <div style="color:#2451A0;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">✓ VALID</div>
+          </td>
+        </tr></table>
+      </td></tr>
+
+      <!-- Kako doći -->
+      <tr><td style="background:#F0F5FF;border-top:1px solid #CBD5E1;border-bottom:1px solid #CBD5E1;padding:10px 20px;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:3px;">Kako doći · Getting There</div>
+      </td></tr>
+      <tr><td class="inner" style="padding:16px 20px;">
+        ${params.locationName || params.address ? `<div style="font-size:14px;font-weight:700;color:#000;margin-bottom:4px;">${params.locationName || ''}</div>` : ''}
+        ${params.address ? `<div style="font-size:12px;color:#64748b;margin-bottom:12px;">${params.address}</div>` : ''}
+        ${params.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(params.address)}" style="display:table;background:#EBF0FA;border:1px solid #2451A0;border-radius:12px;padding:10px 16px;text-decoration:none;">
+          <span style="color:#1A3A6B;font-size:13px;font-weight:700;">Otvori u Google Maps</span>
+        </a>` : '<div style="font-size:12px;color:#94a3b8;font-style:italic;">Adresa nije dostupna</div>'}
+        ${params.coverPhoto ? `<div style="margin-top:12px;border-radius:10px;overflow:hidden;border:1px solid #CBD5E1;"><img src="${params.coverPhoto}" width="100%" style="display:block;max-height:180px;object-fit:cover;" alt="Ulaz parkinga" /></div>` : ''}
+      </td></tr>
+
+      <!-- Upute -->
+      <tr><td style="background:#F0F5FF;border-top:1px solid #CBD5E1;border-bottom:1px solid #CBD5E1;padding:10px 20px;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:3px;">Upute za korištenje · Instructions</div>
+      </td></tr>
+      <tr><td class="inner" style="padding:8px 20px;">
+        <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="vertical-align:top;padding-right:12px;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#2451A0;text-align:center;line-height:22px;font-size:10px;font-weight:900;color:#fff;">1</div>
+              </td>
+              <td style="vertical-align:top;">
+                <div style="font-size:13px;font-weight:700;color:#000;">Dovezite se unutra</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.5;">Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.</div>
+              </td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid #E2E8F0;">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="vertical-align:top;padding-right:12px;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#2451A0;text-align:center;line-height:22px;font-size:10px;font-weight:900;color:#fff;">2</div>
+              </td>
+              <td style="vertical-align:top;">
+                <div style="font-size:13px;font-weight:700;color:#000;">Parkirajte</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.5;">Pronađite slobodan spot i parkirajte. Ako je prisutan attendant, pokažite mu ovaj pass.</div>
+              </td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:10px 0;">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="vertical-align:top;padding-right:12px;">
+                <div style="width:22px;height:22px;border-radius:50%;background:#2451A0;text-align:center;line-height:22px;font-size:10px;font-weight:900;color:#fff;">3</div>
+              </td>
+              <td style="vertical-align:top;">
+                <div style="font-size:13px;font-weight:700;color:#000;">Odvezite se van</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.5;">Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.</div>
+              </td>
+            </tr></table>
+          </td></tr>
+        </table>
+      </td></tr>
+
+      <!-- Kontakt -->
+      <tr><td style="background:#F0F5FF;border-top:1px solid #CBD5E1;border-bottom:1px solid #CBD5E1;padding:10px 20px;">
+        <div style="color:#2451A0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:3px;">Kontakt · Support</div>
+      </td></tr>
+      <tr><td class="inner" style="padding:16px 20px;">
+        <a href="tel:+385915963139" style="display:block;background:#EBF0FA;border:1px solid #CBD5E1;border-radius:12px;padding:12px 16px;text-decoration:none;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#2451A0;">PayParq Priority Support</div>
+          <div style="font-size:15px;font-weight:900;color:#000;margin-top:2px;">+385 91 596 3139</div>
+        </a>
+        <div style="background:#EBF0FA;border:1px solid #CBD5E1;border-radius:12px;padding:12px 16px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#2451A0;">Lot Emergency Number</div>
+          <div style="font-size:13px;font-weight:500;color:#94a3b8;margin-top:2px;">Prikazat će se pri dolasku</div>
+        </div>
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding:12px 20px;text-align:center;">
+        <div style="font-size:9px;color:#cbd5e1;">© 2026 PayParq · payparq.com</div>
+      </td></tr>
+
     </table>
   </td></tr>
 </table>
@@ -490,6 +643,28 @@ async function sendBookingConfirmation(
   const plate = (meta.plate_number ?? meta.plate ?? '').toString().trim() || undefined;
   const address = (meta.address ?? '').toString().trim() || undefined;
 
+  let coverPhoto: string | null = null;
+  try {
+    if (locationId) {
+      const { data: photoRow } = await client
+        .from('locations')
+        .select('verification_photos,verification_metadata,photos,photo')
+        .eq('id', locationId)
+        .maybeSingle();
+      if (photoRow) {
+        const rawVp = (photoRow as { verification_photos?: unknown }).verification_photos;
+        const rawPh = (photoRow as { photos?: unknown }).photos;
+        const parseArr = (v: unknown): string[] => Array.isArray(v) ? v : (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return []; } })() : []);
+        const vpArr = parseArr(rawVp);
+        const phArr = parseArr(rawPh);
+        const meta2 = (photoRow as { verification_metadata?: Record<string,unknown>|null }).verification_metadata;
+        const metaUrls = parseArr(meta2?.photo_urls);
+        const metaPhotos = parseArr(meta2?.photos);
+        coverPhoto = vpArr[0] ?? phArr[0] ?? metaUrls[0] ?? metaPhotos[0] ?? (photoRow as { photo?: string|null }).photo ?? null;
+      }
+    }
+  } catch { /* best effort */ }
+
   const html = await buildBookingConfirmationEmail({
     sessionId: session.id,
     reservationCode,
@@ -502,6 +677,7 @@ async function sendBookingConfirmation(
     currency: session.currency || 'EUR',
     plate,
     address,
+    coverPhoto,
   });
 
   try {
@@ -1271,6 +1447,24 @@ export async function POST(req: Request) {
       }
     } catch { /* best effort */ }
 
+    let coverPhotoPI: string | null = null;
+    try {
+      if (location_id && location_id !== 'DEFAULT_LOC') {
+        const { data: photoRow } = await client
+          .from('locations')
+          .select('verification_photos,verification_metadata,photos,photo')
+          .eq('id', location_id)
+          .maybeSingle();
+        if (photoRow) {
+          const parseArr = (v: unknown): string[] => Array.isArray(v) ? v : (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return []; } })() : []);
+          const vpArr = parseArr((photoRow as { verification_photos?: unknown }).verification_photos);
+          const phArr = parseArr((photoRow as { photos?: unknown }).photos);
+          const meta2 = (photoRow as { verification_metadata?: Record<string,unknown>|null }).verification_metadata;
+          coverPhotoPI = vpArr[0] ?? phArr[0] ?? parseArr(meta2?.photo_urls)[0] ?? parseArr(meta2?.photos)[0] ?? (photoRow as { photo?: string|null }).photo ?? null;
+        }
+      }
+    } catch { /* best effort */ }
+
     const html = await buildBookingConfirmationEmail({
       sessionId: paymentIntent.id,
       reservationCode,
@@ -1283,6 +1477,7 @@ export async function POST(req: Request) {
       currency: paymentIntent.currency?.toUpperCase() || 'EUR',
       plate: plate_number !== 'UNKNOWN' ? plate_number : undefined,
       address: (meta.address ?? '').toString().trim() || undefined,
+      coverPhoto: coverPhotoPI,
     });
 
     const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_SECRET_KEY;

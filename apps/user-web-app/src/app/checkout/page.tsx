@@ -560,6 +560,9 @@ function PaidCheckoutForm({
         if (freeData?.session_id) {
           sessionStorage.setItem('last_payment_intent', freeData.session_id);
         }
+        if (freeData?.cover_photo) {
+          sessionStorage.setItem('payparq_cover_photo', freeData.cover_photo);
+        }
       } catch (err) {
         console.error('Free session creation failed:', err);
       }
