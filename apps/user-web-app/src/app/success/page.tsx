@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react';
+import html2pdf from 'html2pdf.js';
 const LotMap = lazy(() => import('@/components/LotMap'));
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -707,6 +708,21 @@ function SuccessContent() {
     }
   };
 
+  const handleDownloadPass = () => {
+    const passCard = document.querySelector('[data-pass-card]') as HTMLElement;
+    if (!passCard) return;
+    const element = passCard.cloneNode(true) as HTMLElement;
+    element.style.margin = '0';
+    const opt = {
+      margin: 10,
+      filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+    };
+    html2pdf().set(opt).from(element).save();
+  };
+
   const SUPPORT_WHATSAPP = '385915963139';
 
   const openWhatsAppFallback = (requestType: 'shuttle' | 'valet') => {
@@ -1000,7 +1016,7 @@ function SuccessContent() {
           {/* ══════════════════════════════════════
               PARKING PASS CARD
           ══════════════════════════════════════ */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-lg" style={{ border: '2px solid #1A3A6B' }}>
+          <div className="bg-white rounded-2xl overflow-hidden shadow-lg" style={{ border: '2px solid #1A3A6B' }} data-pass-card>
 
             {/* Pass header */}
             <div style={{ background: '#1A3A6B' }} className="px-5 py-4">
@@ -1188,10 +1204,14 @@ function SuccessContent() {
 
           </div>
 
-          {/* Members zona — slim single link */}
+          {/* Members zona — slim single link + download */}
           {summary?.email && (
-            <div className="flex items-center justify-center py-1">
-              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2" style={{ color: '#2451A0' }}>
+            <div className="flex items-center justify-center gap-4 py-3">
+              <button onClick={handleDownloadPass} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
+                ⬇ Preuzmi Pass
+              </button>
+              <span style={{ color: '#94a3b8' }}>·</span>
+              <Link href={membersHref} className="text-[12px] font-semibold underline underline-offset-2 hover:opacity-75 transition-opacity" style={{ color: '#2451A0' }}>
                 Members zona
               </Link>
             </div>

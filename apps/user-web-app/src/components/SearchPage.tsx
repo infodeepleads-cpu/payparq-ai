@@ -8,6 +8,7 @@ import { SearchFilters } from './SearchFilters';
 import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
+import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
@@ -150,6 +151,8 @@ export function SearchPage() {
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
+  const [showDestinationPicker, setShowDestinationPicker] = useState(false);
+  const [destinationVenueType, setDestinationVenueType] = useState<'airport' | 'city' | 'event'>('airport');
 
   useEffect(() => {
     if (!selectedListing) return;
@@ -162,6 +165,12 @@ export function SearchPage() {
       });
     }, 200);
   }, [selectedListing?.id]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapCenter) return;
+    mapRef.current.panTo({ lat: mapCenter.lat, lng: mapCenter.lng });
+    mapRef.current.setZoom(13);
+  }, [mapCenter]);
 
   const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 6371;
@@ -216,10 +225,10 @@ export function SearchPage() {
   // ---------------------------
 
   const parkingCategories = [
-    { id: 'airport', label: 'Zračna Luka', emoji: '✈️', description: 'Parking near airports' },
-    { id: 'hotels', label: 'Hoteli', emoji: '🏨', description: 'Parking near hotels' },
-    { id: 'events', label: 'Eventovi', emoji: '🎉', description: 'Parking near event venues' },
-    { id: 'list-lot', label: 'List your lot', emoji: '📍', description: 'List your parking space', action: 'navigate', link: '/host' },
+    { id: 'airport', label: 'Zračna Luka', description: 'Parking near airports' },
+    { id: 'city', label: 'Gradovi', description: 'Parking in city centers' },
+    { id: 'events', label: 'Eventovi', description: 'Parking near event venues' },
+    { id: 'list-lot', label: 'List your lot', description: 'List your parking space', action: 'navigate', link: '/host' },
   ];
 
   const toggleQuickFilter = (filterId: string) => {
@@ -1090,7 +1099,6 @@ export function SearchPage() {
                           className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
                           onClick={() => setAllParkingDropdownOpen(false)}
                         >
-                          <span className="text-2xl">{cat.emoji}</span>
                           <div translate="no">
                             <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
                             <p className="text-xs text-gray-500">{cat.description}</p>
@@ -1102,9 +1110,12 @@ export function SearchPage() {
                       <button
                         key={cat.id}
                         className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
-                        onClick={() => setAllParkingDropdownOpen(false)}
+                        onClick={() => {
+                          setDestinationVenueType(cat.id as 'airport' | 'hotel' | 'event');
+                          setShowDestinationPicker(true);
+                          setAllParkingDropdownOpen(false);
+                        }}
                       >
-                        <span className="text-2xl">{cat.emoji}</span>
                         <div translate="no">
                           <p className="text-sm font-semibold text-gray-900">{cat.label}</p>
                           <p className="text-xs text-gray-500">{cat.description}</p>
@@ -2352,6 +2363,21 @@ export function SearchPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Destination Picker Widget */}
+      {showDestinationPicker && (
+        <DestinationPickerWidget
+          onClose={() => setShowDestinationPicker(false)}
+          defaultTab={destinationVenueType}
+          onSelect={(venue, startTime, endTime) => {
+            setMapCenter({ lat: venue.lat, lng: venue.lng });
+            setSearchLocationPin({ lat: venue.lat, lng: venue.lng });
+            setSearchLocation(venue.name);
+            setStartTime(startTime);
+            setEndTime(endTime);
+          }}
+        />
       )}
     </div>
   );
