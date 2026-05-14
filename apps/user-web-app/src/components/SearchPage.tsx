@@ -152,7 +152,7 @@ export function SearchPage() {
   const [showCustomerSupport, setShowCustomerSupport] = useState(false);
   const [showGuaranteedParking, setShowGuaranteedParking] = useState(false);
   const [showDestinationPicker, setShowDestinationPicker] = useState(false);
-  const [destinationVenueType, setDestinationVenueType] = useState<'airport' | 'city' | 'event'>('airport');
+  const [destinationVenueType, setDestinationVenueType] = useState<'airport' | 'city' | 'event' | 'hotel'>('airport');
 
   useEffect(() => {
     if (!selectedListing) return;
