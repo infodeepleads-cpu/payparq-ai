@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
         total_spots: parseInt(capacity) || 1,
         verification_metadata: {
           listing_status: 'pending',
+          hub_enabled: true,
           section_status: { section1: true, section2: true, section3: true },
           type,
           capacity,

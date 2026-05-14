@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
         verification_status: 'pending',
         verification_metadata: {
           listing_status: 'pending',
+          hub_enabled: true,
           // Contact
           owner_name: ownerName,
           owner_phone: ownerPhone,
