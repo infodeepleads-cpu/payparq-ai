@@ -163,7 +163,7 @@ const getLocalTimeString = (date: Date) => {
 interface DestinationPickerWidgetProps {
   onClose: () => void;
   onSelect: (venue: Venue, startTime: string, endTime: string) => void;
-  defaultTab?: 'airport' | 'city' | 'event';
+  defaultTab?: 'airport' | 'city' | 'event' | 'hotel';
 }
 
 export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airport' }: DestinationPickerWidgetProps) {
