@@ -718,7 +718,7 @@ function SuccessContent() {
       filename: `payparq-parking-pass-${resCode || 'pass'}.pdf`,
       image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      jsPDF: { orientation: 'portrait' as const, unit: 'mm' as const, format: 'a4' as const },
     };
     html2pdf().set(opt).from(element).save();
   };
