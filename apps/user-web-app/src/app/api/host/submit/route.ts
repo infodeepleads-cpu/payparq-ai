@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
         occupancy: 0,
         display_id: String((Date.now() % 90000) + 10000),
         canonical_slug: `${lotName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'lot'}-${Date.now() % 90000 + 10000}`,
+        verification_photos: photoUrls.length > 0 ? photoUrls : null,
         verification_status: 'pending',
         verification_metadata: {
           listing_status: 'pending',
