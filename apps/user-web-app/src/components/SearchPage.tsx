@@ -1135,7 +1135,7 @@ export function SearchPage() {
             <button
               onClick={() => setShowTotalPrice(!showTotalPrice)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                showTotalPrice ? 'bg-[#5F3DFC]' : 'bg-gray-300'
+                showTotalPrice ? 'bg-black' : 'bg-gray-300'
               }`}
             >
               <span

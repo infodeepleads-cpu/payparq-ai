@@ -194,7 +194,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
           {/* Submit Button */}
           <button
             onClick={() => setIsOpen(false)}
-            className="w-full bg-[#5F3DFC] text-white font-semibold text-xs py-2 rounded hover:bg-[#4F2DEC] transition-colors"
+            className="w-full bg-black text-white font-semibold text-xs py-2 rounded hover:bg-gray-900 transition-colors"
           >
             Potvrdi
           </button>
