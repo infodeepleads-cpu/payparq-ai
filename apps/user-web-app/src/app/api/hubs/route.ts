@@ -14,7 +14,7 @@ export async function GET() {
     const { data: locations, error } = await client
       .from('locations')
       .select('id,name,address,display_id,canonical_slug,latitude,longitude,verification_metadata,rate_per_hour,base_price_hourly,base_price_daily,base_price_monthly,rate_per_hour_floor,rate_per_hour_ceiling,base_price_daily_floor,base_price_daily_ceiling,base_price_monthly_floor,base_price_monthly_ceiling')
-      .filter('verification_metadata->>hub_enabled', 'eq', 'true')
+      .contains('verification_metadata', { hub_enabled: true })
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
       .not('canonical_slug', 'is', null)
