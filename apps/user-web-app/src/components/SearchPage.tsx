@@ -862,14 +862,14 @@ export function SearchPage() {
                 </div>
               </button>
               {homeDropdownOpen && (
-                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[140px]">
-                  <a href="/" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 rounded-t-lg">
+                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
+                  <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg whitespace-nowrap">
                     Home
                   </a>
-                  <a href="/members" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200">
+                  <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 whitespace-nowrap">
                     Log In
                   </a>
-                  <a href="/host" className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                  <a href="/host" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg whitespace-nowrap">
                     List your lot
                   </a>
                 </div>

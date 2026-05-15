@@ -46,7 +46,7 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
 
 function InfoPanel() {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6 space-y-4 sm:space-y-6 w-full overflow-x-hidden text-xs sm:text-sm lg:sticky lg:top-16 h-fit">
+    <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6 space-y-4 sm:space-y-6 w-full overflow-x-hidden text-xs sm:text-sm">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-1">Oglasi svoje parkirno mjesto</p>
         <p className="text-xs text-gray-500">Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.</p>
@@ -512,6 +512,7 @@ export default function HostPage() {
     libraries: GMAPS_LIBS,
   });
 
+
   // Section 1
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -746,12 +747,12 @@ export default function HostPage() {
 
       {/* Body */}
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:auto-rows-max">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8">
           <div>
             <InfoPanel />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 lg:col-start-2">
 
             {/* ── Section 1: Contact Info ── */}
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
