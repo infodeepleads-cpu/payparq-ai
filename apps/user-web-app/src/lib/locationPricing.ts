@@ -83,6 +83,24 @@ export function resolveParkTaxiPriceEuro(source: PricingSource): number {
   return toFiniteMetadataNumber(raw);
 }
 
+export function getViablePrice(
+  source: PricingSource,
+  durationHours: number,
+  reservationType: string
+): number {
+  if (reservationType === 'Mjesečna') {
+    return resolveScannerTruthPriceEuro(source, 'monthly');
+  }
+
+  if (durationHours < 8) {
+    return resolveScannerTruthPriceEuro(source, 'hourly');
+  }
+
+  const hourlyTotal = resolveScannerTruthPriceEuro(source, 'hourly') * durationHours;
+  const dailyTotal = resolveScannerTruthPriceEuro(source, 'daily');
+  return Math.min(hourlyTotal, dailyTotal);
+}
+
 export function formatEuroLabel(amountEuro: number): string {
   return `€${amountEuro.toFixed(2)}`;
 }

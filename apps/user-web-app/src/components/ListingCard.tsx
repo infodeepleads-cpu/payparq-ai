@@ -35,6 +35,8 @@ interface Parking {
   lat: number;
   lng: number;
   pricePerHour: number;
+  pricePerDay?: number;
+  pricePerMonth?: number;
   rating: number;
   reviews: number;
   photo: string;
@@ -56,10 +58,24 @@ interface ListingCardProps {
   showFee?: boolean;
   hideDetailsButton?: boolean;
   spots?: number;
+  reservationType?: string;
 }
 
-export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots }: ListingCardProps) {
-  const subtotal = durationHours * listing.pricePerHour;
+export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots, reservationType = 'Satna/dnevna' }: ListingCardProps) {
+  const getDisplayPrice = (list: Parking, duration: number, type: string): number => {
+    if (type === 'Mjesečna') {
+      return list.pricePerMonth || list.pricePerHour;
+    }
+    if (duration < 8) {
+      return list.pricePerHour;
+    }
+    const hourlyTotal = list.pricePerHour * duration;
+    const dailyTotal = list.pricePerDay || list.pricePerHour;
+    return Math.min(hourlyTotal, dailyTotal);
+  };
+
+  const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
+  const subtotal = durationHours * pricePerUnit;
   const total = parseFloat((showFee ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
   return (
     <div

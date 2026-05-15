@@ -10,7 +10,7 @@ import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
-import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import { resolveScannerTruthPriceEuro, getViablePrice } from '@/lib/locationPricing';
 import { AMENITIES_LIST } from '@/lib/amenities';
 import { AmenitiesChips } from './AmenitiesChips';
 
@@ -63,6 +63,8 @@ interface Parking {
   lat: number;
   lng: number;
   pricePerHour: number;
+  pricePerDay?: number;
+  pricePerMonth?: number;
   rating: number;
   reviews: number;
   photo: string;
@@ -195,7 +197,19 @@ export function SearchPage() {
     return Math.max(1, Math.ceil(diff / 3_600_000));
   })();
 
-  const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
+  const getDisplayPrice = (listing: Parking, duration: number, type: string): number => {
+    if (type === 'Mjesečna') {
+      return listing.pricePerMonth || listing.pricePerHour;
+    }
+    if (duration < 8) {
+      return listing.pricePerHour;
+    }
+    const hourlyTotal = listing.pricePerHour * duration;
+    const dailyTotal = listing.pricePerDay || listing.pricePerHour;
+    return Math.min(hourlyTotal, dailyTotal);
+  };
+
+  const subtotal = selectedListing ? parseFloat((durationHours * getDisplayPrice(selectedListing, durationHours, reservationType)).toFixed(2)) : 0;
   const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
 
@@ -215,8 +229,8 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const sub = parseFloat((durationHours * listing.pricePerHour).toFixed(2));
-    const fee = parseFloat((sub * 0.05).toFixed(2));
+    const sub = parseFloat((durationHours * getDisplayPrice(listing, durationHours, reservationType)).toFixed(2));
+    const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
     const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
     const params = new URLSearchParams({
       loc: listing.id,
@@ -353,6 +367,18 @@ export function SearchPage() {
               rate_per_hour_ceiling: loc.rate_per_hour_ceiling,
             }, 'hourly');
 
+            const pricePerDay = resolveScannerTruthPriceEuro({
+              base_price_daily: loc.base_price_daily,
+              base_price_daily_floor: loc.base_price_daily_floor,
+              base_price_daily_ceiling: loc.base_price_daily_ceiling,
+            }, 'daily');
+
+            const pricePerMonth = resolveScannerTruthPriceEuro({
+              base_price_monthly: loc.base_price_monthly,
+              base_price_monthly_floor: loc.base_price_monthly_floor,
+              base_price_monthly_ceiling: loc.base_price_monthly_ceiling,
+            }, 'monthly');
+
             // Parse verification_metadata if it's a string
             let metadata: any = {};
             if (loc.verification_metadata) {
@@ -382,6 +408,8 @@ export function SearchPage() {
               lat: lat,
               lng: lng,
               pricePerHour,
+              pricePerDay,
+              pricePerMonth,
               rating: loc.review_score || 0,
               reviews: loc.review_count || 0,
               photo: photoUrl,
@@ -601,8 +629,10 @@ export function SearchPage() {
       case 'price':
       case 'cijena': // fallback for Croatian locale
         sorted.sort((a, b) => {
-          const aTotal = (a.pricePerHour * durationHours) + 0.99 + (a.pricePerHour * durationHours * 0.05);
-          const bTotal = (b.pricePerHour * durationHours) + 0.99 + (b.pricePerHour * durationHours * 0.05);
+          const aPricePerUnit = getDisplayPrice(a, durationHours, reservationType);
+          const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
+          const aTotal = (aPricePerUnit * durationHours) + 0.99 + (aPricePerUnit * durationHours * 0.05);
+          const bTotal = (bPricePerUnit * durationHours) + 0.99 + (bPricePerUnit * durationHours * 0.05);
           return aTotal - bTotal;
         });
         break;
@@ -612,7 +642,11 @@ export function SearchPage() {
         break;
       case 'value':
       case 'vrijednost': // fallback for Croatian locale
-        sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
+        sorted.sort((a, b) => {
+          const aPrice = getDisplayPrice(a, durationHours, reservationType);
+          const bPrice = getDisplayPrice(b, durationHours, reservationType);
+          return (b.rating / bPrice) - (a.rating / aPrice);
+        });
         break;
       case 'relevance':
       case 'relevantnost': // fallback for Croatian locale
@@ -1306,9 +1340,11 @@ export function SearchPage() {
                 if (filteredListings.length > 0) {
                   const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
                   if (validListings.length > 0) {
-                    const cheapest = validListings.reduce((min, curr) =>
-                      curr.pricePerHour < min.pricePerHour ? curr : min
-                    );
+                    const cheapest = validListings.reduce((min, curr) => {
+                      const currPrice = getDisplayPrice(curr, durationHours, reservationType);
+                      const minPrice = getDisplayPrice(min, durationHours, reservationType);
+                      return currPrice < minPrice ? curr : min;
+                    });
                     // Use real-time distance calculation for closest (should be at index 0 after sorting)
                     const refPoint = searchLocationPin || mapCenter;
                     const closest = validListings.reduce((min, curr) => {
@@ -1351,6 +1387,7 @@ export function SearchPage() {
                         durationHours={durationHours}
                         showFee={showTotalPrice}
                         spots={liveListing.spots}
+                        reservationType={reservationType}
                       />
                     </div>
                   );
@@ -1739,7 +1776,12 @@ export function SearchPage() {
 
                 <div className="space-y-2 border-b border-gray-200 pb-4">
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">{formatDuration()} × €{selectedListing.pricePerHour.toFixed(2)}/h</p>
+                    <p className="text-sm text-gray-600">
+                      {reservationType === 'Mjesečna'
+                        ? `Mjesečna tarifa`
+                        : `${formatDuration()} × €${getDisplayPrice(selectedListing, durationHours, reservationType).toFixed(2)}/h`
+                      }
+                    </p>
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
@@ -2005,9 +2047,11 @@ export function SearchPage() {
                 if (filteredListings.length > 0) {
                   const validListings = filteredListings.filter(l => l.distance != null && l.pricePerHour != null && l.rating != null);
                   if (validListings.length > 0) {
-                    const cheapest = validListings.reduce((min, curr) =>
-                      curr.pricePerHour < min.pricePerHour ? curr : min
-                    );
+                    const cheapest = validListings.reduce((min, curr) => {
+                      const currPrice = getDisplayPrice(curr, durationHours, reservationType);
+                      const minPrice = getDisplayPrice(min, durationHours, reservationType);
+                      return currPrice < minPrice ? curr : min;
+                    });
                     // Use real-time distance calculation for closest (should be at index 0 after sorting)
                     const refPoint = searchLocationPin || mapCenter;
                     const closest = validListings.reduce((min, curr) => {
@@ -2053,6 +2097,7 @@ export function SearchPage() {
                         showFee={showTotalPrice}
                         hideDetailsButton={true}
                         spots={liveListing.spots}
+                        reservationType={reservationType}
                       />
                     </div>
                   );
