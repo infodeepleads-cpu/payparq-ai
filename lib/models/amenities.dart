@@ -5,7 +5,7 @@ class Amenity {
   final String label;
   final IconData icon;
 
-  Amenity({
+  const Amenity({
     required this.id,
     required this.label,
     required this.icon,
@@ -18,10 +18,10 @@ class AmenitiesManager {
     Amenity(id: 'shuttle', label: 'Shuttle', icon: Icons.directions_bus),
     Amenity(id: 'ev-charging', label: 'EV Charging', icon: Icons.electrical_services),
     Amenity(id: 'wheelchair-accessible', label: 'Wheelchair Access', icon: Icons.accessible),
-    Amenity(id: 'rampa', label: 'Rampa', icon: Icons.ramp),
+    Amenity(id: 'rampa', label: 'Rampa', icon: Icons.accessible_forward),
     Amenity(id: 'in-out-allowed', label: 'In/Out Allowed', icon: Icons.repeat),
     Amenity(id: 'tank-refill', label: 'Tank Refill', icon: Icons.local_gas_station),
-    Amenity(id: 'garage', label: 'Garaža', icon: Icons.garage),
+    Amenity(id: 'garage', label: 'Garaža', icon: Icons.warehouse),
     Amenity(id: 'self-park', label: 'Self Park', icon: Icons.local_parking),
   ];
 
