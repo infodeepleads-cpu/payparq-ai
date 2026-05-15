@@ -9,6 +9,7 @@ import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
+import { AmenitiesChips } from './AmenitiesChips';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 
@@ -121,7 +122,7 @@ export function SearchPage() {
   });
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
   const homeDropdownRef = useRef<HTMLDivElement>(null);
-  const [showTotalPrice, setShowTotalPrice] = useState(false);
+  const [showTotalPrice, setShowTotalPrice] = useState(true);
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
   const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
@@ -559,49 +560,54 @@ export function SearchPage() {
 
     // Apply sorting
     const sorted = [...filtered];
-
-    // Find and move closest listing to top (Najkraća Šetnja always on top)
-    if (sorted.length > 0) {
-      const refPoint = searchLocationPin || mapCenter;
-      const closest = sorted.reduce((min, curr) => {
-        const minDist = haversineKm(refPoint.lat, refPoint.lng, min.lat, min.lng);
-        const currDist = haversineKm(refPoint.lat, refPoint.lng, curr.lat, curr.lng);
-        return currDist < minDist ? curr : min;
-      });
-      const closestIndex = sorted.findIndex(l => l.id === closest.id);
-      if (closestIndex > 0) {
-        sorted.splice(closestIndex, 1);
-        sorted.unshift(closest);
-      }
-    }
-
-    // Apply sorting to rest
-    const rest = sorted.slice(1);
     const ref = searchLocationPin || mapCenter;
+    console.log(`=== SORTING: ${sortBy} | ref: lat=${ref.lat.toFixed(3)}, lng=${ref.lng.toFixed(3)}`);
+
     switch (sortBy) {
       case 'distance':
       case 'walk':
-        rest.sort((a, b) => haversineKm(ref.lat, ref.lng, a.lat, a.lng) - haversineKm(ref.lat, ref.lng, b.lat, b.lng));
+        sorted.sort((a, b) => {
+          const aDist = haversineKm(ref.lat, ref.lng, a.lat, a.lng);
+          const bDist = haversineKm(ref.lat, ref.lng, b.lat, b.lng);
+          console.log(`Sorting by distance: ${a.name}=${aDist.toFixed(2)}km vs ${b.name}=${bDist.toFixed(2)}km`);
+          return aDist - bDist;
+        });
+        console.log('Final distance order:', sorted.map(l => `${l.name}(${haversineKm(ref.lat, ref.lng, l.lat, l.lng).toFixed(2)}km)`));
         break;
       case 'price':
-        rest.sort((a, b) => a.pricePerHour - b.pricePerHour);
+        sorted.sort((a, b) => {
+          const aTotal = (a.pricePerHour * durationHours) + 0.99 + (a.pricePerHour * durationHours * 0.05);
+          const bTotal = (b.pricePerHour * durationHours) + 0.99 + (b.pricePerHour * durationHours * 0.05);
+          return aTotal - bTotal;
+        });
         break;
       case 'rating':
-        rest.sort((a, b) => b.rating - a.rating);
+        sorted.sort((a, b) => b.rating - a.rating);
         break;
       case 'value':
-        rest.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
+        sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
         break;
       case 'relevance':
       default:
+        // Find and move closest listing to top for relevance
+        if (sorted.length > 0) {
+          const closest = sorted.reduce((min, curr) => {
+            const minDist = haversineKm(ref.lat, ref.lng, min.lat, min.lng);
+            const currDist = haversineKm(ref.lat, ref.lng, curr.lat, curr.lng);
+            return currDist < minDist ? curr : min;
+          });
+          const closestIndex = sorted.findIndex(l => l.id === closest.id);
+          if (closestIndex > 0) {
+            sorted.splice(closestIndex, 1);
+            sorted.unshift(closest);
+          }
+        }
         break;
     }
 
-    sorted.splice(1, sorted.length - 1, ...rest);
-
+    console.log(`Sorted result (${sortBy}):`, sorted.slice(0, 5).map(l => ({ name: l.name, dist: haversineKm(ref.lat, ref.lng, l.lat, l.lng).toFixed(2) })));
     setFilteredListings(sorted);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`]);
+  }, [listings, priceRange[0], priceRange[1], selectedFeatures.join(','), selectedFilters.join(','), parkingType, quickFilters.join(','), sortBy, `${searchLocationPin?.lat},${searchLocationPin?.lng}`, durationHours, startTime, endTime]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -717,7 +723,7 @@ export function SearchPage() {
               </div>
               {/* Predictions dropdown */}
               {showPredictions && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-300 rounded-md shadow-xl z-50 max-h-80 overflow-y-auto">
+                <div className="absolute top-full mt-1 left-1/2 bg-white border border-gray-300 rounded-md shadow-xl z-50 max-h-80 overflow-y-auto" style={{ width: 'calc(100% + 1rem)', transform: 'translateX(-50%)' }}>
                   {/* Current Location */}
                   <button
                     onClick={handleCurrentLocation}
@@ -921,7 +927,7 @@ export function SearchPage() {
             {/* Location Search */}
             <div>
               <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Kamo ideš?</label>
-              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#5F3DFC] focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 flex items-center gap-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
                 <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
                 <input
                   type="text"
@@ -1018,7 +1024,7 @@ export function SearchPage() {
             </button>
             <button
               onClick={() => setShowMobileSearchEdit(false)}
-              className="flex-1 px-4 py-2 bg-[#5F3DFC] text-white text-sm font-semibold rounded-lg hover:bg-[#4330c4]"
+              className="flex-1 px-4 py-2 bg-[#000000] text-white text-sm font-semibold rounded-lg hover:bg-gray-900"
             >
               Primijeni
             </button>
@@ -1046,7 +1052,7 @@ export function SearchPage() {
               onClick={() => toggleQuickFilter('instant-access')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 quickFilters.includes('instant-access')
-                  ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
+                  ? 'bg-[#000000] text-white border border-[#000000]'
                   : 'border border-gray-300 text-gray-900 hover:border-gray-400'
               }`}
             >
@@ -1057,7 +1063,7 @@ export function SearchPage() {
             onClick={() => toggleQuickFilter('covered-garage')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               quickFilters.includes('covered-garage')
-                ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
+                ? 'bg-[#000000] text-white border border-[#000000]'
                 : 'border border-gray-300 text-gray-900 hover:border-gray-400'
             }`}
           >
@@ -1067,7 +1073,7 @@ export function SearchPage() {
             onClick={() => toggleQuickFilter('self-park')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               quickFilters.includes('self-park')
-                ? 'bg-[#5F3DFC] text-white border border-[#5F3DFC]'
+                ? 'bg-[#000000] text-white border border-[#000000]'
                 : 'border border-gray-300 text-gray-900 hover:border-gray-400'
             }`}
           >
@@ -1167,7 +1173,7 @@ export function SearchPage() {
                       type="checkbox"
                       checked={selectedFilters.includes(filter.id)}
                       onChange={() => toggleFilter(filter.id)}
-                      className="w-4 h-4 accent-[#5F3DFC] rounded cursor-pointer"
+                      className="w-4 h-4 accent-[#000000] rounded cursor-pointer"
                     />
                     <span className="text-sm font-medium text-gray-900">{filter.label}</span>
                     <span className="text-xs text-gray-500">({filter.count})</span>
@@ -1183,7 +1189,7 @@ export function SearchPage() {
                       type="checkbox"
                       checked={selectedFilters.includes(filter.id)}
                       onChange={() => toggleFilter(filter.id)}
-                      className="w-4 h-4 accent-[#5F3DFC] rounded cursor-pointer"
+                      className="w-4 h-4 accent-[#000000] rounded cursor-pointer"
                     />
                     <span className="text-sm font-medium text-gray-900">{filter.label}</span>
                     <span className="text-xs text-gray-500">({filter.count})</span>
@@ -1195,7 +1201,7 @@ export function SearchPage() {
                   <button
                     onClick={() => setShowTotalPrice(!showTotalPrice)}
                     className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors flex-shrink-0 ${
-                      showTotalPrice ? 'bg-[#5F3DFC]' : 'bg-gray-300'
+                      showTotalPrice ? 'bg-[#000000]' : 'bg-gray-300'
                     }`}
                   >
                     <span
@@ -1219,7 +1225,7 @@ export function SearchPage() {
               </button>
               <button
                 onClick={() => setFilterModalOpen(false)}
-                className="px-6 py-2 bg-[#5F3DFC] text-white text-sm font-medium rounded-lg hover:bg-[#4F2DEC]"
+                className="px-6 py-2 bg-[#000000] text-white text-sm font-medium rounded-lg hover:bg-gray-900"
               >
                 Show {filteredListings.length} results
               </button>
@@ -1564,17 +1570,8 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Amenities</p>
                   </button>
                   {showAmenities && (
-                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
-                      {selectedListing.amenities
-                        ? (Array.isArray(selectedListing.amenities)
-                            ? selectedListing.amenities
-                            : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
-                              <span>{typeof a === 'string' ? a.trim() : a}</span>
-                            </div>
-                          ))
-                        : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                    <div className="mt-3 ml-7">
+                      <AmenitiesChips selected={selectedListing.features || []} />
                     </div>
                   )}
                 </div>
@@ -1867,7 +1864,8 @@ export function SearchPage() {
           >
             {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
             {filteredListings.map((listing) => {
-              const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+              const subtotal = durationHours * listing.pricePerHour;
+              const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
               const isSelected = selectedListing?.id === listing.id;
               const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
@@ -1937,7 +1935,7 @@ export function SearchPage() {
                 onClick={() => toggleQuickFilter('instant-access')}
                 className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
                   quickFilters.includes('instant-access')
-                    ? 'bg-[#5F3DFC] text-white'
+                    ? 'bg-[#000000] text-white'
                     : 'border border-gray-300 text-gray-900 hover:border-gray-400'
                 }`}
               >
@@ -1948,7 +1946,7 @@ export function SearchPage() {
               onClick={() => toggleQuickFilter('covered-garage')}
               className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
                 quickFilters.includes('covered-garage')
-                  ? 'bg-[#5F3DFC] text-white'
+                  ? 'bg-[#000000] text-white'
                   : 'border border-gray-300 text-gray-900 hover:border-gray-400'
               }`}
             >
@@ -1958,7 +1956,7 @@ export function SearchPage() {
               onClick={() => toggleQuickFilter('self-park')}
               className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex-shrink-0 ${
                 quickFilters.includes('self-park')
-                  ? 'bg-[#5F3DFC] text-white'
+                  ? 'bg-[#000000] text-white'
                   : 'border border-gray-300 text-gray-900 hover:border-gray-400'
               }`}
             >
@@ -1967,9 +1965,18 @@ export function SearchPage() {
           </div>
         </div>
 
-        {/* Results count */}
-        <div className="flex-shrink-0 px-4 py-2 text-xs text-gray-600 border-b border-gray-200">
-          {filteredListings.length} rezultata
+        {/* Results count and Sort dropdown */}
+        <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+          <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="px-2 py-1 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-black"
+          >
+            <option value="relevance">Poredaj po relevantnosti</option>
+            <option value="distance">Poredaj po udaljenosti</option>
+            <option value="price">Poredaj po cijeni</option>
+          </select>
         </div>
 
         {/* Mobile List */}
@@ -2086,7 +2093,8 @@ export function SearchPage() {
                 }}
               >
                 {filteredListings.map((listing) => {
-                  const price = parseFloat((durationHours * listing.pricePerHour * (showTotalPrice ? 1.05 : 1)).toFixed(2));
+                  const subtotal = durationHours * listing.pricePerHour;
+                  const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
                   const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
                   const isSelected = selectedListing?.id === listing.id;
                   const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
@@ -2275,17 +2283,8 @@ export function SearchPage() {
                   <p className="text-sm font-bold text-gray-900">Amenities</p>
                 </button>
                 {showAmenities && (
-                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
-                    {selectedListing.amenities
-                      ? (Array.isArray(selectedListing.amenities)
-                          ? selectedListing.amenities
-                          : String(selectedListing.amenities).split(',')).map((a: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span>{typeof a === 'string' ? a.trim() : a}</span>
-                          </div>
-                        ))
-                      : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                  <div className="mt-2 ml-6">
+                    <AmenitiesChips selected={selectedListing.features || []} size="sm" />
                   </div>
                 )}
               </div>

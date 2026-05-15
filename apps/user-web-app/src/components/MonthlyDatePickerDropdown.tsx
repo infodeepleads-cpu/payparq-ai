@@ -79,7 +79,7 @@ export function MonthlyDatePickerDropdown({ startDate, onStartDateChange }: Prop
       </div>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-4 w-full">
+        <div className="absolute top-full mt-2 left-1/2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-4" style={{ width: '280px', transform: 'translateX(-50%)' }}>
           {/* Header */}
           <div className="text-center mb-3">
             <div className="text-xs font-semibold text-gray-500 mb-2">Full Month / Puni Mjesec</div>
@@ -124,7 +124,7 @@ export function MonthlyDatePickerDropdown({ startDate, onStartDateChange }: Prop
                   onClick={() => handleDateSelect(day)}
                   className={`h-6 text-xs rounded transition-colors ${
                     isSelected
-                      ? 'bg-[#5F3DFC] text-white font-semibold'
+                      ? 'bg-black text-white font-semibold'
                       : 'text-gray-900 hover:bg-gray-100'
                   }`}
                 >

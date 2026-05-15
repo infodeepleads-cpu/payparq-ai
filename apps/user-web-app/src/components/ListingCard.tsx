@@ -60,7 +60,7 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
-  const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
+  const total = parseFloat((showFee ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
   return (
     <div
       onClick={(e) => {
