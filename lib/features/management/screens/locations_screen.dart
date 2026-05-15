@@ -925,6 +925,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
             text: metaStr(meta['getting_there'], 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.'));
         final howItWorksCtrl = TextEditingController(
             text: metaStr(meta['how_it_works'], '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići'));
+        final maxHeightCtrl = TextEditingController(
+            text: meta['max_height'] != null ? meta['max_height'].toString() : '');
         double pendingLatitude = (effectiveLoc['latitude'] is num)
             ? (effectiveLoc['latitude'] as num).toDouble()
             : double.tryParse('${effectiveLoc['latitude'] ?? 0.0}') ?? 0.0;
@@ -1213,6 +1215,12 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     // Save listing detail sections to verification_metadata
                     final updatedMeta = Map<String, dynamic>.from(meta);
                     updatedMeta['access_hours'] = accessHoursCtrl.text.trim();
+                    final maxHeightText = maxHeightCtrl.text.trim();
+                    if (maxHeightText.isNotEmpty) {
+                      updatedMeta['max_height'] = double.tryParse(maxHeightText) ?? meta['max_height'];
+                    } else {
+                      updatedMeta['max_height'] = null;
+                    }
                     updatedMeta['amenities_ids'] = selectedAmenities;
                     updatedMeta['things_to_know'] = thingsToKnowCtrl.text.trim();
                     updatedMeta['getting_there'] = gettingThereCtrl.text.trim();
@@ -1798,6 +1806,21 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                             children: [
                               TextField(controller: accessHoursCtrl, maxLines: 4, style: GoogleFonts.inter(fontSize: 12),
                                 decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. pon – pet: 6:00 – 23:00',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                            ],
+                          ),
+                          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            childrenPadding: const EdgeInsets.only(bottom: 12),
+                            leading: const Icon(Icons.height, size: 17, color: Colors.black54),
+                            title: Text(Lang.sel(ref.watch(localeIsCroatianProvider), 'Height Restrictions', 'Ograničenja visine'),
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                            iconColor: Colors.black45, collapsedIconColor: Colors.black45,
+                            children: [
+                              TextField(controller: maxHeightCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), style: GoogleFonts.inter(fontSize: 12),
+                                decoration: InputDecoration(labelText: Lang.sel(ref.watch(localeIsCroatianProvider), 'Max Height (cm)', 'Maks. visina (cm)'), filled: true, fillColor: AppTheme.background,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
                             ],
