@@ -209,7 +209,12 @@ export function SearchPage() {
     return Math.min(hourlyTotal, dailyTotal);
   };
 
-  const subtotal = selectedListing ? parseFloat((durationHours * getDisplayPrice(selectedListing, durationHours, reservationType)).toFixed(2)) : 0;
+  const subtotal = selectedListing ? (() => {
+    const pricePerUnit = getDisplayPrice(selectedListing, durationHours, reservationType);
+    // For monthly, don't multiply by duration - it's a flat monthly rate
+    const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
+    return parseFloat(calc.toFixed(2));
+  })() : 0;
   const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
   const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
 
@@ -229,7 +234,9 @@ export function SearchPage() {
   };
 
   const buildCheckoutUrl = (listing: Parking) => {
-    const sub = parseFloat((durationHours * getDisplayPrice(listing, durationHours, reservationType)).toFixed(2));
+    const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
+    const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
+    const sub = parseFloat(calc.toFixed(2));
     const fee = parseFloat((0.99 + sub * 0.05).toFixed(2));
     const total = parseFloat((showTotalPrice ? sub + fee : sub).toFixed(2));
     const params = new URLSearchParams({
@@ -631,8 +638,10 @@ export function SearchPage() {
         sorted.sort((a, b) => {
           const aPricePerUnit = getDisplayPrice(a, durationHours, reservationType);
           const bPricePerUnit = getDisplayPrice(b, durationHours, reservationType);
-          const aTotal = (aPricePerUnit * durationHours) + 0.99 + (aPricePerUnit * durationHours * 0.05);
-          const bTotal = (bPricePerUnit * durationHours) + 0.99 + (bPricePerUnit * durationHours * 0.05);
+          const aCalc = reservationType === 'Mjesečna' ? aPricePerUnit : aPricePerUnit * durationHours;
+          const bCalc = reservationType === 'Mjesečna' ? bPricePerUnit : bPricePerUnit * durationHours;
+          const aTotal = aCalc + 0.99 + (aCalc * 0.05);
+          const bTotal = bCalc + 0.99 + (bCalc * 0.05);
           return aTotal - bTotal;
         });
         break;

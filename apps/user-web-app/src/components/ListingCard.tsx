@@ -75,7 +75,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
   };
 
   const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
-  const subtotal = durationHours * pricePerUnit;
+  const subtotal = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
   const total = parseFloat((showFee ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
   return (
     <div
