@@ -144,7 +144,7 @@ function SummaryPanel({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 sticky top-8 p-6 space-y-6">
+    <div className="bg-white rounded-lg border border-gray-200 md:sticky md:top-8 p-4 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
       <div className="hidden lg:block">
         <p className="text-sm font-semibold text-gray-900 mb-1">{locationName}</p>
         <p className="text-xs text-gray-600 mb-2">{address || locationId}</p>
@@ -156,16 +156,16 @@ function SummaryPanel({
         <p className="font-bold text-gray-900 text-3xl mt-1 text-center">€{amountEur.toFixed(2)}</p>
       </div>
 
-      <div className="border-t border-gray-100 pt-6">
+      <div className="border-t border-gray-100 pt-4 md:pt-6">
         <div className="mb-4">
           <p className="text-xs font-semibold text-gray-400 mb-2.5">Check-in → Check-out</p>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-900 leading-none">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <span className="text-sm font-medium text-gray-900 leading-tight truncate">
               {checkIn && checkOut
                 ? `${new Date(checkIn).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkIn).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} → ${new Date(checkOut).toLocaleString('en-US', { month: 'short', day: 'numeric' })} · ${new Date(checkOut).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`
                 : '—'}
             </span>
-            <button onClick={openDatePicker} className="px-2 py-1 text-xs font-bold text-gray-900 hover:text-gray-700 focus:outline-none">
+            <button onClick={openDatePicker} className="px-3 py-1 text-xs font-bold text-gray-900 hover:text-gray-700 focus:outline-none whitespace-nowrap">
               Promijeni
             </button>
           </div>
@@ -711,7 +711,7 @@ function PaidCheckoutForm({
             </div>
 
             {/* Payment Method */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6 space-y-4 overflow-hidden">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Način plaćanja</p>
               <ExpressCheckoutElement
                 options={{ wallets: { googlePay: 'always', applePay: 'always' } }}
@@ -782,21 +782,17 @@ function PaidCheckoutForm({
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 mt-12">
-        <div className="max-w-4xl mx-auto px-6 py-6 flex items-center justify-between text-xs text-gray-400">
+      <footer className="bg-white border-t border-gray-100 mt-6">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between text-xs text-gray-400">
           <div className="flex items-center gap-3">
             <span>© 2026 PayParq</span>
-            <div className="flex items-center gap-1.5 ml-3">
+            <div className="flex items-center gap-1.5">
               <Phone className="w-3 h-3" />
               <span>+385915963139</span>
             </div>
           </div>
-          <div className="flex items-center gap-4" translate="no">
+          <div className="flex items-center gap-1.5" translate="no">
             <span className="text-gray-500">Powered by <span className="font-black text-gray-900">Stripe</span></span>
-            <span>·</span>
-            <a href="/terms" className="hover:text-gray-600 transition-colors">Terms</a>
-            <a href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</a>
-            <a href="/contact" className="hover:text-gray-600 transition-colors">Contact</a>
           </div>
         </div>
       </footer>

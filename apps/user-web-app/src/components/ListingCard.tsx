@@ -60,10 +60,14 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, badgeText, checkoutUrl, durationHours = 1, showFee = false, hideDetailsButton = false, spots }: ListingCardProps) {
   const subtotal = durationHours * listing.pricePerHour;
-  const total = parseFloat((showFee ? subtotal * 1.05 : subtotal).toFixed(2));
+  const total = parseFloat((showFee ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
   return (
     <div
-      onClick={() => onSelect(listing)}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        onSelect(listing);
+        onDetails?.();
+      }}
       className={`p-3 rounded-2xl border transition-all cursor-pointer h-[155px] flex flex-col overflow-hidden bg-white ${
         isSelected ? 'border-blue-500 bg-blue-500/10 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
       }`}
@@ -161,13 +165,18 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
               Detalji
             </button>
           )}
-          <a
-            href={checkoutUrl || '#'}
-            onClick={(e) => { e.stopPropagation(); if (!checkoutUrl) e.preventDefault(); }}
-            className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              if (checkoutUrl) {
+                window.location.href = checkoutUrl;
+              }
+            }}
+            className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors whitespace-nowrap cursor-pointer"
           >
             Rezervirajte sad
-          </a>
+          </button>
         </div>
       </div>
       </div>

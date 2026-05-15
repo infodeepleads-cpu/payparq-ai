@@ -126,7 +126,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-3 space-y-3 w-full">
+        <div className="absolute top-full mt-2 left-1/2 bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-3 space-y-3" style={{ width: '400px', transform: 'translateX(-50%)' }}>
           {/* Start Date and Time */}
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -134,7 +134,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
               <select
                 value={startDate.toISOString().slice(0, 10)}
                 onChange={(e) => handleStartDateChange(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {generateDateOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -148,7 +148,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
               <select
                 value={getLocalTimeString(startDate)}
                 onChange={(e) => handleStartTimeChange(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {generateTimeOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -166,7 +166,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
               <select
                 value={endDate.toISOString().slice(0, 10)}
                 onChange={(e) => handleEndDateChange(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {generateDateOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -180,7 +180,7 @@ export function DateTimePickerDropdown({ startTime, endTime, onStartTimeChange, 
               <select
                 value={getLocalTimeString(endDate)}
                 onChange={(e) => handleEndTimeChange(e.target.value)}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#5F3DFC]"
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {generateTimeOptions().map((opt) => (
                   <option key={opt.value} value={opt.value}>

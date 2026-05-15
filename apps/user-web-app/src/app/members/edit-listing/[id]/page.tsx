@@ -6,6 +6,7 @@ import { useJsApiLoader } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { MapPin, Camera, Clock, AlertCircle, Menu, X, Square, Calendar, FileText, Map } from 'lucide-react';
 import { PayparqPageHeader } from '@/components/PayparqPageHeader';
+import { AmenitiesChips } from '@/components/AmenitiesChips';
 
 const SECTIONS = [
   { id: 'location', label: 'Lokacijski detalji', icon: MapPin },
@@ -562,25 +563,18 @@ export default function EditListingPage() {
 
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-black/60 mb-3 uppercase">Karakteristike</label>
-                  <div className="space-y-2">
-                    {['24/7 Lighting', 'CCTV', 'Security Guard', 'EV Charging', 'WiFi', 'Covered Parking', 'Valet Service', 'Car Wash', 'Phone Charging', 'Accessible for Disabled'].map((feature) => (
-                      <label key={feature} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.features.includes(feature)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({ ...formData, features: [...formData.features, feature] });
-                            } else {
-                              setFormData({ ...formData, features: formData.features.filter(f => f !== feature) });
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-black/20 accent-[#7C3AED]"
-                        />
-                        <span className="text-sm text-black">{feature}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <AmenitiesChips
+                    selected={formData.features}
+                    onToggle={(amenityId) => {
+                      setFormData({
+                        ...formData,
+                        features: formData.features.includes(amenityId)
+                          ? formData.features.filter(f => f !== amenityId)
+                          : [...formData.features, amenityId]
+                      });
+                    }}
+                    editable={true}
+                  />
                 </div>
               </div>
             </div>

@@ -2,19 +2,7 @@
 
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-
-const FEATURES = [
-  { id: 'valet', label: 'Valet', count: 128 },
-  { id: 'garage', label: 'Garage - Covered', count: 128 },
-  { id: 'on-site-staff', label: 'On-Site Staff', count: 126 },
-  { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: 93 },
-  { id: 'ev-charging', label: 'EV Charging', count: 56 },
-  { id: 'lot-uncovered', label: 'Lot - Uncovered', count: 15 },
-  { id: 'alley-access', label: 'Alley Access', count: 2 },
-  { id: 'self-park', label: 'Self Park', count: 20 },
-  { id: 'touchless', label: 'Touchless', count: 10 },
-  { id: 'in-out-allowed', label: 'In & Out Allowed', count: 6 },
-];
+import { AMENITIES_LIST } from '@/lib/amenities';
 
 interface SearchFiltersProps {
   priceRange: [number, number];
@@ -115,7 +103,7 @@ export function SearchFilters({
                 value="all"
                 checked={parkingType === 'all'}
                 onChange={(e) => onParkingTypeChange(e.target.value as any)}
-                className="w-4 h-4 accent-[#5F3DFC]"
+                className="w-4 h-4 accent-black"
               />
               <span className="text-xs text-gray-700">All Types</span>
             </label>
@@ -126,7 +114,7 @@ export function SearchFilters({
                 value="self-park"
                 checked={parkingType === 'self-park'}
                 onChange={(e) => onParkingTypeChange(e.target.value as any)}
-                className="w-4 h-4 accent-[#5F3DFC]"
+                className="w-4 h-4 accent-black"
               />
               <span className="text-xs text-gray-700">Self Park</span>
             </label>
@@ -137,7 +125,7 @@ export function SearchFilters({
                 value="garage"
                 checked={parkingType === 'garage'}
                 onChange={(e) => onParkingTypeChange(e.target.value as any)}
-                className="w-4 h-4 accent-[#5F3DFC]"
+                className="w-4 h-4 accent-black"
               />
               <span className="text-xs text-gray-700">Garage</span>
             </label>
@@ -179,16 +167,15 @@ export function SearchFilters({
         </button>
         {expandedSections.amenities && (
           <div className="space-y-2">
-            {FEATURES.map((feature) => (
-              <label key={feature.id} className="flex items-center gap-2 cursor-pointer">
+            {AMENITIES_LIST.map((amenity) => (
+              <label key={amenity.id} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selectedFeatures.includes(feature.id)}
-                  onChange={() => toggleFeature(feature.id)}
-                  className="w-4 h-4 accent-[#5F3DFC] rounded"
+                  checked={selectedFeatures.includes(amenity.id)}
+                  onChange={() => toggleFeature(amenity.id)}
+                  className="w-4 h-4 accent-black rounded"
                 />
-                <span className="text-xs text-gray-700 flex-1">{feature.label}</span>
-                <span className="text-xs text-gray-500">({feature.count})</span>
+                <span className="text-xs text-gray-700 flex-1">{amenity.label}</span>
               </label>
             ))}
           </div>

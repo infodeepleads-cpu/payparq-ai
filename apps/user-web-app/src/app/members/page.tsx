@@ -1536,7 +1536,7 @@ export default function MembersPage() {
                     type="button"
                     onClick={handleSendVerificationEmail}
                     disabled={verificationLoading}
-                    className="inline-flex items-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-[11px] font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-60"
+                    className="inline-flex items-center px-3 py-1.5 rounded-full bg-[black] text-white text-[11px] font-semibold hover:bg-[#4330c4] transition-colors disabled:opacity-60"
                   >
                     {verificationLoading ? "Sending..." : "Verify email"}
                   </button>
@@ -1588,7 +1588,7 @@ export default function MembersPage() {
               <p className="text-sm text-black/70">Brzi pregled i akcije.</p>
             </div>
             <div className="shrink-0 space-y-2">
-              <div className="rounded-lg border border-[#5F3DFC]/25 bg-[#F5F2FF] px-3 py-2 text-right">
+              <div className="rounded-lg border border-[black]/25 bg-[#F5F2FF] px-3 py-2 text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3E22C6]/70">Wallet</p>
                 <p className="text-sm font-semibold text-[#3E22C6]">
                   {formatMoneyFromCents(walletSummary?.balanceCents, walletSummary?.currency || "EUR")}
@@ -1808,12 +1808,12 @@ export default function MembersPage() {
               const valetCode = homeContext.valetCode ?? deriveValetCode(homeContext.stripeSessionId);
               const priceCents = Number(valetCfg?.price_cents ?? 500);
               return (
-                <div className="min-w-[210px] rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-3 space-y-2">
-                  <p className="text-sm font-semibold text-[#5F3DFC]">Valet parking</p>
-                  <p className="text-[11px] text-[#5F3DFC]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
+                <div className="min-w-[210px] rounded-xl border border-[black]/20 bg-[#F5F2FF] p-3 space-y-2">
+                  <p className="text-sm font-semibold text-[black]">Valet parking</p>
+                  <p className="text-[11px] text-[black]/70">Uključeno u cijenu · kod <span className="font-mono font-bold">{valetCode}</span></p>
                   <p className="text-[10px] text-black/40">Vrijednost: {formatCents(priceCents)}</p>
                   <button type="button" onClick={() => setValetToggled(v => !v)} className="flex items-center gap-2">
-                    <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: valetToggled ? '#5F3DFC' : '#f3f4f6', borderColor: valetToggled ? '#5F3DFC' : '#e5e7eb' }}>
+                    <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative shrink-0" style={{ background: valetToggled ? 'black' : '#f3f4f6', borderColor: valetToggled ? 'black' : '#e5e7eb' }}>
                       <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: valetToggled ? '18px' : '2px' }} />
                     </div>
                     <span className="text-xs font-medium text-black">{valetToggled ? 'Uključeno' : 'Isključeno'}</span>
@@ -1822,7 +1822,7 @@ export default function MembersPage() {
                     <button
                       type="button"
                       onClick={() => callService('valet', valetCode, homeContext.plate ?? null)}
-                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
+                      className="inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-[black] text-white text-xs font-semibold hover:bg-[#4e2fdb] transition-colors"
                     >
                       Pozovi auto
                     </button>
@@ -1879,7 +1879,7 @@ export default function MembersPage() {
             const cfg = (homeContext.addonsConfig ?? {}) as Record<string, unknown>;
             const phoneSms = ((cfg.phone_sms as string | undefined) ?? '385915963139').replace(/\D/g, '') || '385915963139';
             const badgeMap: Record<string, { label: string; color: string; bg: string }> = {
-              valet: { label: 'VLT', color: '#5F3DFC', bg: '#F5F2FF' },
+              valet: { label: 'VLT', color: 'black', bg: '#F5F2FF' },
               shuttle: { label: 'SHT', color: '#0F6E56', bg: '#E1F5EE' },
               ev_charging: { label: 'EV', color: '#2E7D32', bg: '#E8F5E9' },
               car_wash_basic: { label: 'WASH', color: '#1565C0', bg: '#E3F2FD' },
@@ -1909,7 +1909,7 @@ export default function MembersPage() {
                         <a
                           href={`https://wa.me/${phoneSms}?text=${encodeURIComponent(`${deriveValetCode(sid)} - Poziv vozila`)}`}
                           target="_blank" rel="noopener noreferrer"
-                          className="font-mono font-bold text-[#5F3DFC]"
+                          className="font-mono font-bold text-[black]"
                         >
                           {deriveValetCode(sid)}
                         </a>
@@ -1970,7 +1970,7 @@ export default function MembersPage() {
                     <div className="flex items-center justify-between rounded-xl border border-black/10 p-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-[#F5F2FF] flex items-center justify-center shrink-0">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5F3DFC" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><path d="M13 16v-1a2 2 0 1 1 4 0v1"/></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><path d="M13 16v-1a2 2 0 1 1 4 0v1"/></svg>
                         </div>
                         <div className="min-w-0">
                           <p className="text-[13px] font-medium text-black">Valet parking</p>
@@ -1983,7 +1983,7 @@ export default function MembersPage() {
                         </div>
                       </div>
                       <button type="button" onClick={() => setBuyAddonValetOn(v => !v)} className="shrink-0">
-                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonValetOn ? '#5F3DFC' : '#f3f4f6', borderColor: buyAddonValetOn ? '#5F3DFC' : '#e5e7eb' }}>
+                        <div className="w-10 h-[22px] rounded-full border transition-colors duration-200 relative" style={{ background: buyAddonValetOn ? 'black' : '#f3f4f6', borderColor: buyAddonValetOn ? 'black' : '#e5e7eb' }}>
                           <div className="w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] transition-all duration-200 shadow-sm" style={{ left: buyAddonValetOn ? '18px' : '2px' }} />
                         </div>
                       </button>
@@ -2452,7 +2452,7 @@ export default function MembersPage() {
                   type="button"
                   onClick={handleSendVerificationEmail}
                   disabled={verificationLoading}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#5F3DFC] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors disabled:opacity-60"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[black] text-white text-xs font-semibold shadow-md hover:bg-[#4330c4] transition-colors disabled:opacity-60"
                 >
                   {verificationLoading ? "Sending..." : "Verify email"}
                 </button>
@@ -2498,7 +2498,7 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">
             Track rewards and benefits earned across the Payparq network.
           </p>
-          <div className="rounded-xl border border-[#5F3DFC]/20 bg-[#F5F2FF] p-4 space-y-2">
+          <div className="rounded-xl border border-[black]/20 bg-[#F5F2FF] p-4 space-y-2">
             <p className="text-sm font-semibold text-[#3E22C6]">
               {formatLoyaltyLevelLabel(loyaltySummary?.level)}
             </p>
@@ -2561,7 +2561,7 @@ export default function MembersPage() {
         if (v >= 7) return 'Dobro'; if (v >= 6) return 'Zadovoljava'; return 'Loše';
       }
       function scoreColor(v: number) {
-        if (v >= 9) return '#003580'; if (v >= 7) return '#5F3DFC'; return '#dc2626';
+        if (v >= 9) return '#003580'; if (v >= 7) return 'black'; return '#dc2626';
       }
       return (
         <div className="space-y-4">
@@ -2569,7 +2569,7 @@ export default function MembersPage() {
           <p className="text-sm text-black/70">Recenzije koje ste dali za parkiranje na PayParq lokacijama.</p>
           {reviewsLoading && (
             <div className="flex items-center gap-2 text-sm text-black/50">
-              <div className="w-4 h-4 border-2 border-[#5F3DFC] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-[black] border-t-transparent rounded-full animate-spin" />
               Učitavanje...
             </div>
           )}
@@ -2806,7 +2806,7 @@ export default function MembersPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/list-your-parking')}
-                    className="w-6 h-6 rounded-full bg-[#5F3DFC] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
+                    className="w-6 h-6 rounded-full bg-[black] text-white flex items-center justify-center hover:bg-[#4330c4] transition-colors"
                     title="Dodaj novi prostor"
                   >
                     <span className="text-base leading-none font-bold">+</span>
@@ -2815,7 +2815,7 @@ export default function MembersPage() {
             {ownerListingsLoading ? (
               <p className="text-xs text-black/50">Učitavanje...</p>
             ) : ownerListings.length === 0 ? (
-              <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[#5F3DFC]">+</span> za dodavanje.</p>
+              <p className="text-xs text-black/50">Nemaš objavljenih prostora. Klikni <span className="font-semibold text-[black]">+</span> za dodavanje.</p>
             ) : (
               <div className="space-y-2">
                 {ownerListings.map((loc) => (
@@ -2909,7 +2909,7 @@ export default function MembersPage() {
               <div className="sticky top-6 space-y-4">
                 <div className="rounded-xl border border-black/10 bg-white p-4">
                   <p className="text-xs text-black/70 leading-snug mb-2">U vašem području, prostori mogu zaraditi i do</p>
-                  <p className="text-2xl font-bold text-[#5F3DFC]">
+                  <p className="text-2xl font-bold text-[black]">
                     €6,912.00
                     <span className="text-sm font-normal text-black/60 block">godišnje</span>
                   </p>
@@ -2919,7 +2919,7 @@ export default function MembersPage() {
                   href="https://www.payparq.com/host"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full px-4 py-3 bg-[#5F3DFC] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 text-sm"
+                  className="w-full px-4 py-3 bg-[black] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                   ⚡ Instant Listing
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3096,7 +3096,7 @@ export default function MembersPage() {
 
           {isSignedIn && (
             <div className="min-h-0 flex-1 flex flex-col bg-[#05020A] overflow-hidden">
-              <div className="bg-[#5F3DFC] px-3 md:px-6 py-3 flex items-center justify-between gap-2 md:gap-4">
+              <div className="bg-[black] px-3 md:px-6 py-3 flex items-center justify-between gap-2 md:gap-4">
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -3160,7 +3160,7 @@ export default function MembersPage() {
                           : "text-white/70 hover:bg-white/5"
                       }`}
                     >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC]/90 text-[11px]">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[black]/90 text-[11px]">
                         H
                       </span>
                       <span>Home</span>
@@ -3196,7 +3196,7 @@ export default function MembersPage() {
                           href="/host"
                           className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-[#8B5CF6]/90 hover:bg-white/5"
                         >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#5F3DFC]/20 text-[11px]">
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[black]/20 text-[11px]">
                             ⚡
                           </span>
                           <span>Instant listing</span>
