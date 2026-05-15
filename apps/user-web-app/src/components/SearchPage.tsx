@@ -850,8 +850,9 @@ export function SearchPage() {
           {/* Right side - Menu + Map */}
           <div className="flex gap-1.5 flex-shrink-0">
             {/* Menu Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={homeDropdownRef}>
               <button
+                type="button"
                 onClick={() => setHomeDropdownOpen(!homeDropdownOpen)}
                 className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center"
               >
@@ -863,13 +864,13 @@ export function SearchPage() {
               </button>
               {homeDropdownOpen && (
                 <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
-                  <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg whitespace-nowrap">
+                  <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg">
                     Home
                   </a>
-                  <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 whitespace-nowrap">
+                  <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
                     Log In
                   </a>
-                  <a href="/host" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg whitespace-nowrap">
+                  <a href="/host" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
                     List your lot
                   </a>
                 </div>
@@ -2031,6 +2032,9 @@ export function SearchPage() {
                           setShowMobileDetails(true);
                         }}
                         badgeText={badgeText}
+                        checkoutUrl={buildCheckoutUrl(listing)}
+                        durationHours={durationHours}
+                        showFee={showTotalPrice}
                         hideDetailsButton={true}
                         spots={liveListing.spots}
                       />
