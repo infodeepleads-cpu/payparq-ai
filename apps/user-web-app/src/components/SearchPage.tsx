@@ -227,7 +227,7 @@ export function SearchPage() {
   const parkingCategories = [
     { id: 'airport', label: 'Zračna Luka', description: 'Parking near airports' },
     { id: 'city', label: 'Gradovi', description: 'Parking in city centers' },
-    { id: 'events', label: 'Eventovi', description: 'Parking near event venues' },
+    { id: 'event', label: 'Eventovi', description: 'Parking near event venues' },
     { id: 'list-lot', label: 'List your lot', description: 'List your parking space', action: 'navigate', link: '/host' },
   ];
 
@@ -1111,7 +1111,7 @@ export function SearchPage() {
                         key={cat.id}
                         className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 border border-gray-100 text-left transition-colors"
                         onClick={() => {
-                          setDestinationVenueType(cat.id as 'airport' | 'hotel' | 'event');
+                          setDestinationVenueType(cat.id as 'airport' | 'city' | 'event');
                           setShowDestinationPicker(true);
                           setAllParkingDropdownOpen(false);
                         }}

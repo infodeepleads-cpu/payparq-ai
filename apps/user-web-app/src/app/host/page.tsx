@@ -46,7 +46,7 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
 
 function InfoPanel() {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 sticky top-8 p-6 space-y-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6 space-y-4 sm:space-y-6 w-full overflow-x-hidden text-xs sm:text-sm">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-1">Oglasi svoje parkirno mjesto</p>
         <p className="text-xs text-gray-500">Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.</p>
@@ -74,9 +74,9 @@ function InfoPanel() {
       <div className="border-t border-gray-100 pt-6">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Procjena zarade</p>
         <div className="space-y-2 text-xs">
-          <div className="flex justify-between text-gray-700"><span>Prosj. raspon satne cijene</span><span className="font-medium">€0.5 – €4.00</span></div>
-          <div className="flex justify-between text-gray-700"><span>Prosj. raspon dnevne cijene</span><span className="font-medium">€5 – €30</span></div>
-          <div className="flex justify-between text-gray-900 font-bold pt-2 border-t border-gray-100"><span>Prosj. raspon mjesečne cijene</span><span>€29 – €440</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon satne cijene</span><span className="font-medium flex-shrink-0">€0.5 – €4.00</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon dnevne cijene</span><span className="font-medium flex-shrink-0">€5 – €30</span></div>
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-900 font-bold pt-2 border-t border-gray-100"><span>Prosj. raspon mjesečne cijene</span><span className="flex-shrink-0">€29 – €440</span></div>
         </div>
       </div>
     </div>
@@ -218,7 +218,7 @@ interface DateConfig {
 function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; onConfigsChange?: (configs: Record<string, DateConfig>) => void }) {
   const [calendarDate, setCalendarDate] = useState(new Date(2026, 4, 1));
   const [dateConfigs, setDateConfigs] = useState<Record<string, DateConfig>>({});
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   useEffect(() => {
     onConfigsChange?.(dateConfigs);
@@ -247,13 +247,16 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
     };
   };
 
-  const handleDateClick = (day: number) => setSelectedDate(getDateString(day));
+  const handleDateClick = (day: number) => {
+    const dateStr = getDateString(day);
+    setSelectedDates((prev) => prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr]);
+  };
   const handleSaveDate = (config: DateConfig) => {
     setDateConfigs((prev) => {
       const next = { ...prev, [config.date]: config };
       return next;
     });
-    setSelectedDate(null);
+    setSelectedDates([]);
   };
   const handleCloseDate = (dateStr: string) => {
     setDateConfigs((prev) => {
@@ -261,9 +264,10 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
       delete next[dateStr];
       return next;
     });
-    setSelectedDate(null);
+    setSelectedDates([]);
   };
 
+  const selectedDate = selectedDates.length > 0 ? selectedDates[0] : null;
   const selectedDateConfig = selectedDate ? getDateConfig(selectedDate) : null;
   const selectedDay = selectedDate ? parseInt(selectedDate.split('-')[2]) : null;
 
@@ -285,8 +289,8 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
       </div>
 
       {/* Calendar Grid */}
-      <div className="border border-gray-200 rounded-lg p-3">
-        <div className="grid grid-cols-7 gap-1.5">
+      <div className="border border-gray-200 rounded-lg p-3 overflow-x-auto">
+        <div className="grid grid-cols-7 gap-1.5 min-w-max md:min-w-full">
           {['pon', 'uto', 'sri', 'čet', 'pet', 'sub', 'ned'].map((day) => (
             <div key={day} className="text-center font-semibold text-xs text-gray-700 py-2" translate="no">{day}</div>
           ))}
@@ -297,7 +301,7 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
             const date = i + 1;
             const dateStr = getDateString(date);
             const config = dateConfigs[dateStr];
-            const isSelected = selectedDate === dateStr;
+            const isSelected = selectedDates.includes(dateStr);
             const isClosed = config && !config.isOpen;
             const displayCapacity = config?.capacity || baseSpots;
             const dayOfWeek = new Date(year, month, date).toLocaleDateString('hr-HR', { weekday: 'short' });
@@ -354,7 +358,7 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
               <h3 className="font-bold text-gray-900">{selectedDay}. {croatianMonths[month]}</h3>
               <button
                 type="button"
-                onClick={() => setSelectedDate(null)}
+                onClick={() => setSelectedDates([])}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
@@ -365,8 +369,8 @@ function CalendarScheduler({ baseSpots, onConfigsChange }: { baseSpots: string; 
               config={selectedDateConfig}
               lotCapacity={baseSpots ? parseInt(baseSpots) : 1}
               onSave={(config) => handleSaveDate(config)}
-              onDelete={() => handleCloseDate(selectedDate!)}
-              onCancel={() => setSelectedDate(null)}
+              onDelete={() => { handleCloseDate(selectedDate!); setSelectedDates((prev) => prev.filter((d) => d !== selectedDate)); }}
+              onCancel={() => setSelectedDates([])}
             />
           </div>
         </div>
@@ -489,14 +493,6 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
         </button>
         <button
           type="button"
-          onClick={onDelete}
-          className="flex-1 px-4 py-2.5 border border-red-300 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors"
-          translate="no"
-        >
-          Zatvori
-        </button>
-        <button
-          type="button"
           onClick={onCancel}
           className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors"
           translate="no"
@@ -567,6 +563,15 @@ export default function HostPage() {
   ];
   const [activeSpotTypes, setActiveSpotTypes] = useState<string[]>([]);
   const toggleSpotType = (k: string) => setActiveSpotTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
+
+  const CAPACITY_TYPES = [
+    { key: 'compact', label: 'Kompaktna mjesta', mult: '0.75×' },
+    { key: 'standard', label: 'Standardna mjesta', mult: '1×' },
+    { key: 'large', label: 'Velika mjesta', mult: '1.25×' },
+    { key: 'disabled', label: 'Mjesta za osobe s invaliditetom', mult: '1.5×' },
+  ];
+  const [activeCapacityTypes, setActiveCapacityTypes] = useState<string[]>([]);
+  const toggleCapacityType = (k: string) => setActiveCapacityTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
   // Section 3 — Cijena / H-D-M
   // Pricing — Standard
@@ -720,7 +725,7 @@ export default function HostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" translate="no" data-no-translate="true">
+    <div className="min-h-screen bg-white overflow-x-hidden" translate="no" data-no-translate="true">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -740,7 +745,7 @@ export default function HostPage() {
 
       {/* Body */}
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8">
           <InfoPanel />
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -950,13 +955,30 @@ export default function HostPage() {
                 </div>
               </CollapsibleSection>
 
+              {/* 3.5b Vrste kapaciteta */}
+              <CollapsibleSection title="Vrste kapaciteta">
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">Odaberite koje ćete kategorije smjestiti uz množitelj standardne cijene</p>
+                <div className="space-y-2">
+                  {CAPACITY_TYPES.map((ct) => (
+                    <div key={ct.key}
+                      onClick={() => toggleCapacityType(ct.key)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${activeCapacityTypes.includes(ct.key) ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900">{ct.label}</p>
+                      </div>
+                      <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeCapacityTypes.includes(ct.key) ? 'text-gray-900' : 'text-gray-400'}`}>{ct.mult}</span>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleSection>
+
               {/* 3.6 Cijena */}
               <CollapsibleSection title="Cijena">
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                   <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije! Naknadu plaća kupac!</p>
                   <p className="text-xs text-black leading-relaxed space-y-2" translate="no">
-                    <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta, i Dinamično određivanje cijena.</span>
+                    <span className="block">PayParq na Vašu cijenu dodaje marginalnu naknadu za uslugu koju plaća kupac koja uključuje: Zajamčeno mjesto, Prioritetnu podršku, SOS poziv za zamjenu mjesta.</span>
                     <span className="block">Za udaljene lotove — prazne parcele bez nadzora uz zračne luke, događaje i plaže — dodaje se dodatna naknada.</span>
                   </p>
                 </div>
@@ -964,7 +986,7 @@ export default function HostPage() {
                 {/* Standard pricing */}
                 <div className="space-y-4 mb-6 pb-6 border-b border-gray-100">
                   <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Standard</p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
                       <label className={labelClass}>Satna (€/h)</label>
                       <input type="number" placeholder="2.50" min="0" step="0.50" value={standardHourlyPrice} onChange={(e) => setStandardHourlyPrice(e.target.value)} className={inputClass} required />
@@ -980,19 +1002,10 @@ export default function HostPage() {
                   </div>
                 </div>
 
-                {/* Dynamic Price Toggle */}
-                <div className="flex items-center justify-between pt-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800">Dinamično određivanje cijena</p>
-                    <p className="text-xs text-gray-400">PayParq će prilagoditi cijene na temelju potražnje</p>
-                  </div>
-                  <Toggle checked={useDynamicPrice} onChange={setUseDynamicPrice} />
-                </div>
-
-                {useDynamicPrice && (
+                {true && (
                   <div className="space-y-4 pt-2 border-t border-gray-100">
                     <p className="text-xs font-semibold text-gray-700 uppercase tracking-widest">Minimalne cijene koje ćete prihvatiti</p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <div>
                         <label className={labelClass} translate="no">Satna (€/h)</label>
                         <input type="number" placeholder="1.00" min="0" step="0.10" value={minPriceHourly} onChange={(e) => setMinPriceHourly(e.target.value)} className={inputClass} />
@@ -1040,7 +1053,7 @@ export default function HostPage() {
                   {photos.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs font-semibold text-gray-700">{photos.length} {photos.length === 1 ? 'fotografija' : 'fotografija'} učitano</p>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         {photos.map((photo, idx) => (
                           <div key={idx} className="relative group">
                             <img src={URL.createObjectURL(photo)} alt={`Fotografija ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
@@ -1107,7 +1120,7 @@ export default function HostPage() {
           <span>© 2026 PayParq</span>
           <div className="flex items-center gap-4">
             <a href="/terms" className="hover:text-gray-600 transition-colors">Uvjeti</a>
-            <a href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</a>
+            <a href="/privacy" className="hover:text-gray-600 transition-colors">Privatnost</a>
             <a href="/contact" className="hover:text-gray-600 transition-colors">Kontakt</a>
           </div>
         </div>

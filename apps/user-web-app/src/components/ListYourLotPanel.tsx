@@ -1284,7 +1284,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right white sector with widget */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Your exact address will only be shared with confirmed bookings." />
@@ -1333,7 +1333,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Pin the exact entrance so drivers can navigate directly to your parking space." />
@@ -1389,7 +1389,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6 space-y-4">
                 <InfoWidget tip="Choose a clear, descriptive name that helps drivers identify your parking space easily." />
@@ -1504,7 +1504,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Select features that make your parking space stand out. These help drivers find exactly what they need." />
@@ -1596,7 +1596,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Be clear about vehicle size limitations. This helps drivers find parking that fits their vehicle." />
@@ -1700,7 +1700,7 @@ export function ListYourLotPanel({
           </div>
 
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Clearly specify how drivers will access your parking space to avoid confusion." />
@@ -2870,7 +2870,7 @@ export function ListYourLotPanel({
             </div>
           </div>
           {/* Right sector - 35% */}
-          <div className="w-full md:flex-[0_0_35%] bg-white py-6 flex items-center justify-center md:h-full">
+          <div className="hidden md:flex w-full md:flex-[0_0_35%] bg-white py-6 items-center justify-center md:h-full">
             <div className="w-80">
               <div className="sticky top-6">
                 <InfoWidget tip="Review all details before publishing. You can edit after going live." />
