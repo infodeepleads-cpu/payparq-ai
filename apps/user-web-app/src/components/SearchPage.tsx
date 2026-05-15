@@ -568,7 +568,7 @@ export function SearchPage() {
       console.log(`  [${i}] ${l.name}: lat=${l.lat}, lng=${l.lng}, dist=${dist.toFixed(2)}km`);
     });
 
-    switch (sortBy) {
+    switch (sortBy as string) {
       case 'distance':
       case 'walk':
       case 'udaljenost': // fallback for Croatian locale
@@ -702,12 +702,12 @@ export function SearchPage() {
           </div>
 
           {/* Reservation Type - Tall Widget */}
-          <div className="border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-black min-h-[50px] flex flex-col justify-center px-4 py-2 mr-2 ml-40">
+          <div className="border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-black min-h-[50px] flex flex-col justify-center px-4 py-2 mr-2 flex-1">
             <label className="text-xs font-semibold text-gray-400 mb-0.5 leading-none">Vrsta rezervacije</label>
             <select
               value={reservationType}
               onChange={(e) => setReservationType(e.target.value)}
-              className="bg-white border-none text-sm font-medium text-gray-900 p-0 pr-6 focus:outline-none cursor-pointer w-full leading-none -ml-1"
+              className="bg-white border-none text-sm font-medium text-gray-900 p-0 pr-6 focus:outline-none cursor-pointer w-full leading-none -ml-1 min-w-[400px]"
             >
               <option value="Satna/dnevna">Satna/dnevna</option>
               <option value="Mjesecna">Mjesecna</option>
