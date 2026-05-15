@@ -12,6 +12,7 @@ import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 import { AMENITIES_LIST } from '@/lib/amenities';
+import { AmenitiesChips } from './AmenitiesChips';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
@@ -320,10 +321,19 @@ export function SearchPage() {
             if (addonsConfig.wheelchair) features.push('wheelchair-accessible');
             if (addonsConfig.ev_charging) features.push('ev-charging');
 
-            // Fallback: also check verification_metadata.features array
+            // Fallback: also check verification_metadata
             const meta = loc.verification_metadata
               ? (typeof loc.verification_metadata === 'string' ? JSON.parse(loc.verification_metadata) : loc.verification_metadata)
               : {};
+
+            // Check new amenities_ids (from mobile scanner)
+            if (Array.isArray(meta.amenities_ids)) {
+              for (const id of meta.amenities_ids) {
+                if (!features.includes(id)) features.push(id);
+              }
+            }
+
+            // Fallback: check old features array
             if (Array.isArray(meta.features)) {
               for (const f of meta.features) {
                 if (!features.includes(f)) features.push(f);
@@ -410,6 +420,10 @@ export function SearchPage() {
     };
 
     fetchListings();
+
+    // Auto-refresh listings every 60 seconds
+    const refreshInterval = setInterval(fetchListings, 60000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
 
@@ -1588,15 +1602,10 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Amenities</p>
                   </button>
                   {showAmenities && (
-                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
+                    <div className="mt-3 ml-7">
                       {selectedListing.features && selectedListing.features.length > 0
-                        ? selectedListing.features.map((f: string, i: number) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
-                              <span>{f}</span>
-                            </div>
-                          ))
-                        : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                        ? <AmenitiesChips selected={selectedListing.features} size="sm" />
+                        : <p className="text-gray-400 text-sm">Nema dostupnih sadržaja.</p>}
                     </div>
                   )}
                 </div>
@@ -2312,15 +2321,10 @@ export function SearchPage() {
                   <p className="text-sm font-bold text-gray-900">Amenities</p>
                 </button>
                 {showAmenities && (
-                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
+                  <div className="mt-2 ml-6">
                     {selectedListing.features && selectedListing.features.length > 0
-                      ? selectedListing.features.map((f: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span>{f}</span>
-                          </div>
-                        ))
-                      : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                      ? <AmenitiesChips selected={selectedListing.features} size="sm" />
+                      : <p className="text-gray-400 text-xs">Nema dostupnih sadržaja.</p>}
                   </div>
                 )}
               </div>
