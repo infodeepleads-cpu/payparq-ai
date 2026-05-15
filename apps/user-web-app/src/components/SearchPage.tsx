@@ -9,9 +9,9 @@ import { BookingModal } from './BookingModal';
 import { DateTimePickerDropdown } from './DateTimePickerDropdown';
 import { MonthlyDatePickerDropdown } from './MonthlyDatePickerDropdown';
 import { DestinationPickerWidget } from './DestinationPickerWidget';
-import { AmenitiesChips } from './AmenitiesChips';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
+import { AMENITIES_LIST } from '@/lib/amenities';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
@@ -133,6 +133,11 @@ export function SearchPage() {
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
   const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+
+  // Debug: log sortBy changes
+  useEffect(() => {
+    console.log('=== sortBy changed to:', sortBy);
+  }, [sortBy]);
   const [recentSearches, setRecentSearches] = useState<{ name: string; lat: number; lng: number }[]>([]);
   const [nearbyPlaces, setNearbyPlaces] = useState<{ name: string; lat: number; lng: number; type: string }[]>([]);
   const [showDetailsView, setShowDetailsView] = useState(false);
@@ -238,17 +243,11 @@ export function SearchPage() {
     );
   };
 
-  const FILTER_OPTIONS = [
-    { id: 'valet', label: 'Valet', count: listings.filter(l => l.features.includes('valet')).length },
-    { id: 'garage-covered', label: 'Garage - Covered', count: listings.filter(l => l.type === 'garage' || l.features.includes('garage')).length },
-    { id: 'lot-uncovered', label: 'Parcela - Nepokrivena', count: listings.filter(l => l.type === 'lot').length },
-    { id: 'immediate-parking', label: 'Immediate Parking', count: listings.filter(l => l.availability).length },
-    { id: 'on-site-staff', label: 'On-Site Staff', count: listings.filter(l => l.features.includes('on-site-staff')).length },
-    { id: 'month-to-month', label: 'Mjesečni najam', count: listings.length },
-    { id: 'wheelchair-accessible', label: 'Wheelchair Accessible', count: listings.filter(l => l.features.includes('wheelchair-accessible')).length },
-    { id: 'self-park', label: 'Self Park', count: listings.filter(l => l.type === 'self-park').length },
-    { id: 'ev-charging', label: 'EV Charging', count: listings.filter(l => l.features.includes('ev-charging')).length },
-  ];
+  const FILTER_OPTIONS = AMENITIES_LIST.map(amenity => ({
+    id: amenity.id,
+    label: amenity.label,
+    count: listings.filter(l => l.features.includes(amenity.id)).length
+  }));
 
   const toggleFilter = (filterId: string) => {
     setSelectedFilters((prev) =>
@@ -519,7 +518,7 @@ export function SearchPage() {
       filtered = filtered.filter((l) => l.availability);
     }
     if (quickFilters.includes('covered-garage')) {
-      filtered = filtered.filter((l) => l.type === 'garage');
+      filtered = filtered.filter((l) => l.type === 'garage' || l.features.includes('garage') || l.features.includes('covered'));
     }
     if (quickFilters.includes('self-park')) {
       filtered = filtered.filter((l) => l.type === 'self-park');
@@ -561,20 +560,32 @@ export function SearchPage() {
     // Apply sorting
     const sorted = [...filtered];
     const ref = searchLocationPin || mapCenter;
-    console.log(`=== SORTING: ${sortBy} | ref: lat=${ref.lat.toFixed(3)}, lng=${ref.lng.toFixed(3)}`);
+    console.log(`=== SORTING: ${sortBy}`);
+    console.log(`ref point (searchLocationPin=${searchLocationPin ? 'yes' : 'no'}):`, ref);
+    console.log(`filtered listings count: ${filtered.length}`);
+    filtered.forEach((l, i) => {
+      const dist = haversineKm(ref.lat, ref.lng, l.lat, l.lng);
+      console.log(`  [${i}] ${l.name}: lat=${l.lat}, lng=${l.lng}, dist=${dist.toFixed(2)}km`);
+    });
 
     switch (sortBy) {
       case 'distance':
       case 'walk':
+      case 'udaljenost': // fallback for Croatian locale
         sorted.sort((a, b) => {
           const aDist = haversineKm(ref.lat, ref.lng, a.lat, a.lng);
           const bDist = haversineKm(ref.lat, ref.lng, b.lat, b.lng);
-          console.log(`Sorting by distance: ${a.name}=${aDist.toFixed(2)}km vs ${b.name}=${bDist.toFixed(2)}km`);
-          return aDist - bDist;
+          const diff = aDist - bDist;
+          return diff;
         });
-        console.log('Final distance order:', sorted.map(l => `${l.name}(${haversineKm(ref.lat, ref.lng, l.lat, l.lng).toFixed(2)}km)`));
+        console.log('After sort (distance):');
+        sorted.forEach((l, i) => {
+          const dist = haversineKm(ref.lat, ref.lng, l.lat, l.lng);
+          console.log(`  [${i}] ${l.name}: dist=${dist.toFixed(2)}km`);
+        });
         break;
       case 'price':
+      case 'cijena': // fallback for Croatian locale
         sorted.sort((a, b) => {
           const aTotal = (a.pricePerHour * durationHours) + 0.99 + (a.pricePerHour * durationHours * 0.05);
           const bTotal = (b.pricePerHour * durationHours) + 0.99 + (b.pricePerHour * durationHours * 0.05);
@@ -582,12 +593,15 @@ export function SearchPage() {
         });
         break;
       case 'rating':
+      case 'ocjena': // fallback for Croatian locale
         sorted.sort((a, b) => b.rating - a.rating);
         break;
       case 'value':
+      case 'vrijednost': // fallback for Croatian locale
         sorted.sort((a, b) => (b.rating / b.pricePerHour) - (a.rating / a.pricePerHour));
         break;
       case 'relevance':
+      case 'relevantnost': // fallback for Croatian locale
       default:
         // Find and move closest listing to top for relevance
         if (sorted.length > 0) {
@@ -1067,7 +1081,7 @@ export function SearchPage() {
                 : 'border border-gray-300 text-gray-900 hover:border-gray-400'
             }`}
           >
-            Covered Garage
+            Natkriveno/Garaža
           </button>
           <button
             onClick={() => toggleQuickFilter('self-park')}
@@ -1242,7 +1256,11 @@ export function SearchPage() {
           <div className="flex-shrink-0 px-4 py-3 bg-gray-100 border-b border-gray-200 flex justify-end">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              onChange={(e) => {
+                const newVal = e.target.value as typeof sortBy;
+                console.log('Dropdown changed to:', newVal, 'from:', sortBy);
+                setSortBy(newVal);
+              }}
               className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="relevance">Poredaj po relevantnosti</option>
@@ -1570,8 +1588,15 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Amenities</p>
                   </button>
                   {showAmenities && (
-                    <div className="mt-3 ml-7">
-                      <AmenitiesChips selected={selectedListing.features || []} />
+                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
+                      {selectedListing.features && selectedListing.features.length > 0
+                        ? selectedListing.features.map((f: string, i: number) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
+                              <span>{f}</span>
+                            </div>
+                          ))
+                        : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
                     </div>
                   )}
                 </div>
@@ -1950,7 +1975,7 @@ export function SearchPage() {
                   : 'border border-gray-300 text-gray-900 hover:border-gray-400'
               }`}
             >
-              Garaža
+              Natkriveno/Garaža
             </button>
             <button
               onClick={() => toggleQuickFilter('self-park')}
@@ -1970,7 +1995,11 @@ export function SearchPage() {
           <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            onChange={(e) => {
+              const newVal = e.target.value as typeof sortBy;
+              console.log('Mobile dropdown changed to:', newVal, 'from:', sortBy);
+              setSortBy(newVal);
+            }}
             className="px-2 py-1 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-black"
           >
             <option value="relevance">Poredaj po relevantnosti</option>
@@ -2283,8 +2312,15 @@ export function SearchPage() {
                   <p className="text-sm font-bold text-gray-900">Amenities</p>
                 </button>
                 {showAmenities && (
-                  <div className="mt-2 ml-6">
-                    <AmenitiesChips selected={selectedListing.features || []} size="sm" />
+                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
+                    {selectedListing.features && selectedListing.features.length > 0
+                      ? selectedListing.features.map((f: string, i: number) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                            <span>{f}</span>
+                          </div>
+                        ))
+                      : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
                   </div>
                 )}
               </div>
