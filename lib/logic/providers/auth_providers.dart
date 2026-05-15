@@ -472,7 +472,7 @@ final availableLocationsProvider =
           timeout: queryTimeout,
           query: () => Supabase.instance.client
               .from('profiles')
-              .select('role, location_id, location_display_id')
+              .select('role, location_id')
               .eq('id', user.id)
               .maybeSingle(),
         );

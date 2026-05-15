@@ -163,7 +163,7 @@ const getLocalTimeString = (date: Date) => {
 interface DestinationPickerWidgetProps {
   onClose: () => void;
   onSelect: (venue: Venue, startTime: string, endTime: string) => void;
-  defaultTab?: 'airport' | 'city' | 'event';
+  defaultTab?: 'airport' | 'city' | 'event' | 'hotel';
 }
 
 export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airport' }: DestinationPickerWidgetProps) {
@@ -180,7 +180,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
     return toLocalISOString(now);
   });
   const [searchFilter, setSearchFilter] = useState('');
-  const [activeTab, setActiveTab] = useState<'airport' | 'city' | 'event'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'airport' | 'city' | 'event' | 'hotel'>(defaultTab || 'airport');
   const [showVenues, setShowVenues] = useState(false);
 
   const startDate = new Date(startTime);
