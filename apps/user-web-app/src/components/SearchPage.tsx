@@ -12,6 +12,7 @@ import { DestinationPickerWidget } from './DestinationPickerWidget';
 import { MapPin, Star, Search, ChevronRight, Info, Users, Lock, Accessibility, Zap, ChevronDown, Ticket, CheckCircle, LogOut, X, Clock, AlertCircle } from 'lucide-react';
 import { resolveScannerTruthPriceEuro } from '@/lib/locationPricing';
 import { AMENITIES_LIST } from '@/lib/amenities';
+import { AmenitiesChips } from './AmenitiesChips';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
@@ -196,7 +197,7 @@ export function SearchPage() {
 
   const subtotal = selectedListing ? parseFloat((durationHours * selectedListing.pricePerHour).toFixed(2)) : 0;
   const serviceFee = parseFloat((0.99 + subtotal * 0.05).toFixed(2));
-  const totalPrice = parseFloat((showTotalPrice ? subtotal + serviceFee : subtotal).toFixed(2));
+  const totalPrice = parseFloat((subtotal + serviceFee).toFixed(2));
 
   const formatDuration = () => {
     const h = durationHours;
@@ -320,10 +321,19 @@ export function SearchPage() {
             if (addonsConfig.wheelchair) features.push('wheelchair-accessible');
             if (addonsConfig.ev_charging) features.push('ev-charging');
 
-            // Fallback: also check verification_metadata.features array
+            // Fallback: also check verification_metadata
             const meta = loc.verification_metadata
               ? (typeof loc.verification_metadata === 'string' ? JSON.parse(loc.verification_metadata) : loc.verification_metadata)
               : {};
+
+            // Check new amenities_ids (from mobile scanner)
+            if (Array.isArray(meta.amenities_ids)) {
+              for (const id of meta.amenities_ids) {
+                if (!features.includes(id)) features.push(id);
+              }
+            }
+
+            // Fallback: check old features array
             if (Array.isArray(meta.features)) {
               for (const f of meta.features) {
                 if (!features.includes(f)) features.push(f);
@@ -410,6 +420,10 @@ export function SearchPage() {
     };
 
     fetchListings();
+
+    // Auto-refresh listings every 60 seconds
+    const refreshInterval = setInterval(fetchListings, 60000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
 
@@ -1420,7 +1434,7 @@ export function SearchPage() {
                 <Info className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div className="text-left">
                   <p className="text-sm font-semibold text-gray-900">Vehicle size restrictions may apply</p>
-                  <p className="text-xs text-gray-600 mt-1">Add your vehicle details to check if your car fits and view any oversize fees.</p>
+                  <p className="text-xs text-gray-600 mt-1">Provjerite da li Vam vozilo podliježe ograničenjima i dodatnim naknadama.</p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
@@ -1491,7 +1505,7 @@ export function SearchPage() {
                     <p className="text-sm text-gray-500 mt-1.5">Nema ulaza i izlaza</p>
                   </div>
                   <div className="text-right flex flex-col items-end">
-                    <p className="text-2xl font-bold text-gray-900">€{(subtotal * 1.05).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
                     <span className="text-sm text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
                   </div>
                 </button>
@@ -1588,15 +1602,10 @@ export function SearchPage() {
                     <p className="text-base font-bold text-gray-900">Amenities</p>
                   </button>
                   {showAmenities && (
-                    <div className="space-y-2 mt-3 ml-7 text-sm text-gray-900 leading-relaxed">
+                    <div className="mt-3 ml-7">
                       {selectedListing.features && selectedListing.features.length > 0
-                        ? selectedListing.features.map((f: string, i: number) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <span className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0" />
-                              <span>{f}</span>
-                            </div>
-                          ))
-                        : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                        ? <AmenitiesChips selected={selectedListing.features} size="sm" />
+                        : <p className="text-gray-400 text-sm">Nema dostupnih sadržaja.</p>}
                     </div>
                   )}
                 </div>
@@ -1734,9 +1743,10 @@ export function SearchPage() {
                     <p className="text-sm font-semibold text-gray-900">€{subtotal.toFixed(2)}</p>
                   </div>
                   <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">Naknada za uslugu (€0.99 + 5%)</p>
+                    <p className="text-sm text-gray-600">Naknada za uslugu</p>
                     <p className="text-sm font-semibold text-gray-900">€{serviceFee.toFixed(2)}</p>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">Naknada za uslugu uključuje: Jamstvo rezerviranog mjesta, prioritetnu podršku, rješavanje sporova i ostalo.</p>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
@@ -1764,95 +1774,65 @@ export function SearchPage() {
         {/* Vehicle Modal - Centered Overlay */}
         {showVehicleModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-y-auto max-h-[90vh]">
-              <div className="p-6 space-y-4">
-                {/* Header */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Add Vehicle</h3>
-                  <p className="text-sm text-gray-600 mt-1">Tell us what you need to park and we'll help you find the best spot.</p>
-                </div>
+            <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full">
+              <div className="p-6">
+                {/* Close Button */}
+                <button
+                  onClick={() => {
+                    setShowVehicleModal(false);
+                    setVehicleInput('');
+                    setSelectedVehicle(null);
+                    setVehicleCheckResult(null);
+                  }}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
 
-                {/* Make and Model Input */}
-                <div className="space-y-2 relative">
-                  <label className="text-sm font-semibold text-gray-900">Make and Model</label>
-                  <input
-                    type="text"
-                    placeholder="Type to Search"
-                    value={vehicleInput}
-                    onChange={(e) => setVehicleInput(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500">Example: Honda Civic</p>
-
-                  {/* Search Results Dropdown */}
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                    {VEHICLE_DATABASE.filter((v) =>
-                      vehicleInput === '' || `${v.make} ${v.model}`.toLowerCase().includes(vehicleInput.toLowerCase())
-                    ).map((vehicle, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            setSelectedVehicle(vehicle);
-                            setVehicleInput(`${vehicle.make} ${vehicle.model}`);
-                            if (selectedListing?.maxHeight) {
-                              setVehicleCheckResult(vehicle.height <= selectedListing.maxHeight ? 'fits' : 'prohibited');
-                            }
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-200 text-sm"
-                        >
-                          {vehicle.make} {vehicle.model} <span className="text-gray-500">({vehicle.height}m)</span>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Vehicle Check Result */}
-                {selectedVehicle && vehicleCheckResult && (
-                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    vehicleCheckResult === 'fits'
-                      ? 'bg-green-100 text-green-800 border border-green-300'
-                      : 'bg-red-100 text-red-800 border border-red-300'
-                  }`}>
-                    <span>{vehicleCheckResult === 'fits' ? '✓ Fits' : '✗ Prohibited'}</span>
-                    <span className="text-xs">
-                      {vehicleCheckResult === 'fits'
-                        ? `Your ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.height}m) fits within the limit (${selectedListing?.maxHeight}m)`
-                        : `Your ${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.height}m) exceeds the limit (${selectedListing?.maxHeight}m)`}
-                    </span>
-                  </div>
-                )}
-
-                {!selectedListing?.maxHeight && selectedVehicle && (
-                  <div className="p-3 rounded-lg text-sm text-gray-700 bg-gray-100 border border-gray-300">
-                    No height restriction data available for this lot.
-                  </div>
-                )}
-
-                {/* CTA Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      setShowVehicleModal(false);
-                      setVehicleInput('');
-                      setSelectedVehicle(null);
-                      setVehicleCheckResult(null);
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-50"
-                  >
-                    Not Now
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (selectedVehicle) {
+                {/* Height Restriction Info */}
+                {selectedListing?.maxHeight ? (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v20M2 12h20"/>
+                        <path d="M12 2L8 8M12 2l4 6"/>
+                      </svg>
+                      <div>
+                        <p className="text-lg font-bold text-gray-900">Max Height Restriction</p>
+                        <p className="text-3xl font-bold text-amber-600 mt-2">{selectedListing.maxHeight.toFixed(2)}m</p>
+                        <p className="text-sm text-gray-600 mt-3">Additional charges or access restrictions may apply if this limit is exceeded</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
                         setShowVehicleModal(false);
-                      }
-                    }}
-                    disabled={!selectedVehicle}
-                    className="flex-1 px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add Vehicle
-                  </button>
-                </div>
+                        setVehicleInput('');
+                        setSelectedVehicle(null);
+                        setVehicleCheckResult(null);
+                      }}
+                      className="w-full mt-6 px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+                    >
+                      Zatvori
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 space-y-4">
+                    <p className="text-gray-700">No height restriction data available for this lot.</p>
+                    <button
+                      onClick={() => {
+                        setShowVehicleModal(false);
+                        setVehicleInput('');
+                        setSelectedVehicle(null);
+                        setVehicleCheckResult(null);
+                      }}
+                      className="w-full px-4 py-3 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+                    >
+                      Zatvori
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2312,15 +2292,10 @@ export function SearchPage() {
                   <p className="text-sm font-bold text-gray-900">Amenities</p>
                 </button>
                 {showAmenities && (
-                  <div className="space-y-1 mt-2 ml-6 text-xs text-gray-900 leading-relaxed">
+                  <div className="mt-2 ml-6">
                     {selectedListing.features && selectedListing.features.length > 0
-                      ? selectedListing.features.map((f: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
-                            <span>{f}</span>
-                          </div>
-                        ))
-                      : <p className="text-gray-400">Nema dostupnih sadržaja.</p>}
+                      ? <AmenitiesChips selected={selectedListing.features} size="sm" />
+                      : <p className="text-gray-400 text-xs">Nema dostupnih sadržaja.</p>}
                   </div>
                 )}
               </div>

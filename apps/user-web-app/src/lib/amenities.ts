@@ -1,4 +1,4 @@
-import { Users, Zap, Lock, Waves, ParkingCircle, Repeat2, Accessibility, Bus } from 'lucide-react';
+import { Users, Zap, Lock, Accessibility, Bus, Fuel, Repeat2, ParkingCircle } from 'lucide-react';
 
 export interface Amenity {
   id: string;
@@ -9,15 +9,13 @@ export interface Amenity {
 export const AMENITIES_LIST: Amenity[] = [
   { id: 'valet', label: 'Valet', icon: Users },
   { id: 'shuttle', label: 'Shuttle', icon: Bus },
-  { id: 'ev_charging', label: 'EV Charging', icon: Zap },
-  { id: 'garage', label: 'Garage', icon: Lock },
-  { id: 'wheelchair_accessible', label: 'Wheelchair Access', icon: Accessibility },
-  { id: 'on_site_staff', label: 'On-Site Staff', icon: Users },
-  { id: 'lot_uncovered', label: 'Uncovered Lot', icon: ParkingCircle },
-  { id: 'alley_access', label: 'Alley Access', icon: Repeat2 },
-  { id: 'touchless', label: 'Touchless', icon: Waves },
-  { id: 'in_out_allowed', label: 'In/Out Allowed', icon: Repeat2 },
-  { id: 'self_park', label: 'Self Park', icon: ParkingCircle },
+  { id: 'ev-charging', label: 'EV Charging', icon: Zap },
+  { id: 'wheelchair-accessible', label: 'Wheelchair Access', icon: Accessibility },
+  { id: 'rampa', label: 'Rampa', icon: Lock },
+  { id: 'in-out-allowed', label: 'In/Out Allowed', icon: Repeat2 },
+  { id: 'tank-refill', label: 'Tank Refill', icon: Fuel },
+  { id: 'garage', label: 'Garaža', icon: Lock },
+  { id: 'self-park', label: 'Self Park', icon: ParkingCircle },
 ];
 
 export const getAmenityLabel = (id: string): string => {

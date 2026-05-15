@@ -1,6 +1,6 @@
 'use client';
 
-import { AMENITIES_LIST } from '@/lib/amenities';
+import { AMENITIES_LIST, getAmenityLabel, getAmenityIcon } from '@/lib/amenities';
 
 interface AmenitiesChipsProps {
   selected: string[];
@@ -13,11 +13,21 @@ export function AmenitiesChips({ selected, onToggle, editable = false, size = 'm
   const sizeClass = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm';
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
 
+  // Show selected amenities (even if not in AMENITIES_LIST) + all unselected from list
+  const allAmenityIds = new Set([...selected, ...AMENITIES_LIST.map(a => a.id)]);
+  const amenities = Array.from(allAmenityIds).map(id => ({
+    id,
+    label: getAmenityLabel(id),
+    icon: getAmenityIcon(id),
+  }));
+
+  // Only show selected amenities (when not editable) or all amenities (when editable)
+  const displayAmenities = editable ? amenities : amenities.filter(a => selected.includes(a.id));
+
   return (
     <div className="flex flex-wrap gap-2">
-      {AMENITIES_LIST.map((amenity) => {
+      {displayAmenities.map((amenity) => {
         const isSelected = selected.includes(amenity.id);
-        const Icon = amenity.icon;
 
         return (
           <button
@@ -32,7 +42,7 @@ export function AmenitiesChips({ selected, onToggle, editable = false, size = 'm
                   : 'border border-gray-200 text-gray-600 bg-gray-50'
             } ${editable ? 'cursor-pointer' : 'cursor-default'}`}
           >
-            <Icon className={iconSize} />
+            {amenity.icon && <amenity.icon className={iconSize} />}
             <span>{amenity.label}</span>
           </button>
         );
