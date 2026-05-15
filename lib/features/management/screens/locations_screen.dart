@@ -9,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../theme.dart';
 import '../../../widgets/admin_data_card.dart';
+import '../../../widgets/amenities_display.dart';
+import '../../../models/amenities.dart';
 import '../repositories/parking_repository.dart';
 import '../../../widgets/lot_location_picker.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -915,8 +917,8 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
         // Listing detail section controllers
         final accessHoursCtrl = TextEditingController(
             text: metaStr(meta['access_hours'], 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00'));
-        final amenitiesCtrl = TextEditingController(
-            text: metaStr(meta['amenities'], 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima'));
+        final List<String> selectedAmenities = List<String>.from(
+            (meta['amenities_ids'] as List?) ?? []);
         final thingsToKnowCtrl = TextEditingController(
             text: metaStr(meta['things_to_know'], 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.'));
         final gettingThereCtrl = TextEditingController(
@@ -1211,7 +1213,7 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                     // Save listing detail sections to verification_metadata
                     final updatedMeta = Map<String, dynamic>.from(meta);
                     updatedMeta['access_hours'] = accessHoursCtrl.text.trim();
-                    updatedMeta['amenities'] = amenitiesCtrl.text.trim();
+                    updatedMeta['amenities_ids'] = selectedAmenities;
                     updatedMeta['things_to_know'] = thingsToKnowCtrl.text.trim();
                     updatedMeta['getting_there'] = gettingThereCtrl.text.trim();
                     updatedMeta['how_it_works'] = howItWorksCtrl.text.trim();
@@ -1809,10 +1811,23 @@ class _LocationsScreenState extends ConsumerState<LocationsScreen> {
                               style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
                             iconColor: Colors.black45, collapsedIconColor: Colors.black45,
                             children: [
-                              TextField(controller: amenitiesCtrl, maxLines: 5, style: GoogleFonts.inter(fontSize: 12),
-                                decoration: InputDecoration(filled: true, fillColor: AppTheme.background, hintText: 'e.g. EV punjenje, Pokriven, ...',
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                child: AmenitiesDisplay(
+                                  selected: selectedAmenities,
+                                  onToggle: (amenityId) {
+                                    setState(() {
+                                      if (selectedAmenities.contains(amenityId)) {
+                                        selectedAmenities.remove(amenityId);
+                                      } else {
+                                        selectedAmenities.add(amenityId);
+                                      }
+                                    });
+                                  },
+                                  editable: canEdit,
+                                  size: 'md',
+                                ),
+                              ),
                             ],
                           ),
                           const Divider(height: 1, thickness: 1, color: AppTheme.border),
