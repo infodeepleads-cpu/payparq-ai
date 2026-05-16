@@ -137,9 +137,10 @@ export function SearchPage() {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [quickFilters, setQuickFilters] = useState<string[]>([]);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [sortModalOpen, setSortModalOpen] = useState(false);
   const [error, setError] = useState<string>('');
   const filterModalRef = useRef<HTMLDivElement>(null);
-  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('relevance');
+  const [sortBy, setSortBy] = useState<'relevance' | 'distance' | 'price' | 'rating' | 'walk' | 'value'>('distance');
 
   // Debug: log sortBy changes
   useEffect(() => {
@@ -935,9 +936,9 @@ export function SearchPage() {
       </div>
 
       {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
-        {/* Logo Row */}
-        <div className="flex items-center justify-between mb-2">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4">
+        {/* Logo Row with Menu */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className="w-8 h-8 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
@@ -950,61 +951,61 @@ export function SearchPage() {
               payparq
             </div>
           </div>
+
+          {/* Menu Dropdown on Right */}
+          <div className="relative" ref={mobileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="flex items-center justify-center p-2 hover:opacity-70 transition-opacity"
+            >
+              <div className="flex flex-col gap-1">
+                <div className="w-4 h-px bg-gray-600"></div>
+                <div className="w-4 h-px bg-gray-600"></div>
+              </div>
+            </button>
+            {mobileMenuOpen && (
+              <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
+                <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg">
+                  Home
+                </a>
+                <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
+                  Log In
+                </a>
+                <a href="/host" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
+                  List your lot
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Search Widget (4/5) + Menu/Map (1/5) */}
+        {/* Search Widget + Map Button */}
         <div className="flex gap-2 h-12">
           {/* Search Widget - Clickable Summary */}
           <button
             onClick={() => setShowMobileSearchEdit(true)}
-            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex flex-col justify-center"
+            className="flex-1 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 px-3 py-1 text-left flex items-center gap-2"
           >
-            <div className="text-xs text-gray-600 font-semibold truncate max-w-28">{searchLocation || 'Gdje ideš?'}</div>
-            {startTime && endTime && (
-              <div className="text-xs text-gray-700 font-medium">
-                {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            )}
-          </button>
-
-          {/* Right side - Menu + Map */}
-          <div className="flex gap-1.5 flex-shrink-0">
-            {/* Menu Dropdown */}
-            <div className="relative" ref={mobileMenuRef}>
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center"
-              >
-                <div className="flex flex-col gap-1">
-                  <div className="w-4 h-px bg-gray-600"></div>
-                  <div className="w-4 h-px bg-gray-600"></div>
-                  <div className="w-4 h-px bg-gray-600"></div>
-                </div>
-              </button>
-              {mobileMenuOpen && (
-                <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
-                  <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg">
-                    Home
-                  </a>
-                  <a href="/members" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200">
-                    Log In
-                  </a>
-                  <a href="/host" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 border-t border-gray-200 rounded-b-lg">
-                    List your lot
-                  </a>
+            <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
+            <div className="flex flex-col justify-center flex-1">
+              <div className="text-xs text-gray-600 font-semibold truncate">{searchLocation || 'Gdje ideš?'}</div>
+              {startTime && endTime && (
+                <div className="text-xs text-gray-700 font-medium">
+                  {new Date(startTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })} to {new Date(endTime).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>
+          </button>
 
-            {/* Map Button */}
-            <button
-              onClick={() => setShowMobileMap(true)}
-              className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center flex-shrink-0"
-            >
-              <MapPin className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
+          {/* Map Button - Enlarged */}
+          <button
+            onClick={() => setShowMobileMap(!showMobileMap)}
+            className="w-20 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center gap-1.5 flex-shrink-0 px-2"
+          >
+            <MapPin className="w-4 h-4 text-gray-600 flex-shrink-0" />
+            <div className="text-xs text-gray-600 font-semibold truncate">{showMobileMap ? 'Popis' : 'Karta'}</div>
+          </button>
         </div>
       </div>
 
@@ -1012,15 +1013,8 @@ export function SearchPage() {
       {showMobileSearchEdit && (
         <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-4 py-4 border-b border-gray-200">
-            <button
-              onClick={() => setShowMobileSearchEdit(false)}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              ← Nazad
-            </button>
+          <div className="flex-shrink-0 flex items-center justify-center px-4 py-4 border-b border-gray-200">
             <h2 className="text-lg font-bold text-gray-900">Uredi pretragu</h2>
-            <div className="w-12"></div>
           </div>
 
           {/* Body */}
@@ -1111,20 +1105,27 @@ export function SearchPage() {
 
             {/* Date/Time Pickers */}
             <div>
-              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase">Vrijeme</label>
-              {reservationType === 'Mjesečna' ? (
-                <MonthlyDatePickerDropdown
-                  startDate={monthlyStartDate}
-                  onStartDateChange={setMonthlyStartDate}
-                />
-              ) : (
-                <DateTimePickerDropdown
-                  startTime={startTime}
-                  endTime={endTime}
-                  onStartTimeChange={setStartTime}
-                  onEndTimeChange={setEndTime}
-                />
-              )}
+              <label className="text-xs font-semibold text-gray-400 mb-2 block uppercase flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Vrijeme
+              </label>
+              <div className="border border-gray-300 rounded-lg bg-white px-3 py-2 focus-within:border-[#000000] focus-within:ring-2 focus-within:ring-blue-500">
+                {reservationType === 'Mjesečna' ? (
+                  <MonthlyDatePickerDropdown
+                    startDate={monthlyStartDate}
+                    onStartDateChange={setMonthlyStartDate}
+                  />
+                ) : (
+                  <DateTimePickerDropdown
+                    startTime={startTime}
+                    endTime={endTime}
+                    onStartTimeChange={setStartTime}
+                    onEndTimeChange={setEndTime}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -1342,6 +1343,52 @@ export function SearchPage() {
                 className="px-6 py-2 bg-[#000000] text-white text-sm font-medium rounded-lg hover:bg-gray-900"
               >
                 Show {filteredListings.length} results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sort Modal */}
+      {sortModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-gray-900 mb-6">Poredaj po</h2>
+
+            <div className="space-y-3 mb-8">
+              {[
+                { value: 'distance', label: 'Udaljenost' },
+                { value: 'price-low', label: 'Cijena (nisko-visoko)' },
+                { value: 'price-high', label: 'Cijena (visoko-nisko)' },
+                { value: 'rating', label: 'Ocjena' },
+              ].map((option) => (
+                <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sort"
+                    value={option.value}
+                    checked={sortBy === option.value}
+                    onChange={() => setSortBy(option.value as typeof sortBy)}
+                    className="w-4 h-4 accent-[#000000] cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-gray-900">{option.label}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+              <button
+                onClick={() => setSortModalOpen(false)}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Povratak
+              </button>
+              <button
+                onClick={() => setSortModalOpen(false)}
+                className="px-6 py-2 bg-[#000000] text-white text-sm font-medium rounded-lg hover:bg-gray-900"
+              >
+                Primjeni
               </button>
             </div>
           </div>
@@ -2020,7 +2067,7 @@ export function SearchPage() {
       </div>
 
       {/* Mobile: List view with filters */}
-      <div className="md:hidden flex flex-1 flex-col overflow-hidden">
+      <div className="md:hidden flex flex-1 flex-col overflow-hidden w-full">
         {/* Mobile Filters - Horizontal scrollable */}
         <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto">
           <div className="flex gap-2 px-4 py-3">
@@ -2065,30 +2112,100 @@ export function SearchPage() {
             >
               Self Park
             </button>
+            <button
+              onClick={() => setSortModalOpen(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 text-xs font-medium hover:border-gray-400 flex-shrink-0 bg-white"
+            >
+              Poredaj po
+            </button>
+            <button
+              onClick={() => setShowDestinationPicker(true)}
+              className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-300 text-gray-700 text-xs font-medium hover:border-gray-400 flex-shrink-0"
+            >
+              All Parking Options
+            </button>
           </div>
         </div>
 
-        {/* Results count and Sort dropdown */}
-        <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+        {/* Results count */}
+        <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200">
           <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
-          <select
-            value={sortBy}
-            onChange={(e) => {
-              const newVal = e.target.value as typeof sortBy;
-              console.log('Mobile dropdown changed to:', newVal, 'from:', sortBy);
-              setSortBy(newVal);
-            }}
-            className="px-2 py-1 text-xs font-medium border border-gray-300 rounded-lg bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-black"
-          >
-            <option value="relevance">Poredaj po relevantnosti</option>
-            <option value="distance">Poredaj po udaljenosti</option>
-            <option value="price">Poredaj po cijeni</option>
-          </select>
         </div>
 
-        {/* Mobile List */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-3">
+        {/* Mobile List/Map */}
+        {showMobileMap ? (
+          <div className="flex-1 overflow-hidden w-full">
+            {isLoaded ? (
+              <GoogleMap
+                zoom={15}
+                center={mapCenter}
+                mapContainerStyle={{ width: '100%', height: '100%', minHeight: '400px' }}
+                onLoad={(map) => {
+                  mapRef.current = map;
+                }}
+              >
+                {filteredListings.map((listing) => {
+                  const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
+                  const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
+                  const subtotal = parseFloat(calc.toFixed(2));
+                  const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
+                  const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+                  const isSelected = selectedListing?.id === listing.id;
+                  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
+                    <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,79 50,88 Q 46,79 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                      fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                    <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
+                      font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
+                      fill="${isSelected ? 'white' : 'black'}">${label}</text>
+                  </svg>`;
+                  const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
+                  const scaledWidth = 48.75;
+                  const scaledHeight = 44.85;
+                  return (
+                    <Marker
+                      key={listing.id}
+                      position={{ lat: listing.lat, lng: listing.lng }}
+                      onClick={() => {
+                        setShowMobileMap(false);
+                      }}
+                      icon={{
+                        url: iconUrl,
+                        anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
+                        scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
+                      }}
+                    />
+                  );
+                })}
+
+                {/* Search location marker - Blue pin */}
+                {searchLocationPin && (() => {
+                  const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 32" width="24" height="31.5">
+                    <path d="M12 0C5.4 0 0 5.4 0 12c0 8 12 20 12 20s12-12 12-20c0-6.6-5.4-12-12-12zm0 16c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" fill="#0047FF" stroke="white" stroke-width="1"/>
+                  </svg>`;
+                  const pinScaledWidth = 31.2;
+                  const pinScaledHeight = 40.95;
+                  return (
+                    <Marker
+                      position={searchLocationPin}
+                      icon={{
+                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(pinSvg)}`,
+                        anchor: new google.maps.Point(pinScaledWidth / 2, pinScaledHeight),
+                        scaledSize: new google.maps.Size(pinScaledWidth, pinScaledHeight)
+                      }}
+                      clickable={false}
+                    />
+                  );
+                })()}
+              </GoogleMap>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-600">Loading map...</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto w-full h-full">
+            <div className="p-4 space-y-3">
             {filteredListings.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
                 <div>
@@ -2162,6 +2279,7 @@ export function SearchPage() {
             )}
           </div>
         </div>
+      )}
       </div>
 
       {/* Booking Modal */}
@@ -2174,70 +2292,6 @@ export function SearchPage() {
             setShowBookingModal(false);
           }}
         />
-      )}
-
-      {/* Mobile Full-Screen Map */}
-      {showMobileMap && (
-        <div className="md:hidden fixed inset-0 bg-gray-100 z-40 flex flex-col">
-          {/* Header */}
-          <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-            <button
-              onClick={() => setShowMobileMap(false)}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              ← Nazad
-            </button>
-            <h2 className="text-lg font-bold text-gray-900">Karta</h2>
-            <div className="w-12"></div>
-          </div>
-
-          {/* Map */}
-          <div className="flex-1 overflow-hidden">
-            {isLoaded && (
-              <GoogleMap
-                zoom={15}
-                center={mapCenter}
-                mapContainerStyle={{ width: '100%', height: '100%' }}
-                onLoad={(map) => {
-                  mapRef.current = map;
-                }}
-              >
-                {filteredListings.map((listing) => {
-                  const subtotal = durationHours * listing.pricePerHour;
-                  const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
-                  const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
-                  const isSelected = selectedListing?.id === listing.id;
-                  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
-                    <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                      fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
-                    <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
-                      font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
-                      fill="${isSelected ? 'white' : 'black'}">${label}</text>
-                  </svg>`;
-                  const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
-                  const scaledWidth = 48.75;
-                  const scaledHeight = 44.85;
-                  return (
-                    <Marker
-                      key={listing.id}
-                      position={{ lat: listing.lat, lng: listing.lng }}
-                      onClick={() => {
-                        setSelectedListing(listing);
-                        setShowMobileMap(false);
-                        setShowMobileDetails(true);
-                      }}
-                      icon={{
-                        url: iconUrl,
-                        anchor: new google.maps.Point(scaledWidth / 2, scaledHeight),
-                        scaledSize: new google.maps.Size(scaledWidth, scaledHeight)
-                      }}
-                    />
-                  );
-                })}
-              </GoogleMap>
-            )}
-          </div>
-        </div>
       )}
 
       {/* Mobile Details Bottom Sheet - Exact Desktop Layout */}

@@ -236,7 +236,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
           <h2 className="text-lg md:text-xl font-semibold text-gray-900">Kamo ideš?</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+          <button onClick={onClose} className="text-sm font-semibold text-gray-600 hover:text-gray-900">Odustani</button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -258,14 +258,19 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
 
               {/* Search Bar with 3 nearest options */}
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search venues..."
-                  value={searchFilter}
-                  onChange={(e) => { setSearchFilter(e.target.value); setShowVenues(true); }}
-                  onFocus={() => setShowVenues(true)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm text-gray-900"
-                />
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search venues..."
+                    value={searchFilter}
+                    onChange={(e) => { setSearchFilter(e.target.value); setShowVenues(true); }}
+                    onFocus={() => setShowVenues(true)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm text-gray-900"
+                  />
+                </div>
 
                 {/* Venues dropdown - shown when focused or searching */}
                 {showVenues && (
@@ -317,17 +322,22 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
                   </select>
                 </div>
               </div>
-
-              {/* Search button - shown when venue is selected */}
-              {selectedVenue && (
-                <button
-                  onClick={handleSearch}
-                  className="w-full bg-white border border-black text-black font-semibold text-sm py-2 rounded hover:bg-gray-50 transition-colors"
-                >
-                  Search Parking
-                </button>
-              )}
             </div>
+        </div>
+
+        {/* CTA Button - Fixed at bottom, always visible */}
+        <div className="border-t border-gray-200 p-4 md:p-6 bg-white">
+          <button
+            onClick={handleSearch}
+            disabled={!selectedVenue}
+            className={`w-full font-semibold text-sm py-3 rounded-lg transition-colors ${
+              selectedVenue
+                ? 'bg-black text-white hover:bg-gray-900 cursor-pointer'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {selectedVenue ? 'Search Parking' : 'Select a location'}
+          </button>
         </div>
       </div>
     </div>
