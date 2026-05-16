@@ -1955,7 +1955,9 @@ export function SearchPage() {
           >
             {/* Parking lot location markers - Cloud with price (native Marker, no twitch) */}
             {filteredListings.map((listing) => {
-              const subtotal = durationHours * listing.pricePerHour;
+              const pricePerUnit = getDisplayPrice(listing, durationHours, reservationType);
+              const calc = reservationType === 'Mjesečna' ? pricePerUnit : durationHours * pricePerUnit;
+              const subtotal = parseFloat(calc.toFixed(2));
               const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
               const isSelected = selectedListing?.id === listing.id;
