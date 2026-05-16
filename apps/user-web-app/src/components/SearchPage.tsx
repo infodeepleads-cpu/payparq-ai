@@ -1551,7 +1551,7 @@ export function SearchPage() {
               </button>
 
               {/* PayParq Watermark */}
-              <div className="absolute bottom-4 right-4 text-gray-400 text-lg font-black tracking-tight opacity-30 blur-sm">
+              <div className="absolute bottom-20 right-4 text-gray-300 text-2xl font-black tracking-tight opacity-80 z-20">
                 payparq
               </div>
 
@@ -2372,7 +2372,7 @@ export function SearchPage() {
                     )}
 
                     {/* PayParq Watermark */}
-                    <div className="absolute bottom-4 right-2 text-gray-400 text-sm font-black tracking-tight opacity-30 blur-sm">
+                    <div className="absolute bottom-16 right-2 text-gray-300 text-xl font-black tracking-tight opacity-80 z-20">
                       payparq
                     </div>
 
