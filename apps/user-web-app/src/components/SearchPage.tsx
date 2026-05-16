@@ -16,6 +16,8 @@ import { AmenitiesChips } from './AmenitiesChips';
 
 const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
 
+const UNIVERSAL_THINGS_TO_KNOW = 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.';
+
 const HOTSPOTS_BY_REGION: Record<string, Array<{ name: string; lat: number; lng: number; type: string }>> = {
   split: [
     { name: 'Riva', lat: 43.5088, lng: 16.4406, type: 'landmark' },
@@ -125,6 +127,8 @@ export function SearchPage() {
   });
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
   const homeDropdownRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [showTotalPrice, setShowTotalPrice] = useState(true);
   const [allParkingDropdownOpen, setAllParkingDropdownOpen] = useState(false);
   const [showMobileSearchEdit, setShowMobileSearchEdit] = useState(false);
@@ -464,7 +468,7 @@ export function SearchPage() {
               heightRestrictions: loc.height_restrictions === true || loc.height_restrictions === 'yes',
               accessHours: (metadata.access_hours as string | undefined) || 'pon – pet: 6:00 – 23:00\nsub – ned: 7:00 – 23:00',
               amenities: (metadata.amenities as string | undefined) || 'Valet usluga, Garaža - Natkrivena, Osoblje na licu mjesta, EV punjenje, Pristup invalidskim kolicima',
-              thingsToKnow: (metadata.things_to_know as string | undefined) || 'Zbog ograničenja veličine, ova lokacija ne može primiti kamionete i putničke kombije.\n\nZa egzotična vozila obratite se izravno servisu radi dostupnosti i cijene.\n\nKamioni, kombiji i veliki SUV-ovi smatraju se super velikim i podliježu dodatnim naknadama na licu mjesta.',
+              thingsToKnow: (metadata.things_to_know as string | undefined) || UNIVERSAL_THINGS_TO_KNOW,
               gettingThere: (metadata.getting_there as string | undefined) || 'Unesite adresu lokacije u navigaciju. Ulaz je označen znakom za parkiranje.',
               howItWorks: (metadata.how_it_works as string | undefined) || '1. Pokažite službeniku svoju PayParq parkirnu propusnicu, ispisanu ili na mobilnom uređaju\n2. Samo uđite ako nema nikoga\n3. Odvezite se kad budete spremni otići',
               spots: loc.total_spots || loc.capacity,
@@ -635,6 +639,7 @@ export function SearchPage() {
             case 'wheelchair-accessible': return l.features.includes('wheelchair-accessible');
             case 'self-park': return l.type === 'self-park';
             case 'ev-charging': return l.features.includes('ev-charging');
+            case 'rampa': return l.features.includes('rampa');
             default: return true;
           }
         });
@@ -720,12 +725,15 @@ export function SearchPage() {
       if (homeDropdownRef.current && !homeDropdownRef.current.contains(e.target as Node)) {
         setHomeDropdownOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
     };
-    if (homeDropdownOpen) {
+    if (homeDropdownOpen || mobileMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [homeDropdownOpen]);
+  }, [homeDropdownOpen, mobileMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -962,10 +970,10 @@ export function SearchPage() {
           {/* Right side - Menu + Map */}
           <div className="flex gap-1.5 flex-shrink-0">
             {/* Menu Dropdown */}
-            <div className="relative" ref={homeDropdownRef}>
+            <div className="relative" ref={mobileMenuRef}>
               <button
                 type="button"
-                onClick={() => setHomeDropdownOpen(!homeDropdownOpen)}
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="w-10 h-10 rounded-lg border border-gray-300 bg-white hover:border-gray-400 flex items-center justify-center"
               >
                 <div className="flex flex-col gap-1">
@@ -974,7 +982,7 @@ export function SearchPage() {
                   <div className="w-4 h-px bg-gray-600"></div>
                 </div>
               </button>
-              {homeDropdownOpen && (
+              {mobileMenuOpen && (
                 <div className="absolute top-full mt-1 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[160px] sm:min-w-[180px]">
                   <a href="/" className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-xs sm:text-sm text-gray-900 rounded-t-lg">
                     Home
@@ -1613,7 +1621,7 @@ export function SearchPage() {
                   href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                   className="inline-block px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                  Rezervirajte sada — €{totalPrice.toFixed(2)}
                 </a>
 
                 {/* Green Box */}
@@ -1844,7 +1852,7 @@ export function SearchPage() {
                   href={buildCheckoutUrl(selectedListing)}
                   className="block w-full mt-2 px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
-                  Rezervirajte sad — €{totalPrice.toFixed(2)}
+                  Rezervirajte sada — €{totalPrice.toFixed(2)}
                 </a>
                 <button
                   onClick={() => setShowPriceBreakdown(false)}
@@ -1960,16 +1968,18 @@ export function SearchPage() {
               const subtotal = parseFloat(calc.toFixed(2));
               const price = parseFloat((showTotalPrice ? subtotal + 0.99 + (subtotal * 0.05) : subtotal).toFixed(2));
               const label = `€${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
+              const shouldShowIntegerOnly = showTotalPrice && (reservationType === 'Mjesečna' || price >= 100);
+              const mapLabel = shouldShowIntegerOnly ? `€${Math.floor(price)}` : label;
               const isSelected = selectedListing?.id === listing.id;
               const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 115" width="48.75" height="56.0625">
-                <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,88 50,106 Q 46,88 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
-                  fill="${isSelected ? '#3b82f6' : 'white'}" stroke="${isSelected ? '#1d4ed8' : 'black'}" stroke-width="2"/>
+                <path d="M 50,8 C 73,8 92,22 92,38 C 92,54 73,68 58,70 Q 54,79 50,88 Q 46,79 42,70 C 27,68 8,54 8,38 C 8,22 27,8 50,8 Z"
+                  fill="${isSelected ? '#3b82f6' : 'white'}"/>
                 <text x="50" y="41" text-anchor="middle" dominant-baseline="middle"
                   font-family="Arial,sans-serif" font-size="31.2" font-weight="bold"
-                  fill="${isSelected ? 'white' : 'black'}">${label}</text>
+                  fill="${isSelected ? 'white' : 'black'}">${mapLabel}</text>
               </svg>`;
               const iconUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgStr)}`;
-              const scaledWidth = 63.375;
+              const scaledWidth = 150;
               const scaledHeight = 58.305;
               return (
                 <Marker
@@ -2457,7 +2467,7 @@ export function SearchPage() {
                 href={selectedListing ? buildCheckoutUrl(selectedListing) : '#'}
                 className="block w-full px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
               >
-                Rezervirajte sad — €{totalPrice.toFixed(2)}
+                Rezervirajte sada — €{totalPrice.toFixed(2)}
               </a>
               <button
                 onClick={() => setShowMobileDetails(false)}

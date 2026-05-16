@@ -191,7 +191,7 @@ export function ListingCard({ listing, isSelected, onSelect, onBook, onDetails, 
             }}
             className="px-4 py-3 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors whitespace-nowrap cursor-pointer"
           >
-            Rezervirajte sad
+            Rezervirajte sada
           </button>
         </div>
       </div>

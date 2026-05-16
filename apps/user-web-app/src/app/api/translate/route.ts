@@ -58,6 +58,8 @@ const hrOverrides = new Map<string, string>([
   ["From mixed-use garages to open-air lots, payparq turns any space into a seamless, app-free arrival experience while unlocking new revenue.", "Od garaža mješovite namjene do parcela na otvorenom, payparq pretvara bilo koji prostor u besprijekoran doživljaj dolaska bez aplikacije, a istovremeno donosi nove prihode."],
   ["Pay Now", "Plati sada"],
   ["Reserve", "Rezerviraj"],
+  ["Book Now", "Rezervirajte sada"],
+  ["Rezervirajte sada", "Rezervirajte sada"],
   ["Home", "Početna"],
   ["Rest easy with 24/7 AI Computer Vision monitoring every vehicle. We ensure all cars are authorized and offer an optional insurance where applicable for total peace of mind.", "Budite sigurni uz 24/7 AI vidljivost koja nadzire svako vozilo. Osiguravamo da su sva vozila autorizirana i nudimo opcionalno osiguranje gdje je primjenjivo za potpuni mir."],
   ["Apply", "Apliciraj"],
