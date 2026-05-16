@@ -2325,12 +2325,51 @@ export function SearchPage() {
               {/* Photo Carousel */}
               {selectedListing.photos && selectedListing.photos.length > 0 && (
                 <div className="relative -mx-4 mb-4">
-                  <div className="bg-gray-100 h-56 cursor-pointer" onClick={() => selectedListing.photos && selectedListing.photos.length > 1 && setPhotoIndex((photoIndex + 1) % selectedListing.photos.length)}>
+                  <div className="bg-gray-100 h-56 cursor-pointer relative overflow-hidden" onClick={() => selectedListing.photos && selectedListing.photos.length > 1 && setPhotoIndex((photoIndex + 1) % selectedListing.photos.length)}>
                     <img
                       src={selectedListing.photos[photoIndex] || selectedListing.photo}
                       alt={selectedListing.name}
                       className="w-full h-full object-cover"
                     />
+
+                    {/* Left Arrow */}
+                    {selectedListing.photos.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPhotoIndex((photoIndex - 1 + selectedListing.photos.length) % selectedListing.photos.length);
+                        }}
+                        style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }}
+                        className="bg-black/60 hover:bg-black/70 text-white rounded-full p-1.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-8 h-8 z-10"
+                      >
+                        <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Right Arrow */}
+                    {selectedListing.photos.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPhotoIndex((photoIndex + 1) % selectedListing.photos.length);
+                        }}
+                        style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)' }}
+                        className="bg-black/60 hover:bg-black/70 text-white rounded-full p-1.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-8 h-8 z-10"
+                      >
+                        <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Photo Counter */}
+                    {selectedListing.photos.length > 1 && (
+                      <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded-full text-xs font-medium">
+                        {photoIndex + 1}/{selectedListing.photos.length}
+                      </div>
+                    )}
                   </div>
                   {selectedListing.photos.length > 1 && (
                     <div className="flex gap-1 mt-2 px-4">
@@ -2347,6 +2386,33 @@ export function SearchPage() {
                   )}
                 </div>
               )}
+
+              {/* Vehicle Size Restrictions - Clickable */}
+              <button
+                onClick={() => {
+                  setShowVehicleModal(true);
+                  setVehicleCheckResult(null);
+                }}
+                className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-start gap-3 justify-between cursor-pointer transition-colors border-b border-gray-200 -mx-4 mb-4"
+              >
+                <div className="flex items-start gap-3 flex-1">
+                  <Info className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-gray-900">Vehicle size restrictions may apply</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Provjerite da li Vam vozilo podliježi ograničenjima i dodatnim naknadama.</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+              </button>
+
+              {/* Book Now Suggestion Widget */}
+              <div className="flex-shrink-0 w-full px-4 py-3 bg-amber-100 flex items-start gap-3 border-b border-amber-300 -mx-4 mb-4">
+                <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-gray-900">Predlažemo da rezervirate odmah.</p>
+                  <p className="text-xs text-gray-900 mt-0.5">Ovdje imamo samo {(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()} po ovoj cijeni!</p>
+                </div>
+              </div>
 
               {/* Location Information Widget */}
               <div className="w-full bg-white border-b border-gray-200 mb-4 px-0 -mx-4">
@@ -2505,6 +2571,59 @@ export function SearchPage() {
                     {selectedListing.howItWorks
                       ? selectedListing.howItWorks.split('\n').map((step, i) => <p key={i}>{step}</p>)
                       : <p className="text-gray-400">Nema dostupnih informacija.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Getting There */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowGettingThere(!showGettingThere)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showGettingThere ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Getting There</p>
+                </button>
+                {showGettingThere && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    {selectedListing.gettingThere
+                      ? <p>{selectedListing.gettingThere}</p>
+                      : <p className="text-gray-400">Nema dostupnih uputa za dolazak.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Free Cancellation Policy */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowCancellationPolicy(!showCancellationPolicy)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showCancellationPolicy ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Free Cancellation Policy</p>
+                </button>
+                {showCancellationPolicy && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    <p>U ovoj ustanovi imate vremena do trenutka kada vaša rezervacija počne otkazati svoje parkiranje za puni povrat novca. Rezervaciju možete otkazati na web stranici ili aplikaciji PayParq.</p>
+                    <p>Ako imate problema sa svojom rezervacijom, a vrijeme je nakon početka, obratite se našim PayParq timom koji će rado pomoći ispraviti svaku situaciju!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Guaranteed Parking */}
+              <div className="pt-3 border-t border-gray-200 mb-4 px-4">
+                <button
+                  onClick={() => setShowGuaranteedParking(!showGuaranteedParking)}
+                  className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
+                >
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showGuaranteedParking ? 'rotate-180' : ''}`} />
+                  <p className="text-sm font-bold text-gray-900">Guaranteed Parking by PayParq</p>
+                </button>
+                {showGuaranteedParking && (
+                  <div className="space-y-2 text-xs text-gray-900 leading-relaxed mt-2 ml-6">
+                    <p>When you park and pay with PayParq, we guarantee you will have a spot to park in at the price you paid or your money back.</p>
+                    <p>If you need help with your reservation, please contact us, and we'll do our best to make it right. Our world-class customer support team is available 7 days a week, 365 days a year.</p>
+                    <p>For specifics, please refer to the PayParq Parking Guarantee.</p>
                   </div>
                 )}
               </div>
