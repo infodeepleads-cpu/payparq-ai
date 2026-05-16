@@ -1550,14 +1550,14 @@ export function SearchPage() {
                 </svg>
               </button>
 
+              {/* PayParq Watermark */}
+              <div className="absolute bottom-20 right-4 text-gray-400 text-3xl font-black tracking-tight opacity-40 blur-sm">
+                payparq
+              </div>
+
               {/* Photo Counter */}
               <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 rounded-full text-sm font-medium">
                 {(() => { const photosArray = selectedListing.photos && selectedListing.photos.length > 0 ? selectedListing.photos : [selectedListing.photo || 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800']; return `${photoIndex + 1}/${photosArray.length}`; })()}
-              </div>
-
-              {/* PayParq Watermark */}
-              <div className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1.5 text-sm font-black tracking-tight">
-                payparq
               </div>
             </div>
 
@@ -2371,17 +2371,17 @@ export function SearchPage() {
                       </button>
                     )}
 
+                    {/* PayParq Watermark */}
+                    <div className="absolute bottom-12 right-2 text-gray-400 text-2xl font-black tracking-tight opacity-40 blur-sm">
+                      payparq
+                    </div>
+
                     {/* Photo Counter */}
                     {selectedListing.photos.length > 1 && (
                       <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded-full text-xs font-medium">
                         {photoIndex + 1}/{selectedListing.photos.length}
                       </div>
                     )}
-
-                    {/* PayParq Watermark */}
-                    <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 text-xs font-black tracking-tight">
-                      payparq
-                    </div>
                   </div>
                   {selectedListing.photos.length > 1 && (
                     <div className="flex gap-1 mt-2 px-4">
