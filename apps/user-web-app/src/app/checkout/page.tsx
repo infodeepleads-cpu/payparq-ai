@@ -10,8 +10,11 @@ import { Star, CheckCircle, X, Phone, Lock } from 'lucide-react';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
-// Brand name constants - NEVER translate these
-const STRIPE_BRAND = 'Stripe';
+// Hardcoded footer text for each language - NEVER translate brand names
+const FOOTER_TEXTS = {
+  en: 'Powered by Stripe',
+  hr: 'Pogonjen od strane Stripe',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -794,8 +797,13 @@ function PaidCheckoutForm({
               <span>+385915963139</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-500">Powered by <span className="font-black text-gray-900" translate="no">{STRIPE_BRAND}</span></span>
+          <div className="flex items-center gap-1.5" translate="no">
+            <span className="text-gray-500">
+              {(() => {
+                const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
+                return FOOTER_TEXTS[lang as keyof typeof FOOTER_TEXTS] || FOOTER_TEXTS.en;
+              })()}
+            </span>
           </div>
         </div>
       </footer>
