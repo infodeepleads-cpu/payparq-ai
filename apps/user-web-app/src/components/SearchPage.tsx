@@ -2069,7 +2069,7 @@ export function SearchPage() {
       {/* Mobile: List view with filters */}
       <div className="md:hidden flex flex-1 flex-col overflow-hidden w-full">
         {/* Mobile Filters - Horizontal scrollable */}
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto relative z-50 bg-white">
+        <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto relative bg-white">
           <div className="flex gap-2 px-4 py-3">
             <button
               onClick={() => setFilterModalOpen(true)}
@@ -2129,7 +2129,7 @@ export function SearchPage() {
 
         {/* Results count */}
         {!showMobileDetails && (
-          <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 relative z-50">
+          <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 relative">
             <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
           </div>
         )}
