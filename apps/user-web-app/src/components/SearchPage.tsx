@@ -2440,66 +2440,66 @@ export function SearchPage() {
               </div>
 
               {/* Reservation Details Widget */}
-              <div className="w-full bg-white border-b border-gray-200 mb-4 px-0 -mx-4">
-                <div className="px-4 py-3 space-y-3">
+              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 px-4 py-3">
+                <p className="text-sm text-gray-700 font-semibold mb-4">Rezervacija parkinga</p>
+
+                {/* Date, Time and Price Row */}
+                <button
+                  onClick={() => setShowPriceBreakdown(true)}
+                  className="w-full text-left hover:opacity-70 transition-opacity pb-4 border-b border-gray-200 flex items-start justify-between -mt-1"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-900">{formatTimeRange()}</p>
+                    <p className="text-xs text-gray-500 mt-1">Nema ulaza i izlaza</p>
+                  </div>
+                  <div className="text-right flex flex-col items-end ml-2">
+                    <p className="text-xl font-bold text-gray-900">€{totalPrice.toFixed(2)}</p>
+                    <span className="text-xs text-gray-500 border-b border-gray-400 pb-0.5 -mt-1">Ukupno</span>
+                  </div>
+                </button>
+
+                {/* Grey Box - Reservation Extended */}
+                <div className="bg-gray-200 rounded-lg p-2 mt-3">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
+                    <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  </div>
+                </div>
+
+                {/* Yellow Spots Widget */}
+                <div className="flex items-center gap-1.5 bg-yellow-100 rounded-md px-3 py-2 mt-3">
+                  <Info className="w-3.5 h-3.5 text-yellow-700 flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-semibold text-gray-900">{(() => { const s = selectedListing.id.charCodeAt(selectedListing.id.length - 1) % 5 + 1; if (s === 1) return '1 preostalo mjesto'; if (s <= 4) return `${s} preostala mjesta`; return `${s} preostalih mjesta`; })()}</span>
+                    <span className="text-xs text-gray-600 ml-1">po ovoj cijeni</span>
+                  </div>
+                </div>
+
+                {/* Green Box */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2 mt-3">
                   <div className="flex items-center gap-2">
-                    <button className="inline-block bg-gray-200 px-2 py-1 rounded text-xs font-semibold text-gray-900">
-                      Online specijal
-                    </button>
-                    <button
-                      onClick={() => setShowOnlineSpecialReminder(!showOnlineSpecialReminder)}
-                      className="text-xs font-semibold text-gray-600 hover:text-gray-800"
-                    >
-                      Detalji
-                    </button>
-                  </div>
-
-                  {showOnlineSpecialReminder && (
-                    <div className="bg-yellow-100 rounded-md px-2 py-1.5">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Info className="w-3 h-3 text-yellow-700 flex-shrink-0" />
-                        <p className="text-xs font-semibold text-gray-900">Važna napomena</p>
-                      </div>
-                      <p className="text-xs text-gray-900">Molimo vas da poštujete vrijeme vaše rezervacije. Ne ulazite prije početka rezervacije niti je napuštajte nakon njezinog završetka.</p>
+                    <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+                      <span className="text-white text-xs font-bold">✓</span>
                     </div>
-                  )}
-
-                  <p className="text-xs text-gray-700 font-semibold">Rezervacija parkinga</p>
-
-                  <button
-                    onClick={() => setShowPriceBreakdown(true)}
-                    className="w-full text-left hover:opacity-70 transition-opacity pb-3 border-b border-gray-200 flex items-start justify-between"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-bold text-gray-900">{formatDuration()}</p>
-                      <p className="text-sm text-gray-900 mt-0.5">{formatTimeRange()}</p>
-                      <p className="text-xs text-gray-600 mt-0.5">Nema ulaza i izlaza</p>
-                    </div>
-                    <div className="text-right ml-2 flex-shrink-0">
-                      <p className="text-xs font-bold text-gray-900">€{subtotal.toFixed(2)}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Međuzbroj</p>
-                    </div>
-                  </button>
-
-                  <div className="bg-gray-200 rounded-lg p-2 mt-3">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold text-gray-900">Vaša rezervacija je produžena bez dodatnih troškova!</p>
-                      <Info className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                      <p className="text-xs text-gray-700 font-semibold">Besplatno otkazivanje</p>
+                      <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5 mt-3">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
-                      <p className="text-xs text-green-900 font-semibold">Besplatno otkazivanje</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-600 flex-shrink-0">
+                      <span className="text-white text-xs font-bold">✓</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
-                      <p className="text-xs text-green-900 font-semibold">Garancija Mjesta</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-gray-700 font-semibold">Garancija Mjesta</p>
+                      <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                     </div>
                   </div>
+                </div>
 
-                  <p className="text-xs text-gray-600 pt-2">Sigurna plaćanja omogućuje Stripe</p>
+                {/* Payment Methods */}
+                <div className="pt-3">
+                  <p className="text-xs text-gray-600">Sigurna plaćanja omogućuje Stripe</p>
                 </div>
               </div>
 
