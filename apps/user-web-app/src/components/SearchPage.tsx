@@ -2139,7 +2139,7 @@ export function SearchPage() {
               <GoogleMap
                 zoom={15}
                 center={mapCenter}
-                mapContainerStyle={{ width: '100%', height: '100%', minHeight: '400px' }}
+                mapContainerStyle={{ width: '100%', height: '100%', minHeight: 'calc(100vh - 200px)' }}
                 onLoad={(map) => {
                   mapRef.current = map;
                 }}
