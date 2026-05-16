@@ -152,7 +152,7 @@ function SummaryPanel({
       </div>
 
       <div className="lg:hidden">
-        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} Sat{durationHours > 1 ? 'a' : ''})</p>
+        <p className="text-xs font-semibold text-gray-600 text-center">Sesija parkiranja ({durationHours} {durationHours === 1 ? 'sat' : durationHours < 5 ? 'sata' : 'sati'})</p>
         <p className="font-bold text-gray-900 text-3xl mt-1 text-center">€{amountEur.toFixed(2)}</p>
       </div>
 
