@@ -2333,11 +2333,12 @@ export function SearchPage() {
                     />
 
                     {/* Left Arrow */}
-                    {selectedListing.photos.length > 1 && (
+                    {selectedListing.photos && selectedListing.photos.length > 1 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPhotoIndex((photoIndex - 1 + selectedListing.photos.length) % selectedListing.photos.length);
+                          const photosArray = selectedListing.photos || [];
+                          setPhotoIndex((photoIndex - 1 + photosArray.length) % photosArray.length);
                         }}
                         style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }}
                         className="bg-black/60 hover:bg-black/70 text-white rounded-full p-1.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-8 h-8 z-10"
@@ -2349,11 +2350,12 @@ export function SearchPage() {
                     )}
 
                     {/* Right Arrow */}
-                    {selectedListing.photos.length > 1 && (
+                    {selectedListing.photos && selectedListing.photos.length > 1 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPhotoIndex((photoIndex + 1) % selectedListing.photos.length);
+                          const photosArray = selectedListing.photos || [];
+                          setPhotoIndex((photoIndex + 1) % photosArray.length);
                         }}
                         style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)' }}
                         className="bg-black/60 hover:bg-black/70 text-white rounded-full p-1.5 shadow-md transition-all inline-flex items-center justify-center leading-none w-8 h-8 z-10"
