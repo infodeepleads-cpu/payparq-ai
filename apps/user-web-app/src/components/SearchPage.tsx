@@ -936,7 +936,7 @@ export function SearchPage() {
       </div>
 
       {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 relative z-50">
         {/* Logo Row with Menu */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -2069,7 +2069,7 @@ export function SearchPage() {
       {/* Mobile: List view with filters */}
       <div className="md:hidden flex flex-1 flex-col overflow-hidden w-full">
         {/* Mobile Filters - Horizontal scrollable */}
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto">
+        <div className="flex-shrink-0 border-b border-gray-200 bg-white overflow-x-auto relative z-50 bg-white">
           <div className="flex gap-2 px-4 py-3">
             <button
               onClick={() => setFilterModalOpen(true)}
@@ -2128,12 +2128,14 @@ export function SearchPage() {
         </div>
 
         {/* Results count */}
-        <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200">
-          <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
-        </div>
+        {!showMobileDetails && (
+          <div className="flex-shrink-0 px-4 py-2 border-b border-gray-200 relative z-50">
+            <span className="text-xs text-gray-600">{filteredListings.length} rezultata</span>
+          </div>
+        )}
 
-        {/* Mobile List/Map */}
-        {showMobileMap ? (
+        {/* Mobile List/Map - Hidden when details open */}
+        {!showMobileDetails && (showMobileMap ? (
           <div className="flex-1 overflow-hidden w-full">
             {isLoaded ? (
               <GoogleMap
@@ -2279,7 +2281,7 @@ export function SearchPage() {
             )}
           </div>
         </div>
-      )}
+      ))}
       </div>
 
       {/* Booking Modal */}
@@ -2294,20 +2296,36 @@ export function SearchPage() {
         />
       )}
 
-      {/* Mobile Details Bottom Sheet - Exact Desktop Layout */}
+      {/* Mobile Details - Full screen replacement */}
       {showMobileDetails && selectedListing && (
-        <div className="md:hidden fixed inset-0 bg-black/50 z-40 flex items-end">
-          <div className="w-full bg-white rounded-t-3xl max-h-[95vh] overflow-y-auto">
-            {/* Drag Handle */}
-            <div className="flex justify-center py-3 sticky top-0 bg-white rounded-t-3xl z-20">
-              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+        <div className="md:hidden fixed inset-0 bg-white z-50 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="md:hidden bg-white border-b border-gray-200 px-4 py-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
+                    <span className="text-xs font-semibold tracking-tight leading-none text-white">P</span>
+                  </div>
+                </div>
+                <div className="text-base font-black tracking-tight text-black">payparq</div>
+              </div>
+              <button
+                onClick={() => setShowMobileDetails(false)}
+                className="text-gray-600 hover:text-gray-900 text-xl font-bold"
+              >
+                ✕
+              </button>
             </div>
+          </div>
 
+          {/* Details Content */}
+          <div className="w-full bg-white overflow-y-auto flex-1">
             <div className="px-4 pb-6 space-y-0">
               {/* Photo Carousel */}
               {selectedListing.photos && selectedListing.photos.length > 0 && (
                 <div className="relative -mx-4 mb-4">
-                  <div className="bg-gray-100 h-56">
+                  <div className="bg-gray-100 h-56 cursor-pointer" onClick={() => selectedListing.photos && selectedListing.photos.length > 1 && setPhotoIndex((photoIndex + 1) % selectedListing.photos.length)}>
                     <img
                       src={selectedListing.photos[photoIndex] || selectedListing.photo}
                       alt={selectedListing.name}
@@ -2425,7 +2443,7 @@ export function SearchPage() {
                   onClick={() => setShowThingsToKnow(!showThingsToKnow)}
                   className="flex items-center gap-2 w-full hover:opacity-70 transition-opacity"
                 >
-                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showThingsToKnow ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${showThingsToKnow ? 'rotate-180' : ''}`} />
                   <p className="text-sm font-bold text-gray-900">Things You Should Know</p>
                 </button>
                 {showThingsToKnow && (
