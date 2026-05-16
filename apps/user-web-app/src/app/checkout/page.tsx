@@ -10,6 +10,9 @@ import { Star, CheckCircle, X, Phone, Lock } from 'lucide-react';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
+// Brand name constants - NEVER translate these
+const STRIPE_BRAND = 'Stripe';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(iso: string) {
@@ -791,8 +794,8 @@ function PaidCheckoutForm({
               <span>+385915963139</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5" translate="no">
-            <span className="text-gray-500">Powered by <span className="font-black text-gray-900">Stripe</span></span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500">Powered by <span className="font-black text-gray-900" translate="no">{STRIPE_BRAND}</span></span>
           </div>
         </div>
       </footer>
