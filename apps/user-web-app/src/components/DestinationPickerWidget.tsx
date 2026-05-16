@@ -231,7 +231,7 @@ export function DestinationPickerWidget({ onClose, onSelect, defaultTab = 'airpo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end z-50 md:items-center md:justify-center">
+    <div className="fixed inset-0 bg-black/50 flex items-end z-[60] md:items-center md:justify-center">
       <div className="bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 md:slide-in-from-bottom-0">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">

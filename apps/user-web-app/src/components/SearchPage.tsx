@@ -1272,7 +1272,7 @@ export function SearchPage() {
 
       {/* Filter Modal */}
       {filterModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
           <div
             ref={filterModalRef}
             className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
@@ -1351,7 +1351,7 @@ export function SearchPage() {
 
       {/* Sort Modal */}
       {sortModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-gray-900 mb-6">Poredaj po</h2>
 
