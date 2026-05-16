@@ -384,6 +384,7 @@ export function SearchPage() {
               base_price_monthly: loc.base_price_monthly,
               base_price_monthly_floor: loc.base_price_monthly_floor,
               base_price_monthly_ceiling: loc.base_price_monthly_ceiling,
+              base_price_daily: loc.base_price_daily,
             }, 'monthly');
 
             // Parse verification_metadata if it's a string
@@ -393,6 +394,28 @@ export function SearchPage() {
                 ? JSON.parse(loc.verification_metadata)
                 : loc.verification_metadata;
             }
+
+            // Check for calendar overrides on the booking start date
+            const getCalendarOverridePrices = () => {
+              const startDate = new Date(startTime);
+              const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+              const dateConfigs = metadata?.dateConfigs || {};
+              const dayConfig = dateConfigs[dateStr];
+
+              if (dayConfig) {
+                return {
+                  hourly: dayConfig.priceHourly || pricePerHour,
+                  daily: dayConfig.priceDaily || pricePerDay,
+                  monthly: dayConfig.priceMonthly || pricePerMonth,
+                };
+              }
+              return { hourly: pricePerHour, daily: pricePerDay, monthly: pricePerMonth };
+            };
+
+            const calendarPrices = getCalendarOverridePrices();
+            const finalPricePerHour = calendarPrices.hourly;
+            const finalPricePerDay = calendarPrices.daily;
+            const finalPricePerMonth = calendarPrices.monthly;
             const verificationPhotos = (() => {
               if (Array.isArray(loc.verification_photos)) return loc.verification_photos;
               if (typeof loc.verification_photos === 'string') {
@@ -414,9 +437,9 @@ export function SearchPage() {
               address: loc.address || '',
               lat: lat,
               lng: lng,
-              pricePerHour,
-              pricePerDay,
-              pricePerMonth,
+              pricePerHour: finalPricePerHour,
+              pricePerDay: finalPricePerDay,
+              pricePerMonth: finalPricePerMonth,
               rating: loc.review_score || 0,
               reviews: loc.review_count || 0,
               photo: photoUrl,
