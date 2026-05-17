@@ -10,7 +10,7 @@ class VerificationRepository {
     return _client
         .from('locations')
         .stream(primaryKey: ['id'])
-        .eq('verification_status', 'pending')
+        .or('verification_status.eq.pending,verification_status.eq.registration_interest')
         .order('verification_submitted_at', ascending: false);
   }
 
@@ -19,7 +19,7 @@ class VerificationRepository {
         .from('locations')
         .select(
             'id, name, display_id, verification_status, verification_photos, verification_submitted_at, is_run_by_payparq')
-        .eq('verification_status', 'pending')
+        .or('verification_status.eq.pending,verification_status.eq.registration_interest')
         .order('verification_submitted_at', ascending: false);
     return (data as List)
         .whereType<Map>()
