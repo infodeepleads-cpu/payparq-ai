@@ -35,25 +35,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add to verification inbox (mobile scanner admin sees it - read-only, no approval)
+    // Add to locations table for mobile scanner inbox (registration interest - read-only)
     try {
-      const { error: inboxErr } = await supabase
-        .from('verification_inbox')
+      const { error: locationErr } = await supabase
+        .from('locations')
         .insert({
           owner_email: email,
-          owner_name: country,
-          lot_name: 'Host Registration Inquiry',
-          address: phone,
-          status: 'registration_interest',
-          created_at: new Date().toISOString(),
+          owner_phone: phone,
+          country_code: country,
+          verification_status: 'registration_interest',
+          verification_submitted_at: new Date().toISOString(),
         });
-      if (inboxErr) {
-        console.error('Inbox insert error:', inboxErr);
+      if (locationErr) {
+        console.error('Location insert error:', locationErr);
       } else {
-        console.log('Registration lead added to inbox');
+        console.log('Registration lead added to locations for inbox');
       }
-    } catch (inboxErr) {
-      console.error('Inbox insert error:', inboxErr);
+    } catch (locationErr) {
+      console.error('Location insert error:', locationErr);
     }
 
     // Send email notification
