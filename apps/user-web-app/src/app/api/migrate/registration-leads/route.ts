@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         address: `Registration Inquiry`,
         display_id: String((timestamp % 90000) + 10000),
         canonical_slug: `registration-interest-${timestamp}`,
-        verification_status: 'registration_interest',
+        verification_status: 'pending',
         verification_submitted_at: lead.created_at || new Date().toISOString(),
         verification_metadata: {
           contact_email: lead.email,
