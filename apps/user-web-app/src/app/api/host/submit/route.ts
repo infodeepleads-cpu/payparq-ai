@@ -122,6 +122,11 @@ export async function POST(req: NextRequest) {
         base_price_hourly: standardHourlyPrice,
         base_price_daily: standardDailyPrice,
         base_price_monthly: standardMonthlyPrice,
+        // Store minimum prices in floor columns so they're enforced everywhere
+        rate_per_hour_floor: minPriceHourly,
+        base_price_hourly_floor: minPriceHourly,
+        base_price_daily_floor: minPriceDaily,
+        base_price_monthly_floor: minPriceMonthly,
         valet_enabled: addons.includes('Valet'),
         shuttle_enabled: addons.includes('Shuttle'),
         addons_config: { enabled: addons },

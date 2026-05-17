@@ -63,7 +63,14 @@ export function resolveScannerTruthPriceEuro(
     floor = toPositiveNumber(source.base_price_daily_floor);
     ceiling = toPositiveNumber(source.base_price_daily_ceiling);
   } else {
-    euro = toPositiveNumber(source.base_price_monthly, 150);
+    // For monthly: use explicit monthly price if set, otherwise calculate from daily (daily × 25 days)
+    const explicitMonthly = toPositiveNumber(source.base_price_monthly);
+    if (explicitMonthly > 0) {
+      euro = explicitMonthly;
+    } else {
+      const dailyPrice = toPositiveNumber(source.base_price_daily, 20);
+      euro = dailyPrice * 25; // 25 days gives ~17% discount for monthly commitment
+    }
     floor = toPositiveNumber(source.base_price_monthly_floor);
     ceiling = toPositiveNumber(source.base_price_monthly_ceiling);
   }
@@ -81,6 +88,24 @@ export function resolveParkTaxiPriceEuro(source: PricingSource): number {
       : null;
   const raw = metadata?.["park_taxi_price"];
   return toFiniteMetadataNumber(raw);
+}
+
+export function getViablePrice(
+  source: PricingSource,
+  durationHours: number,
+  reservationType: string
+): number {
+  if (reservationType === 'Mjesečna') {
+    return resolveScannerTruthPriceEuro(source, 'monthly');
+  }
+
+  if (durationHours < 8) {
+    return resolveScannerTruthPriceEuro(source, 'hourly');
+  }
+
+  const hourlyTotal = resolveScannerTruthPriceEuro(source, 'hourly') * durationHours;
+  const dailyTotal = resolveScannerTruthPriceEuro(source, 'daily');
+  return Math.min(hourlyTotal, dailyTotal);
 }
 
 export function formatEuroLabel(amountEuro: number): string {

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, CheckCircle, MapPin, Navigation, ChevronDown, ChevronUp, Clock, X, Info } from 'lucide-react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
@@ -44,13 +45,29 @@ function CollapsibleSection({ title, children, defaultOpen = true }: { title: st
 
 // ─── Left info panel ──────────────────────────────────────────────────────────
 
-function InfoPanel() {
+function InfoPanel({ completedSteps }: { completedSteps: number }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6 space-y-4 sm:space-y-6 w-full overflow-x-hidden text-xs sm:text-sm">
       <div>
         <p className="text-sm font-semibold text-gray-900 mb-1">Oglasi svoje parkirno mjesto</p>
         <p className="text-xs text-gray-500">Oglasite Vaše parkirno mjesto potpuno besplatno i zarađujte već danas.</p>
       </div>
+
+      {/* Progress indicator - desktop only */}
+      <div className="hidden md:block border-t border-gray-100 pt-6 space-y-3">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Dovrši još {Math.max(0, 3 - completedSteps)} koraka do početka zarađivanja</p>
+        <div className="flex items-center gap-2">
+          {[0, 1, 2].map((stepIdx) => (
+            <div
+              key={stepIdx}
+              className={`flex-1 h-2 rounded-full transition-colors ${
+                stepIdx < completedSteps ? 'bg-gray-900' : 'bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="border-t border-gray-100 pt-6 space-y-4">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Kako funkcionira</p>
         <div className="space-y-3">
@@ -77,6 +94,21 @@ function InfoPanel() {
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon satne cijene</span><span className="font-medium flex-shrink-0">€0.5 – €4.00</span></div>
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-700"><span>Prosj. raspon dnevne cijene</span><span className="font-medium flex-shrink-0">€5 – €30</span></div>
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1 text-gray-900 font-bold pt-2 border-t border-gray-100"><span>Prosj. raspon mjesečne cijene</span><span className="flex-shrink-0">€29 – €440</span></div>
+        </div>
+      </div>
+
+      {/* Progress indicator - mobile only */}
+      <div className="md:hidden border-t border-gray-100 pt-6 space-y-3">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Dovrši još {Math.max(0, 3 - completedSteps)} koraka do početka zarađivanja</p>
+        <div className="flex items-center gap-2">
+          {[0, 1, 2].map((stepIdx) => (
+            <div
+              key={stepIdx}
+              className={`flex-1 h-2 rounded-full transition-colors ${
+                stepIdx < completedSteps ? 'bg-gray-900' : 'bg-gray-300'
+              }`}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -507,6 +539,8 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function HostPage() {
+  const searchParams = useSearchParams();
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: GMAPS_LIBS,
@@ -524,6 +558,17 @@ export default function HostPage() {
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [parkingType, setParkingType] = useState('');
   const [region, setRegion] = useState('HR');
+
+  // Prefill from URL params
+  useEffect(() => {
+    const prefillEmail = searchParams.get('email');
+    const prefillPhone = searchParams.get('phone');
+    const prefillCountry = searchParams.get('country');
+
+    if (prefillEmail) setEmail(prefillEmail);
+    if (prefillPhone) setPhone(prefillPhone);
+    if (prefillCountry) setRegion(prefillCountry);
+  }, [searchParams]);
 
   // Section 3 — Stvari koje biste trebali znati
   const [accessType, setAccessType] = useState('');
@@ -585,6 +630,7 @@ export default function HostPage() {
   const [minPriceHourly, setMinPriceHourly] = useState('');
   const [minPriceDaily, setMinPriceDaily] = useState('');
   const [minPriceMonthly, setMinPriceMonthly] = useState('');
+  const [useAIDynamicPricing, setUseAIDynamicPricing] = useState(true);
 
   // Photos
   const [photos, setPhotos] = useState<File[]>([]);
@@ -596,11 +642,20 @@ export default function HostPage() {
   const [wantSafeBrand, setWantSafeBrand] = useState(true);
   const [wantMarketing, setWantMarketing] = useState(true);
   const [wantDashboard, setWantDashboard] = useState(true);
-  const [wantReferral, setWantReferral] = useState(false);
+  const [wantReferral, setWantReferral] = useState(true);
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Calculate progress: step 1 when contact filled, step 2 when lot info filled, step 3 when photos added
+  const completedSteps = useMemo(() => {
+    let steps = 0;
+    if (name && email) steps++;
+    if (lotName && address) steps++;
+    if (photos.length > 0) steps++;
+    return steps;
+  }, [name, email, lotName, address, photos]);
 
   const compressImage = (file: File, maxWidthPx = 1280, quality = 0.82): Promise<File> =>
     new Promise((resolve) => {
@@ -629,6 +684,7 @@ export default function HostPage() {
     e.preventDefault();
     setSubmitting(true);
     setSubmitError('');
+    setWantReferral(true);
 
     const fd = new FormData();
     // Contact
@@ -749,7 +805,7 @@ export default function HostPage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8">
           <div>
-            <InfoPanel />
+            <InfoPanel completedSteps={completedSteps} />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 lg:col-start-2">
@@ -793,7 +849,7 @@ export default function HostPage() {
               <p className="text-xs font-black text-gray-500 uppercase tracking-widest">3 — Specifičnosti lota</p>
 
               {/* 3.1 Stvari koje biste trebali znati */}
-              <CollapsibleSection title="Stvari koje biste trebali znati">
+              <CollapsibleSection title="Stvari koje biste trebali znati" defaultOpen={false}>
                 {/* Access Type */}
                 <div>
                   <label className={labelClass}>Vrsta Pristupa</label>
@@ -879,7 +935,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.2 Dodaci */}
-              <CollapsibleSection title="Dodaci (10)">
+              <CollapsibleSection title="Dodaci (10)" defaultOpen={false}>
                 <div className="flex flex-wrap gap-2">
                   {ADDONS.map((a) => (
                     <button key={a} type="button" onClick={() => toggleAddon(a)}
@@ -891,7 +947,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.3 Radno Vrijeme */}
-              <CollapsibleSection title="Radno Vrijeme (Pristupno vrijeme)">
+              <CollapsibleSection title="Radno Vrijeme (Pristupno vrijeme)" defaultOpen={false}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-gray-800">24/7</p>
@@ -930,7 +986,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.4 Kapacitet */}
-              <CollapsibleSection title="Kapacitet">
+              <CollapsibleSection title="Kapacitet" defaultOpen={false}>
                 <div>
                   <label className={labelClass}>Broj mjesta</label>
                   <input type="number" placeholder="10" min="1" value={baseSpots} onChange={(e) => setBaseSpots(e.target.value)} className={inputClass} required />
@@ -942,7 +998,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.5 Vrsta mjesta */}
-              <CollapsibleSection title="Vrsta mjesta">
+              <CollapsibleSection title="Vrsta mjesta" defaultOpen={false}>
                 <p className="text-xs text-gray-600 mb-3 leading-relaxed">Razlikujte kategoriju mjesta — odaberite koje ćete smjestiti uz množitelj standardne cijene</p>
                 <div className="space-y-2">
                   {SPOT_TYPES.map((st) => (
@@ -960,7 +1016,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.5b Vrste kapaciteta */}
-              <CollapsibleSection title="Vrste kapaciteta">
+              <CollapsibleSection title="Vrste kapaciteta" defaultOpen={false}>
                 <p className="text-xs text-gray-600 mb-3 leading-relaxed">Odaberite koje ćete kategorije smjestiti uz množitelj standardne cijene</p>
                 <div className="space-y-2">
                   {CAPACITY_TYPES.map((ct) => (
@@ -977,7 +1033,7 @@ export default function HostPage() {
               </CollapsibleSection>
 
               {/* 3.6 Cijena */}
-              <CollapsibleSection title="Cijena">
+              <CollapsibleSection title="Cijena" defaultOpen={false}>
                 {/* Info box */}
                 <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                   <p className="text-xs font-semibold text-black mb-2 flex items-center gap-2"><Info className="w-4 h-4 text-violet-600 flex-shrink-0" /> Nema provizije! Naknadu plaća kupac!</p>
@@ -1022,6 +1078,13 @@ export default function HostPage() {
                         <label className={labelClass} translate="no">Mjesečna (€/mj)</label>
                         <input type="number" placeholder="100.00" min="0" step="10" value={minPriceMonthly} onChange={(e) => setMinPriceMonthly(e.target.value)} className={inputClass} />
                       </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-4">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-800">AI Dynamic Pricing</p>
+                        <p className="text-xs text-gray-400">Kalkulacija cijene za maksimalnu zaradu</p>
+                      </div>
+                      <Toggle checked={useAIDynamicPricing} onChange={setUseAIDynamicPricing} />
                     </div>
                   </div>
                 )}
@@ -1101,6 +1164,10 @@ export default function HostPage() {
               <div className="flex items-start justify-between gap-4 pt-3 border-t border-gray-100">
                 <p className="text-xs font-medium text-gray-600 leading-relaxed">Da, želim se pridružiti PayParq Referral programu</p>
                 <Toggle checked={wantReferral} onChange={setWantReferral} />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-xs font-medium text-gray-600 leading-relaxed">Da, želim pomoć pri traženju operativnog partnera</p>
+                <Toggle checked={false} onChange={() => {}} />
               </div>
             </div>
 

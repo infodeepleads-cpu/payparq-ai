@@ -84,7 +84,7 @@ export function BookingModal({ listing, onClose, onConfirm }: BookingModalProps)
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-[60]">
       <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:w-[500px] max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 flex items-center justify-between p-4">

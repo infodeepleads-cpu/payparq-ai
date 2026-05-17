@@ -976,7 +976,7 @@ function SuccessContent() {
           <path d="M13 16v-1a2 2 0 1 1 4 0v1"/>
         </svg>
       ),
-      title: 'Vozite se unutra',
+      title: 'Dovezite se unutra',
       desc: 'Uđite direktno na parking. Ako je rampa zatvorena, pritisnite gumb ili nazovite broj za hitne slučajeve.',
       phone: emergencyPhone,
     },
@@ -999,7 +999,7 @@ function SuccessContent() {
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       ),
-      title: 'Vozite se van',
+      title: 'Dovezite se van',
       desc: 'Izađite s parkinga slobodno. Ako je rampa zatvorena, nazovite broj za hitne slučajeve.',
       phone: emergencyPhone,
     },
