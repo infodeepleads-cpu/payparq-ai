@@ -2914,18 +2914,6 @@ export default function MembersPage() {
                     <span className="text-sm font-normal text-black/60 block">godišnje</span>
                   </p>
                 </div>
-
-                <a
-                  href="https://www.payparq.com/host"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full px-4 py-3 bg-[black] text-white rounded-lg font-semibold hover:bg-[#4330c4] transition-colors flex items-center justify-center gap-2 text-sm"
-                >
-                  ⚡ Instant Listing
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
               </div>
             </div>
           </div>
@@ -2938,19 +2926,30 @@ export default function MembersPage() {
     }
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <h2 className="text-lg font-semibold tracking-tight text-black">
-          Help
+          Resources
         </h2>
-        <p className="text-sm text-black/70">
-          Find answers, raise a ticket, or reach the Payparq team for support.
-        </p>
-        <p className="text-sm text-black/80">
-          Email: <a className="underline" href="mailto:payparq@outlook.com">payparq@outlook.com</a>
-        </p>
-        <p className="text-sm text-black/80">
-          WhatsApp: <a className="underline" href="https://wa.me/385915963139">+385915963139</a>
-        </p>
+
+        <div className="space-y-2 bg-white border border-black/10 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-black">For Hosts</h3>
+          <Link
+            href="/list-your-parking"
+            className="block px-3 py-2 rounded-lg text-sm text-black/70 hover:bg-black/5 transition-colors"
+          >
+            + Navedite svoje parkiralište
+          </Link>
+        </div>
+
+        <div className="space-y-2 bg-white border border-black/10 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-black">Support</h3>
+          <p className="text-sm text-black/80">
+            Email: <a className="underline" href="mailto:payparq@outlook.com">payparq@outlook.com</a>
+          </p>
+          <p className="text-sm text-black/80">
+            WhatsApp: <a className="underline" href="https://wa.me/385915963139">+385915963139</a>
+          </p>
+        </div>
       </div>
     );
   }
@@ -3184,20 +3183,11 @@ export default function MembersPage() {
                           <span>Moji prostori</span>
                         </button>
                         <Link
-                          href="/list-your-parking"
+                          href="/host"
                           className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-white/70 hover:bg-white/5"
                         >
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[11px]">
                             +
-                          </span>
-                          <span>Navedite svoje parkiralište</span>
-                        </Link>
-                        <Link
-                          href="/host"
-                          className="flex w-full items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors text-[#8B5CF6]/90 hover:bg-white/5"
-                        >
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[black]/20 text-[11px]">
-                            ⚡
                           </span>
                           <span>Instant listing</span>
                         </Link>
