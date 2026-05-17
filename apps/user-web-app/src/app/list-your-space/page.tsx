@@ -27,6 +27,8 @@ export default function ListYourSpace() {
   const [hostPhone, setHostPhone] = useState('');
   const [hostCountry, setHostCountry] = useState('HR');
   const [showStickyCta, setShowStickyCta] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,6 +65,56 @@ export default function ListYourSpace() {
   }, []);
 
   const monthlyEarnings = spaces * days * price * 4;
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hostEmail || !hostPhone || !hostCountry) {
+      setSubmitMessage({ type: 'error', text: 'Please fill in all fields' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    try {
+      const response = await fetch('/api/register-interest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: hostEmail,
+          phone: hostPhone,
+          country: hostCountry,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      setSubmitMessage({ type: 'success', text: 'Thank you! We may contact you in the next 72h about your registration. You may complete your registration on the next page.' });
+
+      // Redirect to host form with prefilled data after 2 seconds
+      setTimeout(() => {
+        const params = new URLSearchParams({
+          email: hostEmail,
+          phone: hostPhone,
+          country: hostCountry,
+        });
+        window.location.href = `/host?${params.toString()}`;
+      }, 2000);
+    } catch (error) {
+      console.error('Submission error:', error);
+      setSubmitMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const faqs = [
     {
@@ -110,7 +162,7 @@ export default function ListYourSpace() {
           <div className="relative max-w-6xl mx-auto px-6 md:px-12">
             <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center justify-center">
               <div className="flex justify-center md:justify-center md:order-2 md:col-span-1 order-1" style={{ marginTop: '-70px' }}>
-                <div id="register-form" className="rounded-2xl bg-white border border-black/10 p-4 shadow-lg flex flex-col justify-start w-full max-w-sm">
+                <form id="register-form" onSubmit={handleRegisterSubmit} className="rounded-2xl bg-white p-4 shadow-lg flex flex-col justify-start w-full max-w-sm">
                   <h3 className="text-lg font-bold text-black mb-3">Postani PayParq Host</h3>
 
                   <div className="space-y-2.5 flex-1 flex flex-col">
@@ -182,8 +234,22 @@ export default function ListYourSpace() {
                       Once you've become a host, we will occasionally send you offers and promotions related to our services. You can always unsubscribe by changing your communication preferences.
                     </p>
 
-                    <button className="w-full mt-3 bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm">
-                      Register Now
+                    {submitMessage && (
+                      <div className={`p-4 rounded-xl text-sm text-center font-semibold ${
+                        submitMessage.type === 'success'
+                          ? 'bg-green-50 text-green-800 border border-green-200'
+                          : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}>
+                        {submitMessage.text}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full mt-3 bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] text-white font-semibold py-2.5 rounded-lg hover:shadow-lg transition-shadow text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Registering...' : 'Register Now'}
                     </button>
 
                     <div className="text-center pt-2 space-y-1">
@@ -193,7 +259,7 @@ export default function ListYourSpace() {
                       </Link>
                     </div>
                   </div>
-                </div>
+                </form>
               </div>
 
               <div className="md:order-1 md:col-span-1 order-2">
@@ -246,68 +312,85 @@ export default function ListYourSpace() {
                         <h3 className="text-base font-bold text-white text-center">Kalkulator zarade</h3>
                       </div>
                       {/* Phone Content */}
-                      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <label className="text-sm font-semibold text-black">Spaces</label>
-                            <span className="text-lg font-bold text-[#5F3DFC]">{spaces}</span>
+                      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
+                        {/* Parking Listing Card 1 */}
+                        <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                          <div className="w-full h-16 bg-gradient-to-r from-blue-400 to-blue-500"></div>
+                          <div className="p-2.5">
+                            <p className="text-xs font-semibold text-black">Downtown Garage</p>
+                            <p className="text-xs text-black/60">Zagreb</p>
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-xs font-bold text-[#5F3DFC]">€8/day</p>
+                              <span className="text-xs text-yellow-500 font-semibold">★ 4.8</span>
+                            </div>
                           </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="10"
-                            value={spaces}
-                            onChange={(e) => setSpaces(Number(e.target.value))}
-                            className="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
                         </div>
 
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <label className="text-sm font-semibold text-black">Days/week</label>
-                            <span className="text-lg font-bold text-[#5F3DFC]">{days}</span>
+                        {/* Parking Listing Card 2 */}
+                        <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                          <div className="w-full h-16 bg-gradient-to-r from-purple-400 to-purple-500"></div>
+                          <div className="p-2.5">
+                            <p className="text-xs font-semibold text-black">City Center Spot</p>
+                            <p className="text-xs text-black/60">Split</p>
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-xs font-bold text-[#5F3DFC]">€6/day</p>
+                              <span className="text-xs text-yellow-500 font-semibold">★ 5.0</span>
+                            </div>
                           </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="7"
-                            value={days}
-                            onChange={(e) => setDays(Number(e.target.value))}
-                            className="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
                         </div>
 
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <label className="text-sm font-semibold text-black">Price/day</label>
-                            <span className="text-lg font-bold text-[#5F3DFC]">€{price}</span>
+                        {/* Parking Listing Card 3 */}
+                        <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                          <div className="w-full h-16 bg-gradient-to-r from-emerald-400 to-emerald-500"></div>
+                          <div className="p-2.5">
+                            <p className="text-xs font-semibold text-black">Riverside Parking</p>
+                            <p className="text-xs text-black/60">Rijeka</p>
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-xs font-bold text-[#5F3DFC]">€5/day</p>
+                              <span className="text-xs text-yellow-500 font-semibold">★ 4.9</span>
+                            </div>
                           </div>
-                          <input
-                            type="range"
-                            min="2"
-                            max="50"
-                            value={price}
-                            onChange={(e) => setPrice(Number(e.target.value))}
-                            className="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer"
-                          />
                         </div>
 
-                        <div className="bg-gradient-to-r from-[#5F3DFC]/10 to-[#5F3DFC]/5 rounded-xl p-4 text-center border border-[#5F3DFC]/20 mt-6">
-                          <p className="text-xs text-black/60 mb-1">Monthly earnings</p>
-                          <p className="text-3xl font-bold text-[#5F3DFC]">
-                            €{monthlyEarnings.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-black/50 mt-2">
-                            {spaces}sp • {days}d/w • €{price}/d
-                          </p>
+                        {/* Reviews */}
+                        <div className="space-y-2 mt-4">
+                          <p className="text-xs font-semibold text-black px-1">Recent Reviews</p>
+
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <div className="flex items-start gap-2 mb-1">
+                              <div className="w-8 h-8 rounded-full bg-blue-400 flex-shrink-0"></div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-black">Ana M.</p>
+                                <p className="text-xs text-yellow-500">★★★★★ 5.0</p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-black/70">"Great location, earned €320 last month!"</p>
+                          </div>
+
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <div className="flex items-start gap-2 mb-1">
+                              <div className="w-8 h-8 rounded-full bg-purple-400 flex-shrink-0"></div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-black">Marko K.</p>
+                                <p className="text-xs text-yellow-500">★★★★★ 5.0</p>
+                              </div>
+                            </div>
+                            <p className="text-xs text-black/70">"Easy to manage, amazing support"</p>
+                          </div>
+                        </div>
+
+                        {/* Earnings Widget */}
+                        <div className="bg-gradient-to-r from-[#5F3DFC] to-[#4330c4] rounded-lg p-3 mt-4">
+                          <p className="text-xs text-white/80 mb-1">Your monthly earnings</p>
+                          <p className="text-2xl font-bold text-white">€560</p>
+                          <p className="text-xs text-white/70 mt-1">2 spaces • Avg €280/space</p>
                         </div>
 
                         <Link
                           href="/host"
-                          className="w-full block bg-[#5F3DFC] text-white py-2 rounded-lg font-semibold text-sm hover:bg-[#4330c4] transition-colors cursor-pointer text-center"
+                          className="w-full block bg-[#5F3DFC] text-white py-2 rounded-lg font-semibold text-xs hover:bg-[#4330c4] transition-colors cursor-pointer text-center mt-2"
                         >
-                          Objavite svoje parkirno mjesto
+                          List Your Space
                         </Link>
                       </div>
                     </div>
@@ -359,9 +442,8 @@ export default function ListYourSpace() {
               {/* Step 3: Pass */}
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
-                  <div className="text-6xl font-black text-[#5F3DFC] mb-4">3</div>
-                  <h3 className="text-4xl font-bold text-black mb-4">Propusnica</h3>
-                  <p className="text-lg text-black/70">Receive your QR code parking pass via email, access entry codes in the app, and you're ready to park.</p>
+                  <h3 className="text-5xl font-black text-black mb-4" translate="no"><span className="text-[#5F3DFC]">3</span> Propusnica</h3>
+                  <p className="text-lg text-black/70" translate="no">Primite svoju propusnica za parkiranje s QR kodom putem e-poste, pristupite kodovima za ulazak u aplikaciju i spremni ste za parkiranje.</p>
                 </div>
                 <div className="rounded-xl overflow-hidden h-64 md:h-80 shadow-lg">
                   <img

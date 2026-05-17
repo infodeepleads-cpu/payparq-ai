@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, CheckCircle, MapPin, Navigation, ChevronDown, ChevronUp, Clock, X, Info } from 'lucide-react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
@@ -538,6 +539,8 @@ function DateConfigWidget({ config, lotCapacity, onSave, onDelete, onCancel }: {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function HostPage() {
+  const searchParams = useSearchParams();
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries: GMAPS_LIBS,
@@ -555,6 +558,17 @@ export default function HostPage() {
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [parkingType, setParkingType] = useState('');
   const [region, setRegion] = useState('HR');
+
+  // Prefill from URL params
+  useEffect(() => {
+    const prefillEmail = searchParams.get('email');
+    const prefillPhone = searchParams.get('phone');
+    const prefillCountry = searchParams.get('country');
+
+    if (prefillEmail) setEmail(prefillEmail);
+    if (prefillPhone) setPhone(prefillPhone);
+    if (prefillCountry) setRegion(prefillCountry);
+  }, [searchParams]);
 
   // Section 3 — Stvari koje biste trebali znati
   const [accessType, setAccessType] = useState('');
