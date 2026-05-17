@@ -30,14 +30,13 @@ export async function POST(request: NextRequest) {
       return {
         name: `Host Interest - ${lead.email}`,
         address: `Registration Inquiry`,
-        owner_phone: lead.phone,
         display_id: String((timestamp % 90000) + 10000),
         canonical_slug: `registration-interest-${timestamp}`,
         verification_status: 'registration_interest',
         verification_submitted_at: lead.created_at || new Date().toISOString(),
         verification_metadata: {
           contact_email: lead.email,
-          contact_phone: lead.phone,
+          owner_phone: lead.phone,
           country: lead.country,
           source: 'landing_page_registration',
         },

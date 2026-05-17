@@ -43,14 +43,13 @@ export async function POST(request: NextRequest) {
         .insert({
           name: `Host Interest - ${email}`,
           address: `Registration Inquiry`,
-          owner_phone: phone,
           display_id: String((timestamp % 90000) + 10000),
           canonical_slug: `registration-interest-${timestamp}`,
           verification_status: 'registration_interest',
           verification_submitted_at: new Date().toISOString(),
           verification_metadata: {
             contact_email: email,
-            contact_phone: phone,
+            owner_phone: phone,
             country: country,
             source: 'landing_page_registration',
           },
