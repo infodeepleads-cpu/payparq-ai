@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
         name: `Host Interest - ${lead.email}`,
         address: `Registration Inquiry`,
         owner_phone: lead.phone,
-        country_code: lead.country,
         display_id: String((timestamp % 90000) + 10000),
         canonical_slug: `registration-interest-${timestamp}`,
         verification_status: 'registration_interest',
@@ -39,6 +38,7 @@ export async function POST(request: NextRequest) {
         verification_metadata: {
           contact_email: lead.email,
           contact_phone: lead.phone,
+          country: lead.country,
           source: 'landing_page_registration',
         },
         capacity: 0,
