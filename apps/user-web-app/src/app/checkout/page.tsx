@@ -784,17 +784,19 @@ function PaidCheckoutForm({
             {/* Mobile: Single button (GPay > APay > Card) + Change link + CTA | Desktop: CTA button */}
             {isMobile ? (
               <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                  className="w-full text-center text-xs font-bold text-black hover:opacity-70 py-2"
-                >
-                  {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
-                </button>
+                <div className="mx-4 px-0 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                    className="w-[calc(100%-16px)] mx-2 text-center text-xs font-bold text-black hover:opacity-70 py-2"
+                  >
+                    {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
+                  </button>
 
-                <ExpressCheckoutElement
-                  options={{ wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' } }}
-                  onConfirm={async () => {
+                  <div style={{ transform: 'scale(1.3)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
+                    <ExpressCheckoutElement
+                    options={{ wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' } }}
+                    onConfirm={async () => {
                     if (!stripe || !elements) return;
                     if (clientSecret && clientSecret !== 'free') {
                       const piId = clientSecret.split('_secret_')[0];
@@ -816,7 +818,9 @@ function PaidCheckoutForm({
                     });
                     if (error) console.error(error);
                   }}
-                />
+                    />
+                  </div>
+                </div>
 
                 {showPaymentOptions && (
                   <>
@@ -848,7 +852,7 @@ function PaidCheckoutForm({
               </button>
             )}
 
-            <p className="text-center text-xs text-gray-500 pb-1 mt-1">
+            <p className="hidden md:block text-center text-xs text-gray-500 pb-1 mt-1">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
             </p>
           </form>
