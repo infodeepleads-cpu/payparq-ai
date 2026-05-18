@@ -788,7 +788,7 @@ function PaidCheckoutForm({
                   <button
                     type="button"
                     onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                    className="w-[calc(100%-16px)] mx-2 text-center text-xs font-bold text-black hover:opacity-70 py-2"
+                    className="w-full py-4 rounded-lg font-bold text-base text-white bg-black hover:bg-gray-800 transition-colors"
                   >
                     {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
                   </button>
