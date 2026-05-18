@@ -776,16 +776,24 @@ function PaidCheckoutForm({
               </div>
             )}
 
-            <p className="text-center text-xs text-gray-400 pb-4">
+            <p className="text-center text-xs text-gray-400 pb-1">
               By completing your purchase you agree to our{' '}
               <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
             </p>
 
             {/* Mobile: Single button (GPay > APay > Card) + Change link + CTA | Desktop: CTA button */}
             {isMobile ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                  className="w-full text-center text-xs font-bold text-black hover:opacity-70 py-2"
+                >
+                  {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
+                </button>
+
                 <ExpressCheckoutElement
-                  options={{ wallets: { googlePay: 'always', applePay: 'never' } }}
+                  options={{ wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' } }}
                   onConfirm={async () => {
                     if (!stripe || !elements) return;
                     if (clientSecret && clientSecret !== 'free') {
@@ -810,52 +818,8 @@ function PaidCheckoutForm({
                   }}
                 />
 
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-700 py-2"
-                >
-                  Promijeni
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={!stripe || submitting}
-                  className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
-                >
-                  {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
-                </button>
-
                 {showPaymentOptions && (
-                  <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
-                    <div className="border-b pb-3">
-                      <p className="text-xs font-semibold text-gray-600 mb-3">Odaberite način plaćanja</p>
-                      <ExpressCheckoutElement
-                        options={{ wallets: { googlePay: 'never', applePay: 'always' } }}
-                        onConfirm={async () => {
-                          if (!stripe || !elements) return;
-                          if (clientSecret && clientSecret !== 'free') {
-                            const piId = clientSecret.split('_secret_')[0];
-                            if (piId?.startsWith('pi_')) {
-                              try {
-                                await fetch('/api/stripe/payment-intent', {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
-                                });
-                              } catch { /* non-blocking */ }
-                            }
-                          }
-                          const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
-                          const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
-                          const { error } = await stripe.confirmPayment({
-                            elements,
-                            confirmParams: { return_url: successUrl },
-                          });
-                          if (error) console.error(error);
-                        }}
-                      />
-                    </div>
+                  <>
                     <PaymentElement
                       options={{
                         layout: { type: 'accordion' },
@@ -864,7 +828,14 @@ function PaidCheckoutForm({
                         fields: { billingDetails: { email: 'never', phone: 'never' } },
                       }}
                     />
-                  </div>
+                    <button
+                      type="submit"
+                      disabled={!stripe || submitting}
+                      className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+                    >
+                      {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
+                    </button>
+                  </>
                 )}
               </div>
             ) : (
@@ -877,7 +848,7 @@ function PaidCheckoutForm({
               </button>
             )}
 
-            <p className="text-center text-xs text-gray-500 pb-4">
+            <p className="text-center text-xs text-gray-500 pb-1 mt-1">
               Potvrđivanjem plaćanja dopuštate tvrtki INDIREKTNO da vas se tereti za ovo plaćanje i buduća plaćanja u skladu s njenim uvjetima.
             </p>
           </form>
@@ -885,7 +856,7 @@ function PaidCheckoutForm({
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-100 mt-6">
+      <footer className="bg-white border-t border-gray-100 mt-0">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between text-xs text-gray-400">
           <div className="flex items-center gap-3">
             <span>© 2026 PayParq</span>
