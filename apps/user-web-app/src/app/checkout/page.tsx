@@ -831,20 +831,7 @@ function PaidCheckoutForm({
                         layout: { type: 'accordion' },
                         paymentMethodOrder: ['card', 'paypal'],
                         wallets: { googlePay: 'never', applePay: 'never' },
-                        fields: { billingDetails: { email: 'never', phone: 'never' } },
-                        appearance: {
-                          theme: 'flat',
-                          variables: {
-                            colorPrimary: '#2563eb',
-                            colorBackground: '#ffffff',
-                            fontFamily: 'system-ui, -apple-system, sans-serif',
-                            borderRadius: '8px',
-                          },
-                          rules: {
-                            '.Tab': { boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', padding: '12px' },
-                            '.Input': { padding: '10px 12px', borderRadius: '6px' },
-                          }
-                        }
+                        fields: { billingDetails: { email: 'never', phone: 'never' } }
                       }}
                     />
                     <button
