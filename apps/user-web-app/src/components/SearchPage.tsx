@@ -2453,7 +2453,7 @@ export function SearchPage() {
               </div>
 
               {/* Location Information Widget */}
-              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden -ml-[38px]">
+              <div className="flex-shrink-0 w-full bg-white border-b border-gray-200 overflow-hidden -ml-[23px]">
                 {/* Black Badge Header */}
                 <div className="font-bold text-white bg-black px-2 flex items-center justify-start" style={{ fontSize: '12px', paddingRight: '24px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '0 0 16px 0' }}>
                   Lokacija
