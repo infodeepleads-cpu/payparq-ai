@@ -610,14 +610,6 @@ export default function HostPage() {
   const [activeSpotTypes, setActiveSpotTypes] = useState<string[]>([]);
   const toggleSpotType = (k: string) => setActiveSpotTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
-  const CAPACITY_TYPES = [
-    { key: 'compact', label: 'Kompaktna mjesta', mult: '0.75×' },
-    { key: 'standard', label: 'Standardna mjesta', mult: '1×' },
-    { key: 'large', label: 'Velika mjesta', mult: '1.25×' },
-    { key: 'disabled', label: 'Mjesta za osobe s invaliditetom', mult: '1.5×' },
-  ];
-  const [activeCapacityTypes, setActiveCapacityTypes] = useState<string[]>([]);
-  const toggleCapacityType = (k: string) => setActiveCapacityTypes((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]);
 
   // Section 3 — Cijena / H-D-M
   // Pricing — Standard
@@ -1020,23 +1012,6 @@ export default function HostPage() {
                         {st.desc && <p className="text-xs text-gray-400 mt-0.5">{st.desc}</p>}
                       </div>
                       <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeSpotTypes.includes(st.key) ? 'text-gray-900' : 'text-gray-400'}`}>{st.mult}</span>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleSection>
-
-              {/* 3.5b Vrste kapaciteta */}
-              <CollapsibleSection title="Vrste kapaciteta" defaultOpen={false}>
-                <p className="text-xs text-gray-600 mb-3 leading-relaxed">Odaberite koje ćete kategorije smjestiti uz množitelj standardne cijene</p>
-                <div className="space-y-2">
-                  {CAPACITY_TYPES.map((ct) => (
-                    <div key={ct.key}
-                      onClick={() => toggleCapacityType(ct.key)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${activeCapacityTypes.includes(ct.key) ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900">{ct.label}</p>
-                      </div>
-                      <span className={`text-xs font-bold ml-3 flex-shrink-0 ${activeCapacityTypes.includes(ct.key) ? 'text-gray-900' : 'text-gray-400'}`}>{ct.mult}</span>
                     </div>
                   ))}
                 </div>
