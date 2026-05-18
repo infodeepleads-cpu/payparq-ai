@@ -781,7 +781,7 @@ function PaidCheckoutForm({
               <a href="/terms" className="underline hover:text-gray-600">Terms of Service</a>
             </p>
 
-            {/* Mobile: Google Pay button + dropdown | Desktop: CTA button */}
+            {/* Mobile: Google Pay button + Change button | Desktop: CTA button */}
             {isMobile ? (
               <div className="space-y-3">
                 <ExpressCheckoutElement
@@ -814,7 +814,7 @@ function PaidCheckoutForm({
                   onClick={() => setShowPaymentOptions(!showPaymentOptions)}
                   className="w-full py-3 px-4 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
-                  {showPaymentOptions ? '▼ Pogledajte manje' : '▼ Ostali načini plaćanja'}
+                  Promijeni
                 </button>
                 {showPaymentOptions && (
                   <PaymentElement
