@@ -785,18 +785,10 @@ function PaidCheckoutForm({
             {isMobile ? (
               <div className="space-y-2">
                 <div className="mx-4 px-0 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                    className="w-[calc(100%-16px)] mx-2 text-center text-xs font-bold text-black hover:opacity-70 py-2"
-                  >
-                    {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
-                  </button>
-
                   <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
                     <ExpressCheckoutElement
                     options={{
-                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: showPaymentOptions ? 'always' : 'never' }
+                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: 'never' }
                     }}
                     onConfirm={async () => {
                     if (!stripe || !elements) return;
@@ -822,6 +814,14 @@ function PaidCheckoutForm({
                   }}
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                    className="w-[calc(100%-16px)] mx-2 text-center text-xs font-bold text-black hover:opacity-70 py-2"
+                  >
+                    {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
+                  </button>
                 </div>
 
                 {showPaymentOptions && (
