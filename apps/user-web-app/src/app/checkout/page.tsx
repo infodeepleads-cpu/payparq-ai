@@ -784,45 +784,13 @@ function PaidCheckoutForm({
             {/* Mobile: Single button (GPay > APay > Card) + Change link + CTA | Desktop: CTA button */}
             {isMobile ? (
               <div className="space-y-2">
-                <div className="mx-4 px-0 py-2">
-                  <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
-                    <ExpressCheckoutElement
-                    options={{
-                      wallets: { googlePay: !showPaymentOptions ? 'always' : 'never', applePay: 'never' }
-                    }}
-                    onConfirm={async () => {
-                    if (!stripe || !elements) return;
-                    if (clientSecret && clientSecret !== 'free') {
-                      const piId = clientSecret.split('_secret_')[0];
-                      if (piId?.startsWith('pi_')) {
-                        try {
-                          await fetch('/api/stripe/payment-intent', {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
-                          });
-                        } catch { /* non-blocking */ }
-                      }
-                    }
-                    const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
-                    const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
-                    const { error } = await stripe.confirmPayment({
-                      elements,
-                      confirmParams: { return_url: successUrl },
-                    });
-                    if (error) console.error(error);
-                  }}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentOptions(!showPaymentOptions)}
-                    className="w-[calc(100%-16px)] mx-2 text-center text-xs font-bold text-black hover:opacity-70 py-2"
-                  >
-                    {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentOptions(!showPaymentOptions)}
+                  className="text-left text-xs font-bold text-black hover:opacity-70 py-2 px-4"
+                >
+                  {showPaymentOptions ? 'Zatvori opcije' : 'Promijeni'}
+                </button>
 
                 {showPaymentOptions && (
                   <>
@@ -837,11 +805,45 @@ function PaidCheckoutForm({
                     <button
                       type="submit"
                       disabled={!stripe || submitting}
-                      className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700"
+                      className="w-full py-4 rounded-lg font-bold text-base text-white disabled:opacity-60 transition-opacity shadow-sm bg-blue-600 hover:bg-blue-700 mx-4"
                     >
                       {submitting ? 'Obrada...' : isFree ? 'Potvrdi - Besplatno' : 'Plaćajte'}
                     </button>
                   </>
+                )}
+
+                {!showPaymentOptions && (
+                  <div className="mx-4 px-0 py-2">
+                    <div style={{ transform: 'scale(1.1)', transformOrigin: 'top center', marginBottom: '0.75rem', marginLeft: '8px', marginRight: '8px' }}>
+                      <ExpressCheckoutElement
+                      options={{
+                        wallets: { googlePay: 'always', applePay: 'never' }
+                      }}
+                      onConfirm={async () => {
+                      if (!stripe || !elements) return;
+                      if (clientSecret && clientSecret !== 'free') {
+                        const piId = clientSecret.split('_secret_')[0];
+                        if (piId?.startsWith('pi_')) {
+                          try {
+                            await fetch('/api/stripe/payment-intent', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ payment_intent_id: piId, email, plate, phone }),
+                            });
+                          } catch { /* non-blocking */ }
+                        }
+                      }
+                      const piId = clientSecret && clientSecret !== 'free' ? clientSecret.split('_secret_')[0] : '';
+                      const successUrl = piId ? `${window.location.origin}/success?payment_intent=${piId}` : `${window.location.origin}/success`;
+                      const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: { return_url: successUrl },
+                      });
+                      if (error) console.error(error);
+                    }}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (

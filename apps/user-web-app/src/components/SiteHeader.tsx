@@ -136,7 +136,7 @@ export function SiteHeader({ hideAnnouncementBar = false }: { hideAnnouncementBa
 
             <div className="flex items-center justify-center">
               <Link href="/" className="relative flex items-center justify-center">
-                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.45)] flex items-center justify-center">
+                <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white/95 flex items-center justify-center">
                   <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[#020617] to-[#020617] flex items-center justify-center border border-white/40">
                     <span className="text-sm md:text-base font-semibold tracking-tight leading-none text-white">
                       P
